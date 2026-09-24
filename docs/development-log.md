@@ -325,3 +325,30 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 28 --flame-view --frame-hash --dump-frame out\fake-flames.ppm
 ```
+
+## 2026-09-24: Moving pushwalls
+
+- Added the historically owned `WL_ACT1.c` translation for `PushWall` and
+  `MovePWalls`, including one-active-wall gating, secret counting, forward-cell
+  reservation, blocking actors/statics, tile/area handoff, and original state
+  and position arithmetic.
+- Restored the original blocking classification for Wolf3D static objects so
+  scenery participates correctly in pushwall obstruction checks.
+- Ported the vertical and horizontal moving-wall hit calculations from
+  `WL_DRAW.C`; ray distance and texture sampling now follow the fractional wall
+  plane instead of treating the occupied map cell as fixed geometry.
+- Focused tests cover activation and rejection, halfway ray geometry, first-cell
+  crossing, actor obstruction, full travel, and blocking versus non-blocking
+  statics.
+- The E1M1 diagnostic captures the first secret portrait wall at the original
+  half-tile position.
+- 320x200 indexed-frame FNV-1a: `48bdacd231ece2d9`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 portrait pushwall halfway into motion](../out/moving-pushwall.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pushwall-view --frame-hash --dump-frame out\moving-pushwall.ppm
+```

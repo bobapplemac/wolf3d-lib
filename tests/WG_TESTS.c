@@ -11,6 +11,7 @@
 #include "WG_GRAPHICS.h"
 #include "WL_GAME.h"
 #include "WL_AGENT.h"
+#include "WL_ACT1.h"
 #include "WG_MAPS.h"
 #include "ID_PM.h"
 #include "WG_PALETTE.h"
@@ -1279,6 +1280,111 @@ static void TestStaticRaycaster(void)
     CHECK(hits[159].map_x == WG_LEVEL_SIZE - 1);
 }
 
+static void TestPushWalls(void)
+{
+    wg_level_t level;
+    wg_view_tables_t tables;
+    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
+    wg_actor_t *blocker;
+    size_t source = 10U * WG_LEVEL_SIZE + 10U;
+    int x;
+    int y;
+
+    memset(&level, 0, sizeof(level));
+    memset(&tables, 0, sizeof(tables));
+    for (x = 0; x < WG_LEVEL_SIZE; ++x)
+    {
+        level.tiles[x] = 1U;
+        level.tiles[(WG_LEVEL_SIZE - 1) * WG_LEVEL_SIZE + x] = 1U;
+    }
+    for (y = 0; y < WG_LEVEL_SIZE; ++y)
+    {
+        level.tiles[y * WG_LEVEL_SIZE] = 1U;
+        level.tiles[y * WG_LEVEL_SIZE + WG_LEVEL_SIZE - 1] = 1U;
+    }
+    level.tiles[source] = 2U;
+    level.info[source] = 98U;
+    level.player_tile_x = 8U;
+    level.player_tile_y = 10U;
+    level.areas[10U * WG_LEVEL_SIZE + 8U] = 3U;
+    CHECK(WL_PushWall(&level, 10U, 10U, 0U));
+    CHECK(level.secret_count == 1U);
+    CHECK(level.pushwall_state == 1U);
+    CHECK(level.pushwall_position == 0U);
+    CHECK(level.pushwall_x == 10U);
+    CHECK(level.pushwall_y == 10U);
+    CHECK(level.pushwall_direction == 0U);
+    CHECK(level.tiles[source] == (2U | 0xc0U));
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 11U] == 2U);
+    CHECK(level.info[source] == 0U);
+    CHECK(!WL_PushWall(&level, 10U, 10U, 0U));
+
+    CHECK(WL_MovePushWalls(&level, 63U));
+    CHECK(level.pushwall_state == 64U);
+    CHECK(level.pushwall_position == 32U);
+    WG_ViewBuildTrigTables(&tables);
+    CHECK(WG_ViewCalculateProjection(&tables, WG_MAX_VIEW_WIDTH,
+                                     WG_FOCAL_LENGTH));
+    CHECK(WG_RaycastWalls(&level, &tables,
+                          8 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          10 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          0U, 10U, hits));
+    CHECK(hits[159].side == WG_WALL_VERTICAL);
+    CHECK(hits[159].map_x == 10U);
+    CHECK(hits[159].tile == (2U | 0xc0U));
+    CHECK(hits[159].x == 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(hits[159].wall_page == 3U);
+
+    CHECK(WL_MovePushWalls(&level, 64U));
+    CHECK(level.pushwall_state == 128U);
+    CHECK(level.pushwall_x == 11U);
+    CHECK(level.tiles[source] == 0U);
+    CHECK(level.areas[source] == 3U);
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 11U] == (2U | 0xc0U));
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 12U] == 2U);
+
+    level.actor_count = 1U;
+    blocker = &level.actors[0];
+    blocker->tile_x = 13U;
+    blocker->tile_y = 10U;
+    blocker->flags = WG_ACTOR_FLAG_SHOOTABLE;
+    CHECK(WL_MovePushWalls(&level, 128U));
+    CHECK(level.pushwall_state == 0U);
+    CHECK(level.pushwall_x == 12U);
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 11U] == 0U);
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 12U] == 2U);
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 13U] == 0U);
+
+    memset(&level, 0, sizeof(level));
+    level.tiles[source] = 2U;
+    CHECK(WL_PushWall(&level, 10U, 10U, 0U));
+    CHECK(WL_MovePushWalls(&level, 127U));
+    CHECK(WL_MovePushWalls(&level, 128U));
+    CHECK(WL_MovePushWalls(&level, 128U));
+    CHECK(level.pushwall_state == 0U);
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 10U] == 0U);
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 11U] == 0U);
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 12U] == 0U);
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 13U] == 2U);
+
+    memset(&level, 0, sizeof(level));
+    level.tiles[source] = 2U;
+    level.tiles[10U * WG_LEVEL_SIZE + 11U] = 1U;
+    CHECK(!WL_PushWall(&level, 10U, 10U, 0U));
+    CHECK(level.secret_count == 0U);
+    CHECK(level.tiles[source] == 2U);
+
+    memset(&level, 0, sizeof(level));
+    level.tiles[source] = 2U;
+    level.static_count = 1U;
+    level.statics[0].tile_x = 11U;
+    level.statics[0].tile_y = 10U;
+    level.statics[0].blocking = 1U;
+    CHECK(!WL_PushWall(&level, 10U, 10U, 0U));
+    level.statics[0].blocking = 0U;
+    CHECK(WL_PushWall(&level, 10U, 10U, 0U));
+}
+
 static void TestStaticRenderer(void)
 {
     wg_level_t level;
@@ -1788,6 +1894,7 @@ int main(int argc, char **argv)
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();
+    TestPushWalls();
     TestStaticRenderer();
 
     if (argc == 4 && strcmp(argv[1], "--data") == 0)

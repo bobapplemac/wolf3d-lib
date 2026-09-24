@@ -66,6 +66,37 @@ static int WG_AmbushArea(const wg_map_t *map, size_t index,
     return 1;
 }
 
+static int WG_StaticBlocks(unsigned type)
+{
+    switch (type)
+    {
+    case 1U:
+    case 2U:
+    case 3U:
+    case 5U:
+    case 7U:
+    case 8U:
+    case 10U:
+    case 11U:
+    case 12U:
+    case 13U:
+    case 16U:
+    case 17U:
+    case 18U:
+    case 22U:
+    case 35U:
+    case 36U:
+    case 37U:
+    case 39U:
+    case 40U:
+    case 45U:
+    case 46U:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level)
 {
@@ -129,6 +160,7 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
         else if (info >= 23U && info <= 71U)
         {
             wg_static_object_t *object;
+            unsigned type = info - 23U;
 
             if (level->static_count >= WG_MAX_STATICS)
             {
@@ -137,12 +169,12 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
             object = &level->statics[level->static_count++];
             object->tile_x = (uint8_t)(index % WG_LEVEL_SIZE);
             object->tile_y = (uint8_t)(index / WG_LEVEL_SIZE);
+            object->blocking = (uint8_t)WG_StaticBlocks(type);
             /*
              * SPR_DEMO and SPR_DEATHCAM precede SPR_STAT_0. The final
              * non-Spear statinfo entry is the duplicate ammo clip.
              */
-            object->shape = info == 71U ? 28U
-                                        : (uint16_t)(info - 23U + 2U);
+            object->shape = info == 71U ? 28U : (uint16_t)(type + 2U);
         }
         else
         {

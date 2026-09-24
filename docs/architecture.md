@@ -192,9 +192,12 @@ The ray-traversal layer is a direct, fixed-point translation of original
 `AsmRefresh`, including its quadrant-specific tangent steps, vertical/horizontal
 entry switching, focal-point offset, texture mirroring, and perpendicular height
 calculation. Closed and opening doors use their original half-tile planes,
-position tests, lock/elevator faces, and adjacent jamb textures. Moving pushwalls
-remain the one deliberately rejected wall-hit case rather than being approximated
-as fixed geometry.
+position tests, lock/elevator faces, and adjacent jamb textures. `PushWall` and
+`MovePWalls` retain the original `1/128/256` state thresholds, destination
+reservation, obstruction checks, secret accounting, vacated-tile area handoff,
+and `pwallpos = (pwallstate / 2) & 63` offset. The vertical and horizontal
+pushwall hit paths move the sampled wall plane by that offset before performing
+the same texture mirroring and perpendicular-height calculation.
 
 An owned wall cache decodes every present pre-sprite VSWAP page once into conventional
 row-major 64x64 pixels. The initial renderer composes the static traversal and
@@ -211,8 +214,8 @@ diagnostic exposes the scenery beyond E1M1's initially closed door without
 changing normal level state. Ordinary enemies and dead guards share the same
 visible-object list; live actors use the original larger `ACTORSIZE` projection
 adjustment and select one of eight rotations with `CalcRotate`. Patrol state
-updates now feed this same rendering path; boss death/projectile behavior and
-moving pushwalls are still being added. The isolated
+updates now feed this same rendering path; boss death behavior is still being
+added. The isolated
 `--alert-view` diagnostic advances the selected guard through awareness and its
 reaction delay. `--chase-view` then advances the original chase animation and
 movement. `--fire-view` selects the original guard shot action and renders its
@@ -220,7 +223,8 @@ resulting attack sprite and health change. `--bite-view` does the same for an
 original E1M1 dog's leap and bite. `--boss-fire-view` renders Hans's seeded
 hitscan attack on E1M9. `--needle-view` renders Schabbs's syringe in flight on
 E2M9, and `--rocket-view` renders Giftmacher's rotating rocket and smoke trail
-on E4M9 without altering normal captures.
+on E4M9. `--pushwall-view` activates the first E1M1 secret and renders it at a
+half-tile offset without altering normal captures.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

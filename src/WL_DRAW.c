@@ -128,6 +128,63 @@ static void WG_RecordHit(const wg_view_tables_t *tables,
     hit->side = side;
 }
 
+static void WG_RecordPushWallHit(const wg_level_t *level,
+                                 const wg_view_tables_t *tables,
+                                 wg_wall_hit_t *hit, uint8_t tile,
+                                 wg_wall_side_t side, int map_x, int map_y,
+                                 int x_tile_step, int y_tile_step,
+                                 int32_t x_intercept, int32_t y_intercept,
+                                 int32_t view_x, int32_t view_y,
+                                 int32_t view_cosine, int32_t view_sine)
+{
+    unsigned texture;
+    int32_t offset = (int32_t)level->pushwall_position * 1024;
+    int32_t distance;
+
+    if (side == WG_WALL_VERTICAL)
+    {
+        texture = ((uint32_t)y_intercept >> 10) & 63U;
+        if (x_tile_step == -1)
+        {
+            x_intercept += WG_FIXED_ONE - offset;
+            texture = 63U - texture;
+        }
+        else
+        {
+            x_intercept += offset;
+        }
+        hit->wall_page = (uint16_t)(((tile & 63U) - 1U) * 2U + 1U);
+    }
+    else
+    {
+        texture = ((uint32_t)x_intercept >> 10) & 63U;
+        if (y_tile_step == -1)
+        {
+            y_intercept += WG_FIXED_ONE - offset;
+        }
+        else
+        {
+            y_intercept += offset;
+            texture = 63U - texture;
+        }
+        hit->wall_page = (uint16_t)(((tile & 63U) - 1U) * 2U);
+    }
+    distance = WG_FixedMul(x_intercept - view_x, view_cosine)
+               - WG_FixedMul(y_intercept - view_y, view_sine);
+    if (distance < WG_MIN_DISTANCE)
+    {
+        distance = WG_MIN_DISTANCE;
+    }
+    hit->x = x_intercept;
+    hit->y = y_intercept;
+    hit->height = tables->height_numerator / (distance / 256);
+    hit->texture_column = (uint8_t)texture;
+    hit->tile = tile;
+    hit->map_x = (uint8_t)map_x;
+    hit->map_y = (uint8_t)map_y;
+    hit->side = side;
+}
+
 static int WG_RaycastWallsInternal(
     const wg_level_t *level, const wg_view_tables_t *tables,
     int32_t player_x, int32_t player_y, uint16_t player_angle,
@@ -277,6 +334,17 @@ static int WG_RaycastWallsInternal(
                 tile = WG_LevelTile(level, map_x, map_y);
                 if (tile != 0U)
                 {
+                    if ((tile & 0xc0U) == 0xc0U)
+                    {
+                        x_intercept = x_tile * WG_FIXED_ONE;
+                        WG_RecordPushWallHit(
+                            level, tables, &hits[pixel], tile,
+                            WG_WALL_VERTICAL, map_x, map_y,
+                            x_tile_step, y_tile_step,
+                            x_intercept, y_intercept,
+                            view_x, view_y, view_cosine, view_sine);
+                        break;
+                    }
                     if ((tile & 0x80U) != 0U)
                     {
                         unsigned door_index = tile & 0x7fU;
@@ -361,6 +429,17 @@ static int WG_RaycastWallsInternal(
                 tile = WG_LevelTile(level, map_x, map_y);
                 if (tile != 0U)
                 {
+                    if ((tile & 0xc0U) == 0xc0U)
+                    {
+                        y_intercept = y_tile * WG_FIXED_ONE;
+                        WG_RecordPushWallHit(
+                            level, tables, &hits[pixel], tile,
+                            WG_WALL_HORIZONTAL, map_x, map_y,
+                            x_tile_step, y_tile_step,
+                            x_intercept, y_intercept,
+                            view_x, view_y, view_cosine, view_sine);
+                        break;
+                    }
                     if ((tile & 0x80U) != 0U)
                     {
                         unsigned door_index = tile & 0x7fU;

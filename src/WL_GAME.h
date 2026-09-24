@@ -27,6 +27,7 @@ typedef struct wg_static_object
 {
     uint8_t tile_x;
     uint8_t tile_y;
+    uint8_t blocking;
     uint16_t shape;
 } wg_static_object_t;
 
@@ -66,6 +67,12 @@ typedef struct wg_level
     uint16_t player_health;
     uint16_t damage_count;
     uint8_t player_dead;
+    uint16_t secret_count;
+    uint16_t pushwall_state;
+    uint8_t pushwall_position;
+    uint8_t pushwall_x;
+    uint8_t pushwall_y;
+    uint8_t pushwall_direction;
     wg_door_t doors[WG_MAX_DOORS];
     uint8_t door_count;
     wg_static_object_t statics[WG_MAX_STATICS];

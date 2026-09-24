@@ -49,8 +49,8 @@ Hans, Gretel, Mecha-Hitler, and Hitler also retain their original hitscan burst
 states, and Dr. Schabbs throws moving, colliding syringe projectiles. The other
 two rocket bosses—Giftmacher and Fatface—now retain their throws, smoke trails,
 explosions, and projectile damage. Fake Hitler also retains his original
-eight-flame burst. Boss death transitions and pushwall motion are not yet
-active:
+eight-flame burst. Pushwall activation, movement, blocking, and moving-plane
+rendering are active. Boss death transitions are not yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -106,6 +106,13 @@ original eight-flame burst and renders their cumulative damage:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 28 --flame-view --frame-hash --dump-frame fake-flames.ppm
+```
+
+The pushwall diagnostic activates the first E1M1 secret and captures its wall
+plane halfway across the first tile:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pushwall-view --frame-hash --dump-frame moving-pushwall.ppm
 ```
 
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz

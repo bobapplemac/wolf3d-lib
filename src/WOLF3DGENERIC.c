@@ -9,6 +9,7 @@
 #include "WG_GRAPHICS.h"
 #include "ID_US_1.h"
 #include "WL_AGENT.h"
+#include "WL_ACT1.h"
 #include "WL_GAME.h"
 #include "WG_MAPS.h"
 #include "WG_PALETTE.h"
@@ -242,6 +243,64 @@ static int WG_SetActorViewPose(wg_level_t *level, const wg_actor_t *actor,
     return 0;
 }
 
+static int WG_SetPushWallView(wg_level_t *level)
+{
+    static const int direction_x[] = { 1, 0, -1, 0 };
+    static const int direction_y[] = { 0, -1, 0, 1 };
+    static const uint16_t angles[] = { 0U, 90U, 180U, 270U };
+    size_t index;
+
+    if (level == NULL)
+    {
+        return 0;
+    }
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        int wall_x;
+        int wall_y;
+        size_t direction;
+
+        if (level->info[index] != 98U)
+        {
+            continue;
+        }
+        wall_x = (int)(index % WG_LEVEL_SIZE);
+        wall_y = (int)(index / WG_LEVEL_SIZE);
+        for (direction = 0U; direction < 4U; ++direction)
+        {
+            int target_x = wall_x + direction_x[direction];
+            int target_y = wall_y + direction_y[direction];
+            int near_x = wall_x - direction_x[direction];
+            int near_y = wall_y - direction_y[direction];
+            int view_x = wall_x - direction_x[direction] * 2;
+            int view_y = wall_y - direction_y[direction] * 2;
+
+            if (target_x <= 0 || target_x + 1 >= WG_LEVEL_SIZE
+                || target_y <= 0 || target_y + 1 >= WG_LEVEL_SIZE
+                || view_x <= 0 || view_x + 1 >= WG_LEVEL_SIZE
+                || view_y <= 0 || view_y + 1 >= WG_LEVEL_SIZE
+                || level->tiles[(size_t)target_y * WG_LEVEL_SIZE
+                                + (size_t)target_x] != 0U
+                || level->tiles[(size_t)near_y * WG_LEVEL_SIZE
+                                + (size_t)near_x] != 0U
+                || level->tiles[(size_t)view_y * WG_LEVEL_SIZE
+                                + (size_t)view_x] != 0U)
+            {
+                continue;
+            }
+            level->player_tile_x = (uint8_t)view_x;
+            level->player_tile_y = (uint8_t)view_y;
+            level->player_x = view_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+            level->player_y = view_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+            level->player_angle = angles[direction];
+            return WL_PushWall(level, (uint8_t)wall_x, (uint8_t)wall_y,
+                               (uint8_t)(direction * 2U))
+                   && WL_MovePushWalls(level, 63U);
+        }
+    }
+    return 0;
+}
+
 static int WG_LoadTitleScreen(const char *data_path)
 {
     wg_graphics_t graphics;
@@ -287,6 +346,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int needle_view,
                                   int rocket_view,
                                   int flame_view,
+                                  int pushwall_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -329,6 +389,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         && !needle_view
         && !rocket_view
         && !flame_view
+        && !pushwall_view
         && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
@@ -538,6 +599,10 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             }
         }
     }
+    if (pushwall_view && !WG_SetPushWallView(&level))
+    {
+        goto cleanup;
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
@@ -627,7 +692,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--boss-fire-view"),
             WG_HasArgument(argc, argv, "--needle-view"),
             WG_HasArgument(argc, argv, "--rocket-view"),
-            WG_HasArgument(argc, argv, "--flame-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--flame-view"),
+            WG_HasArgument(argc, argv, "--pushwall-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

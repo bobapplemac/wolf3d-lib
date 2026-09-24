@@ -27,6 +27,7 @@ set(WG_CORE_SOURCES
     src/WG_PALETTE.c
     src/ID_US_1.c
     src/WL_AGENT.c
+    src/WL_ACT1.c
     src/WL_ACT2.c
     src/WL_STATE.c
     src/WL_DRAW.c
@@ -147,6 +148,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(bite-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "2391755b562c8744")
+        add_test(NAME pushwall-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --pushwall-view
+            --frame-hash)
+        set_tests_properties(pushwall-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "48bdacd231ece2d9")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -200,5 +206,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --flame-view --frame-hash)
         set_tests_properties(flame-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "ba572ca325d89701")
+        add_test(NAME pushwall-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --pushwall-view
+            --frame-hash)
+        set_tests_properties(pushwall-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "48bdacd231ece2d9")
     endif()
 endif()
