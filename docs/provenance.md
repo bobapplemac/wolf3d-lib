@@ -30,5 +30,11 @@ increment-before-lookup behavior follow original `US_InitRndT`/`US_RndT` in
 `ID_US_1.C`; Wolf4SDL's `id_us_1.cpp` was used to cross-check the portable byte
 index behavior.
 
+The fixed-point and view-table implementation follows original `BuildTables`,
+`CalcProjection`, and `FixedByFrac` in `WL_MAIN.C` and `WL_DRAW.C`. Wolf4SDL's
+corresponding routines were used to identify the safe cardinal-angle assignments
+and the conversion from the DOS assembly routine's sign-magnitude fraction to
+ordinary signed fixed-point values.
+
 Wolfenstein 3D data and executables are external test inputs. No game assets are
 part of this repository or covered by its license.

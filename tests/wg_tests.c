@@ -6,6 +6,7 @@
 #include "wg_assets.h"
 #include "wg_compression.h"
 #include "wg_data.h"
+#include "wg_fixed.h"
 #include "wg_font.h"
 #include "wg_graphics.h"
 #include "wg_level.h"
@@ -14,6 +15,7 @@
 #include "wg_palette.h"
 #include "wg_random.h"
 #include "wg_video.h"
+#include "wg_view.h"
 
 static int failures;
 
@@ -155,6 +157,39 @@ static void TestRandom(void)
     CHECK(WG_RandomNext(&random) == 109U);
     WG_RandomSeed(&random, 255U);
     CHECK(WG_RandomNext(&random) == 0U);
+}
+
+static void TestViewMath(void)
+{
+    wg_view_tables_t tables;
+    const int32_t *cosine;
+
+    memset(&tables, 0, sizeof(tables));
+    CHECK(WG_FixedMul(WG_FIXED_ONE, WG_FIXED_ONE / 2) ==
+          WG_FIXED_ONE / 2);
+    CHECK(WG_FixedMul(-WG_FIXED_ONE, WG_FIXED_ONE / 2) ==
+          -WG_FIXED_ONE / 2);
+    WG_ViewBuildTrigTables(&tables);
+    cosine = WG_ViewCosineTable(&tables);
+    CHECK(cosine != NULL);
+    CHECK(tables.sine[0] == 0);
+    CHECK(tables.sine[WG_ANGLE_QUADRANT] == WG_FIXED_ONE);
+    CHECK(tables.sine[2 * WG_ANGLE_QUADRANT] == 0);
+    CHECK(tables.sine[3 * WG_ANGLE_QUADRANT] == -WG_FIXED_ONE);
+    CHECK(cosine[0] == WG_FIXED_ONE);
+    CHECK(cosine[WG_ANGLE_QUADRANT] == 0);
+    CHECK(tables.fine_tangent[0] > 0);
+    CHECK(tables.fine_tangent[WG_FINE_ANGLES / 4 - 1] > WG_FIXED_ONE);
+    CHECK(WG_ViewCalculateProjection(&tables, WG_MAX_VIEW_WIDTH,
+                                     WG_FOCAL_LENGTH));
+    CHECK(tables.pixel_angle[159] == 0);
+    CHECK(tables.pixel_angle[160] == 0);
+    CHECK(tables.pixel_angle[0] == -tables.pixel_angle[319]);
+    CHECK(tables.scale == 218);
+    CHECK(tables.height_numerator == 223232);
+    CHECK(tables.min_height_divisor == 7);
+    CHECK(tables.max_slope > 0);
+    CHECK(!WG_ViewCalculateProjection(&tables, 319, WG_FOCAL_LENGTH));
 }
 
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
@@ -411,6 +446,7 @@ int main(int argc, char **argv)
     TestMalformedCompression();
     TestVideo();
     TestRandom();
+    TestViewMath();
 
     if (argc == 4 && strcmp(argv[1], "--data") == 0)
     {

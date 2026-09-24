@@ -58,6 +58,21 @@ The gameplay random generator is the original 256-byte lookup table and byte
 index progression rather than a host C library generator. Its state is held in
 an engine-owned object so tests and later demo playback can reset it exactly.
 
+## Renderer math
+
+The view layer retains the original 16.16 coordinate unit, 3,600 fine-angle
+tangent table, overlapping 360-degree sine/cosine table, focal length, minimum
+distance, and per-column ray-angle calculation. Table construction intentionally
+keeps the original single-precision angle accumulation and integer operation
+order. Negative trigonometric values use portable two's-complement integers;
+the DOS source's sign-magnitude encoding existed solely for its assembly
+`FixedByFrac` routine.
+
+The original sine-table loop writes one element beyond its declared array when
+it reaches 90 degrees. The portable loop stops before that iteration and assigns
+the two exact cardinal values explicitly, matching the modern ports without the
+out-of-bounds write.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a

@@ -18,6 +18,7 @@ add_library(wolf3dgeneric STATIC
     src/wg_compression.c
     src/wg_data.c
     src/wg_file.c
+    src/wg_fixed.c
     src/wg_font.c
     src/wg_graphics.c
     src/wg_level.c
@@ -26,6 +27,7 @@ add_library(wolf3dgeneric STATIC
     src/wg_palette.c
     src/wg_random.c
     src/wg_video.c
+    src/wg_view.c
     src/wolf3dgeneric.c
 )
 
@@ -35,6 +37,10 @@ target_include_directories(wolf3dgeneric
 )
 
 target_compile_features(wolf3dgeneric PUBLIC c_std_99)
+
+if(NOT MSVC)
+    target_link_libraries(wolf3dgeneric PUBLIC m)
+endif()
 
 if(MSVC)
     target_compile_options(wolf3dgeneric PRIVATE /W4 /permissive-)
