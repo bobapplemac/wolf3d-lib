@@ -14,6 +14,12 @@ struct id_sd_music
     id_sd_imf_t sequence;
     id_sd_sample_clock_t clock;
     uint32_t sample_rate;
+    const uint8_t *effect_data;
+    uint32_t effect_length;
+    uint32_t effect_position;
+    uint16_t effect_priority;
+    uint8_t effect_block;
+    uint8_t effect_divider;
 };
 
 int ID_SD_IMFStart(id_sd_imf_t *sequence, const uint8_t *chunk,
@@ -154,6 +160,96 @@ void ID_SD_MusicDestroy(id_sd_music_t *music)
     free(music);
 }
 
+static void ID_SD_EffectWriteInstrument(id_sd_music_t *music,
+                                        const uint8_t *instrument)
+{
+    static const uint16_t registers[10] =
+    {
+        0x20U, 0x23U, 0x40U, 0x43U, 0x60U,
+        0x63U, 0x80U, 0x83U, 0xe0U, 0xe3U
+    };
+    size_t index;
+
+    for (index = 0U; index < 10U; ++index)
+    {
+        OPL3_WriteRegBuffered(&music->chip, registers[index],
+                              instrument[index]);
+    }
+    /* The Wolf3D source deliberately uses zero rather than inst.nConn. */
+    OPL3_WriteRegBuffered(&music->chip, 0xc0U, 0U);
+}
+
+int ID_SD_EffectStart(id_sd_music_t *music, const uint8_t *chunk,
+                      size_t chunk_size)
+{
+    uint32_t length;
+    uint16_t priority;
+
+    if (music == NULL || chunk == NULL || chunk_size < 24U)
+    {
+        return 0;
+    }
+    length = WG_ReadLE32(chunk);
+    priority = WG_ReadLE16(chunk + 4U);
+    if (length == 0U || length > chunk_size - 23U
+        || (chunk[12U] == 0U && chunk[13U] == 0U)
+        || (music->effect_data != NULL
+            && priority < music->effect_priority))
+    {
+        return 0;
+    }
+    ID_SD_EffectStop(music);
+    music->effect_data = chunk + 23U;
+    music->effect_length = length;
+    music->effect_position = 0U;
+    music->effect_priority = priority;
+    music->effect_block = (uint8_t)(((chunk[22U] & 7U) << 2) | 0x20U);
+    ID_SD_EffectWriteInstrument(music, chunk + 6U);
+    return 1;
+}
+
+void ID_SD_EffectStop(id_sd_music_t *music)
+{
+    if (music == NULL)
+    {
+        return;
+    }
+    music->effect_data = NULL;
+    music->effect_length = 0U;
+    music->effect_position = 0U;
+    music->effect_priority = 0U;
+    OPL3_WriteRegBuffered(&music->chip, 0xb0U, 0U);
+}
+
+int ID_SD_EffectPlaying(const id_sd_music_t *music)
+{
+    return music != NULL && music->effect_data != NULL;
+}
+
+static void ID_SD_EffectService(id_sd_music_t *music)
+{
+    uint8_t sample;
+
+    if (music->effect_data == NULL)
+    {
+        return;
+    }
+    sample = music->effect_data[music->effect_position++];
+    if (sample == 0U)
+    {
+        OPL3_WriteRegBuffered(&music->chip, 0xb0U, 0U);
+    }
+    else
+    {
+        OPL3_WriteRegBuffered(&music->chip, 0xa0U, sample);
+        OPL3_WriteRegBuffered(&music->chip, 0xb0U, music->effect_block);
+    }
+    if (music->effect_position == music->effect_length)
+    {
+        ID_SD_EffectStop(music);
+    }
+}
+
 int ID_SD_MusicStart(id_sd_music_t *music, const uint8_t *chunk,
                      size_t chunk_size)
 {
@@ -162,7 +258,6 @@ int ID_SD_MusicStart(id_sd_music_t *music, const uint8_t *chunk,
         return 0;
     }
     ID_SD_MusicStop(music);
-    OPL3_Reset(&music->chip, music->sample_rate);
     if (!ID_SD_SampleClockStart(&music->clock, music->sample_rate)
         || !ID_SD_IMFStart(&music->sequence, chunk, chunk_size,
                            ID_SD_MusicWrite, music))
@@ -184,7 +279,7 @@ void ID_SD_MusicStop(id_sd_music_t *music)
     }
     ID_SD_IMFStop(&music->sequence);
     OPL3_WriteReg(&music->chip, 0xbdU, 0U);
-    for (channel = 0U; channel < 9U; ++channel)
+    for (channel = 1U; channel < 9U; ++channel)
     {
         OPL3_WriteReg(&music->chip, (uint16_t)(0xb0U + channel), 0U);
     }
@@ -215,6 +310,11 @@ int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
         while (ticks-- != 0U)
         {
             ID_SD_IMFService(&music->sequence);
+            if (++music->effect_divider == 5U)
+            {
+                music->effect_divider = 0U;
+                ID_SD_EffectService(music);
+            }
         }
     }
     return 1;

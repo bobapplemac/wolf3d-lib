@@ -14,6 +14,19 @@
 #define WG_NO_AREA 0xffU
 #define WG_MAX_DOORS 64
 #define WG_MAX_STATICS 400
+#define WG_MAX_SOUND_EVENTS 16
+
+typedef enum wg_sound
+{
+    WG_SOUND_NOWAY = 6,
+    WG_SOUND_ATTACK_GATLING = 11,
+    WG_SOUND_OPEN_DOOR = 18,
+    WG_SOUND_CLOSE_DOOR = 19,
+    WG_SOUND_ATTACK_KNIFE = 23,
+    WG_SOUND_ATTACK_PISTOL = 24,
+    WG_SOUND_ATTACK_MACHINEGUN = 26,
+    WG_SOUND_PUSHWALL = 46
+} wg_sound_t;
 
 typedef enum wg_difficulty
 {
@@ -122,6 +135,8 @@ typedef struct wg_level
     int32_t kill_x;
     int32_t kill_y;
     uint16_t secret_count;
+    uint8_t sound_events[WG_MAX_SOUND_EVENTS];
+    uint8_t sound_event_count;
     uint16_t pushwall_state;
     uint8_t pushwall_position;
     uint8_t pushwall_x;
@@ -139,5 +154,7 @@ typedef struct wg_level
 int WG_LevelBuild(const wg_map_t *map, wg_level_t *level);
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level);
+int WG_QueueSound(wg_level_t *level, wg_sound_t sound);
+void WG_ClearSoundEvents(wg_level_t *level);
 
 #endif

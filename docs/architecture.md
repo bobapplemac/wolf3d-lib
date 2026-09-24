@@ -268,3 +268,6 @@ therefore produces 700 services over 48,000 output frames without making the
 70 Hz gameplay loop run ten times faster. The generic layer submits signed
 48 kHz stereo PCM, while Win32 transports it through four reusable `waveOut`
 buffers and headless mode can emit the identical samples as a WAV fixture.
+AdLib effects share Nuked's channel 0 with the music chip, retain original
+priority replacement and instrument programming, and consume one pitch byte at
+140 Hz (every fifth IMF service), just as the fast DOS timer ISR did.

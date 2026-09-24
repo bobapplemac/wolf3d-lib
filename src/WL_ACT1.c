@@ -103,6 +103,7 @@ int WL_CloseDoor(struct wg_level *level, size_t door_index)
     {
         return 0;
     }
+    (void)WG_QueueSound(level, WG_SOUND_CLOSE_DOOR);
     door->action = WG_DOOR_CLOSING;
     return 1;
 }
@@ -120,6 +121,7 @@ int WL_OperateDoor(struct wg_level *level, size_t door_index)
         && (level->player_keys
             & (1U << (door->lock - WG_DOOR_LOCK_1))) == 0U)
     {
+        (void)WG_QueueSound(level, WG_SOUND_NOWAY);
         return 0;
     }
     if (door->action == WG_DOOR_CLOSED
@@ -159,6 +161,10 @@ int WL_MoveDoors(struct wg_level *level, unsigned tics)
         }
         else if (door->action == WG_DOOR_OPENING)
         {
+            if (door->position == 0U)
+            {
+                (void)WG_QueueSound(level, WG_SOUND_OPEN_DOOR);
+            }
             if (tics >= 64U
                 || (uint32_t)door->position + ((uint32_t)tics << 10)
                        >= 0xffffU)
@@ -289,6 +295,7 @@ int WL_PushWall(struct wg_level *level, uint8_t tile_x, uint8_t tile_y,
     destination_y = (int)tile_y + delta_y;
     if (WL_PushWallSpotBlocked(level, destination_x, destination_y))
     {
+        (void)WG_QueueSound(level, WG_SOUND_NOWAY);
         return 0;
     }
     destination = (size_t)destination_y * WG_LEVEL_SIZE
@@ -302,6 +309,7 @@ int WL_PushWall(struct wg_level *level, uint8_t tile_x, uint8_t tile_y,
     level->pushwall_position = 0U;
     level->tiles[source] = (uint8_t)(old_tile | 0xc0U);
     level->info[source] = 0U;
+    (void)WG_QueueSound(level, WG_SOUND_PUSHWALL);
     return 1;
 }
 

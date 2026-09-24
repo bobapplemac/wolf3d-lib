@@ -60,6 +60,9 @@ standard 16-bit stereo WAV without opening an audio device:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --dump-music e1m1.wav
 ```
 
+Add `--sound N` to start one of the original zero-based AdLib effects in that
+render; for example, `--sound 24` mixes the pistol with E1M1's music.
+
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status
 bar. Patrol movement, actor awareness, ordinary enemy chase movement, and the

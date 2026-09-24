@@ -66,11 +66,27 @@ static void TestIMFSequencer(void)
         0x40U, 0x02U, 0U, 0U,
         0x60U, 0x03U, 1U, 0U
     };
+    static const uint8_t effect_chunk[] =
+    {
+        3U, 0U, 0U, 0U, 5U, 0U,
+        1U, 1U, 2U, 2U, 3U, 3U, 4U, 4U,
+        5U, 5U, 0U, 0U, 0U, 0U, 0U, 0U,
+        2U, 0x80U, 0U, 0x90U
+    };
+    static const uint8_t low_priority_effect[] =
+    {
+        1U, 0U, 0U, 0U, 4U, 0U,
+        1U, 1U, 2U, 2U, 3U, 3U, 4U, 4U,
+        5U, 5U, 0U, 0U, 0U, 0U, 0U, 0U,
+        2U, 0x80U
+    };
     id_sd_imf_t sequence;
     id_sd_sample_clock_t clock;
     opl_write_log_t log;
     unsigned index;
     uint32_t ticks = 0U;
+    id_sd_music_t *music;
+    int16_t effect_pcm[1200U * 2U];
 
     CHECK(WL_MusicChunkForMap(0U) == 264U);
     CHECK(WL_MusicChunkForMap(8U) == 263U);
@@ -113,6 +129,19 @@ static void TestIMFSequencer(void)
     CHECK(ID_SD_SampleClockFramesToTick(&clock) == 63U);
     CHECK(ID_SD_SampleClockAdvance(&clock, 63U) == 1U);
     CHECK(clock.phase == 0U);
+
+    music = ID_SD_MusicCreate(48000U);
+    CHECK(music != NULL);
+    if (music != NULL)
+    {
+        CHECK(ID_SD_EffectStart(music, effect_chunk, sizeof(effect_chunk)));
+        CHECK(ID_SD_EffectPlaying(music));
+        CHECK(!ID_SD_EffectStart(music, low_priority_effect,
+                                 sizeof(low_priority_effect)));
+        CHECK(ID_SD_MusicRender(music, effect_pcm, 1200U));
+        CHECK(!ID_SD_EffectPlaying(music));
+        ID_SD_MusicDestroy(music);
+    }
 }
 
 static size_t ActorClassCount(const wg_level_t *level,
@@ -1366,6 +1395,7 @@ static void TestPlayerWeapons(void)
     level.player_y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
     level.player_tile_x = 10U;
     level.player_tile_y = 10U;
+    level.player_weapon = WG_WEAPON_PISTOL;
     CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
     actor = &level.actors[0];
     actor->flags |= WG_ACTOR_FLAG_VISIBLE;
@@ -1373,6 +1403,8 @@ static void TestPlayerWeapons(void)
     actor->trans_x = WG_FIXED_ONE;
     WG_RandomSeed(&level.random, 1U);
     CHECK(WL_GunAttack(&level));
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0] == WG_SOUND_ATTACK_PISTOL);
     CHECK(level.made_noise == 1U);
     CHECK(actor->state == WG_STATE_DIE1);
     CHECK(level.score == 100U);
@@ -1699,6 +1731,9 @@ static void TestPlayerMovementAndUse(void)
     CHECK(WL_CmdUse(&level));
     CHECK(level.doors[0].action == WG_DOOR_OPENING);
     CHECK(WL_MoveDoors(&level, 32U));
+    CHECK(level.sound_event_count == 2U);
+    CHECK(level.sound_events[0] == WG_SOUND_NOWAY);
+    CHECK(level.sound_events[1] == WG_SOUND_OPEN_DOOR);
     CHECK(level.doors[0].position == 32768U);
     CHECK(!WL_TryMove(&level, 11 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
                       level.player_y));
@@ -1714,6 +1749,8 @@ static void TestPlayerMovementAndUse(void)
     level.player_tile_x = 8U;
     CHECK(WL_MoveDoors(&level, 300U));
     CHECK(level.doors[0].action == WG_DOOR_CLOSING);
+    CHECK(level.sound_event_count == 3U);
+    CHECK(level.sound_events[2] == WG_SOUND_CLOSE_DOOR);
     CHECK(WL_MoveDoors(&level, 64U));
     CHECK(level.doors[0].position == 0U);
     CHECK(level.doors[0].action == WG_DOOR_CLOSED);
@@ -2677,11 +2714,16 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         opl_write_log_t log;
         int16_t *music_pcm;
         uint64_t music_hash = 1469598103934665603ULL;
+        uint64_t mixed_hash = 1469598103934665603ULL;
+        const uint8_t *music_data;
+        size_t music_size;
         size_t music_count = 0U;
 
         CHECK(audio.offset_count == 289U);
         CHECK(WG_AudioGetChunk(&audio, 261U, &page_data, &page_size));
         CHECK(page_size > 2U);
+        music_data = page_data;
+        music_size = page_size;
         music_player = ID_SD_MusicCreate(48000U);
         music_pcm = (int16_t *)malloc(48000U * 2U * sizeof(*music_pcm));
         CHECK(music_player != NULL && music_pcm != NULL);
@@ -2701,6 +2743,29 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)music_hash);
             CHECK(music_hash == 0x201858e57f147650ULL);
+            ID_SD_MusicDestroy(music_player);
+            music_player = ID_SD_MusicCreate(48000U);
+            CHECK(music_player != NULL);
+            CHECK(ID_SD_MusicStart(music_player, music_data, music_size));
+            CHECK(WG_AudioGetChunk(&audio, 111U, &page_data, &page_size));
+            CHECK(ID_SD_EffectStart(music_player, page_data, page_size));
+            CHECK(ID_SD_MusicRender(music_player, music_pcm, 4800U));
+            for (index = 0U;
+                 index < 4800U * 2U * sizeof(*music_pcm); ++index)
+            {
+                mixed_hash ^= pcm_bytes[index];
+                mixed_hash *= 1099511628211ULL;
+            }
+            printf("%s music plus pistol FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)mixed_hash);
+            CHECK(mixed_hash == 0xbebd8fbdef66d214ULL);
+            for (index = 87U; index < 174U; ++index)
+            {
+                CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));
+                ID_SD_EffectStop(music_player);
+                CHECK(ID_SD_EffectStart(music_player, page_data, page_size));
+            }
         }
         free(music_pcm);
         ID_SD_MusicDestroy(music_player);

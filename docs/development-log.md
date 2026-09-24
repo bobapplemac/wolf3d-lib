@@ -555,3 +555,30 @@ Regenerate it with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --dump-music out\e1m1-nuked-opl3.wav
 ```
+
+## 2026-09-24: AdLib effects in the live mixer
+
+- Ported `SDL_AlSetFXInst`, `SDL_ALPlaySound`, and `SDL_ALSoundService` behavior
+  into the portable `ID_SD.c` owner: channel-0 operator programming, block/key
+  state, zero-pitch key-off, stream completion, and sound priority are retained.
+- Effects advance at the original 140 Hz—every fifth 700 Hz audio service—and
+  share the same Nuked chip and PCM stream as IMF music.
+- Added a bounded per-level sound event queue. Player weapon frames, opening
+  and closing doors, locked doors, and pushwalls now emit their original sound
+  numbers; the runtime resolves their AUDIO chunks into the priority mixer.
+- Reduced Win32 transport blocks to 512 frames, bounding queued device latency
+  to roughly 43 ms while retaining four reusable buffers.
+- Validated all 87 AdLib effect chunks in both supplied editions, lower-priority
+  rejection, service completion, and deterministic music/effect synthesis.
+- The first 0.1 seconds of E1M1 music plus the pistol has PCM FNV-1a
+  `bebd8fbdef66d214` in both editions.
+- The ten-second mixed WAV has SHA-256
+  `ebe613d9a705ab31add505e3bf581646ed9ed71ea4ac5951179d9983efb701fd`.
+
+![E1M1 music with the original AdLib pistol effect](../out/e1m1-pistol-opl.wav)
+
+Regenerate it with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --dump-music out\e1m1-pistol-opl.wav
+```

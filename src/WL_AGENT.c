@@ -744,6 +744,7 @@ int WL_KnifeAttack(struct wg_level *level)
     {
         return 0;
     }
+    (void)WG_QueueSound(level, WG_SOUND_ATTACK_KNIFE);
     if (WL_PlayerAttackTarget(level, &target_index, 1))
     {
         (void)WL_DamageActor(level, target_index,
@@ -764,6 +765,18 @@ int WL_GunAttack(struct wg_level *level)
     if (level == NULL)
     {
         return 0;
+    }
+    if (level->player_weapon == WG_WEAPON_PISTOL)
+    {
+        (void)WG_QueueSound(level, WG_SOUND_ATTACK_PISTOL);
+    }
+    else if (level->player_weapon == WG_WEAPON_MACHINEGUN)
+    {
+        (void)WG_QueueSound(level, WG_SOUND_ATTACK_MACHINEGUN);
+    }
+    else if (level->player_weapon == WG_WEAPON_CHAINGUN)
+    {
+        (void)WG_QueueSound(level, WG_SOUND_ATTACK_GATLING);
     }
     level->made_noise = 1U;
     if (!WL_PlayerAttackTarget(level, &target_index, 0))

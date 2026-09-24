@@ -651,9 +651,29 @@ static void WG_GameSessionInput(wl_input_t *input)
 static int WG_GameSessionTick(void)
 {
     wl_input_t input;
+    size_t sound;
 
     WG_GameSessionInput(&input);
-    return WL_PlayTick(&wg_game.level, &wg_game.view, &wg_game.play, &input);
+    if (!WL_PlayTick(&wg_game.level, &wg_game.view, &wg_game.play, &input))
+    {
+        return 0;
+    }
+    if (wg_game.audio_active)
+    {
+        for (sound = 0U; sound < wg_game.level.sound_event_count; ++sound)
+        {
+            const uint8_t *data;
+            size_t size;
+            size_t chunk = 87U + wg_game.level.sound_events[sound];
+
+            if (WG_AudioGetChunk(&wg_game.audio, chunk, &data, &size))
+            {
+                (void)ID_SD_EffectStart(wg_game.music, data, size);
+            }
+        }
+    }
+    WG_ClearSoundEvents(&wg_game.level);
+    return 1;
 }
 
 static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,

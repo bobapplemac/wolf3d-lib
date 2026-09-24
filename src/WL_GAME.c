@@ -437,3 +437,22 @@ int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
 {
     return WG_LevelBuildForDifficulty(map, WG_DIFFICULTY_MEDIUM, level);
 }
+
+int WG_QueueSound(wg_level_t *level, wg_sound_t sound)
+{
+    if (level == NULL || level->sound_event_count >= WG_MAX_SOUND_EVENTS
+        || sound < 0 || sound > UINT8_MAX)
+    {
+        return 0;
+    }
+    level->sound_events[level->sound_event_count++] = (uint8_t)sound;
+    return 1;
+}
+
+void WG_ClearSoundEvents(wg_level_t *level)
+{
+    if (level != NULL)
+    {
+        level->sound_event_count = 0U;
+    }
+}

@@ -16,7 +16,7 @@ static LARGE_INTEGER wg_counter_start;
 static int wg_quit_pending;
 
 #define WG_PCM_BUFFER_COUNT 4U
-#define WG_PCM_BUFFER_FRAMES 1024U
+#define WG_PCM_BUFFER_FRAMES 512U
 static HWAVEOUT wg_wave_out;
 static WAVEHDR wg_wave_headers[WG_PCM_BUFFER_COUNT];
 static int16_t wg_wave_samples[WG_PCM_BUFFER_COUNT]

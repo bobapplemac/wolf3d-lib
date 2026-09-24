@@ -59,7 +59,7 @@ static void WG_WriteLE32(FILE *stream, uint32_t value)
 }
 
 static int WG_WriteMusic(const char *data_path, unsigned map_number,
-                         const char *output_path)
+                         int sound_number, const char *output_path)
 {
     enum { sample_rate = 48000, seconds = 10, block_frames = 1024 };
     wg_data_set_t data_set;
@@ -87,6 +87,16 @@ static int WG_WriteMusic(const char *data_path, unsigned map_number,
     if (music == NULL || !ID_SD_MusicStart(music, chunk, chunk_size))
     {
         goto cleanup;
+    }
+    if (sound_number >= 0)
+    {
+        if (sound_number > 86
+            || !WG_AudioGetChunk(&audio, 87U + (size_t)sound_number,
+                                 &chunk, &chunk_size)
+            || !ID_SD_EffectStart(music, chunk, chunk_size))
+        {
+            goto cleanup;
+        }
     }
 #ifdef _MSC_VER
     if (fopen_s(&stream, output_path, "wb") != 0)
@@ -220,16 +230,23 @@ int main(int argc, char **argv)
     const char *music_path;
     const char *data_path;
     const char *map_text;
+    const char *sound_text;
     unsigned map_number = 0U;
+    int sound_number = -1;
 
     bootstrap_test = argc == 2 && strcmp(argv[1], "--bootstrap-test") == 0;
     dump_path = WG_DumpPath(argc, argv);
     music_path = WG_ArgumentValue(argc, argv, "--dump-music");
     data_path = WG_ArgumentValue(argc, argv, "--data");
     map_text = WG_ArgumentValue(argc, argv, "--map");
+    sound_text = WG_ArgumentValue(argc, argv, "--sound");
     if (map_text != NULL)
     {
         map_number = (unsigned)strtoul(map_text, NULL, 10);
+    }
+    if (sound_text != NULL)
+    {
+        sound_number = (int)strtol(sound_text, NULL, 10);
     }
     result = wolf3dgeneric_Create(argc, argv);
     if (result != WG_RESULT_OK)
@@ -251,7 +268,8 @@ int main(int argc, char **argv)
     }
     if (music_path != NULL
         && (data_path == NULL
-            || !WG_WriteMusic(data_path, map_number, music_path)))
+            || !WG_WriteMusic(data_path, map_number, sound_number,
+                              music_path)))
     {
         fprintf(stderr, "Unable to write music dump: %s\n", music_path);
         wolf3dgeneric_Shutdown();
