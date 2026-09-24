@@ -128,9 +128,12 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --bos
 - Scope: original randomized initial state phase, six-state walk animation,
   `T_Path` distance consumption, `SelectPathDir` map arrows, tile-center
   snapping, class speeds, collision checks, and closed-door waiting.
-- The diagnostic advances all actors by 128 original 70 Hz tics, opens doors to
-  keep the selected E1M1 patrol visible, and chooses a clear viewing pose.
-- 320x200 indexed-frame FNV-1a: `b2d1e5360eae2135`
+- The corrected diagnostic advances all actors by 127 original 70 Hz tics,
+  landing on a state with a `T_Path` thinker, opens doors to keep the selected
+  E1M1 patrol visible, and chooses a clear viewing pose.
+- Corrected the first implementation so the short `path1s` and `path3s` states
+  no longer move; the original state table assigns them no thinker.
+- 320x200 indexed-frame FNV-1a: `0460cc1c73d44f60`
 - Identical result with the supplied WL1 and WL6 data sets.
 
 ![E1M1 guard following his original patrol path](../out/moving-patrol.png)
@@ -138,7 +141,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --bos
 Regenerate the capture with:
 
 ```text
-wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --patrol-view --actor-tics 128 --frame-hash --dump-frame out\moving-patrol.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --patrol-view --actor-tics 127 --frame-hash --dump-frame out\moving-patrol.ppm
 ```
 
 ## 2026-09-23: Area connectivity and first sighting
@@ -151,8 +154,8 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors 
   ambush setup, deterministic random delay, and the guard's first chase frame.
 - The diagnostic uses the established E1M1 guard pose and advances awareness in
   two calls: one detection tic followed by enough tics for the original maximum
-  reaction delay. Chase direction selection and attacks are intentionally not
-  active yet.
+  reaction delay. At this checkpoint, chase direction selection and attacks
+  intentionally remained inactive.
 - 320x200 indexed-frame FNV-1a: `63df8fa451a6ba6b`
 - Identical result with the supplied WL1 and WL6 data sets.
 
@@ -162,4 +165,29 @@ Regenerate the capture with:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --alert-view --frame-hash --dump-frame out\alerted-guard.ppm
+```
+
+## 2026-09-23: Guard chase movement
+
+- Scope: original six-state chase animation, `SelectChaseDir`,
+  `SelectDodgeDir`, destination reservation, collision fallback ordering,
+  closed-door waiting, tile-center correction, and `MINACTORDIST` player
+  separation.
+- The ranged attack probability consumes the original random value. A selected
+  attack is held as an explicit pending state until the next combat slice adds
+  each class's original shooting sequence and damage action.
+- Focused tests cover deterministic first-attack diagonal dodging, chase
+  animation pauses, rotated chase shapes, attack selection, and waiting at and
+  crossing a door.
+- The diagnostic advances the alerted E1M1 guard by nine original 70 Hz tics,
+  short enough for the seeded attack roll to fail and expose chase movement.
+- 320x200 indexed-frame FNV-1a: `8485e203e6d30079`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 guard beginning his chase](../out/chasing-guard.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --chase-view --actor-tics 9 --frame-hash --dump-frame out\chasing-guard.ppm
 ```

@@ -86,8 +86,10 @@ randomized initial tic phase, six-state `20/5/15/20/5/15` animation cycle,
 class-specific speed, destination-tile reservation, tile-center snapping, and
 direction arrows stored in map plane 1. Cardinal and diagonal wall/actor checks
 preserve the distinction between ordinary actors and dogs, and actors stop at
-closed doors until the door reaches its fully open position. Chase movement,
-combat states, and player/actor contact remain subsequent slices.
+closed doors until the door reaches its fully open position. Combat states,
+dog/special-boss movement, and player/actor contact remain subsequent slices. As in
+`DoActor`, only path states with a `T_Path` thinker move; the short `path1s` and
+`path3s` states update animation time without movement.
 
 The awareness slice retains all 37 original area numbers separately from the
 collision byte map. An ambush marker (plane-0 tile 106) is cleared and assigned
@@ -97,8 +99,17 @@ connected to the player. `CheckLine` retains the original 1/256-tile two-axis
 trace and door-position test, while `CheckSight`, `SightPlayer`, and
 `FirstSighting` retain close-range detection, cardinal facing checks, ambush and
 noise rules, class-specific randomized reaction delays, chase speeds, and the
-first chase frame. Chase direction selection and attacks remain the next actor
-slice.
+first chase frame.
+
+The first chase slice adds the original six-state `10/3/8/10/3/8` animation,
+`SelectChaseDir`, `SelectDodgeDir`, `TryWalk` destination reservation, and the
+movement portion of `T_Chase` for guards, officers, mutants, SS, Hans, Gretel,
+Mecha Hitler, and Hitler. It retains first-attack turnaround permission, random
+dodge ordering, cardinal/diagonal collision rules, closed-door waiting,
+tile-center correction, and `MINACTORDIST` player separation. The ranged-attack
+probability consumes the original random value and records an attack-pending
+state; class-specific shooting states, damage, dog bites, and special boss
+thinkers remain the next slice.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
@@ -155,8 +166,9 @@ visible-object list; live actors use the original larger `ACTORSIZE` projection
 adjustment and select one of eight rotations with `CalcRotate`. Patrol state
 updates now feed this same rendering path; awareness and combat AI, boss special
 behavior, and moving pushwalls are still being added. The isolated
-`--alert-view` diagnostic also advances the selected guard through awareness and
-its reaction delay, without enabling incomplete chase logic in normal captures.
+`--alert-view` diagnostic advances the selected guard through awareness and its
+reaction delay. `--chase-view` then advances the original chase animation and
+movement without enabling incomplete combat logic in normal captures.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

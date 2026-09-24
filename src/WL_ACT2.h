@@ -8,6 +8,7 @@
 #define WG_ACTOR_FLAG_SHOOTABLE 0x0001U
 #define WG_ACTOR_FLAG_ATTACK_MODE 0x0002U
 #define WG_ACTOR_FLAG_FIRST_ATTACK 0x0004U
+#define WG_ACTOR_FLAG_ATTACK_PENDING 0x0008U
 #define WG_ACTOR_FLAG_AMBUSH 0x0040U
 
 typedef enum wg_actor_class
@@ -48,7 +49,13 @@ typedef enum wg_actor_state
     WG_STATE_PATH3S,
     WG_STATE_PATH4,
     WG_STATE_GHOST1,
-    WG_STATE_CHASE1
+    WG_STATE_CHASE1,
+    WG_STATE_CHASE1S,
+    WG_STATE_CHASE2,
+    WG_STATE_CHASE3,
+    WG_STATE_CHASE3S,
+    WG_STATE_CHASE4,
+    WG_STATE_ATTACK_PENDING
 } wg_actor_state_t;
 
 typedef struct wg_actor

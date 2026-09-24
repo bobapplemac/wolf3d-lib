@@ -191,6 +191,8 @@ static int WG_SetActorViewPose(wg_level_t *level, const wg_actor_t *actor)
             level->player_x = actor->x + offsets_x[direction] * WG_FIXED_ONE;
             level->player_y = actor->y + offsets_y[direction] * WG_FIXED_ONE;
             level->player_angle = angles[direction];
+            level->player_tile_x = (uint8_t)(level->player_x / WG_FIXED_ONE);
+            level->player_tile_y = (uint8_t)(level->player_y / WG_FIXED_ONE);
             return 1;
         }
     }
@@ -237,7 +239,7 @@ static int WG_LoadTitleScreen(const char *data_path)
 static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int guard_view, int boss_view,
                                   int patrol_view, int alert_view,
-                                  unsigned actor_tics)
+                                  int chase_view, unsigned actor_tics)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -275,11 +277,11 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             level.doors[door].position = 0xffffU;
         }
     }
-    if (!WL_TickActors(&level, actor_tics))
+    if (!chase_view && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
     }
-    if (guard_view || alert_view)
+    if (guard_view || alert_view || chase_view)
     {
         const wg_actor_t *actor = WG_FindGuardViewActor(&level);
         size_t player_tile;
@@ -291,6 +293,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         level.player_x = actor->x - 3 * WG_FIXED_ONE;
         level.player_y = actor->y;
         level.player_angle = 0U;
+        level.player_tile_x = (uint8_t)(level.player_x / WG_FIXED_ONE);
+        level.player_tile_y = (uint8_t)(level.player_y / WG_FIXED_ONE);
         player_tile = (size_t)actor->tile_y * WG_LEVEL_SIZE
                       + actor->tile_x - 3U;
         if (level.tiles[player_tile] != 0U)
@@ -316,9 +320,13 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
-    if (alert_view
+    if ((alert_view || chase_view)
         && (!WL_TickAwareness(&level, 1U, 0)
             || !WL_TickAwareness(&level, 64U, 0)))
+    {
+        goto cleanup;
+    }
+    if (chase_view && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
     }
@@ -403,7 +411,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--guard-view"),
             WG_HasArgument(argc, argv, "--boss-view"),
             WG_HasArgument(argc, argv, "--patrol-view"),
-            WG_HasArgument(argc, argv, "--alert-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--alert-view"),
+            WG_HasArgument(argc, argv, "--chase-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

@@ -43,9 +43,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
 
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status
-bar. Patrol movement and the original actor-awareness transition are active in
-the current diagnostic slice; chase movement, combat behavior, and pushwall
-motion are not yet active:
+bar. Patrol movement, the actor-awareness transition, and the first ordinary
+enemy chase slice are active; combat actions, special chase thinkers, and
+pushwall motion are not yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -79,7 +79,7 @@ To advance E1M1's patrol actors by a deterministic number of original 70 Hz
 tics and frame the first patrol, use:
 
 ```text
-wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --patrol-view --actor-tics 128 --dump-frame patrol.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --patrol-view --actor-tics 127 --dump-frame patrol.ppm
 ```
 
 The `--alert-view` diagnostic places the player in front of an E1M1 guard and
@@ -88,6 +88,17 @@ state:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --alert-view --frame-hash --dump-frame alerted.ppm
+```
+
+To continue that guard through nine tics of the original chase thinker and
+six-state chase animation, use `--chase-view`. The current chase checkpoint
+selects directions, dodges, reserves destination tiles, waits at closed doors,
+and moves while preserving the minimum player distance. Attack decisions are
+recorded but their class-specific attack states are the next implementation
+slice.
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --chase-view --actor-tics 9 --frame-hash --dump-frame chase.ppm
 ```
 
 ## License

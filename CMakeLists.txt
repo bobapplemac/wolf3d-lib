@@ -119,14 +119,19 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             PASS_REGULAR_EXPRESSION "a38a57b87c979508")
         add_test(NAME patrol-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --open-doors
-            --patrol-view --actor-tics 128 --frame-hash)
+            --patrol-view --actor-tics 127 --frame-hash)
         set_tests_properties(patrol-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "b2d1e5360eae2135")
+            PASS_REGULAR_EXPRESSION "0460cc1c73d44f60")
         add_test(NAME alert-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --alert-view
             --frame-hash)
         set_tests_properties(alert-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "63df8fa451a6ba6b")
+        add_test(NAME chase-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --chase-view
+            --actor-tics 9 --frame-hash)
+        set_tests_properties(chase-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "8485e203e6d30079")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -137,13 +142,18 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             PASS_REGULAR_EXPRESSION "a38a57b87c979508")
         add_test(NAME patrol-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --open-doors
-            --patrol-view --actor-tics 128 --frame-hash)
+            --patrol-view --actor-tics 127 --frame-hash)
         set_tests_properties(patrol-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "b2d1e5360eae2135")
+            PASS_REGULAR_EXPRESSION "0460cc1c73d44f60")
         add_test(NAME alert-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --alert-view
             --frame-hash)
         set_tests_properties(alert-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "63df8fa451a6ba6b")
+        add_test(NAME chase-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --chase-view
+            --actor-tics 9 --frame-hash)
+        set_tests_properties(chase-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "8485e203e6d30079")
     endif()
 endif()

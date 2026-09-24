@@ -231,16 +231,23 @@ static void TestPatrolMovement(void)
     CHECK(actor->state == WG_STATE_PATH3S);
     CHECK(actor->tic_count == 5);
     CHECK(actor->shape == 74U);
-    CHECK(actor->x == 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(actor->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
     CHECK(actor->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
-    CHECK(actor->direction == 6U);
+    CHECK(actor->direction == 0U);
     CHECK(actor->tile_x == 3U);
-    CHECK(actor->tile_y == 3U);
+    CHECK(actor->tile_y == 2U);
     CHECK(actor->distance == WG_FIXED_ONE);
     CHECK(WL_TickActors(&level, 1U));
-    CHECK(actor->x == 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
-    CHECK(actor->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 512);
-    CHECK(actor->distance == WG_FIXED_ONE - 512);
+    CHECK(actor->tic_count == 4);
+    CHECK(actor->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(actor->distance == WG_FIXED_ONE);
+    CHECK(WL_TickActors(&level, 4U));
+    CHECK(actor->state == WG_STATE_PATH4);
+    CHECK(actor->tic_count == 15);
+    CHECK(actor->shape == 82U);
+    CHECK(actor->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 2048);
+    CHECK(actor->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(actor->distance == WG_FIXED_ONE - 2048);
 }
 
 static void TestActorAwareness(void)
@@ -290,6 +297,35 @@ static void TestActorAwareness(void)
     CHECK(actor->speed == 1536);
     CHECK((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) != 0U);
     CHECK((actor->flags & WG_ACTOR_FLAG_FIRST_ATTACK) != 0U);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(actor->state == WG_STATE_CHASE1);
+    CHECK(actor->tic_count == 9);
+    CHECK(actor->direction == 1U);
+    CHECK(actor->tile_x == 3U);
+    CHECK(actor->tile_y == 1U);
+    CHECK(actor->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 1536);
+    CHECK(actor->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 1536);
+    CHECK((actor->flags & WG_ACTOR_FLAG_FIRST_ATTACK) == 0U);
+    CHECK(WL_TickActors(&level, 9U));
+    CHECK(actor->state == WG_STATE_CHASE1S);
+    CHECK(actor->tic_count == 3);
+    CHECK(actor->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 1536);
+    CHECK(actor->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 1536);
+    CHECK(WL_TickActors(&level, 3U));
+    CHECK(actor->state == WG_STATE_CHASE2);
+    CHECK(actor->tic_count == 8);
+    CHECK(actor->shape == 66U);
+    CHECK(actor->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 6144);
+    CHECK(actor->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 6144);
+    actor->tile_x = level.player_tile_x;
+    actor->tile_y = level.player_tile_y;
+    actor->distance = 0;
+    actor->state = WG_STATE_CHASE1;
+    actor->tic_count = 10;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(actor->state == WG_STATE_ATTACK_PENDING);
+    CHECK(actor->tic_count == 0);
+    CHECK((actor->flags & WG_ACTOR_FLAG_ATTACK_PENDING) != 0U);
 
     plane_one[2U * WG_LEVEL_SIZE + 2U] = 180U;
     CHECK(WG_LevelBuild(&map, &level));
@@ -336,7 +372,7 @@ static void TestDoorAreaConnectivity(void)
     }
     plane_zero[2U * WG_LEVEL_SIZE + 3U] = 90U;
     plane_one[2U * WG_LEVEL_SIZE + 1U] = 19U;
-    plane_one[2U * WG_LEVEL_SIZE + 5U] = 110U;
+    plane_one[2U * WG_LEVEL_SIZE + 4U] = 110U;
     map.width = WG_LEVEL_SIZE;
     map.height = WG_LEVEL_SIZE;
     map.planes[0] = plane_zero;
@@ -348,11 +384,24 @@ static void TestDoorAreaConnectivity(void)
     CHECK(level.area_by_player[0] != 0U);
     CHECK(level.area_by_player[1] == 0U);
     CHECK(!WL_CheckLine(&level, &level.actors[0]));
+    level.actors[0].state = WG_STATE_CHASE1;
+    level.actors[0].tic_count = 10;
+    level.actors[0].flags |= WG_ACTOR_FLAG_ATTACK_MODE;
+    level.actors[0].distance = 0;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actors[0].tile_x == 3U);
+    CHECK(level.actors[0].tile_y == 2U);
+    CHECK(level.actors[0].distance == -1);
+    CHECK(level.actors[0].x == 4 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
     level.doors[0].position = 0xffffU;
     CHECK(WL_UpdateAreaConnectivity(&level));
     CHECK(level.area_by_player[1] != 0U);
     CHECK(WL_CheckLine(&level, &level.actors[0]));
     CHECK(WL_CheckSight(&level, &level.actors[0]));
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actors[0].distance == WG_FIXED_ONE - 512);
+    CHECK(level.actors[0].x
+          == 4 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 512);
 }
 
 static void TestHuffman(void)
