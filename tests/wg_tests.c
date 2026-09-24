@@ -5,10 +5,12 @@
 #include "wg_audio.h"
 #include "wg_compression.h"
 #include "wg_data.h"
+#include "wg_font.h"
 #include "wg_graphics.h"
 #include "wg_maps.h"
 #include "wg_pages.h"
 #include "wg_palette.h"
+#include "wg_video.h"
 
 static int failures;
 
@@ -89,11 +91,64 @@ static void TestMalformedCompression(void)
                          sizeof(word_output) / sizeof(word_output[0]), 0xabcd));
 }
 
+static void TestVideo(void)
+{
+    uint8_t source[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT];
+    uint8_t destination[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT];
+    uint8_t small[] = { 1, 2, 3, 4, 5, 6 };
+    uint8_t black[256 * 3];
+    uint8_t faded[256 * 3];
+    uint8_t converted[256 * 3];
+    wg_fizzle_t fizzle;
+    size_t index;
+    unsigned iterations = 0;
+
+    WG_VideoClear(destination, 7);
+    CHECK(destination[0] == 7);
+    CHECK(destination[sizeof(destination) - 1U] == 7);
+    WG_VideoBar(destination, -2, -1, 4, 3, 9);
+    CHECK(destination[0] == 9);
+    CHECK(destination[1] == 9);
+    CHECK(destination[WG_VIDEO_WIDTH] == 9);
+    CHECK(destination[WG_VIDEO_WIDTH + 1U] == 9);
+    WG_VideoPlot(destination, WG_VIDEO_WIDTH, 0, 3);
+    CHECK(destination[WG_VIDEO_WIDTH - 1U] == 7);
+
+    WG_VideoClear(destination, 0);
+    WG_VideoBlit(destination, -1, 1, small, 3, 2);
+    CHECK(destination[WG_VIDEO_WIDTH] == 2);
+    CHECK(destination[WG_VIDEO_WIDTH + 1U] == 3);
+    CHECK(destination[WG_VIDEO_WIDTH * 2U] == 5);
+    CHECK(destination[WG_VIDEO_WIDTH * 2U + 1U] == 6);
+
+    memset(black, 0, sizeof(black));
+    WG_PaletteFade(black, WG_WolfPaletteVGA, 15, 30, faded);
+    CHECK(faded[5] == 21U);
+    WG_PaletteFade(black, WG_WolfPaletteVGA, 30, 30, faded);
+    CHECK(memcmp(faded, WG_WolfPaletteVGA, sizeof(faded)) == 0);
+    WG_PaletteFromVGA(WG_WolfPaletteVGA, converted);
+    CHECK(memcmp(converted, WG_WolfPalette, sizeof(converted)) == 0);
+
+    for (index = 0; index < sizeof(source); ++index)
+    {
+        source[index] = (uint8_t)(index * 37U + 11U);
+    }
+    memset(destination, 0, sizeof(destination));
+    WG_FizzleStart(&fizzle);
+    while (!WG_FizzleStep(&fizzle, source, destination,
+                           WG_VIDEO_WIDTH, WG_VIDEO_HEIGHT, 1000U))
+    {
+        CHECK(++iterations < 1000U);
+    }
+    CHECK(memcmp(source, destination, sizeof(source)) == 0);
+}
+
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                         size_t expected_graphics_offsets)
 {
     wg_data_set_t data_set;
     wg_graphics_t graphics;
+    wg_font_t font;
     wg_audio_t audio;
     wg_pages_t pages;
     wg_maps_t maps;
@@ -146,6 +201,16 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(WG_WolfPalette[1] == 0);
         CHECK(WG_WolfPalette[2] == 0);
         CHECK(WG_WolfPalette[5] == 170);
+        CHECK(WG_FontOpen(&font, &graphics, 0));
+        if (font.data != NULL)
+        {
+            CHECK(font.height != 0U);
+            CHECK(WG_FontMeasure(&font, "WOLF") != 0U);
+            memset(framebuffer, 0, sizeof(framebuffer));
+            WG_FontDraw(&font, framebuffer, 4, 4, "WOLF", 15);
+            CHECK(memchr(framebuffer, 15, sizeof(framebuffer)) != NULL);
+            WG_FontClose(&font);
+        }
         CHECK(WG_GraphicsDecodePicture(&graphics,
               expected_variant == WG_GAME_WOLF3D_SHAREWARE_14 ? 98U : 86U,
               &picture_pixels, &picture_width, &picture_height));
@@ -287,6 +352,7 @@ int main(int argc, char **argv)
     TestCarmack();
     TestRLEW();
     TestMalformedCompression();
+    TestVideo();
 
     if (argc == 4 && strcmp(argv[1], "--data") == 0)
     {

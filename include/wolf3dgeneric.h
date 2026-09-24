@@ -30,6 +30,19 @@ typedef enum wg_event_type
     WG_EVENT_MOUSE_BUTTON
 } wg_event_type_t;
 
+/* IBM PC set-1 scan codes, matching the identifiers used by Wolf3D. */
+typedef enum wg_key
+{
+    WG_KEY_ESCAPE = 0x01,
+    WG_KEY_ENTER = 0x1c,
+    WG_KEY_CONTROL = 0x1d,
+    WG_KEY_SPACE = 0x39,
+    WG_KEY_LEFT = 0x4b,
+    WG_KEY_UP = 0x48,
+    WG_KEY_RIGHT = 0x4d,
+    WG_KEY_DOWN = 0x50
+} wg_key_t;
+
 typedef struct wg_event
 {
     wg_event_type_t type;
@@ -52,4 +65,3 @@ void wolf3dgeneric_Shutdown(void);
 #endif
 
 #endif
-

@@ -37,6 +37,13 @@ palette. A host presents that pair, reports input events, supplies monotonic
 time and sleeping, and reports fatal errors. The Win32 reference host uses GDI;
 the headless host supplies deterministic virtual time for tests.
 
+The portable video layer implements clipped plots, bars, picture blits,
+proportional bitmap fonts, VGA-precision palette interpolation, and the
+original 17-bit fizzle LFSR. The logical operations are tested without a host;
+the headless host can also export any presented indexed frame as a PPM image.
+Keyboard events use the original IBM PC set-1 scan-code values so gameplay and
+menu code do not depend on a platform's virtual-key numbering.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a

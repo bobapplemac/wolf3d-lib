@@ -14,14 +14,46 @@ static LARGE_INTEGER wg_counter_frequency;
 static LARGE_INTEGER wg_counter_start;
 static int wg_quit_pending;
 
+#define WG_EVENT_QUEUE_CAPACITY 64U
+static wg_event_t wg_event_queue[WG_EVENT_QUEUE_CAPACITY];
+static size_t wg_event_read;
+static size_t wg_event_write;
+
+static void wg_queue_event(const wg_event_t *event)
+{
+    size_t next = (wg_event_write + 1U) % WG_EVENT_QUEUE_CAPACITY;
+
+    if (next != wg_event_read)
+    {
+        wg_event_queue[wg_event_write] = *event;
+        wg_event_write = next;
+    }
+}
+
 static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
                                        WPARAM wparam, LPARAM lparam)
 {
     (void)wparam;
-    (void)lparam;
 
     switch (message)
     {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+        {
+            wg_event_t event;
+
+            event.type = WG_EVENT_KEY;
+            event.pressed = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+            event.key = (uint16_t)((lparam >> 16) & 0xff);
+            event.x = 0;
+            event.y = 0;
+            event.button = 0;
+            wg_queue_event(&event);
+            return 0;
+        }
+
         case WM_CLOSE:
             wg_quit_pending = 1;
             DestroyWindow(window);
@@ -74,6 +106,9 @@ int WG_Init(void)
 
     QueryPerformanceFrequency(&wg_counter_frequency);
     QueryPerformanceCounter(&wg_counter_start);
+    wg_event_read = 0;
+    wg_event_write = 0;
+    wg_quit_pending = 0;
     ShowWindow(wg_window, SW_SHOW);
     return 1;
 }
@@ -144,6 +179,11 @@ int WG_PollEvent(wg_event_t *event)
 {
     MSG message;
 
+    if (event == NULL)
+    {
+        return 0;
+    }
+
     if (wg_quit_pending)
     {
         wg_quit_pending = 0;
@@ -160,6 +200,13 @@ int WG_PollEvent(wg_event_t *event)
         }
         TranslateMessage(&message);
         DispatchMessageW(&message);
+    }
+
+    if (wg_event_read != wg_event_write)
+    {
+        *event = wg_event_queue[wg_event_read];
+        wg_event_read = (wg_event_read + 1U) % WG_EVENT_QUEUE_CAPACITY;
+        return 1;
     }
 
     event->type = WG_EVENT_NONE;
