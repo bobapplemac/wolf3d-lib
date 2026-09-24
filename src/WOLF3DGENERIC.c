@@ -52,6 +52,27 @@ static int WG_HasArgument(int argc, char **argv, const char *argument)
     return 0;
 }
 
+static const wg_actor_t *WG_FindGuardViewActor(const wg_level_t *level)
+{
+    size_t index;
+
+    if (level == NULL)
+    {
+        return NULL;
+    }
+    for (index = level->actor_count; index > 0U; --index)
+    {
+        const wg_actor_t *actor = &level->actors[index - 1U];
+
+        if (actor->actor_class == WG_ACTOR_GUARD
+            && actor->rotate != 0U && actor->tile_x >= 3U)
+        {
+            return actor;
+        }
+    }
+    return NULL;
+}
+
 static int WG_LoadTitleScreen(const char *data_path)
 {
     wg_graphics_t graphics;
@@ -129,15 +150,13 @@ static int WG_LoadInitialPlayView(int open_doors, int guard_view)
     }
     if (guard_view)
     {
-        const wg_actor_t *actor;
+        const wg_actor_t *actor = WG_FindGuardViewActor(&level);
         size_t player_tile;
 
-        if (level.actor_count == 0U
-            || level.actors[level.actor_count - 1U].tile_x < 3U)
+        if (actor == NULL)
         {
             goto cleanup;
         }
-        actor = &level.actors[level.actor_count - 1U];
         level.player_x = actor->x - 3 * WG_FIXED_ONE;
         level.player_y = actor->y;
         level.player_angle = 0U;

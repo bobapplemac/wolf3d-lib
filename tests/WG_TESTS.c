@@ -34,6 +34,112 @@ static int failures;
         }                                                                       \
     } while (0)
 
+static size_t ActorClassCount(const wg_level_t *level,
+                              wg_actor_class_t actor_class)
+{
+    size_t count = 0;
+    size_t index;
+
+    for (index = 0; index < level->actor_count; ++index)
+    {
+        if (level->actors[index].actor_class == actor_class)
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+static const wg_actor_t *FindLastLiveGuard(const wg_level_t *level)
+{
+    size_t index;
+
+    for (index = level->actor_count; index > 0U; --index)
+    {
+        const wg_actor_t *actor = &level->actors[index - 1U];
+
+        if (actor->actor_class == WG_ACTOR_GUARD && actor->rotate != 0U)
+        {
+            return actor;
+        }
+    }
+    return NULL;
+}
+
+static void TestActorSetup(void)
+{
+    static const uint16_t easy_codes[] =
+    {
+        108U, 112U, 116U, 120U, 124U, 126U, 130U, 134U, 138U,
+        216U, 220U
+    };
+    static const uint16_t medium_codes[] =
+    {
+        144U, 148U, 152U, 156U, 162U, 166U, 170U, 174U, 234U,
+        238U
+    };
+    static const uint16_t hard_codes[] =
+    {
+        180U, 184U, 188U, 192U, 198U, 202U, 206U, 210U, 252U,
+        256U
+    };
+    uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_map_t map;
+    wg_level_t level;
+    size_t index;
+
+    memset(&map, 0, sizeof(map));
+    for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        plane_zero[index] = WG_AREA_TILE;
+        plane_one[index] = 0U;
+    }
+    plane_one[WG_LEVEL_SIZE + 1U] = 19U;
+    for (index = 0; index < sizeof(easy_codes) / sizeof(easy_codes[0]); ++index)
+    {
+        plane_one[2U * WG_LEVEL_SIZE + 2U + index] = easy_codes[index];
+    }
+    for (index = 0;
+         index < sizeof(medium_codes) / sizeof(medium_codes[0]); ++index)
+    {
+        plane_one[3U * WG_LEVEL_SIZE + 2U + index] = medium_codes[index];
+    }
+    for (index = 0; index < sizeof(hard_codes) / sizeof(hard_codes[0]); ++index)
+    {
+        plane_one[4U * WG_LEVEL_SIZE + 2U + index] = hard_codes[index];
+    }
+    map.width = WG_LEVEL_SIZE;
+    map.height = WG_LEVEL_SIZE;
+    map.planes[0] = plane_zero;
+    map.planes[1] = plane_one;
+
+    CHECK(WG_LevelBuildForDifficulty(&map, WG_DIFFICULTY_BABY, &level));
+    CHECK(level.actor_count == 11U);
+    CHECK(ActorClassCount(&level, WG_ACTOR_GUARD) == 2U);
+    CHECK(ActorClassCount(&level, WG_ACTOR_OFFICER) == 2U);
+    CHECK(ActorClassCount(&level, WG_ACTOR_SS) == 2U);
+    CHECK(ActorClassCount(&level, WG_ACTOR_DOG) == 2U);
+    CHECK(ActorClassCount(&level, WG_ACTOR_MUTANT) == 2U);
+    CHECK(ActorClassCount(&level, WG_ACTOR_INERT) == 1U);
+    CHECK(level.actors[0].shape == 50U);
+    CHECK(level.actors[1].shape == 58U);
+    CHECK(level.actors[2].shape == 238U);
+    CHECK(level.actors[3].shape == 246U);
+    CHECK(level.actors[4].shape == 95U);
+    CHECK(level.actors[5].shape == 138U);
+    CHECK(level.actors[6].shape == 146U);
+    CHECK(level.actors[7].shape == 99U);
+    CHECK(level.actors[8].shape == 99U);
+    CHECK(level.actors[9].shape == 187U);
+    CHECK(level.actors[10].shape == 195U);
+
+    CHECK(WG_LevelBuildForDifficulty(&map, WG_DIFFICULTY_MEDIUM, &level));
+    CHECK(level.actor_count == 21U);
+    CHECK(WG_LevelBuildForDifficulty(&map, WG_DIFFICULTY_HARD, &level));
+    CHECK(level.actor_count == 31U);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -540,15 +646,25 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(level.player_angle == 0U);
             CHECK(level.door_count > 0U);
             CHECK(level.static_count == 121U);
-            CHECK(level.actor_count == 17U);
-            CHECK(level.actors[16].tile_x == 39U);
-            CHECK(level.actors[16].tile_y == 61U);
-            CHECK(level.actors[16].direction == 4U);
-            CHECK(level.actors[16].shape == 50U);
+            CHECK(level.actor_count == 21U);
+            CHECK(ActorClassCount(&level, WG_ACTOR_GUARD) == 17U);
+            CHECK(ActorClassCount(&level, WG_ACTOR_DOG) == 3U);
+            CHECK(ActorClassCount(&level, WG_ACTOR_OFFICER) == 0U);
+            CHECK(ActorClassCount(&level, WG_ACTOR_SS) == 0U);
+            CHECK(ActorClassCount(&level, WG_ACTOR_MUTANT) == 0U);
+            CHECK(ActorClassCount(&level, WG_ACTOR_INERT) == 1U);
+            CHECK(level.actors[19].tile_x == 31U);
+            CHECK(level.actors[19].tile_y == 57U);
+            CHECK(level.actors[19].shape == 95U);
+            CHECK(level.actors[19].rotate == 0U);
+            CHECK(level.actors[20].tile_x == 39U);
+            CHECK(level.actors[20].tile_y == 61U);
+            CHECK(level.actors[20].direction == 4U);
+            CHECK(level.actors[20].shape == 50U);
             printf("%s map 0 static objects: %u\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned)level.static_count);
-            printf("%s map 0 initial guards: %u\n",
+            printf("%s map 0 initial actors: %u\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned)level.actor_count);
             {
@@ -593,7 +709,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s initial scenery view FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)scenery_hash);
-                CHECK(scenery_hash == 0x52a9cf2dd9dcab66ULL);
+                CHECK(scenery_hash == 0x723ccdefbb003ac1ULL);
                 CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
                 CHECK(WG_GraphicsOpen(&graphics, &data_set));
                 WL_StatusDefaults(&status);
@@ -606,7 +722,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s initial HUD view FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)hud_hash);
-                CHECK(hud_hash == 0xab0c1a3f48fece62ULL);
+                CHECK(hud_hash == 0x0b077346cfd7b513ULL);
                 for (index = 0; index < level.door_count; ++index)
                 {
                     level.doors[index].position = 0xffffU;
@@ -630,24 +746,27 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s open-door scenery FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)open_view_hash);
-                CHECK(open_view_hash == 0x800512fcf839700fULL);
+                CHECK(open_view_hash == 0xd2e29d9233c925ccULL);
                 for (index = 0; index < level.door_count; ++index)
                 {
                     level.doors[index].position = 0U;
                 }
-                CHECK(level.actor_count != 0U);
-                CHECK(WG_RenderStaticView(
-                    framebuffer, &level, &view_tables, &wall_cache, 0, 0,
-                    level.actors[level.actor_count - 1U].x
-                        - 3 * WG_FIXED_ONE,
-                    level.actors[level.actor_count - 1U].y, 0,
-                    render_hits, visible_tiles));
-                CHECK(WL_DrawScaleds(
-                    framebuffer, &pages, &level, &view_tables, render_hits,
-                    visible_tiles,
-                    level.actors[level.actor_count - 1U].x
-                        - 3 * WG_FIXED_ONE,
-                    level.actors[level.actor_count - 1U].y, 0));
+                {
+                    const wg_actor_t *guard = FindLastLiveGuard(&level);
+
+                    CHECK(guard != NULL);
+                    if (guard != NULL)
+                    {
+                        CHECK(WG_RenderStaticView(
+                            framebuffer, &level, &view_tables, &wall_cache,
+                            0, 0, guard->x - 3 * WG_FIXED_ONE, guard->y, 0,
+                            render_hits, visible_tiles));
+                        CHECK(WL_DrawScaleds(
+                            framebuffer, &pages, &level, &view_tables,
+                            render_hits, visible_tiles,
+                            guard->x - 3 * WG_FIXED_ONE, guard->y, 0));
+                    }
+                }
                 CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
                 CHECK(WL_DrawStatusBar(framebuffer, &graphics, &status));
                 for (index = 0; index < sizeof(framebuffer); ++index)
@@ -668,16 +787,16 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
 
                 CHECK(WG_LevelBuildForDifficulty(
                     &map, WG_DIFFICULTY_BABY, &difficulty_level));
-                printf("%s baby guards: %u\n",
+                printf("%s baby actors: %u\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned)difficulty_level.actor_count);
-                CHECK(difficulty_level.actor_count == 10U);
+                CHECK(difficulty_level.actor_count == 12U);
                 CHECK(WG_LevelBuildForDifficulty(
                     &map, WG_DIFFICULTY_HARD, &difficulty_level));
-                printf("%s hard guards: %u\n",
+                printf("%s hard actors: %u\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned)difficulty_level.actor_count);
-                CHECK(difficulty_level.actor_count == 32U);
+                CHECK(difficulty_level.actor_count == 38U);
             }
             printf("%s map 0 player: (%u,%u) angle %u\n",
                    WG_DataVariantName(data_set.variant),
@@ -749,6 +868,7 @@ int main(int argc, char **argv)
     TestMalformedCompression();
     TestVideo();
     TestRandom();
+    TestActorSetup();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

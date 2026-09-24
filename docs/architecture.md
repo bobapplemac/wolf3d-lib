@@ -66,12 +66,16 @@ original 400-object capacity. Their shape numbers preserve the `SPR_DEMO`,
 asset-name table. Code 71 retains the original final `SPR_STAT_26` duplicate
 ammo-clip entry from `statinfo`.
 
-The first active-object slice recognizes standing and patrolling guard codes at
-the original easy, medium, and hard difficulty thresholds. Actors retain their
-tile-center 16.16 position, eight-way direction, initial state shape, the
-original 150-object capacity, and `SpawnPatrol`'s one-tile destination advance.
-The legacy `WG_LevelBuild` entry point selects medium difficulty; an explicit
-difficulty entry point supports deterministic setup testing.
+The active-object setup recognizes standing and patrolling guards, officers,
+SS, dogs, and mutants at the original easy, medium, and hard map-code
+thresholds, plus inert dead guards. Actors retain their tile-center 16.16
+position, eight-way direction, initial state shape, the original 150-object
+capacity, and `SpawnPatrol`'s one-tile destination advance. The original map
+format reserves standing-dog codes although the DOS `SpawnStand` switch omits
+the dog case; the portable setup gives those entries the dog's path pose without
+advancing it, avoiding the original undefined stale-object behavior. The legacy
+`WG_LevelBuild` entry point selects medium difficulty; an explicit difficulty
+entry point supports deterministic setup testing.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
@@ -123,10 +127,10 @@ uses the original `TransformTile` projection, 50-entry visible-object limit,
 ray-traversal `spotvis` admission, far-to-near `DrawScaleds` ordering, and
 wall-height tests for per-column occlusion. The headless `--open-doors`
 diagnostic exposes the scenery beyond E1M1's initially closed door without
-changing normal level state. Standing and initial patrol guards share the same
-visible-object list, use the original larger `ACTORSIZE` projection adjustment,
-and select one of eight rotations with `CalcRotate`. Actor state updates, AI,
-additional enemy classes, and moving pushwalls are still being added.
+changing normal level state. Ordinary enemies and dead guards share the same
+visible-object list; live actors use the original larger `ACTORSIZE` projection
+adjustment and select one of eight rotations with `CalcRotate`. Actor state
+updates, AI, bosses, ghosts, and moving pushwalls are still being added.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

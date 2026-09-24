@@ -83,3 +83,23 @@ Regenerate the guard capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --guard-view --dump-frame out\standing-guard.ppm
 ```
+
+## 2026-09-23: Ordinary enemy setup and dead guards
+
+- Scope: original map-code setup for guards, officers, SS, dogs, mutants, and
+  inert dead guards, including each difficulty band and initial stand/patrol
+  state shape.
+- E1M1 medium difficulty creates 17 live guards, three dogs, and one inert dead
+  guard; baby creates 12 total actors and hard creates 38.
+- 320x200 indexed-frame FNV-1a, including weapon and HUD: `0b077346cfd7b513`
+- Identical result with the supplied WL1 and WL6 data sets.
+- The corpse and locked door in this normal starting pose are both original
+  E1M1 map objects; no diagnostic level-state changes are applied.
+
+![E1M1 original dead guard and locked door](../out/initial-standard-actors.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame out\initial-standard-actors.ppm
+```

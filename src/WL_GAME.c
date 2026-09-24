@@ -3,6 +3,35 @@
 
 #include <string.h>
 
+static int WG_DifficultyDirection(uint16_t info, uint16_t easy_base,
+                                  uint16_t tier_spacing,
+                                  wg_difficulty_t difficulty,
+                                  uint8_t *direction)
+{
+    unsigned tier;
+
+    if (direction == NULL)
+    {
+        return 0;
+    }
+    for (tier = 0; tier < 3U; ++tier)
+    {
+        uint16_t base = (uint16_t)(easy_base + tier * tier_spacing);
+
+        if (info >= base && info <= base + 3U)
+        {
+            if ((tier == 1U && difficulty < WG_DIFFICULTY_MEDIUM)
+                || (tier == 2U && difficulty < WG_DIFFICULTY_HARD))
+            {
+                return 0;
+            }
+            *direction = (uint8_t)(info - base);
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level)
 {
@@ -60,52 +89,118 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
             object->shape = info == 71U ? 28U
                                         : (uint16_t)(info - 23U + 2U);
         }
-        else if ((info >= 108U && info <= 111U)
-                 || (difficulty >= WG_DIFFICULTY_MEDIUM
-                     && info >= 144U && info <= 147U)
-                 || (difficulty >= WG_DIFFICULTY_HARD
-                     && info >= 180U && info <= 183U))
+        else
         {
-            uint16_t base_info = info;
+            uint8_t direction;
 
-            if (base_info >= 180U)
+            if (WG_DifficultyDirection(info, 108U, 36U, difficulty,
+                                       &direction))
             {
-                base_info -= 72U;
+                if (!WL_SpawnStand(level, WG_ACTOR_GUARD,
+                                   (uint8_t)(index % WG_LEVEL_SIZE),
+                                   (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
             }
-            else if (base_info >= 144U)
+            else if (WG_DifficultyDirection(info, 112U, 36U, difficulty,
+                                            &direction))
             {
-                base_info -= 36U;
+                if (!WL_SpawnPatrol(level, WG_ACTOR_GUARD,
+                                    (uint8_t)(index % WG_LEVEL_SIZE),
+                                    (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
             }
-            if (!WL_SpawnStand(level, WG_ACTOR_GUARD,
-                               (uint8_t)(index % WG_LEVEL_SIZE),
-                               (uint8_t)(index / WG_LEVEL_SIZE),
-                               (uint8_t)(base_info - 108U)))
+            else if (info == 124U)
             {
-                return 0;
+                if (!WL_SpawnDeadGuard(
+                    level, (uint8_t)(index % WG_LEVEL_SIZE),
+                    (uint8_t)(index / WG_LEVEL_SIZE)))
+                {
+                    return 0;
+                }
             }
-        }
-        else if ((info >= 112U && info <= 115U)
-                 || (difficulty >= WG_DIFFICULTY_MEDIUM
-                     && info >= 148U && info <= 151U)
-                 || (difficulty >= WG_DIFFICULTY_HARD
-                     && info >= 184U && info <= 187U))
-        {
-            uint16_t base_info = info;
-
-            if (base_info >= 184U)
+            else if (WG_DifficultyDirection(info, 116U, 36U, difficulty,
+                                            &direction))
             {
-                base_info -= 72U;
+                if (!WL_SpawnStand(level, WG_ACTOR_OFFICER,
+                                   (uint8_t)(index % WG_LEVEL_SIZE),
+                                   (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
             }
-            else if (base_info >= 148U)
+            else if (WG_DifficultyDirection(info, 120U, 36U, difficulty,
+                                            &direction))
             {
-                base_info -= 36U;
+                if (!WL_SpawnPatrol(level, WG_ACTOR_OFFICER,
+                                    (uint8_t)(index % WG_LEVEL_SIZE),
+                                    (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
             }
-            if (!WL_SpawnPatrol(level, WG_ACTOR_GUARD,
-                                (uint8_t)(index % WG_LEVEL_SIZE),
-                                (uint8_t)(index / WG_LEVEL_SIZE),
-                                (uint8_t)(base_info - 112U)))
+            else if (WG_DifficultyDirection(info, 126U, 36U, difficulty,
+                                            &direction))
             {
-                return 0;
+                if (!WL_SpawnStand(level, WG_ACTOR_SS,
+                                   (uint8_t)(index % WG_LEVEL_SIZE),
+                                   (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
+            }
+            else if (WG_DifficultyDirection(info, 130U, 36U, difficulty,
+                                            &direction))
+            {
+                if (!WL_SpawnPatrol(level, WG_ACTOR_SS,
+                                    (uint8_t)(index % WG_LEVEL_SIZE),
+                                    (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
+            }
+            else if (WG_DifficultyDirection(info, 134U, 36U, difficulty,
+                                            &direction))
+            {
+                if (!WL_SpawnStand(level, WG_ACTOR_DOG,
+                                   (uint8_t)(index % WG_LEVEL_SIZE),
+                                   (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
+            }
+            else if (WG_DifficultyDirection(info, 138U, 36U, difficulty,
+                                            &direction))
+            {
+                if (!WL_SpawnPatrol(level, WG_ACTOR_DOG,
+                                    (uint8_t)(index % WG_LEVEL_SIZE),
+                                    (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
+            }
+            else if (WG_DifficultyDirection(info, 216U, 18U, difficulty,
+                                            &direction))
+            {
+                if (!WL_SpawnStand(level, WG_ACTOR_MUTANT,
+                                   (uint8_t)(index % WG_LEVEL_SIZE),
+                                   (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
+            }
+            else if (WG_DifficultyDirection(info, 220U, 18U, difficulty,
+                                            &direction))
+            {
+                if (!WL_SpawnPatrol(level, WG_ACTOR_MUTANT,
+                                    (uint8_t)(index % WG_LEVEL_SIZE),
+                                    (uint8_t)(index / WG_LEVEL_SIZE), direction))
+                {
+                    return 0;
+                }
             }
         }
     }

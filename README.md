@@ -42,8 +42,8 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
 ```
 
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
-view, static scenery, initial standing/patrolling guards, ready pistol, and
-status bar. Actor behavior and pushwall motion are not yet active:
+view, static scenery, initial ordinary enemies and dead guards, ready pistol,
+and status bar. Actor behavior and pushwall motion are not yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
