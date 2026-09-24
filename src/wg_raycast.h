@@ -9,7 +9,8 @@
 typedef enum wg_wall_side
 {
     WG_WALL_HORIZONTAL = 0,
-    WG_WALL_VERTICAL = 1
+    WG_WALL_VERTICAL = 1,
+    WG_WALL_DOOR = 2
 } wg_wall_side_t;
 
 typedef struct wg_wall_hit
@@ -30,5 +31,11 @@ int WG_RaycastStaticWalls(const wg_level_t *level,
                           int32_t player_x, int32_t player_y,
                           uint16_t player_angle,
                           wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH]);
+
+int WG_RaycastWalls(const wg_level_t *level,
+                    const wg_view_tables_t *tables,
+                    int32_t player_x, int32_t player_y,
+                    uint16_t player_angle, uint16_t door_wall_base,
+                    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH]);
 
 #endif

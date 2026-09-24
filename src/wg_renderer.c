@@ -83,11 +83,13 @@ int WG_RenderStaticView(
         || walls == NULL || walls->pixels == NULL
         || tables->view_width != WG_VIDEO_WIDTH
         || color_index >= sizeof(wg_ceiling_colors)
-        || !WG_RaycastStaticWalls(level, tables, player_x, player_y,
-                                  player_angle, hits))
+        || walls->count < 8U
+        || !WG_RaycastWalls(level, tables, player_x, player_y,
+                            player_angle, (uint16_t)(walls->count - 8U), hits))
     {
         return 0;
     }
+    memset(framebuffer, 0, WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT);
     for (pixel = 0; pixel < WG_PLAY_VIEW_HEIGHT / 2; ++pixel)
     {
         memset(framebuffer + pixel * WG_VIDEO_WIDTH,

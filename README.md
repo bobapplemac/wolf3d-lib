@@ -38,6 +38,13 @@ window:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
 ```
 
+The current renderer checkpoint can export the initial Episode 1, Floor 1
+wall view (actors, weapon, status bar, and pushwall motion are not yet drawn):
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
+```
+
 ## License
 
 The project is licensed under GPL-2.0-only. Game data is not covered by this

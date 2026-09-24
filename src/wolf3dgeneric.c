@@ -6,8 +6,13 @@
 
 #include "wg_data.h"
 #include "wg_graphics.h"
+#include "wg_level.h"
+#include "wg_maps.h"
 #include "wg_palette.h"
+#include "wg_pages.h"
 #include "wg_platform.h"
+#include "wg_renderer.h"
+#include "wg_view.h"
 
 uint8_t *WG_ScreenBuffer;
 uint8_t WG_Palette[WG_PALETTE_COLORS * 3];
@@ -28,6 +33,20 @@ static const char *WG_FindDataPath(int argc, char **argv)
         }
     }
     return NULL;
+}
+
+static int WG_HasArgument(int argc, char **argv, const char *argument)
+{
+    int index;
+
+    for (index = 1; index < argc; ++index)
+    {
+        if (strcmp(argv[index], argument) == 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static int WG_LoadTitleScreen(const char *data_path)
@@ -67,6 +86,52 @@ static int WG_LoadTitleScreen(const char *data_path)
     return 1;
 }
 
+static int WG_LoadInitialPlayView(void)
+{
+    wg_maps_t maps;
+    wg_map_t map;
+    wg_level_t level;
+    wg_pages_t pages;
+    wg_wall_cache_t walls;
+    wg_view_tables_t view;
+    int success = 0;
+
+    memset(&maps, 0, sizeof(maps));
+    memset(&map, 0, sizeof(map));
+    memset(&pages, 0, sizeof(pages));
+    memset(&walls, 0, sizeof(walls));
+    memset(&view, 0, sizeof(view));
+    if (!WG_MapsOpen(&maps, &wg_data_set)
+        || !WG_MapsLoad(&maps, 0, &map)
+        || !WG_LevelBuild(&map, &level)
+        || !WG_PagesOpen(&pages, &wg_data_set)
+        || !WG_WallCacheLoad(&walls, &pages))
+    {
+        goto cleanup;
+    }
+    WG_ViewBuildTrigTables(&view);
+    if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
+                                    WG_FOCAL_LENGTH)
+        || !WG_RenderStaticView(WG_ScreenBuffer, &level, &view, &walls,
+                                0, 0, level.player_x, level.player_y,
+                                level.player_angle))
+    {
+        goto cleanup;
+    }
+    success = 1;
+
+cleanup:
+    WG_WallCacheFree(&walls);
+    WG_PagesClose(&pages);
+    WG_MapFree(&map);
+    WG_MapsClose(&maps);
+    if (!success)
+    {
+        WG_ReportError("Unable to render the initial Wolf3D play view.");
+    }
+    return success;
+}
+
 wg_result_t wolf3dgeneric_Create(int argc, char **argv)
 {
     size_t framebuffer_size;
@@ -97,6 +162,12 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     wg_initialized = 1;
     data_path = WG_FindDataPath(argc, argv);
     if (data_path != NULL && !WG_LoadTitleScreen(data_path))
+    {
+        wolf3dgeneric_Shutdown();
+        return WG_RESULT_PLATFORM_ERROR;
+    }
+    if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
+        && !WG_LoadInitialPlayView())
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

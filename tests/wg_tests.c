@@ -275,6 +275,27 @@ static void TestStaticRaycaster(void)
                                 270, hits));
     CHECK(hits[159].side == WG_WALL_HORIZONTAL);
     CHECK(hits[159].map_y == WG_LEVEL_SIZE - 1);
+
+    level.tiles[32 * WG_LEVEL_SIZE + 40] = 0x80U;
+    level.door_count = 1;
+    level.doors[0].tile_x = 40;
+    level.doors[0].tile_y = 32;
+    level.doors[0].vertical = 1;
+    level.doors[0].lock = WG_DOOR_NORMAL;
+    CHECK(WG_RaycastWalls(&level, &tables,
+                          32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          0, 10, hits));
+    CHECK(hits[159].side == WG_WALL_DOOR);
+    CHECK(hits[159].map_x == 40);
+    CHECK(hits[159].wall_page == 11);
+    level.doors[0].position = 0xffffU;
+    CHECK(WG_RaycastWalls(&level, &tables,
+                          32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          0, 10, hits));
+    CHECK(hits[159].side == WG_WALL_VERTICAL);
+    CHECK(hits[159].map_x == WG_LEVEL_SIZE - 1);
 }
 
 static void TestStaticRenderer(void)
@@ -283,7 +304,7 @@ static void TestStaticRenderer(void)
     wg_view_tables_t tables;
     wg_wall_cache_t walls;
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT];
-    uint8_t wall_pixels[2 * WG_TEXTURE_SIZE * WG_TEXTURE_SIZE];
+    uint8_t wall_pixels[8 * WG_TEXTURE_SIZE * WG_TEXTURE_SIZE];
     int x;
     int y;
 
@@ -294,7 +315,7 @@ static void TestStaticRenderer(void)
     memset(wall_pixels + WG_TEXTURE_SIZE * WG_TEXTURE_SIZE, 77,
            WG_TEXTURE_SIZE * WG_TEXTURE_SIZE);
     walls.pixels = wall_pixels;
-    walls.count = 2;
+    walls.count = 8;
     for (x = 0; x < WG_LEVEL_SIZE; ++x)
     {
         level.tiles[x] = 1;
@@ -335,6 +356,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint16_t picture_height;
     uint64_t frame_hash = 1469598103934665603ULL;
     uint64_t map_hash = 1469598103934665603ULL;
+    uint64_t view_hash = 1469598103934665603ULL;
     size_t index;
     size_t decoded_graphics = 0;
     size_t loaded_maps = 0;
@@ -507,6 +529,35 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(level.player_y == 0x00398000L);
             CHECK(level.player_angle == 0U);
             CHECK(level.door_count > 0U);
+            {
+                wg_view_tables_t view_tables;
+                wg_wall_cache_t wall_cache;
+
+                memset(&view_tables, 0, sizeof(view_tables));
+                memset(&wall_cache, 0, sizeof(wall_cache));
+                WG_ViewBuildTrigTables(&view_tables);
+                CHECK(WG_ViewCalculateProjection(&view_tables,
+                                                 WG_MAX_VIEW_WIDTH,
+                                                 WG_FOCAL_LENGTH));
+                CHECK(WG_PagesOpen(&pages, &data_set));
+                CHECK(WG_WallCacheLoad(&wall_cache, &pages));
+                memset(framebuffer, 0, sizeof(framebuffer));
+                CHECK(WG_RenderStaticView(framebuffer, &level, &view_tables,
+                                          &wall_cache, 0, 0,
+                                          level.player_x, level.player_y,
+                                          level.player_angle));
+                for (index = 0; index < sizeof(framebuffer); ++index)
+                {
+                    view_hash ^= framebuffer[index];
+                    view_hash *= 1099511628211ULL;
+                }
+                printf("%s initial play view FNV-1a: %016llx\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned long long)view_hash);
+                CHECK(view_hash == 0x52a9cf2dd9dcab66ULL);
+                WG_WallCacheFree(&wall_cache);
+                WG_PagesClose(&pages);
+            }
             printf("%s map 0 player: (%u,%u) angle %u\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned)level.player_tile_x,

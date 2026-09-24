@@ -84,18 +84,20 @@ source sampling order and the original three-bit fractional wall-height unit are
 retained from `ScalePost`; a single call may reproduce the original adjacent-post
 coalescing optimization without VGA plane masks or generated machine code.
 
-The first ray-traversal layer is a direct, fixed-point translation of the static
-wall path through original `AsmRefresh`, including its quadrant-specific tangent
-steps, vertical/horizontal entry switching, focal-point offset, texture mirroring,
-and perpendicular height calculation. It currently rejects doors and pushwalls
-instead of approximating them as fixed walls; their moving-plane hit paths will
-be added explicitly before this traversal is connected to gameplay rendering.
+The ray-traversal layer is a direct, fixed-point translation of original
+`AsmRefresh`, including its quadrant-specific tangent steps, vertical/horizontal
+entry switching, focal-point offset, texture mirroring, and perpendicular height
+calculation. Closed and opening doors use their original half-tile planes,
+position tests, lock/elevator faces, and adjacent jamb textures. Moving pushwalls
+remain the one deliberately rejected wall-hit case rather than being approximated
+as fixed geometry.
 
-An owned wall cache decodes every pre-sprite VSWAP page once into conventional
+An owned wall cache decodes every present pre-sprite VSWAP page once into conventional
 row-major 64x64 pixels. The initial renderer composes the static traversal and
 wall scaler into the original 320x160 play view, using the per-level VGA ceiling
-colors and color 0x19 floor from `VGAClearScreen`. It is intentionally exposed
-as a static-view path until runtime door and pushwall state is represented.
+colors and color 0x19 floor from `VGAClearScreen`. A headless `--play-view`
+capture makes the real E1M1 result directly inspectable while actors, weapons,
+the status bar, and moving pushwalls are still being added.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

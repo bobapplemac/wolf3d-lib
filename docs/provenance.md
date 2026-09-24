@@ -41,8 +41,9 @@ The portable wall-post scaler follows the original `ScalePost` sampling contract
 in `WL_DRAW.C`. Wolf4SDL's C replacement was consulted to translate the compiled
 scaler and VGA plane-mask behavior into direct indexed-framebuffer writes.
 
-Static ray traversal and wall-hit calculations follow original `AsmRefresh`,
-`HitVertWall`, `HitHorizWall`, and `CalcHeight` in `WL_DR_A.ASM`/`WL_DRAW.C`.
+Ray traversal and wall-hit calculations follow original `AsmRefresh`,
+`HitVertWall`, `HitHorizWall`, `HitVertDoor`, `HitHorizDoor`, and `CalcHeight`
+in `WL_DR_A.ASM`/`WL_DRAW.C`.
 Wolf4SDL's structured `AsmRefresh` translation was used to make the assembly
 control flow explicit while retaining the original fixed-point stepping order.
 The play-view clear colors and 160-line layout follow original
