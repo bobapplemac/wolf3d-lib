@@ -166,6 +166,11 @@ int WG_PollEvent(wg_event_t *event)
     return 0;
 }
 
+int WG_IsInteractive(void)
+{
+    return 1;
+}
+
 void WG_SetWindowTitle(const char *title)
 {
     wchar_t wide_title[256];
@@ -249,4 +254,3 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
     LocalFree(wide_argv);
     return exit_code;
 }
-

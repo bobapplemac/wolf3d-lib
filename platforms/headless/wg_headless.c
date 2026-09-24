@@ -39,6 +39,11 @@ int WG_PollEvent(wg_event_t *event)
     return 0;
 }
 
+int WG_IsInteractive(void)
+{
+    return 0;
+}
+
 void WG_SetWindowTitle(const char *title)
 {
     (void)title;
@@ -48,4 +53,3 @@ void WG_ReportError(const char *message)
 {
     fprintf(stderr, "wolf3dgeneric: %s\n", message);
 }
-

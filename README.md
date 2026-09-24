@@ -24,12 +24,15 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The initial tree builds a platform boundary and smoke-test hosts; it is not yet
-a playable engine.
+The initial vertical slice validates both v1.4 data editions and displays the
+original title screen. It is not yet a playable engine. To exercise it:
+
+```text
+wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
+```
 
 ## License
 
 The project is licensed under GPL-2.0-only. Game data is not covered by this
 license and must not be committed to the repository. Third-party components keep
 their own compatible licenses and notices.
-

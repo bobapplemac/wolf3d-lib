@@ -4,6 +4,8 @@
 
 #include "wg_compression.h"
 #include "wg_data.h"
+#include "wg_graphics.h"
+#include "wg_palette.h"
 
 static int failures;
 
@@ -88,6 +90,10 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                         size_t expected_graphics_offsets)
 {
     wg_data_set_t data_set;
+    wg_graphics_t graphics;
+    uint8_t framebuffer[320 * 200];
+    uint64_t frame_hash = 1469598103934665603ULL;
+    size_t index;
 
     CHECK(WG_DataOpen(&data_set, path));
     if (data_set.variant == WG_GAME_UNKNOWN)
@@ -104,6 +110,26 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     CHECK(data_set.audio_offset_count == 289);
     CHECK(data_set.pages[0].offset == 4096);
     CHECK(data_set.pages[0].length != 0);
+
+    CHECK(WG_GraphicsOpen(&graphics, &data_set));
+    if (graphics.offsets != NULL)
+    {
+        CHECK(WG_GraphicsDecodeTitle(&graphics, data_set.variant, framebuffer));
+        for (index = 0; index < sizeof(framebuffer); ++index)
+        {
+            frame_hash ^= framebuffer[index];
+            frame_hash *= 1099511628211ULL;
+        }
+        printf("%s title framebuffer FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)frame_hash);
+        CHECK(frame_hash == 0x01e337d015f1541cULL);
+        CHECK(WG_WolfPalette[0] == 0);
+        CHECK(WG_WolfPalette[1] == 0);
+        CHECK(WG_WolfPalette[2] == 0);
+        CHECK(WG_WolfPalette[5] == 170);
+        WG_GraphicsClose(&graphics);
+    }
     WG_DataClose(&data_set);
 }
 
@@ -143,4 +169,3 @@ int main(int argc, char **argv)
     }
     return 0;
 }
-
