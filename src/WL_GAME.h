@@ -8,7 +8,10 @@
 #include "WL_ACT2.h"
 
 #define WG_LEVEL_SIZE 64
+#define WG_AMBUSH_TILE 106U
 #define WG_AREA_TILE 107U
+#define WG_NUM_AREAS 37
+#define WG_NO_AREA 0xffU
 #define WG_MAX_DOORS 64
 #define WG_MAX_STATICS 400
 
@@ -49,6 +52,9 @@ typedef struct wg_door
 typedef struct wg_level
 {
     uint8_t tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint8_t areas[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint8_t area_by_player[WG_NUM_AREAS];
+    uint8_t ambush_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     uint16_t info[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     int32_t player_x;
     int32_t player_y;

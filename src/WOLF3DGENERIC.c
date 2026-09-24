@@ -236,7 +236,8 @@ static int WG_LoadTitleScreen(const char *data_path)
 
 static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int guard_view, int boss_view,
-                                  int patrol_view, unsigned actor_tics)
+                                  int patrol_view, int alert_view,
+                                  unsigned actor_tics)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -278,7 +279,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
-    if (guard_view)
+    if (guard_view || alert_view)
     {
         const wg_actor_t *actor = WG_FindGuardViewActor(&level);
         size_t player_tile;
@@ -314,6 +315,12 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         {
             goto cleanup;
         }
+    }
+    if (alert_view
+        && (!WL_TickAwareness(&level, 1U, 0)
+            || !WL_TickAwareness(&level, 64U, 0)))
+    {
+        goto cleanup;
     }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
@@ -395,7 +402,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--open-doors"),
             WG_HasArgument(argc, argv, "--guard-view"),
             WG_HasArgument(argc, argv, "--boss-view"),
-            WG_HasArgument(argc, argv, "--patrol-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--patrol-view"),
+            WG_HasArgument(argc, argv, "--alert-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

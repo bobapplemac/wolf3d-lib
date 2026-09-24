@@ -17,8 +17,8 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | `ID_US_1.c` | `ID_US_1.C` | Original deterministic random table |
 | `WL_AGENT.c` | `WL_AGENT.C`, `WL_GAME.C` | Status bar and player HUD drawing |
 | `WL_ACT2.c` | `WL_ACT2.C` | Actor construction and initial state metadata |
-| `WL_STATE.c` | `WL_STATE.C`, `WL_ACT2.C` | Actor state timing, path selection, and tile movement |
-| `WL_GAME.c` | `WL_GAME.C`, `WL_ACT1.C` | Runtime level, player, door, and static-object construction |
+| `WL_STATE.c` | `WL_STATE.C`, `WL_ACT2.C` | Actor timing, path movement, area connectivity, sight, and awareness |
+| `WL_GAME.c` | `WL_GAME.C`, `WL_ACT1.C` | Runtime level, area, player, door, and static-object construction |
 | `WL_MAIN.c` | `WL_MAIN.C` | Trigonometric tables and projection setup |
 | `WL_DRAW.c` | `WL_DRAW.C`, `WL_DR_A.ASM` | Fixed-point ray traversal, wall/door hits, and projected scenery ordering |
 | `WL_SCALE.c` | `WL_SCALE.C`, `WL_DRAW.C` | Portable wall-post and occluded sprite scaling |

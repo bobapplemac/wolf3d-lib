@@ -32,6 +32,40 @@ static int WG_DifficultyDirection(uint16_t info, uint16_t easy_base,
     return 0;
 }
 
+static int WG_AmbushArea(const wg_map_t *map, size_t index,
+                         uint8_t *area_number)
+{
+    size_t x = index % WG_LEVEL_SIZE;
+    size_t y = index / WG_LEVEL_SIZE;
+    uint16_t tile = 0U;
+
+    if (x + 1U < WG_LEVEL_SIZE
+        && map->planes[0][index + 1U] >= WG_AREA_TILE)
+    {
+        tile = map->planes[0][index + 1U];
+    }
+    if (y > 0U && map->planes[0][index - WG_LEVEL_SIZE] >= WG_AREA_TILE)
+    {
+        tile = map->planes[0][index - WG_LEVEL_SIZE];
+    }
+    if (y + 1U < WG_LEVEL_SIZE
+        && map->planes[0][index + WG_LEVEL_SIZE] >= WG_AREA_TILE)
+    {
+        tile = map->planes[0][index + WG_LEVEL_SIZE];
+    }
+    if (x > 0U && map->planes[0][index - 1U] >= WG_AREA_TILE)
+    {
+        tile = map->planes[0][index - 1U];
+    }
+    if (tile < WG_AREA_TILE
+        || tile >= WG_AREA_TILE + WG_NUM_AREAS)
+    {
+        return 0;
+    }
+    *area_number = (uint8_t)(tile - WG_AREA_TILE);
+    return 1;
+}
+
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level)
 {
@@ -47,13 +81,31 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
         return 0;
     }
     memset(level, 0, sizeof(*level));
+    memset(level->areas, WG_NO_AREA, sizeof(level->areas));
     WG_RandomSeed(&level->random, 0U);
     for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
     {
         uint16_t tile = map->planes[0][index];
         uint16_t info = map->planes[1][index];
 
-        level->tiles[index] = tile < WG_AREA_TILE ? (uint8_t)tile : 0;
+        if (tile == WG_AMBUSH_TILE)
+        {
+            level->tiles[index] = WG_AMBUSH_TILE;
+            level->ambush_tiles[index] = 1U;
+            if (!WG_AmbushArea(map, index, &level->areas[index]))
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            level->tiles[index] = tile < WG_AREA_TILE ? (uint8_t)tile : 0U;
+            if (tile >= WG_AREA_TILE
+                && tile < WG_AREA_TILE + WG_NUM_AREAS)
+            {
+                level->areas[index] = (uint8_t)(tile - WG_AREA_TILE);
+            }
+        }
         level->info[index] = info;
         if (info >= 19U && info <= 22U)
         {

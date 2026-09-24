@@ -113,9 +113,18 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
     actor->tile_y = (uint8_t)destination_y;
     actor->direction = (uint8_t)(map_direction * 2U);
     actor->shape = shape;
-    actor->base_shape = shape;
+    actor->base_shape = WL_PatrolShape(actor_class);
     actor->rotate = 1U;
+    actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
+    actor->flags = WG_ACTOR_FLAG_SHOOTABLE;
+    if (!patrol
+        && level->ambush_tiles[(size_t)tile_y * WG_LEVEL_SIZE + tile_x])
+    {
+        actor->flags |= WG_ACTOR_FLAG_AMBUSH;
+        level->tiles[(size_t)tile_y * WG_LEVEL_SIZE + tile_x] = 0U;
+    }
     actor->tic_count = patrol ? WG_RandomNext(&level->random) % 20U : 0;
+    actor->reaction_time = 0;
     actor->speed = actor_class == WG_ACTOR_DOG
                        ? WG_SPEED_DOG : WG_SPEED_PATROL;
     actor->distance = patrol ? WG_FIXED_ONE : 0;
@@ -170,6 +179,12 @@ int WL_SpawnDeadGuard(struct wg_level *level, uint8_t tile_x, uint8_t tile_y)
     actor->shape = WG_SPR_GRD_DEAD;
     actor->base_shape = WG_SPR_GRD_DEAD;
     actor->rotate = 0U;
+    actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
+    actor->flags = 0U;
+    actor->tic_count = 0;
+    actor->reaction_time = 0;
+    actor->speed = 0;
+    actor->distance = 0;
     actor->state = WG_STATE_NONE;
     actor->actor_class = WG_ACTOR_INERT;
     return 1;
@@ -229,7 +244,12 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
     actor->shape = shape;
     actor->base_shape = shape;
     actor->rotate = 0U;
+    actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
+    actor->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_AMBUSH;
+    actor->tic_count = 0;
+    actor->reaction_time = 0;
     actor->speed = WG_SPEED_PATROL;
+    actor->distance = 0;
     actor->state = WG_STATE_STAND;
     actor->actor_class = actor_class;
     return 1;
@@ -262,8 +282,12 @@ int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
     actor->shape = shapes[ghost_kind];
     actor->base_shape = shapes[ghost_kind];
     actor->rotate = 0U;
+    actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
+    actor->flags = WG_ACTOR_FLAG_AMBUSH;
     actor->tic_count = WG_RandomNext(&level->random) % 10U;
+    actor->reaction_time = 0;
     actor->speed = WG_SPEED_DOG;
+    actor->distance = 0;
     actor->state = WG_STATE_GHOST1;
     actor->actor_class = WG_ACTOR_GHOST;
     return 1;

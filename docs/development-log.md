@@ -140,3 +140,26 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --patrol-view --actor-tics 128 --frame-hash --dump-frame out\moving-patrol.ppm
 ```
+
+## 2026-09-23: Area connectivity and first sighting
+
+- Scope: original 37-area bookkeeping, ambush-tile replacement, open-door area
+  connectivity, 1/256-tile `CheckLine`, close/facing `CheckSight` rules,
+  ambush/noise handling, class reaction delays, and `FirstSighting` chase-state
+  transition and speed changes.
+- Focused synthetic maps verify walls, closed and fully open doors, facing,
+  ambush setup, deterministic random delay, and the guard's first chase frame.
+- The diagnostic uses the established E1M1 guard pose and advances awareness in
+  two calls: one detection tic followed by enough tics for the original maximum
+  reaction delay. Chase direction selection and attacks are intentionally not
+  active yet.
+- 320x200 indexed-frame FNV-1a: `63df8fa451a6ba6b`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 guard after first sighting](../out/alerted-guard.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --alert-view --frame-hash --dump-frame out\alerted-guard.ppm
+```

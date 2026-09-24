@@ -43,8 +43,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
 
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status
-bar. Patrol movement is active in the current diagnostic slice; awareness,
-combat behavior, and pushwall motion are not yet active:
+bar. Patrol movement and the original actor-awareness transition are active in
+the current diagnostic slice; chase movement, combat behavior, and pushwall
+motion are not yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -79,6 +80,14 @@ tics and frame the first patrol, use:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --patrol-view --actor-tics 128 --dump-frame patrol.ppm
+```
+
+The `--alert-view` diagnostic places the player in front of an E1M1 guard and
+advances awareness through the original reaction delay into the first chase
+state:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --alert-view --frame-hash --dump-frame alerted.ppm
 ```
 
 ## License

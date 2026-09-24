@@ -86,8 +86,19 @@ randomized initial tic phase, six-state `20/5/15/20/5/15` animation cycle,
 class-specific speed, destination-tile reservation, tile-center snapping, and
 direction arrows stored in map plane 1. Cardinal and diagonal wall/actor checks
 preserve the distinction between ordinary actors and dogs, and actors stop at
-closed doors until the door reaches its fully open position. Player awareness,
+closed doors until the door reaches its fully open position. Chase movement,
 combat states, and player/actor contact remain subsequent slices.
+
+The awareness slice retains all 37 original area numbers separately from the
+collision byte map. An ambush marker (plane-0 tile 106) is cleared and assigned
+the neighboring area using `SpawnStand`'s original right/up/down/left overwrite
+order. A bounded traversal of the original door-to-area graph derives the areas
+connected to the player. `CheckLine` retains the original 1/256-tile two-axis
+trace and door-position test, while `CheckSight`, `SightPlayer`, and
+`FirstSighting` retain close-range detection, cardinal facing checks, ambush and
+noise rules, class-specific randomized reaction delays, chase speeds, and the
+first chase frame. Chase direction selection and attacks remain the next actor
+slice.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
@@ -143,7 +154,9 @@ changing normal level state. Ordinary enemies and dead guards share the same
 visible-object list; live actors use the original larger `ACTORSIZE` projection
 adjustment and select one of eight rotations with `CalcRotate`. Patrol state
 updates now feed this same rendering path; awareness and combat AI, boss special
-behavior, and moving pushwalls are still being added.
+behavior, and moving pushwalls are still being added. The isolated
+`--alert-view` diagnostic also advances the selected guard through awareness and
+its reaction delay, without enabling incomplete chase logic in normal captures.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

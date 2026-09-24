@@ -243,6 +243,118 @@ static void TestPatrolMovement(void)
     CHECK(actor->distance == WG_FIXED_ONE - 512);
 }
 
+static void TestActorAwareness(void)
+{
+    uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_map_t map;
+    wg_level_t level;
+    wg_actor_t *actor;
+    size_t index;
+
+    memset(&map, 0, sizeof(map));
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        plane_zero[index] = WG_AREA_TILE;
+        plane_one[index] = 0U;
+    }
+    plane_zero[2U * WG_LEVEL_SIZE + 2U] = WG_AMBUSH_TILE;
+    plane_one[2U * WG_LEVEL_SIZE + 2U] = 108U;
+    plane_one[2U * WG_LEVEL_SIZE + 5U] = 19U;
+    map.width = WG_LEVEL_SIZE;
+    map.height = WG_LEVEL_SIZE;
+    map.planes[0] = plane_zero;
+    map.planes[1] = plane_one;
+
+    CHECK(WG_LevelBuild(&map, &level));
+    CHECK(level.actor_count == 1U);
+    actor = &level.actors[0];
+    CHECK(level.tiles[2U * WG_LEVEL_SIZE + 2U] == 0U);
+    CHECK(level.areas[2U * WG_LEVEL_SIZE + 2U] == 0U);
+    CHECK(actor->area_number == 0U);
+    CHECK((actor->flags & WG_ACTOR_FLAG_AMBUSH) != 0U);
+    CHECK(WL_UpdateAreaConnectivity(&level));
+    CHECK(level.area_by_player[0] != 0U);
+    CHECK(WL_CheckLine(&level, actor));
+    CHECK(WL_CheckSight(&level, actor));
+    CHECK(WL_TickAwareness(&level, 1U, 0));
+    CHECK((actor->flags & WG_ACTOR_FLAG_AMBUSH) == 0U);
+    CHECK(actor->reaction_time == 3);
+    CHECK(actor->state == WG_STATE_STAND);
+    CHECK(WL_TickAwareness(&level, 2U, 0));
+    CHECK(actor->reaction_time == 1);
+    CHECK(WL_TickAwareness(&level, 1U, 0));
+    CHECK(actor->state == WG_STATE_CHASE1);
+    CHECK(actor->tic_count == 10);
+    CHECK(actor->shape == 58U);
+    CHECK(actor->speed == 1536);
+    CHECK((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) != 0U);
+    CHECK((actor->flags & WG_ACTOR_FLAG_FIRST_ATTACK) != 0U);
+
+    plane_one[2U * WG_LEVEL_SIZE + 2U] = 180U;
+    CHECK(WG_LevelBuild(&map, &level));
+    CHECK(level.actor_count == 0U);
+    CHECK(level.tiles[2U * WG_LEVEL_SIZE + 2U] == WG_AMBUSH_TILE);
+
+    plane_one[2U * WG_LEVEL_SIZE + 2U] = 108U;
+    plane_zero[2U * WG_LEVEL_SIZE + 2U] = WG_AREA_TILE;
+    plane_zero[2U * WG_LEVEL_SIZE + 4U] = 1U;
+    CHECK(WG_LevelBuild(&map, &level));
+    actor = &level.actors[0];
+    CHECK(WL_UpdateAreaConnectivity(&level));
+    CHECK(!WL_CheckLine(&level, actor));
+    CHECK(!WL_CheckSight(&level, actor));
+    plane_zero[2U * WG_LEVEL_SIZE + 4U] = WG_AREA_TILE;
+    CHECK(WG_LevelBuild(&map, &level));
+    actor = &level.actors[0];
+    actor->direction = 4U;
+    CHECK(WL_UpdateAreaConnectivity(&level));
+    CHECK(WL_CheckLine(&level, actor));
+    CHECK(!WL_CheckSight(&level, actor));
+}
+
+static void TestDoorAreaConnectivity(void)
+{
+    uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_map_t map;
+    wg_level_t level;
+    size_t x;
+    size_t y;
+
+    memset(&map, 0, sizeof(map));
+    for (y = 0U; y < WG_LEVEL_SIZE; ++y)
+    {
+        for (x = 0U; x < WG_LEVEL_SIZE; ++x)
+        {
+            size_t index = y * WG_LEVEL_SIZE + x;
+
+            plane_zero[index] = x < 3U ? WG_AREA_TILE : WG_AREA_TILE + 1U;
+            plane_one[index] = 0U;
+        }
+        plane_zero[y * WG_LEVEL_SIZE + 3U] = 1U;
+    }
+    plane_zero[2U * WG_LEVEL_SIZE + 3U] = 90U;
+    plane_one[2U * WG_LEVEL_SIZE + 1U] = 19U;
+    plane_one[2U * WG_LEVEL_SIZE + 5U] = 110U;
+    map.width = WG_LEVEL_SIZE;
+    map.height = WG_LEVEL_SIZE;
+    map.planes[0] = plane_zero;
+    map.planes[1] = plane_one;
+
+    CHECK(WG_LevelBuild(&map, &level));
+    CHECK(level.door_count == 1U);
+    CHECK(WL_UpdateAreaConnectivity(&level));
+    CHECK(level.area_by_player[0] != 0U);
+    CHECK(level.area_by_player[1] == 0U);
+    CHECK(!WL_CheckLine(&level, &level.actors[0]));
+    level.doors[0].position = 0xffffU;
+    CHECK(WL_UpdateAreaConnectivity(&level));
+    CHECK(level.area_by_player[1] != 0U);
+    CHECK(WL_CheckLine(&level, &level.actors[0]));
+    CHECK(WL_CheckSight(&level, &level.actors[0]));
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -1006,6 +1118,8 @@ int main(int argc, char **argv)
     TestActorSetup();
     TestBossAndGhostSetup();
     TestPatrolMovement();
+    TestActorAwareness();
+    TestDoorAreaConnectivity();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();
