@@ -77,6 +77,8 @@ int ID_SD_DigitalNumberForSound(unsigned sound);
 int ID_SD_DigitalStart(id_sd_music_t *music, const uint8_t *data,
                        size_t length, uint16_t priority,
                        uint8_t left_position, uint8_t right_position);
+int ID_SD_DigitalSetPosition(id_sd_music_t *music,
+                            uint8_t left_position, uint8_t right_position);
 void ID_SD_DigitalStop(id_sd_music_t *music);
 int ID_SD_DigitalPlaying(const id_sd_music_t *music);
 

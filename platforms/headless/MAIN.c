@@ -62,6 +62,7 @@ static void WG_WriteLE32(FILE *stream, uint32_t value)
 
 static int WG_WriteMusic(const char *data_path, unsigned map_number,
                          int sound_number, int digitized,
+                         unsigned left_position, unsigned right_position,
                          const char *output_path)
 {
     enum { sample_rate = 48000, seconds = 10, block_frames = 1024 };
@@ -122,7 +123,9 @@ static int WG_WriteMusic(const char *data_path, unsigned map_number,
                 goto cleanup;
             }
             played = ID_SD_DigitalStart(music, digital_data, digital_length,
-                                        WG_ReadLE16(chunk + 4U), 0U, 0U);
+                                        WG_ReadLE16(chunk + 4U),
+                                        (uint8_t)left_position,
+                                        (uint8_t)right_position);
             free(digital_data);
         }
         else
@@ -268,8 +271,12 @@ int main(int argc, char **argv)
     const char *data_path;
     const char *map_text;
     const char *sound_text;
+    const char *left_text;
+    const char *right_text;
     int digitized;
     unsigned map_number = 0U;
+    unsigned left_position = 0U;
+    unsigned right_position = 0U;
     int sound_number = -1;
 
     bootstrap_test = argc == 2 && strcmp(argv[1], "--bootstrap-test") == 0;
@@ -278,6 +285,8 @@ int main(int argc, char **argv)
     data_path = WG_ArgumentValue(argc, argv, "--data");
     map_text = WG_ArgumentValue(argc, argv, "--map");
     sound_text = WG_ArgumentValue(argc, argv, "--sound");
+    left_text = WG_ArgumentValue(argc, argv, "--left-position");
+    right_text = WG_ArgumentValue(argc, argv, "--right-position");
     digitized = WG_HasArgument(argc, argv, "--digitized");
     if (map_text != NULL)
     {
@@ -286,6 +295,20 @@ int main(int argc, char **argv)
     if (sound_text != NULL)
     {
         sound_number = (int)strtol(sound_text, NULL, 10);
+    }
+    if (left_text != NULL)
+    {
+        left_position = (unsigned)strtoul(left_text, NULL, 10);
+    }
+    if (right_text != NULL)
+    {
+        right_position = (unsigned)strtoul(right_text, NULL, 10);
+    }
+    if (left_position > 15U || right_position > 15U
+        || (left_position == 15U && right_position == 15U))
+    {
+        fprintf(stderr, "Sound positions must be 0-15 and not both 15.\n");
+        return 1;
     }
     result = wolf3dgeneric_Create(argc, argv);
     if (result != WG_RESULT_OK)
@@ -308,7 +331,7 @@ int main(int argc, char **argv)
     if (music_path != NULL
         && (data_path == NULL
             || !WG_WriteMusic(data_path, map_number, sound_number, digitized,
-                              music_path)))
+                              left_position, right_position, music_path)))
     {
         fprintf(stderr, "Unable to write music dump: %s\n", music_path);
         wolf3dgeneric_Shutdown();

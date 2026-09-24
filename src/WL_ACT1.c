@@ -103,7 +103,9 @@ int WL_CloseDoor(struct wg_level *level, size_t door_index)
     {
         return 0;
     }
-    (void)WG_QueueSound(level, WG_SOUND_CLOSE_DOOR);
+    (void)WG_QueueSoundAt(level, WG_SOUND_CLOSE_DOOR,
+                          door->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
     door->action = WG_DOOR_CLOSING;
     return 1;
 }
@@ -163,7 +165,10 @@ int WL_MoveDoors(struct wg_level *level, unsigned tics)
         {
             if (door->position == 0U)
             {
-                (void)WG_QueueSound(level, WG_SOUND_OPEN_DOOR);
+                (void)WG_QueueSoundAt(
+                    level, WG_SOUND_OPEN_DOOR,
+                    door->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                    door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
             }
             if (tics >= 64U
                 || (uint32_t)door->position + ((uint32_t)tics << 10)

@@ -253,6 +253,7 @@ static void WL_GiveWeapon(wg_level_t *level, wg_weapon_t weapon)
 int WL_GetBonus(struct wg_level *level, size_t static_index)
 {
     wg_static_object_t *object;
+    wg_sound_t sound;
 
     if (level == NULL || static_index >= level->static_count)
     {
@@ -271,26 +272,32 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
             return 0;
         }
         WL_HealSelf(level, 25U);
+        sound = WG_SOUND_HEALTH_2;
         break;
     case WG_ITEM_KEY1:
     case WG_ITEM_KEY2:
         level->player_keys |= (uint8_t)(1U << (object->item - WG_ITEM_KEY1));
+        sound = WG_SOUND_GET_KEY;
         break;
     case WG_ITEM_CROSS:
         WL_GivePoints(level, 100U);
         ++level->treasure_count;
+        sound = WG_SOUND_BONUS_1;
         break;
     case WG_ITEM_CHALICE:
         WL_GivePoints(level, 500U);
         ++level->treasure_count;
+        sound = WG_SOUND_BONUS_2;
         break;
     case WG_ITEM_BIBLE:
         WL_GivePoints(level, 1000U);
         ++level->treasure_count;
+        sound = WG_SOUND_BONUS_3;
         break;
     case WG_ITEM_CROWN:
         WL_GivePoints(level, 5000U);
         ++level->treasure_count;
+        sound = WG_SOUND_BONUS_4;
         break;
     case WG_ITEM_CLIP:
         if (level->player_ammo == 99U)
@@ -298,6 +305,7 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
             return 0;
         }
         WL_GiveAmmo(level, 8U);
+        sound = WG_SOUND_GET_AMMO;
         break;
     case WG_ITEM_CLIP2:
         if (level->player_ammo == 99U)
@@ -305,18 +313,22 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
             return 0;
         }
         WL_GiveAmmo(level, 4U);
+        sound = WG_SOUND_GET_AMMO;
         break;
     case WG_ITEM_MACHINEGUN:
         WL_GiveWeapon(level, WG_WEAPON_MACHINEGUN);
+        sound = WG_SOUND_GET_MACHINEGUN;
         break;
     case WG_ITEM_CHAINGUN:
         WL_GiveWeapon(level, WG_WEAPON_CHAINGUN);
+        sound = WG_SOUND_GET_GATLING;
         break;
     case WG_ITEM_FULLHEAL:
         WL_HealSelf(level, 99U);
         WL_GiveAmmo(level, 25U);
         WL_GiveExtraMan(level);
         ++level->treasure_count;
+        sound = WG_SOUND_BONUS_EXTRA_LIFE;
         break;
     case WG_ITEM_FOOD:
         if (level->player_health == 100U)
@@ -324,6 +336,7 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
             return 0;
         }
         WL_HealSelf(level, 10U);
+        sound = WG_SOUND_HEALTH_1;
         break;
     case WG_ITEM_ALPO:
         if (level->player_health == 100U)
@@ -331,6 +344,7 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
             return 0;
         }
         WL_HealSelf(level, 4U);
+        sound = WG_SOUND_HEALTH_1;
         break;
     case WG_ITEM_GIBS:
         if (level->player_health > 10U)
@@ -338,11 +352,13 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
             return 0;
         }
         WL_HealSelf(level, 1U);
+        sound = WG_SOUND_SLURPIE;
         break;
     default:
         return 0;
     }
     level->bonus_count = 18U;
+    (void)WG_QueueSound(level, sound);
     object->removed = 1U;
     object->blocking = 0U;
     return 1;

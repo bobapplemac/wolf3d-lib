@@ -69,6 +69,9 @@ VSWAP instead:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digitized --dump-music e1m1-pistol.wav
 ```
 
+For mixer diagnostics, `--left-position N` and `--right-position N` accept the
+original Sound Blaster Pro attenuation values from 0 (full) to 15 (silent).
+
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status
 bar. Patrol movement, actor awareness, ordinary enemy chase movement, and the

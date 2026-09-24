@@ -295,8 +295,13 @@ int ID_SD_DigiBankLoad(const id_sd_digi_bank_t *bank, size_t sound,
     size_t copied = 0U;
     size_t page_index;
 
-    if (bank == NULL || bank->pages == NULL || data == NULL || length == NULL
-        || sound >= bank->count)
+    if (data == NULL || length == NULL)
+    {
+        return 0;
+    }
+    *data = NULL;
+    *length = 0U;
+    if (bank == NULL || bank->pages == NULL || sound >= bank->count)
     {
         return 0;
     }
@@ -382,6 +387,20 @@ int ID_SD_DigitalStart(id_sd_music_t *music, const uint8_t *data,
     music->digital_data = copy;
     music->digital_length = length;
     music->digital_priority = priority;
+    music->digital_left = left_position;
+    music->digital_right = right_position;
+    return 1;
+}
+
+int ID_SD_DigitalSetPosition(id_sd_music_t *music,
+                            uint8_t left_position, uint8_t right_position)
+{
+    if (music == NULL || music->digital_data == NULL
+        || left_position > 15U || right_position > 15U
+        || (left_position == 15U && right_position == 15U))
+    {
+        return 0;
+    }
     music->digital_left = left_position;
     music->digital_right = right_position;
     return 1;

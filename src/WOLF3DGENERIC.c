@@ -47,6 +47,9 @@ typedef struct wg_game_session
     uint8_t keys[128];
     wl_play_state_t play;
     uint8_t audio_active;
+    uint8_t sound_positioned;
+    int32_t sound_x;
+    int32_t sound_y;
 } wg_game_session_t;
 
 static wg_game_session_t wg_game;
@@ -576,6 +579,9 @@ static int WG_GameSessionOpen(unsigned map_number)
     {
         goto cleanup;
     }
+    wg_game.level.shareware =
+        wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14;
+    wg_game.level.map_number = (uint8_t)map_number;
     WG_ViewBuildTrigTables(&wg_game.view);
     if (!WG_ViewCalculateProjection(&wg_game.view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH))
@@ -663,11 +669,26 @@ static int WG_GameSessionTick(void)
     }
     if (wg_game.audio_active)
     {
+        if (wg_game.sound_positioned
+            && ID_SD_DigitalPlaying(wg_game.music))
+        {
+            uint8_t left;
+            uint8_t right;
+
+            if (WG_SoundPosition(&wg_game.level, &wg_game.view,
+                                 wg_game.sound_x, wg_game.sound_y,
+                                 &left, &right))
+            {
+                (void)ID_SD_DigitalSetPosition(wg_game.music, left, right);
+            }
+        }
         for (sound = 0U; sound < wg_game.level.sound_event_count; ++sound)
         {
             const uint8_t *data;
             size_t size;
-            unsigned sound_number = wg_game.level.sound_events[sound];
+            const wg_sound_event_t *event =
+                &wg_game.level.sound_events[sound];
+            unsigned sound_number = event->sound;
             size_t chunk = 87U + sound_number;
             int digital_number = ID_SD_DigitalNumberForSound(sound_number);
 
@@ -679,15 +700,31 @@ static int WG_GameSessionTick(void)
                 {
                     uint8_t *digital_data;
                     size_t digital_length;
+                    uint8_t left = 0U;
+                    uint8_t right = 0U;
 
                     if (ID_SD_DigiBankLoad(&wg_game.digi_bank,
                                            (size_t)digital_number,
                                            &digital_data, &digital_length))
                     {
+                        if (event->positioned
+                            && !WG_SoundPosition(
+                                &wg_game.level, &wg_game.view,
+                                event->x, event->y, &left, &right))
+                        {
+                            left = 0U;
+                            right = 0U;
+                        }
                         played = ID_SD_DigitalStart(
                             wg_game.music, digital_data, digital_length,
-                            WG_ReadLE16(data + 4U), 0U, 0U);
+                            WG_ReadLE16(data + 4U), left, right);
                         free(digital_data);
+                        if (played)
+                        {
+                            wg_game.sound_positioned = event->positioned;
+                            wg_game.sound_x = event->x;
+                            wg_game.sound_y = event->y;
+                        }
                     }
                 }
                 if (!played)
@@ -745,6 +782,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    level.shareware = wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14;
+    level.map_number = (uint8_t)map_number;
     if (open_doors)
     {
         uint8_t door;

@@ -280,3 +280,10 @@ Sound Blaster Pro 0-15 stereo attenuation, and mixes it into the same signed
 rate produced by the original integer DSP time constant for its nominal 7 kHz
 configuration. Missing sample pages in the shareware archive fall back to the
 corresponding AdLib effect at runtime.
+
+World sounds retain the original `WL_GAME.C` spatial transform and its exact
+15-by-30 left-ear attenuation table (the right ear is its mirrored axis).
+Events distinguish centered player/interface sounds from positioned actors and
+doors. While the selected digitized sound remains active, its world coordinate
+is transformed again each game tic so turning or walking changes the stereo
+image as it did through `UpdateSoundLoc` on Sound Blaster Pro hardware.

@@ -154,9 +154,11 @@ static void TestIMFSequencer(void)
                                  sizeof(digital_samples), 5U, 0U, 14U));
         CHECK(!ID_SD_DigitalStart(music, digital_samples,
                                   sizeof(digital_samples), 4U, 0U, 0U));
+        CHECK(ID_SD_DigitalSetPosition(music, 3U, 7U));
+        CHECK(!ID_SD_DigitalSetPosition(music, 15U, 15U));
         CHECK(ID_SD_MusicRender(music, effect_pcm, 20U));
-        CHECK(effect_pcm[0] == INT16_MIN);
-        CHECK(effect_pcm[1] < 0 && effect_pcm[1] > effect_pcm[0]);
+        CHECK(effect_pcm[0] == -26214);
+        CHECK(effect_pcm[1] == -17476);
         CHECK(!ID_SD_DigitalPlaying(music));
         ID_SD_MusicDestroy(music);
     }
@@ -481,6 +483,9 @@ static void TestActorAwareness(void)
     CHECK(actor->tic_count == 10);
     CHECK(actor->shape == 58U);
     CHECK(actor->speed == 1536);
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_GUARD_SIGHT);
+    CHECK(level.sound_events[0].positioned == 1U);
     CHECK((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) != 0U);
     CHECK((actor->flags & WG_ACTOR_FLAG_FIRST_ATTACK) != 0U);
     CHECK(WL_TickActors(&level, 1U));
@@ -643,6 +648,9 @@ static void TestOrdinaryShootingStates(void)
     CHECK(actor->state == WG_STATE_SHOOT3);
     CHECK(actor->shape == 287U);
     CHECK(level.player_health < 100U);
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_NAZI_FIRE);
+    CHECK(level.sound_events[0].positioned == 1U);
 
     WG_RandomSeed(&level.random, 0U);
     level.player_health = 100U;
@@ -723,6 +731,8 @@ static void TestDogChaseAndBite(void)
     CHECK(WL_TickAwareness(&level, 2U, 0));
     CHECK(dog->state == WG_STATE_CHASE1);
     CHECK(dog->speed == 3000);
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_DOG_BARK);
     CHECK(WL_TickActors(&level, 1U));
     CHECK(dog->direction == 1U);
     CHECK(dog->tile_x == 3U);
@@ -753,6 +763,8 @@ static void TestDogChaseAndBite(void)
     CHECK(dog->shape == 137U);
     CHECK(level.player_health == 94U);
     CHECK(level.damage_count == 6U);
+    CHECK(level.sound_event_count == 2U);
+    CHECK(level.sound_events[1].sound == WG_SOUND_DOG_ATTACK);
     CHECK(WL_TickActors(&level, 20U));
     CHECK(dog->state == WG_STATE_DOG_JUMP5);
     CHECK(dog->shape == 99U);
@@ -1421,11 +1433,23 @@ static void TestPlayerWeapons(void)
     actor->trans_x = WG_FIXED_ONE;
     WG_RandomSeed(&level.random, 1U);
     CHECK(WL_GunAttack(&level));
-    CHECK(level.sound_event_count == 1U);
-    CHECK(level.sound_events[0] == WG_SOUND_ATTACK_PISTOL);
+    CHECK(level.sound_event_count == 2U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_ATTACK_PISTOL);
+    CHECK(level.sound_events[0].positioned == 0U);
+    CHECK(level.sound_events[1].sound == WG_SOUND_DEATH_SCREAM_5);
+    CHECK(level.sound_events[1].positioned == 1U);
     CHECK(level.made_noise == 1U);
     CHECK(actor->state == WG_STATE_DIE1);
     CHECK(level.score == 100U);
+
+    memset(&level, 0, sizeof(level));
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.shareware = 1U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
+    WG_RandomSeed(&level.random, 1U);
+    CHECK(WL_KillActor(&level, 0U));
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_2);
 
     memset(&level, 0, sizeof(level));
     level.difficulty = WG_DIFFICULTY_MEDIUM;
@@ -1558,6 +1582,8 @@ static void TestBonusPickups(void)
     level.player_health = 80U;
     CHECK(WL_GetBonus(&level, 0U));
     CHECK(level.player_health == 100U);
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_HEALTH_2);
 
     SetBonus(&level, WG_ITEM_FOOD);
     level.player_health = 95U;
@@ -1594,6 +1620,7 @@ static void TestBonusPickups(void)
     CHECK(level.player_ammo == 14U);
     CHECK(level.player_weapon == WG_WEAPON_MACHINEGUN);
     CHECK(level.player_best_weapon == WG_WEAPON_MACHINEGUN);
+    CHECK(level.sound_events[0].sound == WG_SOUND_GET_MACHINEGUN);
     SetBonus(&level, WG_ITEM_CHAINGUN);
     CHECK(WL_GetBonus(&level, 0U));
     CHECK(level.player_weapon == WG_WEAPON_CHAINGUN);
@@ -1602,6 +1629,7 @@ static void TestBonusPickups(void)
     SetBonus(&level, WG_ITEM_KEY1);
     CHECK(WL_GetBonus(&level, 0U));
     CHECK(level.player_keys == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_GET_KEY);
     SetBonus(&level, WG_ITEM_KEY2);
     level.player_keys = 1U;
     CHECK(WL_GetBonus(&level, 0U));
@@ -1610,6 +1638,7 @@ static void TestBonusPickups(void)
     SetBonus(&level, WG_ITEM_CROSS);
     CHECK(WL_GetBonus(&level, 0U));
     CHECK(level.score == 100U && level.treasure_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_BONUS_1);
     SetBonus(&level, WG_ITEM_CHALICE);
     CHECK(WL_GetBonus(&level, 0U));
     CHECK(level.score == 500U && level.treasure_count == 1U);
@@ -1672,11 +1701,26 @@ static void TestPlayerMovementAndUse(void)
     wg_view_tables_t tables;
     int32_t start_x;
     int32_t start_y;
+    uint8_t left;
+    uint8_t right;
 
     memset(&tables, 0, sizeof(tables));
     WG_ViewBuildTrigTables(&tables);
+    CHECK(WG_ViewCalculateProjection(&tables, WG_MAX_VIEW_WIDTH,
+                                     WG_FOCAL_LENGTH));
 
     SetPlayerMovementLevel(&level);
+    CHECK(WG_SoundPosition(&level, &tables, level.player_x, level.player_y,
+                           &left, &right));
+    CHECK(left == 0U && right == 0U);
+    CHECK(WG_SoundPosition(&level, &tables, level.player_x,
+                           level.player_y - 2 * WG_FIXED_ONE,
+                           &left, &right));
+    CHECK(left < right);
+    CHECK(WG_SoundPosition(&level, &tables, level.player_x,
+                           level.player_y + 2 * WG_FIXED_ONE,
+                           &left, &right));
+    CHECK(left > right);
     start_x = level.player_x;
     start_y = level.player_y;
     level.tiles[10U * WG_LEVEL_SIZE + 11U] = 1U;
@@ -1750,8 +1794,10 @@ static void TestPlayerMovementAndUse(void)
     CHECK(level.doors[0].action == WG_DOOR_OPENING);
     CHECK(WL_MoveDoors(&level, 32U));
     CHECK(level.sound_event_count == 2U);
-    CHECK(level.sound_events[0] == WG_SOUND_NOWAY);
-    CHECK(level.sound_events[1] == WG_SOUND_OPEN_DOOR);
+    CHECK(level.sound_events[0].sound == WG_SOUND_NOWAY);
+    CHECK(level.sound_events[0].positioned == 0U);
+    CHECK(level.sound_events[1].sound == WG_SOUND_OPEN_DOOR);
+    CHECK(level.sound_events[1].positioned == 1U);
     CHECK(level.doors[0].position == 32768U);
     CHECK(!WL_TryMove(&level, 11 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
                       level.player_y));
@@ -1768,7 +1814,8 @@ static void TestPlayerMovementAndUse(void)
     CHECK(WL_MoveDoors(&level, 300U));
     CHECK(level.doors[0].action == WG_DOOR_CLOSING);
     CHECK(level.sound_event_count == 3U);
-    CHECK(level.sound_events[2] == WG_SOUND_CLOSE_DOOR);
+    CHECK(level.sound_events[2].sound == WG_SOUND_CLOSE_DOOR);
+    CHECK(level.sound_events[2].positioned == 1U);
     CHECK(WL_MoveDoors(&level, 64U));
     CHECK(level.doors[0].position == 0U);
     CHECK(level.doors[0].action == WG_DOOR_CLOSED);

@@ -612,3 +612,32 @@ Regenerate the ten-second reference render with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digitized --dump-music out\e1m1-pistol-digital.wav
 ```
+
+## 2026-09-24: Spatial and gameplay sound dispatch
+
+- Replaced the scalar sound-number queue with bounded events that explicitly
+  distinguish centered sounds from fixed-point world locations.
+- Ported `SetSoundLoc` from `WL_GAME.C`, including the focal-point offset,
+  fixed-point listener transform, clamping, and exact 15-by-30 attenuation
+  table. The right channel uses the original mirrored axis.
+- Active digitized sounds are repositioned every 70 Hz game tic as the player
+  moves and turns, preserving `UpdateSoundLoc` behavior without coupling audio
+  sample generation to the gameplay clock.
+- Door motion, ordinary enemy sighting, hitscan fire, dog attacks, Schabbs'
+  syringe, Giftmacher/Fatface rockets, Fake Hitler flames, and rocket impacts
+  now emit their original positioned sound numbers.
+- Boss sight lines remain centered as in the DOS source. Item pickups and both
+  shareware/full guard-death sound selection now emit their original effects;
+  all other supported actor classes have their original death calls as well.
+- The headless WAV diagnostic accepts `--left-position` and
+  `--right-position` to isolate and reproduce mixer panning.
+- The right-biased ten-second pistol fixture has SHA-256
+  `54aeae4d8a7e70efee58d2915e8236c67979301fd005a14d0bbea34bd0213a59`.
+
+![Right-biased digitized pistol spatial-audio fixture](../out/e1m1-pistol-panned.wav)
+
+Regenerate it with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digitized --left-position 12 --right-position 0 --dump-music out\e1m1-pistol-panned.wav
+```

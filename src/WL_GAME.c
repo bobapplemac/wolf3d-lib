@@ -3,6 +3,9 @@
 
 #include <string.h>
 
+#include "WG_FIXED.h"
+#include "WL_MAIN.h"
+
 static int WG_DifficultyDirection(uint16_t info, uint16_t easy_base,
                                   uint16_t tier_spacing,
                                   wg_difficulty_t difficulty,
@@ -440,12 +443,115 @@ int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
 
 int WG_QueueSound(wg_level_t *level, wg_sound_t sound)
 {
+    wg_sound_event_t *event;
+
     if (level == NULL || level->sound_event_count >= WG_MAX_SOUND_EVENTS
         || sound < 0 || sound > UINT8_MAX)
     {
         return 0;
     }
-    level->sound_events[level->sound_event_count++] = (uint8_t)sound;
+    event = &level->sound_events[level->sound_event_count++];
+    memset(event, 0, sizeof(*event));
+    event->sound = (uint8_t)sound;
+    return 1;
+}
+
+int WG_QueueSoundAt(wg_level_t *level, wg_sound_t sound,
+                    int32_t x, int32_t y)
+{
+    wg_sound_event_t *event;
+
+    if (!WG_QueueSound(level, sound))
+    {
+        return 0;
+    }
+    event = &level->sound_events[level->sound_event_count - 1U];
+    event->x = x;
+    event->y = y;
+    event->positioned = 1U;
+    return 1;
+}
+
+static int WG_SoundTile(int32_t value)
+{
+    if (value >= 0)
+    {
+        return (int)(value / WG_FIXED_ONE);
+    }
+    return -(int)((-(int64_t)value + WG_FIXED_ONE - 1) / WG_FIXED_ONE);
+}
+
+int WG_SoundPosition(const wg_level_t *level,
+                     const wg_view_tables_t *tables,
+                     int32_t sound_x, int32_t sound_y,
+                     uint8_t *left, uint8_t *right)
+{
+    static const uint8_t left_table[15][30] =
+    {
+        {8,8,8,8,8,8,8,8,5,3,1,0,0,0,0,0,6,7,7,7,7,7,7,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,6,4,2,0,0,0,0,0,4,6,7,7,7,7,7,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,6,4,2,1,0,0,0,1,4,6,6,7,7,7,7,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,7,5,3,2,1,0,1,2,4,5,6,7,7,7,7,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,6,5,3,3,2,2,3,4,5,6,7,7,7,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,7,6,5,4,4,4,4,5,6,6,7,7,7,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,7,6,6,5,5,5,6,6,7,7,7,8,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,8,8,7,7,6,6,7,7,7,8,8,8,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8},
+        {8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8}
+    };
+    const int32_t *cosine;
+    int32_t view_cosine;
+    int32_t view_sine;
+    int32_t view_x;
+    int32_t view_y;
+    int32_t relative_x;
+    int32_t relative_y;
+    int distance_x;
+    int distance_y;
+
+    if (level == NULL || tables == NULL || left == NULL || right == NULL
+        || level->player_angle >= WG_ANGLES)
+    {
+        return 0;
+    }
+    cosine = WG_ViewCosineTable(tables);
+    view_cosine = cosine[level->player_angle];
+    view_sine = tables->sine[level->player_angle];
+    view_x = level->player_x
+             - WG_FixedMul(tables->focal_length, view_cosine);
+    view_y = level->player_y
+             + WG_FixedMul(tables->focal_length, view_sine);
+    sound_x -= view_x;
+    sound_y -= view_y;
+    relative_x = WG_FixedMul(sound_x, view_cosine)
+                 - WG_FixedMul(sound_y, view_sine);
+    relative_y = WG_FixedMul(sound_x, view_sine)
+                 + WG_FixedMul(sound_y, view_cosine);
+    distance_x = WG_SoundTile(relative_x);
+    distance_y = WG_SoundTile(relative_y);
+    if (distance_y >= 15)
+    {
+        distance_y = 14;
+    }
+    else if (distance_y <= -15)
+    {
+        distance_y = -15;
+    }
+    if (distance_x < 0)
+    {
+        distance_x = -distance_x;
+    }
+    if (distance_x >= 15)
+    {
+        distance_x = 14;
+    }
+    *left = left_table[distance_x][distance_y + 15];
+    *right = left_table[distance_x][14 - distance_y];
     return 1;
 }
 

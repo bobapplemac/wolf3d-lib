@@ -24,7 +24,7 @@
 #define WG_SPR_STAT_MACHINEGUN 29U
 
 static int WL_BeginAttack(wg_actor_t *actor);
-static void WL_FirstSighting(wg_actor_t *actor);
+static void WL_FirstSighting(wg_level_t *level, wg_actor_t *actor);
 static int32_t WL_ChaseStateDuration(const wg_actor_t *actor,
                                      wg_actor_state_t state);
 static wg_actor_state_t WL_NextChaseState(wg_actor_state_t state);
@@ -261,6 +261,94 @@ static int WL_SpawnRealHitler(wg_level_t *level, const wg_actor_t *mecha)
     return 1;
 }
 
+static void WL_QueueDeathSound(wg_level_t *level, const wg_actor_t *actor)
+{
+    static const wg_sound_t guard_sounds[] =
+    {
+        WG_SOUND_DEATH_SCREAM_1, WG_SOUND_DEATH_SCREAM_2,
+        WG_SOUND_DEATH_SCREAM_3, WG_SOUND_DEATH_SCREAM_4,
+        WG_SOUND_DEATH_SCREAM_5, WG_SOUND_DEATH_SCREAM_7,
+        WG_SOUND_DEATH_SCREAM_8, WG_SOUND_DEATH_SCREAM_9
+    };
+    wg_sound_t sound;
+    int positioned = 1;
+
+    if (level->map_number % 10U == 9U
+        && WG_RandomNext(&level->random) == 0U
+        && (actor->actor_class == WG_ACTOR_MUTANT
+            || actor->actor_class == WG_ACTOR_GUARD
+            || actor->actor_class == WG_ACTOR_OFFICER
+            || actor->actor_class == WG_ACTOR_SS
+            || actor->actor_class == WG_ACTOR_DOG))
+    {
+        sound = WG_SOUND_DEATH_SCREAM_6;
+    }
+    else
+    {
+        switch (actor->actor_class)
+        {
+        case WG_ACTOR_MUTANT:
+            sound = WG_SOUND_AHHHG;
+            break;
+        case WG_ACTOR_GUARD:
+            sound = guard_sounds[WG_RandomNext(&level->random)
+                                 % (level->shareware ? 2U : 8U)];
+            break;
+        case WG_ACTOR_OFFICER:
+            sound = WG_SOUND_NEIN_SOWAS;
+            break;
+        case WG_ACTOR_SS:
+            sound = WG_SOUND_LEBEN;
+            break;
+        case WG_ACTOR_DOG:
+            sound = WG_SOUND_DOG_DEATH;
+            break;
+        case WG_ACTOR_BOSS:
+            sound = WG_SOUND_MUTTI;
+            positioned = 0;
+            break;
+        case WG_ACTOR_SCHABBS:
+            sound = WG_SOUND_MEIN_GOTT;
+            positioned = 0;
+            break;
+        case WG_ACTOR_FAKE:
+            sound = WG_SOUND_HITLER_HA;
+            positioned = 0;
+            break;
+        case WG_ACTOR_MECHA_HITLER:
+            sound = WG_SOUND_SCHEIST;
+            positioned = 0;
+            break;
+        case WG_ACTOR_REAL_HITLER:
+            sound = WG_SOUND_EVA;
+            positioned = 0;
+            break;
+        case WG_ACTOR_GRETEL:
+            sound = WG_SOUND_MEIN;
+            positioned = 0;
+            break;
+        case WG_ACTOR_GIFT:
+            sound = WG_SOUND_DONNER;
+            positioned = 0;
+            break;
+        case WG_ACTOR_FAT:
+            sound = WG_SOUND_ROSE;
+            positioned = 0;
+            break;
+        default:
+            return;
+        }
+    }
+    if (positioned)
+    {
+        (void)WG_QueueSoundAt(level, sound, actor->x, actor->y);
+    }
+    else
+    {
+        (void)WG_QueueSound(level, sound);
+    }
+}
+
 int WL_KillActor(wg_level_t *level, size_t actor_index)
 {
     wg_actor_t *actor;
@@ -343,6 +431,7 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     actor->rotate = 0U;
     actor->flags = (uint16_t)(actor->flags & ~WG_ACTOR_FLAG_SHOOTABLE);
     actor->flags |= WG_ACTOR_FLAG_NONMARK;
+    WL_QueueDeathSound(level, actor);
     WL_GivePoints(level, points);
     ++level->kill_count;
     return 1;
@@ -1080,6 +1169,9 @@ static void WL_T_Bite(wg_level_t *level, const wg_actor_t *actor)
     int32_t delta_x = level->player_x - actor->x;
     int32_t delta_y = level->player_y - actor->y;
 
+    (void)WG_QueueSoundAt(level, WG_SOUND_DOG_ATTACK,
+                          actor->x, actor->y);
+
     delta_x = (delta_x < 0 ? -delta_x : delta_x) - WG_FIXED_ONE;
     if (delta_x > WG_FIXED_ONE)
     {
@@ -1260,6 +1352,8 @@ static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
     {
         if (actor->actor_class == WG_ACTOR_ROCKET)
         {
+            (void)WG_QueueSoundAt(level, WG_SOUND_MISSILE_HIT,
+                                  actor->x, actor->y);
             WL_BeginRocketExplosion(actor);
         }
         else
@@ -1335,11 +1429,15 @@ static void WL_SpawnAimedProjectile(wg_level_t *level,
 
 static void WL_T_SchabbThrow(wg_level_t *level, const wg_actor_t *actor)
 {
+    (void)WG_QueueSoundAt(level, WG_SOUND_SCHABBS_THROW,
+                          actor->x, actor->y);
     WL_SpawnAimedProjectile(level, actor, WG_ACTOR_NEEDLE);
 }
 
 static void WL_T_GiftThrow(wg_level_t *level, const wg_actor_t *actor)
 {
+    (void)WG_QueueSoundAt(level, WG_SOUND_MISSILE_FIRE,
+                          actor->x, actor->y);
     WL_SpawnAimedProjectile(level, actor, WG_ACTOR_ROCKET);
 }
 
@@ -1347,6 +1445,9 @@ static void WL_T_FakeFire(wg_level_t *level, const wg_actor_t *actor)
 {
     wg_actor_t *fire = WL_AllocateTransientActor(level);
     double angle;
+
+    (void)WG_QueueSoundAt(level, WG_SOUND_FLAMETHROWER,
+                          actor->x, actor->y);
 
     if (fire == NULL)
     {
@@ -1706,6 +1807,23 @@ static void WL_T_Shoot(wg_level_t *level, wg_actor_t *actor)
                  : (distance < 4 ? random_damage >> 3
                                   : random_damage >> 4);
         WL_TakeDamage(level, damage);
+    }
+    if (actor->actor_class == WG_ACTOR_SS)
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_SS_FIRE,
+                              actor->x, actor->y);
+    }
+    else if (actor->actor_class == WG_ACTOR_BOSS
+             || actor->actor_class == WG_ACTOR_MECHA_HITLER
+             || actor->actor_class == WG_ACTOR_REAL_HITLER)
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_BOSS_FIRE,
+                              actor->x, actor->y);
+    }
+    else
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_NAZI_FIRE,
+                              actor->x, actor->y);
     }
 }
 
@@ -2406,34 +2524,66 @@ int WL_CheckSight(const wg_level_t *level, const wg_actor_t *actor)
     return WL_CheckLine(level, actor);
 }
 
-static void WL_FirstSighting(wg_actor_t *actor)
+static void WL_FirstSighting(wg_level_t *level, wg_actor_t *actor)
 {
     switch (actor->actor_class)
     {
     case WG_ACTOR_GUARD:
+        (void)WG_QueueSoundAt(level, WG_SOUND_GUARD_SIGHT,
+                              actor->x, actor->y);
+        actor->speed *= 3;
+        break;
     case WG_ACTOR_MUTANT:
         actor->speed *= 3;
         break;
     case WG_ACTOR_OFFICER:
+        (void)WG_QueueSoundAt(level, WG_SOUND_OFFICER_SIGHT,
+                              actor->x, actor->y);
+        actor->speed *= 5;
+        break;
     case WG_ACTOR_REAL_HITLER:
+        (void)WG_QueueSound(level, WG_SOUND_DIE);
         actor->speed *= 5;
         break;
     case WG_ACTOR_SS:
+        (void)WG_QueueSoundAt(level, WG_SOUND_SS_SIGHT,
+                              actor->x, actor->y);
         actor->speed *= 4;
         break;
     case WG_ACTOR_DOG:
+        (void)WG_QueueSoundAt(level, WG_SOUND_DOG_BARK,
+                              actor->x, actor->y);
+        actor->speed *= 2;
+        break;
     case WG_ACTOR_GHOST:
         actor->speed *= 2;
         break;
     case WG_ACTOR_BOSS:
+        (void)WG_QueueSound(level, WG_SOUND_GUTENTAG);
         actor->speed = 512 * 3;
         break;
     case WG_ACTOR_SCHABBS:
+        (void)WG_QueueSound(level, WG_SOUND_SCHABBS_HA);
+        actor->speed *= 3;
+        break;
     case WG_ACTOR_FAKE:
+        (void)WG_QueueSound(level, WG_SOUND_TOT_HUND);
+        actor->speed *= 3;
+        break;
     case WG_ACTOR_MECHA_HITLER:
+        (void)WG_QueueSound(level, WG_SOUND_DIE);
+        actor->speed *= 3;
+        break;
     case WG_ACTOR_GRETEL:
+        (void)WG_QueueSound(level, WG_SOUND_KEIN);
+        actor->speed *= 3;
+        break;
     case WG_ACTOR_GIFT:
+        (void)WG_QueueSound(level, WG_SOUND_EINE);
+        actor->speed *= 3;
+        break;
     case WG_ACTOR_FAT:
+        (void)WG_QueueSound(level, WG_SOUND_ERLAUBEN);
         actor->speed *= 3;
         break;
     default:
@@ -2478,7 +2628,7 @@ int WL_DamageActor(wg_level_t *level, size_t actor_index, unsigned damage)
     }
     if ((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) == 0U)
     {
-        WL_FirstSighting(actor);
+        WL_FirstSighting(level, actor);
     }
     pain_shape = WL_PainShape(actor->actor_class,
                               (actor->hit_points & 1) == 0);
@@ -2540,7 +2690,7 @@ int WL_TickAwareness(wg_level_t *level, unsigned tics, int made_noise)
             {
                 continue;
             }
-            WL_FirstSighting(actor);
+            WL_FirstSighting(level, actor);
             continue;
         }
         if ((actor->flags & WG_ACTOR_FLAG_AMBUSH) != 0U)
