@@ -132,6 +132,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --actor-tics 9 --frame-hash)
         set_tests_properties(chase-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "8485e203e6d30079")
+        add_test(NAME fire-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --fire-view
+            --frame-hash)
+        set_tests_properties(fire-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "dbfa84e64bb68acf")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -155,5 +160,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --actor-tics 9 --frame-hash)
         set_tests_properties(chase-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "8485e203e6d30079")
+        add_test(NAME fire-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --fire-view
+            --frame-hash)
+        set_tests_properties(fire-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "dbfa84e64bb68acf")
     endif()
 endif()

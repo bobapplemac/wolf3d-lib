@@ -323,9 +323,21 @@ static void TestActorAwareness(void)
     actor->state = WG_STATE_CHASE1;
     actor->tic_count = 10;
     CHECK(WL_TickActors(&level, 1U));
-    CHECK(actor->state == WG_STATE_ATTACK_PENDING);
-    CHECK(actor->tic_count == 0);
-    CHECK((actor->flags & WG_ACTOR_FLAG_ATTACK_PENDING) != 0U);
+    CHECK(actor->state == WG_STATE_SHOOT1);
+    CHECK(actor->tic_count == 20);
+    CHECK(actor->shape == 96U);
+    actor->flags |= WG_ACTOR_FLAG_VISIBLE;
+    CHECK(WL_TickActors(&level, 20U));
+    CHECK(actor->state == WG_STATE_SHOOT2);
+    CHECK(actor->tic_count == 20);
+    CHECK(actor->shape == 97U);
+    CHECK(level.player_health == 100U);
+    CHECK(WL_TickActors(&level, 20U));
+    CHECK(actor->state == WG_STATE_SHOOT3);
+    CHECK(actor->tic_count == 20);
+    CHECK(actor->shape == 98U);
+    CHECK(level.player_health == 74U);
+    CHECK(level.damage_count == 26U);
 
     plane_one[2U * WG_LEVEL_SIZE + 2U] = 180U;
     CHECK(WG_LevelBuild(&map, &level));
@@ -402,6 +414,92 @@ static void TestDoorAreaConnectivity(void)
     CHECK(level.actors[0].distance == WG_FIXED_ONE - 512);
     CHECK(level.actors[0].x
           == 4 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 512);
+}
+
+static void TestOrdinaryShootingStates(void)
+{
+    wg_level_t level;
+    wg_actor_t *actor;
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 5 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 5U;
+    level.player_tile_y = 2U;
+    level.player_health = 100U;
+    level.difficulty = WG_DIFFICULTY_HARD;
+    level.actor_count = 1U;
+    actor = &level.actors[0];
+    actor->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->tile_x = 2U;
+    actor->tile_y = 2U;
+    actor->area_number = 0U;
+    actor->direction = 0U;
+    actor->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_ATTACK_MODE
+                   | WG_ACTOR_FLAG_VISIBLE;
+
+    WG_RandomSeed(&level.random, 0U);
+    actor->actor_class = WG_ACTOR_OFFICER;
+    actor->attack_shape = 285U;
+    actor->state = WG_STATE_SHOOT1;
+    actor->tic_count = 6;
+    actor->shape = 285U;
+    CHECK(WL_TickActors(&level, 6U));
+    CHECK(actor->state == WG_STATE_SHOOT2);
+    CHECK(actor->tic_count == 20);
+    CHECK(actor->shape == 286U);
+    CHECK(level.player_health == 100U);
+    CHECK(WL_TickActors(&level, 20U));
+    CHECK(actor->state == WG_STATE_SHOOT3);
+    CHECK(actor->shape == 287U);
+    CHECK(level.player_health < 100U);
+
+    WG_RandomSeed(&level.random, 0U);
+    level.player_health = 100U;
+    level.damage_count = 0U;
+    actor->actor_class = WG_ACTOR_MUTANT;
+    actor->attack_shape = 234U;
+    actor->state = WG_STATE_SHOOT1;
+    actor->tic_count = 6;
+    actor->shape = 234U;
+    CHECK(WL_TickActors(&level, 6U));
+    CHECK(actor->state == WG_STATE_SHOOT2);
+    CHECK(actor->shape == 235U);
+    CHECK(level.player_health < 100U);
+    CHECK(WL_TickActors(&level, 20U));
+    CHECK(actor->state == WG_STATE_SHOOT3);
+    CHECK(actor->shape == 236U);
+
+    WG_RandomSeed(&level.random, 0U);
+    level.player_health = 100U;
+    level.damage_count = 0U;
+    actor->actor_class = WG_ACTOR_SS;
+    actor->attack_shape = 184U;
+    actor->state = WG_STATE_SHOOT1;
+    actor->tic_count = 20;
+    actor->shape = 184U;
+    CHECK(WL_TickActors(&level, 20U));
+    CHECK(actor->state == WG_STATE_SHOOT2);
+    CHECK(actor->shape == 185U);
+    CHECK(WL_TickActors(&level, 20U));
+    CHECK(actor->state == WG_STATE_SHOOT3);
+    CHECK(actor->shape == 186U);
+    CHECK(level.player_health < 100U);
+    CHECK(WL_TickActors(&level, 10U));
+    CHECK(actor->state == WG_STATE_SHOOT4);
+    CHECK(actor->shape == 185U);
+
+    level.difficulty = WG_DIFFICULTY_BABY;
+    level.player_health = 100U;
+    level.damage_count = 0U;
+    level.player_dead = 0U;
+    WL_TakeDamage(&level, 20U);
+    CHECK(level.player_health == 95U);
+    CHECK(level.damage_count == 5U);
+    WL_TakeDamage(&level, 400U);
+    CHECK(level.player_health == 0U);
+    CHECK(level.player_dead != 0U);
 }
 
 static void TestHuffman(void)
@@ -1169,6 +1267,7 @@ int main(int argc, char **argv)
     TestPatrolMovement();
     TestActorAwareness();
     TestDoorAreaConnectivity();
+    TestOrdinaryShootingStates();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

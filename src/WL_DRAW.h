@@ -52,7 +52,7 @@ int WL_DrawPlayerWeapon(
 
 int WL_DrawScaleds(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
-    const wg_pages_t *pages, const wg_level_t *level,
+    const wg_pages_t *pages, wg_level_t *level,
     const wg_view_tables_t *tables,
     const wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
     const uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE],

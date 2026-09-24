@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "WG_FIXED.h"
+#include "WL_AGENT.h"
 
 #define WG_NO_DIRECTION 8U
 
@@ -28,6 +29,11 @@ static int WL_ChaseHasThink(wg_actor_state_t state)
 {
     return state == WG_STATE_CHASE1 || state == WG_STATE_CHASE2
            || state == WG_STATE_CHASE3 || state == WG_STATE_CHASE4;
+}
+
+static int WL_IsShootState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_SHOOT1 && state <= WG_STATE_SHOOT9;
 }
 
 static int32_t WL_StateDuration(wg_actor_state_t state)
@@ -345,7 +351,7 @@ static void WL_SelectDodgeDir(wg_level_t *level, size_t actor_index)
     if ((actor->flags & WG_ACTOR_FLAG_FIRST_ATTACK) != 0U)
     {
         turnaround = WG_NO_DIRECTION;
-        actor->flags = (uint16_t)(actor->flags & 0xfffbU);
+        actor->flags = (uint16_t)(actor->flags & 0xffdfU);
     }
     else
     {
@@ -620,6 +626,155 @@ static int WL_UsesStandardChase(wg_actor_class_t actor_class)
            || actor_class == WG_ACTOR_REAL_HITLER;
 }
 
+static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
+                                     wg_actor_state_t state)
+{
+    unsigned stage = (unsigned)(state - WG_STATE_SHOOT1) + 1U;
+
+    switch (actor->actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        return stage <= 3U ? 20 : 0;
+    case WG_ACTOR_OFFICER:
+        if (stage == 1U)
+        {
+            return 6;
+        }
+        return stage == 2U ? 20 : (stage == 3U ? 10 : 0);
+    case WG_ACTOR_MUTANT:
+        if (stage == 1U)
+        {
+            return 6;
+        }
+        if (stage == 2U || stage == 4U)
+        {
+            return 20;
+        }
+        return stage == 3U ? 10 : 0;
+    case WG_ACTOR_SS:
+        if (stage == 1U || stage == 2U)
+        {
+            return 20;
+        }
+        return stage <= 9U ? 10 : 0;
+    default:
+        return 0;
+    }
+}
+
+static unsigned WL_ShootStateCount(wg_actor_class_t actor_class)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+    case WG_ACTOR_OFFICER:
+        return 3U;
+    case WG_ACTOR_MUTANT:
+        return 4U;
+    case WG_ACTOR_SS:
+        return 9U;
+    default:
+        return 0U;
+    }
+}
+
+static int WL_ShootStateHasAction(const wg_actor_t *actor)
+{
+    unsigned stage = (unsigned)(actor->state - WG_STATE_SHOOT1) + 1U;
+
+    switch (actor->actor_class)
+    {
+    case WG_ACTOR_GUARD:
+    case WG_ACTOR_OFFICER:
+        return stage == 2U;
+    case WG_ACTOR_MUTANT:
+        return stage == 1U || stage == 3U;
+    case WG_ACTOR_SS:
+        return stage == 2U || stage == 4U
+               || stage == 6U || stage == 8U;
+    default:
+        return 0;
+    }
+}
+
+static unsigned WL_ShootShapeFrame(const wg_actor_t *actor)
+{
+    unsigned stage = (unsigned)(actor->state - WG_STATE_SHOOT1) + 1U;
+
+    if (actor->actor_class == WG_ACTOR_SS && stage >= 4U)
+    {
+        return (stage & 1U) == 0U ? 1U : 2U;
+    }
+    return stage - 1U;
+}
+
+static void WL_SetShootShape(wg_actor_t *actor)
+{
+    actor->shape = (uint16_t)(actor->attack_shape
+                              + WL_ShootShapeFrame(actor));
+}
+
+static int WL_BeginAttack(wg_actor_t *actor)
+{
+    if (actor->attack_shape == 0U || WL_ShootStateCount(actor->actor_class) == 0U)
+    {
+        actor->state = WG_STATE_ATTACK_PENDING;
+        actor->tic_count = 0;
+        actor->flags |= WG_ACTOR_FLAG_ATTACK_PENDING;
+        return 0;
+    }
+    actor->state = WG_STATE_SHOOT1;
+    actor->tic_count = WL_ShootStateDuration(actor, actor->state);
+    actor->shape = actor->attack_shape;
+    actor->flags = (uint16_t)(actor->flags & 0xfeffU);
+    return 1;
+}
+
+static void WL_T_Shoot(wg_level_t *level, wg_actor_t *actor)
+{
+    int delta_x;
+    int delta_y;
+    int distance;
+    int hit_chance;
+    unsigned damage;
+
+    if (actor->area_number >= WG_NUM_AREAS
+        || !level->area_by_player[actor->area_number]
+        || !WL_CheckLine(level, actor))
+    {
+        return;
+    }
+    delta_x = (int)actor->tile_x - WL_PlayerTileX(level);
+    delta_y = (int)actor->tile_y - WL_PlayerTileY(level);
+    delta_x = delta_x < 0 ? -delta_x : delta_x;
+    delta_y = delta_y < 0 ? -delta_y : delta_y;
+    distance = delta_x > delta_y ? delta_x : delta_y;
+    if (actor->actor_class == WG_ACTOR_SS
+        || actor->actor_class == WG_ACTOR_BOSS)
+    {
+        distance = distance * 2 / 3;
+    }
+    if (level->player_thrust_speed >= 6000)
+    {
+        hit_chance = (actor->flags & WG_ACTOR_FLAG_VISIBLE) != 0U
+                         ? 160 - distance * 16 : 160 - distance * 8;
+    }
+    else
+    {
+        hit_chance = (actor->flags & WG_ACTOR_FLAG_VISIBLE) != 0U
+                         ? 256 - distance * 16 : 256 - distance * 8;
+    }
+    if (WG_RandomNext(&level->random) < hit_chance)
+    {
+        unsigned random_damage = WG_RandomNext(&level->random);
+
+        damage = distance < 2 ? random_damage >> 2
+                 : (distance < 4 ? random_damage >> 3
+                                  : random_damage >> 4);
+        WL_TakeDamage(level, damage);
+    }
+}
+
 static void WL_T_Chase(wg_level_t *level, size_t actor_index, int32_t tics)
 {
     wg_actor_t *actor = &level->actors[actor_index];
@@ -640,9 +795,7 @@ static void WL_T_Chase(wg_level_t *level, size_t actor_index, int32_t tics)
                      ? 300 : (tics * 16) / distance;
         if (WG_RandomNext(&level->random) < chance)
         {
-            actor->state = WG_STATE_ATTACK_PENDING;
-            actor->tic_count = 0;
-            actor->flags |= WG_ACTOR_FLAG_ATTACK_PENDING;
+            WL_BeginAttack(actor);
             return;
         }
         dodge = 1;
@@ -751,6 +904,55 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 connectivity_ready = 1;
             }
             WL_T_Chase(level, index, (int32_t)tics);
+            continue;
+        }
+        if (WL_IsShootState(actor->state))
+        {
+            if (!connectivity_ready)
+            {
+                if (!WL_UpdateAreaConnectivity(level))
+                {
+                    return 0;
+                }
+                connectivity_ready = 1;
+            }
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0 && WL_IsShootState(actor->state))
+            {
+                unsigned stage = (unsigned)(actor->state - WG_STATE_SHOOT1)
+                                 + 1U;
+
+                if (WL_ShootStateHasAction(actor))
+                {
+                    WL_T_Shoot(level, actor);
+                }
+                if (stage >= WL_ShootStateCount(actor->actor_class))
+                {
+                    actor->state = WG_STATE_CHASE1;
+                    actor->tic_count += WL_ChaseStateDuration(actor,
+                                                              actor->state);
+                    WL_SetChaseShape(actor);
+                }
+                else
+                {
+                    actor->state = (wg_actor_state_t)(actor->state + 1);
+                    actor->tic_count += WL_ShootStateDuration(actor,
+                                                              actor->state);
+                    WL_SetShootShape(actor);
+                }
+            }
+            while (actor->tic_count <= 0 && WL_IsChaseState(actor->state))
+            {
+                actor->state = WL_NextChaseState(actor->state);
+                actor->tic_count += WL_ChaseStateDuration(actor,
+                                                          actor->state);
+                WL_SetChaseShape(actor);
+            }
+            if (WL_ChaseHasThink(actor->state)
+                && WL_UsesStandardChase(actor->actor_class))
+            {
+                WL_T_Chase(level, index, (int32_t)tics);
+            }
         }
     }
     return 1;

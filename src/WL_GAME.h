@@ -61,6 +61,11 @@ typedef struct wg_level
     uint16_t player_angle;
     uint8_t player_tile_x;
     uint8_t player_tile_y;
+    wg_difficulty_t difficulty;
+    int32_t player_thrust_speed;
+    uint16_t player_health;
+    uint16_t damage_count;
+    uint8_t player_dead;
     wg_door_t doors[WG_MAX_DOORS];
     uint8_t door_count;
     wg_static_object_t statics[WG_MAX_STATICS];

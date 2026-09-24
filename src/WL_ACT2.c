@@ -7,13 +7,17 @@
 #define WG_SPR_GRD_S_1 50U
 #define WG_SPR_GRD_W1_1 58U
 #define WG_SPR_GRD_DEAD 95U
+#define WG_SPR_GRD_SHOOT1 96U
 #define WG_SPR_DOG_W1_1 99U
 #define WG_SPR_SS_S_1 138U
 #define WG_SPR_SS_W1_1 146U
+#define WG_SPR_SS_SHOOT1 184U
 #define WG_SPR_MUT_S_1 187U
 #define WG_SPR_MUT_W1_1 195U
+#define WG_SPR_MUT_SHOOT1 234U
 #define WG_SPR_OFC_S_1 238U
 #define WG_SPR_OFC_W1_1 246U
+#define WG_SPR_OFC_SHOOT1 285U
 #define WG_SPR_BLINKY_W1 288U
 #define WG_SPR_PINKY_W1 290U
 #define WG_SPR_CLYDE_W1 292U
@@ -69,6 +73,23 @@ static uint16_t WL_PatrolShape(wg_actor_class_t actor_class)
     }
 }
 
+static uint16_t WL_AttackShape(wg_actor_class_t actor_class)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        return WG_SPR_GRD_SHOOT1;
+    case WG_ACTOR_OFFICER:
+        return WG_SPR_OFC_SHOOT1;
+    case WG_ACTOR_SS:
+        return WG_SPR_SS_SHOOT1;
+    case WG_ACTOR_MUTANT:
+        return WG_SPR_MUT_SHOOT1;
+    default:
+        return 0U;
+    }
+}
+
 static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
                          uint8_t tile_y, uint8_t map_direction,
                          wg_actor_class_t actor_class, uint16_t shape,
@@ -114,6 +135,7 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
     actor->direction = (uint8_t)(map_direction * 2U);
     actor->shape = shape;
     actor->base_shape = WL_PatrolShape(actor_class);
+    actor->attack_shape = WL_AttackShape(actor_class);
     actor->rotate = 1U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
     actor->flags = WG_ACTOR_FLAG_SHOOTABLE;
@@ -178,6 +200,7 @@ int WL_SpawnDeadGuard(struct wg_level *level, uint8_t tile_x, uint8_t tile_y)
     actor->direction = 0U;
     actor->shape = WG_SPR_GRD_DEAD;
     actor->base_shape = WG_SPR_GRD_DEAD;
+    actor->attack_shape = 0U;
     actor->rotate = 0U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
     actor->flags = 0U;
@@ -243,6 +266,7 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
     actor->direction = direction;
     actor->shape = shape;
     actor->base_shape = shape;
+    actor->attack_shape = 0U;
     actor->rotate = 0U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
     actor->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_AMBUSH;
@@ -281,6 +305,7 @@ int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
     actor->direction = 0U;
     actor->shape = shapes[ghost_kind];
     actor->base_shape = shapes[ghost_kind];
+    actor->attack_shape = 0U;
     actor->rotate = 0U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
     actor->flags = WG_ACTOR_FLAG_AMBUSH;

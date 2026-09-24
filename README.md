@@ -43,9 +43,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
 
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status
-bar. Patrol movement, the actor-awareness transition, and the first ordinary
-enemy chase slice are active; combat actions, special chase thinkers, and
-pushwall motion are not yet active:
+bar. Patrol movement, actor awareness, ordinary enemy chase movement, and the
+original guard/officer/mutant/SS hitscan attack states are active. Dog attacks,
+special boss combat, and pushwall motion are not yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -93,12 +93,19 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --alert-view 
 To continue that guard through nine tics of the original chase thinker and
 six-state chase animation, use `--chase-view`. The current chase checkpoint
 selects directions, dodges, reserves destination tiles, waits at closed doors,
-and moves while preserving the minimum player distance. Attack decisions are
-recorded but their class-specific attack states are the next implementation
-slice.
+and moves while preserving the minimum player distance. The four ordinary
+ranged enemy classes continue into their class-specific attack states.
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --chase-view --actor-tics 9 --frame-hash --dump-frame chase.ppm
+```
+
+The firing diagnostic selects the guard's original shot action, applies its
+seeded hit and damage roll, and renders the resulting attack frame and updated
+health display:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --fire-view --frame-hash --dump-frame firing.ppm
 ```
 
 ## License

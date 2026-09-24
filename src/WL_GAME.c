@@ -82,6 +82,8 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
     }
     memset(level, 0, sizeof(*level));
     memset(level->areas, WG_NO_AREA, sizeof(level->areas));
+    level->difficulty = difficulty;
+    level->player_health = 100U;
     WG_RandomSeed(&level->random, 0U);
     for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
     {

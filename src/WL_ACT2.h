@@ -6,10 +6,11 @@
 #define WG_MAX_ACTORS 150
 
 #define WG_ACTOR_FLAG_SHOOTABLE 0x0001U
-#define WG_ACTOR_FLAG_ATTACK_MODE 0x0002U
-#define WG_ACTOR_FLAG_FIRST_ATTACK 0x0004U
-#define WG_ACTOR_FLAG_ATTACK_PENDING 0x0008U
+#define WG_ACTOR_FLAG_VISIBLE 0x0008U
+#define WG_ACTOR_FLAG_ATTACK_MODE 0x0010U
+#define WG_ACTOR_FLAG_FIRST_ATTACK 0x0020U
 #define WG_ACTOR_FLAG_AMBUSH 0x0040U
+#define WG_ACTOR_FLAG_ATTACK_PENDING 0x0100U
 
 typedef enum wg_actor_class
 {
@@ -55,6 +56,15 @@ typedef enum wg_actor_state
     WG_STATE_CHASE3,
     WG_STATE_CHASE3S,
     WG_STATE_CHASE4,
+    WG_STATE_SHOOT1,
+    WG_STATE_SHOOT2,
+    WG_STATE_SHOOT3,
+    WG_STATE_SHOOT4,
+    WG_STATE_SHOOT5,
+    WG_STATE_SHOOT6,
+    WG_STATE_SHOOT7,
+    WG_STATE_SHOOT8,
+    WG_STATE_SHOOT9,
     WG_STATE_ATTACK_PENDING
 } wg_actor_state_t;
 
@@ -69,6 +79,7 @@ typedef struct wg_actor
     uint8_t rotate;
     uint8_t area_number;
     uint16_t base_shape;
+    uint16_t attack_shape;
     uint16_t flags;
     int32_t tic_count;
     int32_t reaction_time;

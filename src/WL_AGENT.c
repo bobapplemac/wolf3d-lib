@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WL_GAME.h"
+
 enum
 {
     WL_STATUS_HEIGHT = 40,
@@ -133,6 +135,34 @@ void WL_StatusDefaults(wl_status_t *status)
     status->ammo = 8;
     status->lives = 3;
     status->weapon = 1;
+}
+
+void WL_TakeDamage(struct wg_level *level, unsigned points)
+{
+    unsigned damage;
+
+    if (level == NULL || level->player_dead)
+    {
+        return;
+    }
+    damage = level->difficulty == WG_DIFFICULTY_BABY ? points / 4U : points;
+    if (damage >= level->player_health)
+    {
+        level->player_health = 0U;
+        level->player_dead = 1U;
+    }
+    else
+    {
+        level->player_health = (uint16_t)(level->player_health - damage);
+    }
+    if (damage > (unsigned)UINT16_MAX - level->damage_count)
+    {
+        level->damage_count = UINT16_MAX;
+    }
+    else
+    {
+        level->damage_count = (uint16_t)(level->damage_count + damage);
+    }
 }
 
 int WL_DrawStatusBar(

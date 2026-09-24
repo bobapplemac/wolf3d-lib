@@ -86,8 +86,8 @@ randomized initial tic phase, six-state `20/5/15/20/5/15` animation cycle,
 class-specific speed, destination-tile reservation, tile-center snapping, and
 direction arrows stored in map plane 1. Cardinal and diagonal wall/actor checks
 preserve the distinction between ordinary actors and dogs, and actors stop at
-closed doors until the door reaches its fully open position. Combat states,
-dog/special-boss movement, and player/actor contact remain subsequent slices. As in
+closed doors until the door reaches its fully open position. Dog/special-boss
+movement and player/actor contact remain subsequent slices. As in
 `DoActor`, only path states with a `T_Path` thinker move; the short `path1s` and
 `path3s` states update animation time without movement.
 
@@ -107,9 +107,19 @@ movement portion of `T_Chase` for guards, officers, mutants, SS, Hans, Gretel,
 Mecha Hitler, and Hitler. It retains first-attack turnaround permission, random
 dodge ordering, cardinal/diagonal collision rules, closed-door waiting,
 tile-center correction, and `MINACTORDIST` player separation. The ranged-attack
-probability consumes the original random value and records an attack-pending
-state; class-specific shooting states, damage, dog bites, and special boss
-thinkers remain the next slice.
+probability consumes the original random value. Unsupported boss attacks remain
+in an explicit pending state until their class-specific thinkers are ported.
+
+Ordinary ranged combat retains the guard, officer, mutant, and SS attack state
+tables from `WL_ACT2.C`, including their distinct durations, sprite sequences,
+and one, two, or four `T_Shoot` actions. The shot calculation preserves area and
+line checks, SS distance advantage, visible/running accuracy branches, original
+random consumption, and distance-scaled damage. `TakeDamage` owns player health,
+baby-mode quarter damage, death state, and accumulated red-flash damage in
+`WL_AGENT.c`. Actor flag values now exactly match the original bit layout, and
+the renderer maintains `FL_VISABLE` as the DOS `DrawScaleds` pass did. Sounds,
+dog bites, boss attacks, and the complete death/restart flow remain subsequent
+slices.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
@@ -164,11 +174,13 @@ diagnostic exposes the scenery beyond E1M1's initially closed door without
 changing normal level state. Ordinary enemies and dead guards share the same
 visible-object list; live actors use the original larger `ACTORSIZE` projection
 adjustment and select one of eight rotations with `CalcRotate`. Patrol state
-updates now feed this same rendering path; awareness and combat AI, boss special
-behavior, and moving pushwalls are still being added. The isolated
+updates now feed this same rendering path; boss special behavior and moving
+pushwalls are still being added. The isolated
 `--alert-view` diagnostic advances the selected guard through awareness and its
 reaction delay. `--chase-view` then advances the original chase animation and
-movement without enabling incomplete combat logic in normal captures.
+movement. `--fire-view` selects the original guard shot action and renders its
+resulting attack sprite and health change without enabling combat in normal
+captures.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

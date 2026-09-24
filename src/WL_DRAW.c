@@ -589,7 +589,7 @@ static uint16_t WG_ActorShape(const wg_actor_t *actor, int projected_x,
 
 int WL_DrawScaleds(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
-    const wg_pages_t *pages, const wg_level_t *level,
+    const wg_pages_t *pages, wg_level_t *level,
     const wg_view_tables_t *tables,
     const wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
     const uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE],
@@ -643,14 +643,16 @@ int WL_DrawScaleds(
     }
     for (index = 0; index < level->actor_count; ++index)
     {
-        const wg_actor_t *actor = &level->actors[index];
+        wg_actor_t *actor = &level->actors[index];
         wg_visible_object_t candidate;
 
+        actor->flags = (uint16_t)(actor->flags & 0xfff7U);
         if (WG_ActorTileIsVisible(level, visible_tiles,
                                   actor->tile_x, actor->tile_y)
             && WG_TransformActor(tables, actor, view_x, view_y,
                                  view_cosine, view_sine, &candidate))
         {
+            actor->flags |= WG_ACTOR_FLAG_VISIBLE;
             candidate.shape = WG_ActorShape(
                 actor, candidate.view_x, player_angle,
                 tables->view_width / 2);

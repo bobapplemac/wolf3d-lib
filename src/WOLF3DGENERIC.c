@@ -89,7 +89,7 @@ static int WG_FindUnsignedArgument(int argc, char **argv,
     return 1;
 }
 
-static const wg_actor_t *WG_FindGuardViewActor(const wg_level_t *level)
+static wg_actor_t *WG_FindGuardViewActor(wg_level_t *level)
 {
     size_t index;
 
@@ -99,7 +99,7 @@ static const wg_actor_t *WG_FindGuardViewActor(const wg_level_t *level)
     }
     for (index = level->actor_count; index > 0U; --index)
     {
-        const wg_actor_t *actor = &level->actors[index - 1U];
+        wg_actor_t *actor = &level->actors[index - 1U];
 
         if (actor->actor_class == WG_ACTOR_GUARD
             && actor->rotate != 0U && actor->tile_x >= 3U)
@@ -239,7 +239,8 @@ static int WG_LoadTitleScreen(const char *data_path)
 static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int guard_view, int boss_view,
                                   int patrol_view, int alert_view,
-                                  int chase_view, unsigned actor_tics)
+                                  int chase_view, int fire_view,
+                                  unsigned actor_tics)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -277,13 +278,13 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             level.doors[door].position = 0xffffU;
         }
     }
-    if (!chase_view && !WL_TickActors(&level, actor_tics))
+    if (!chase_view && !fire_view && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
     }
-    if (guard_view || alert_view || chase_view)
+    if (guard_view || alert_view || chase_view || fire_view)
     {
-        const wg_actor_t *actor = WG_FindGuardViewActor(&level);
+        wg_actor_t *actor = WG_FindGuardViewActor(&level);
         size_t player_tile;
 
         if (actor == NULL)
@@ -330,6 +331,23 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    if (fire_view)
+    {
+        wg_actor_t *actor = WG_FindGuardViewActor(&level);
+
+        if (actor == NULL || actor->attack_shape == 0U)
+        {
+            goto cleanup;
+        }
+        actor->state = WG_STATE_SHOOT2;
+        actor->tic_count = 1;
+        actor->shape = (uint16_t)(actor->attack_shape + 1U);
+        actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE | WG_ACTOR_FLAG_VISIBLE;
+        if (!WL_TickActors(&level, 1U))
+        {
+            goto cleanup;
+        }
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
@@ -345,6 +363,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         goto cleanup;
     }
     WL_StatusDefaults(&status);
+    status.health = level.player_health;
     if (!WL_DrawStatusBar(WG_ScreenBuffer, &graphics, &status))
     {
         goto cleanup;
@@ -412,7 +431,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--boss-view"),
             WG_HasArgument(argc, argv, "--patrol-view"),
             WG_HasArgument(argc, argv, "--alert-view"),
-            WG_HasArgument(argc, argv, "--chase-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--chase-view"),
+            WG_HasArgument(argc, argv, "--fire-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

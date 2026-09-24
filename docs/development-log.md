@@ -173,9 +173,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --alert-view 
   `SelectDodgeDir`, destination reservation, collision fallback ordering,
   closed-door waiting, tile-center correction, and `MINACTORDIST` player
   separation.
-- The ranged attack probability consumes the original random value. A selected
-  attack is held as an explicit pending state until the next combat slice adds
-  each class's original shooting sequence and damage action.
+- The ranged attack probability consumes the original random value. At this
+  checkpoint, a selected attack was held as an explicit pending state for the
+  following combat slice.
 - Focused tests cover deterministic first-attack diagonal dodging, chase
   animation pauses, rotated chase shapes, attack selection, and waiting at and
   crossing a door.
@@ -190,4 +190,29 @@ Regenerate the capture with:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --chase-view --actor-tics 9 --frame-hash --dump-frame out\chasing-guard.ppm
+```
+
+## 2026-09-24: Ordinary enemy ranged attacks
+
+- Scope: original guard, officer, mutant, and SS shooting state tables;
+  `T_Shoot` hit chance and distance-scaled damage; player health, baby-mode
+  damage reduction, death marking, and damage-flash accumulation.
+- Restored the actor flag bits to the original `FL_SHOOTABLE`, `FL_VISABLE`,
+  `FL_ATTACKMODE`, `FL_FIRSTATTACK`, and `FL_AMBUSH` values. `DrawScaleds` now
+  maintains visibility on each actor for the shooting accuracy branch.
+- Tests cover every ordinary ranged class's distinct timings, sprite order, and
+  shot actions, deterministic hit/damage rolls, baby-mode quarter damage, and
+  lethal damage.
+- The diagnostic selects E1M1's established guard pose, executes one original
+  shot action, and renders the recoil frame with health reduced from 100% to
+  91% by the seeded roll.
+- 320x200 indexed-frame FNV-1a: `dbfa84e64bb68acf`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 guard firing and damaging the player](../out/guard-firing.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --fire-view --frame-hash --dump-frame out\guard-firing.ppm
 ```
