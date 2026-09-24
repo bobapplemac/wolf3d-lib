@@ -89,7 +89,8 @@ int WG_ScaleWallPost(
 static int WG_ScaleSpriteInternal(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     int view_x, int view_y, int view_width, int view_height, int x_center,
-    const wg_sprite_image_t *sprite, unsigned height,
+    const wg_sprite_image_t *sprite, unsigned draw_height,
+    int32_t clip_height,
     const int32_t wall_height[WG_MAX_VIEW_WIDTH])
 {
     unsigned scale;
@@ -101,11 +102,11 @@ static int WG_ScaleSpriteInternal(
     if (framebuffer == NULL || sprite == NULL
         || view_x < 0 || view_y < 0 || view_width <= 0 || view_height <= 0
         || view_x + view_width > WG_VIDEO_WIDTH
-        || view_y + view_height > WG_VIDEO_HEIGHT || height < 2U)
+        || view_y + view_height > WG_VIDEO_HEIGHT || draw_height < 2U)
     {
         return 0;
     }
-    scale = height >> 1;
+    scale = draw_height >> 1;
     pixel_height = scale * 2U;
     actual_x = x_center - (int)scale;
     upper_edge = view_height / 2 - (int)scale;
@@ -130,11 +131,11 @@ static int WG_ScaleSpriteInternal(
         }
         if (wall_height != NULL)
         {
-            while (left < right && wall_height[left] >= (int32_t)height)
+            while (left < right && wall_height[left] >= clip_height)
             {
                 ++left;
             }
-            while (right > left && wall_height[right - 1] >= (int32_t)height)
+            while (right > left && wall_height[right - 1] >= clip_height)
             {
                 --right;
             }
@@ -167,7 +168,7 @@ static int WG_ScaleSpriteInternal(
                 for (x = left; x < right; ++x)
                 {
                     if (wall_height == NULL
-                        || wall_height[x] < (int32_t)height)
+                        || wall_height[x] < clip_height)
                     {
                         framebuffer[(view_y + y) * WG_VIDEO_WIDTH
                                     + view_x + x] = color;
@@ -185,7 +186,8 @@ int WG_ScaleSprite(
     const wg_sprite_image_t *sprite, unsigned height)
 {
     return WG_ScaleSpriteInternal(framebuffer, view_x, view_y, view_width,
-                                  view_height, x_center, sprite, height, NULL);
+                                  view_height, x_center, sprite, height, 0,
+                                  NULL);
 }
 
 int WG_ScaleSpriteClipped(
@@ -198,7 +200,11 @@ int WG_ScaleSpriteClipped(
     {
         return 0;
     }
+    if (height < 8U)
+    {
+        return 1;
+    }
     return WG_ScaleSpriteInternal(framebuffer, view_x, view_y, view_width,
-                                  view_height, x_center, sprite, height,
-                                  wall_height);
+                                  view_height, x_center, sprite, height >> 2,
+                                  (int32_t)height, wall_height);
 }

@@ -59,6 +59,12 @@ Static-object scanning and shape assignment follow `ScanInfoPlane`,
 `WL_GAME.C`/`WL_ACT1.C`. Projection, far-to-near ordering, and wall-column
 occlusion follow `TransformTile`, `DrawScaleds`, `spotvis`, and `ScaleShape` in
 original `WL_DRAW.C`/`WL_SCALE.C`.
+Standing and patrolling guard map codes and difficulty fallthrough follow
+`ScanInfoPlane` in original `WL_GAME.C`. Their tile-center construction,
+direction mapping, and patrol destination adjustment follow `SpawnNewObj`,
+`SpawnStand`, and `SpawnPatrol` in original `WL_STATE.C`/`WL_ACT2.C`. Actor
+projection and eight-way standing-frame selection follow `TransformActor` and
+`CalcRotate` in original `WL_DRAW.C`.
 
 Wolfenstein 3D data and executables are external test inputs. No game assets are
 part of this repository or covered by its license.

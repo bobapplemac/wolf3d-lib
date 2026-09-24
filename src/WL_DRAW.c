@@ -469,18 +469,18 @@ int WG_RaycastStaticWalls(const wg_level_t *level,
                            0, hits);
 }
 
-typedef struct wg_visible_static
+typedef struct wg_visible_object
 {
     int view_x;
     int32_t view_height;
     uint16_t shape;
-} wg_visible_static_t;
+} wg_visible_object_t;
 
 static int WG_TransformTile(const wg_view_tables_t *tables,
                             uint8_t tile_x, uint8_t tile_y,
                             int32_t view_x, int32_t view_y,
                             int32_t view_cosine, int32_t view_sine,
-                            wg_visible_static_t *visible)
+                            wg_visible_object_t *visible)
 {
     int32_t gx = (int32_t)tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_x;
     int32_t gy = (int32_t)tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_y;
@@ -502,6 +502,91 @@ static int WG_TransformTile(const wg_view_tables_t *tables,
     return visible->view_height > 0;
 }
 
+static int WG_TransformActor(const wg_view_tables_t *tables,
+                             const wg_actor_t *actor,
+                             int32_t view_x, int32_t view_y,
+                             int32_t view_cosine, int32_t view_sine,
+                             wg_visible_object_t *visible)
+{
+    int32_t gx = actor->x - view_x;
+    int32_t gy = actor->y - view_y;
+    int32_t gxt = WG_FixedMul(gx, view_cosine);
+    int32_t gyt = WG_FixedMul(gy, view_sine);
+    int32_t nx = gxt - gyt - 0x4000;
+    int32_t ny;
+
+    if (nx < WG_MIN_DISTANCE)
+    {
+        return 0;
+    }
+    gxt = WG_FixedMul(gx, view_sine);
+    gyt = WG_FixedMul(gy, view_cosine);
+    ny = gyt + gxt;
+    visible->view_x = tables->view_width / 2
+                      + (int)((int64_t)ny * tables->scale / nx);
+    visible->view_height = tables->height_numerator / (nx / 256);
+    return visible->view_height > 0;
+}
+
+static int WG_ActorTileIsVisible(
+    const wg_level_t *level,
+    const uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE],
+    int tile_x, int tile_y)
+{
+    int offset_x;
+    int offset_y;
+
+    if (visible_tiles[(size_t)tile_y * WG_LEVEL_SIZE + (size_t)tile_x] != 0U)
+    {
+        return 1;
+    }
+    for (offset_y = -1; offset_y <= 1; ++offset_y)
+    {
+        for (offset_x = -1; offset_x <= 1; ++offset_x)
+        {
+            int x = tile_x + offset_x;
+            int y = tile_y + offset_y;
+            size_t tile_index;
+
+            if ((offset_x == 0 && offset_y == 0)
+                || x < 0 || x >= WG_LEVEL_SIZE
+                || y < 0 || y >= WG_LEVEL_SIZE)
+            {
+                continue;
+            }
+            tile_index = (size_t)y * WG_LEVEL_SIZE + (size_t)x;
+            if (visible_tiles[tile_index] != 0U
+                && level->tiles[tile_index] == 0U)
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+static uint16_t WG_ActorShape(const wg_actor_t *actor, int projected_x,
+                              uint16_t player_angle, int center_x)
+{
+    int view_angle = (int)player_angle + (center_x - projected_x) / 8;
+    int angle = (view_angle - 180) - actor->direction * (WG_ANGLES / 8);
+
+    if (actor->rotate == 0U)
+    {
+        return actor->shape;
+    }
+    angle += WG_ANGLES / 16;
+    while (angle >= WG_ANGLES)
+    {
+        angle -= WG_ANGLES;
+    }
+    while (angle < 0)
+    {
+        angle += WG_ANGLES;
+    }
+    return (uint16_t)(actor->shape + angle / (WG_ANGLES / 8));
+}
+
 int WL_DrawScaleds(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     const wg_pages_t *pages, const wg_level_t *level,
@@ -510,7 +595,7 @@ int WL_DrawScaleds(
     const uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE],
     int32_t player_x, int32_t player_y, uint16_t player_angle)
 {
-    wg_visible_static_t visible[50];
+    wg_visible_object_t visible[50];
     int32_t wall_height[WG_MAX_VIEW_WIDTH];
     const int32_t *cosine;
     int32_t view_cosine;
@@ -538,7 +623,7 @@ int WL_DrawScaleds(
     }
     for (index = 0; index < level->static_count; ++index)
     {
-        wg_visible_static_t candidate;
+        wg_visible_object_t candidate;
 
         size_t tile_index =
             (size_t)level->statics[index].tile_y * WG_LEVEL_SIZE
@@ -550,6 +635,25 @@ int WL_DrawScaleds(
                                 view_cosine, view_sine, &candidate))
         {
             candidate.shape = level->statics[index].shape;
+            if (visible_count < sizeof(visible) / sizeof(visible[0]))
+            {
+                visible[visible_count++] = candidate;
+            }
+        }
+    }
+    for (index = 0; index < level->actor_count; ++index)
+    {
+        const wg_actor_t *actor = &level->actors[index];
+        wg_visible_object_t candidate;
+
+        if (WG_ActorTileIsVisible(level, visible_tiles,
+                                  actor->tile_x, actor->tile_y)
+            && WG_TransformActor(tables, actor, view_x, view_y,
+                                 view_cosine, view_sine, &candidate))
+        {
+            candidate.shape = WG_ActorShape(
+                actor, candidate.view_x, player_angle,
+                tables->view_width / 2);
             if (visible_count < sizeof(visible) / sizeof(visible[0]))
             {
                 visible[visible_count++] = candidate;
@@ -573,7 +677,7 @@ int WL_DrawScaleds(
         }
         if (farthest != index)
         {
-            wg_visible_static_t temporary = visible[index];
+            wg_visible_object_t temporary = visible[index];
 
             visible[index] = visible[farthest];
             visible[farthest] = temporary;

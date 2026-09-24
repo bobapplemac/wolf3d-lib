@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "WG_DATA.h"
+#include "WG_FIXED.h"
 #include "WG_GRAPHICS.h"
 #include "WL_AGENT.h"
 #include "WL_GAME.h"
@@ -88,7 +89,7 @@ static int WG_LoadTitleScreen(const char *data_path)
     return 1;
 }
 
-static int WG_LoadInitialPlayView(int open_doors)
+static int WG_LoadInitialPlayView(int open_doors, int guard_view)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -124,6 +125,27 @@ static int WG_LoadInitialPlayView(int open_doors)
         for (door = 0; door < level.door_count; ++door)
         {
             level.doors[door].position = 0xffffU;
+        }
+    }
+    if (guard_view)
+    {
+        const wg_actor_t *actor;
+        size_t player_tile;
+
+        if (level.actor_count == 0U
+            || level.actors[level.actor_count - 1U].tile_x < 3U)
+        {
+            goto cleanup;
+        }
+        actor = &level.actors[level.actor_count - 1U];
+        level.player_x = actor->x - 3 * WG_FIXED_ONE;
+        level.player_y = actor->y;
+        level.player_angle = 0U;
+        player_tile = (size_t)actor->tile_y * WG_LEVEL_SIZE
+                      + actor->tile_x - 3U;
+        if (level.tiles[player_tile] != 0U)
+        {
+            goto cleanup;
         }
     }
     WG_ViewBuildTrigTables(&view);
@@ -195,8 +217,9 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         return WG_RESULT_PLATFORM_ERROR;
     }
     if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
-        && !WG_LoadInitialPlayView(WG_HasArgument(argc, argv,
-                                                  "--open-doors")))
+        && !WG_LoadInitialPlayView(
+            WG_HasArgument(argc, argv, "--open-doors"),
+            WG_HasArgument(argc, argv, "--guard-view")))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

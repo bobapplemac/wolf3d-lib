@@ -366,6 +366,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t scenery_hash = 1469598103934665603ULL;
     uint64_t hud_hash = 1469598103934665603ULL;
     uint64_t open_view_hash = 1469598103934665603ULL;
+    uint64_t guard_view_hash = 1469598103934665603ULL;
     size_t index;
     size_t decoded_graphics = 0;
     size_t loaded_maps = 0;
@@ -539,9 +540,17 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(level.player_angle == 0U);
             CHECK(level.door_count > 0U);
             CHECK(level.static_count == 121U);
+            CHECK(level.actor_count == 17U);
+            CHECK(level.actors[16].tile_x == 39U);
+            CHECK(level.actors[16].tile_y == 61U);
+            CHECK(level.actors[16].direction == 4U);
+            CHECK(level.actors[16].shape == 50U);
             printf("%s map 0 static objects: %u\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned)level.static_count);
+            printf("%s map 0 initial guards: %u\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned)level.actor_count);
             {
                 wg_view_tables_t view_tables;
                 wg_wall_cache_t wall_cache;
@@ -621,10 +630,54 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s open-door scenery FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)open_view_hash);
-                CHECK(open_view_hash == 0x9e72f0e803766954ULL);
+                CHECK(open_view_hash == 0x800512fcf839700fULL);
+                for (index = 0; index < level.door_count; ++index)
+                {
+                    level.doors[index].position = 0U;
+                }
+                CHECK(level.actor_count != 0U);
+                CHECK(WG_RenderStaticView(
+                    framebuffer, &level, &view_tables, &wall_cache, 0, 0,
+                    level.actors[level.actor_count - 1U].x
+                        - 3 * WG_FIXED_ONE,
+                    level.actors[level.actor_count - 1U].y, 0,
+                    render_hits, visible_tiles));
+                CHECK(WL_DrawScaleds(
+                    framebuffer, &pages, &level, &view_tables, render_hits,
+                    visible_tiles,
+                    level.actors[level.actor_count - 1U].x
+                        - 3 * WG_FIXED_ONE,
+                    level.actors[level.actor_count - 1U].y, 0));
+                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
+                CHECK(WL_DrawStatusBar(framebuffer, &graphics, &status));
+                for (index = 0; index < sizeof(framebuffer); ++index)
+                {
+                    guard_view_hash ^= framebuffer[index];
+                    guard_view_hash *= 1099511628211ULL;
+                }
+                printf("%s guard view FNV-1a: %016llx\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned long long)guard_view_hash);
+                CHECK(guard_view_hash == 0xa6db229142f7150bULL);
                 WG_GraphicsClose(&graphics);
                 WG_WallCacheFree(&wall_cache);
                 WG_PagesClose(&pages);
+            }
+            {
+                wg_level_t difficulty_level;
+
+                CHECK(WG_LevelBuildForDifficulty(
+                    &map, WG_DIFFICULTY_BABY, &difficulty_level));
+                printf("%s baby guards: %u\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned)difficulty_level.actor_count);
+                CHECK(difficulty_level.actor_count == 10U);
+                CHECK(WG_LevelBuildForDifficulty(
+                    &map, WG_DIFFICULTY_HARD, &difficulty_level));
+                printf("%s hard guards: %u\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned)difficulty_level.actor_count);
+                CHECK(difficulty_level.actor_count == 32U);
             }
             printf("%s map 0 player: (%u,%u) angle %u\n",
                    WG_DataVariantName(data_set.variant),

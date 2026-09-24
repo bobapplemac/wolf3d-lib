@@ -51,8 +51,11 @@ created locally for visual inspection.
   hides the corridor scenery.
 - The diagnostic below uses the same E1M1 starting pose with all doors in their
   original fully-open state so ceiling lights and floor objects are visible.
-- 320x200 indexed-frame FNV-1a, including weapon and HUD: `9e72f0e803766954`
+- 320x200 indexed-frame FNV-1a, including weapon and HUD: `800512fcf839700f`
 - Identical result with the supplied WL1 and WL6 data sets.
+- Corrected during the guard milestone to use `ScaleShape`'s `height >> 3`
+  world scale; the earlier capture incorrectly reused `SimpleScaleShape`'s
+  first-person weapon scale.
 
 ![E1M1 open-door static-object rendering](../out/open-door-static-objects.png)
 
@@ -60,4 +63,23 @@ Regenerate the diagnostic capture with:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --dump-frame out\open-door-static-objects.ppm
+```
+
+## 2026-09-23: Initial standing and patrolling guards
+
+- Scope: original easy/medium/hard guard map-code layering, `SpawnStand`,
+  initial `SpawnPatrol` placement, `TransformActor`, neighboring-tile visibility,
+  and eight-way `CalcRotate` sprite selection.
+- E1M1 medium difficulty creates 17 guards; baby creates 10 and hard creates 32.
+- 320x200 indexed-frame FNV-1a, including weapon and HUD: `a6db229142f7150b`
+- Identical result with the supplied WL1 and WL6 data sets.
+- The diagnostic pose is three tiles west of E1M1's final map-order guard and
+  does not alter ordinary level initialization.
+
+![E1M1 standing guard rendering](../out/standing-guard.png)
+
+Regenerate the guard capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --guard-view --dump-frame out\standing-guard.ppm
 ```

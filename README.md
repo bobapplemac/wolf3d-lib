@@ -42,8 +42,8 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
 ```
 
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
-view, static scenery, ready pistol, and status bar. Active actors and pushwall
-motion are not yet drawn:
+view, static scenery, initial standing/patrolling guards, ready pistol, and
+status bar. Actor behavior and pushwall motion are not yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -52,6 +52,14 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame 
 For a renderer diagnostic that exposes the scenery beyond the initial closed
 door, add `--open-doors`. This only selects a fully-open door state for the
 captured frame; it does not change normal level initialization.
+
+The `--guard-view` diagnostic selects a fixed E1M1 pose facing one of the
+originally spawned guards, making actor projection and rotation directly
+inspectable:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --guard-view --dump-frame guard.ppm
+```
 
 ## License
 

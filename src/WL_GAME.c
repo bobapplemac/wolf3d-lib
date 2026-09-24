@@ -3,14 +3,17 @@
 
 #include <string.h>
 
-int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
+int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
+                               wg_level_t *level)
 {
     size_t index;
     int player_found = 0;
 
     if (map == NULL || level == NULL || map->planes[0] == NULL
         || map->planes[1] == NULL || map->width != WG_LEVEL_SIZE
-        || map->height != WG_LEVEL_SIZE)
+        || map->height != WG_LEVEL_SIZE
+        || difficulty < WG_DIFFICULTY_BABY
+        || difficulty > WG_DIFFICULTY_HARD)
     {
         return 0;
     }
@@ -57,6 +60,54 @@ int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
             object->shape = info == 71U ? 28U
                                         : (uint16_t)(info - 23U + 2U);
         }
+        else if ((info >= 108U && info <= 111U)
+                 || (difficulty >= WG_DIFFICULTY_MEDIUM
+                     && info >= 144U && info <= 147U)
+                 || (difficulty >= WG_DIFFICULTY_HARD
+                     && info >= 180U && info <= 183U))
+        {
+            uint16_t base_info = info;
+
+            if (base_info >= 180U)
+            {
+                base_info -= 72U;
+            }
+            else if (base_info >= 144U)
+            {
+                base_info -= 36U;
+            }
+            if (!WL_SpawnStand(level, WG_ACTOR_GUARD,
+                               (uint8_t)(index % WG_LEVEL_SIZE),
+                               (uint8_t)(index / WG_LEVEL_SIZE),
+                               (uint8_t)(base_info - 108U)))
+            {
+                return 0;
+            }
+        }
+        else if ((info >= 112U && info <= 115U)
+                 || (difficulty >= WG_DIFFICULTY_MEDIUM
+                     && info >= 148U && info <= 151U)
+                 || (difficulty >= WG_DIFFICULTY_HARD
+                     && info >= 184U && info <= 187U))
+        {
+            uint16_t base_info = info;
+
+            if (base_info >= 184U)
+            {
+                base_info -= 72U;
+            }
+            else if (base_info >= 148U)
+            {
+                base_info -= 36U;
+            }
+            if (!WL_SpawnPatrol(level, WG_ACTOR_GUARD,
+                                (uint8_t)(index % WG_LEVEL_SIZE),
+                                (uint8_t)(index / WG_LEVEL_SIZE),
+                                (uint8_t)(base_info - 112U)))
+            {
+                return 0;
+            }
+        }
     }
 
     for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
@@ -102,4 +153,9 @@ int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
         }
     }
     return player_found;
+}
+
+int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
+{
+    return WG_LevelBuildForDifficulty(map, WG_DIFFICULTY_MEDIUM, level);
 }

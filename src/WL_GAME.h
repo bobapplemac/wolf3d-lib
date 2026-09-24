@@ -4,11 +4,20 @@
 #include <stdint.h>
 
 #include "WG_MAPS.h"
+#include "WL_ACT2.h"
 
 #define WG_LEVEL_SIZE 64
 #define WG_AREA_TILE 107U
 #define WG_MAX_DOORS 64
 #define WG_MAX_STATICS 400
+
+typedef enum wg_difficulty
+{
+    WG_DIFFICULTY_BABY = 0,
+    WG_DIFFICULTY_EASY,
+    WG_DIFFICULTY_MEDIUM,
+    WG_DIFFICULTY_HARD
+} wg_difficulty_t;
 
 typedef struct wg_static_object
 {
@@ -49,8 +58,12 @@ typedef struct wg_level
     uint8_t door_count;
     wg_static_object_t statics[WG_MAX_STATICS];
     uint16_t static_count;
+    wg_actor_t actors[WG_MAX_ACTORS];
+    uint16_t actor_count;
 } wg_level_t;
 
 int WG_LevelBuild(const wg_map_t *map, wg_level_t *level);
+int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
+                               wg_level_t *level);
 
 #endif
