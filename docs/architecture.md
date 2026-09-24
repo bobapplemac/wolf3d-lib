@@ -54,6 +54,12 @@ remain zero in that byte map. Plane 1 is retained verbatim for actor and object
 spawning. The initial player position and direction use the original tile codes
 19 through 22 and 16.16 tile-center coordinates.
 
+Door codes 90 through 101 are converted in the original scan order into at most
+64 runtime door records. Doors begin fully closed, retain orientation and lock
+type, occupy the original `0x80 | index` tile value, and mark the adjacent wall
+tiles with bit 0x40 for door-jamb texture selection. Every map in both supplied
+editions is exercised through this conversion.
+
 The gameplay random generator is the original 256-byte lookup table and byte
 index progression rather than a host C library generator. Its state is held in
 an engine-owned object so tests and later demo playback can reset it exactly.

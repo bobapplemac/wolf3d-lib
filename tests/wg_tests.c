@@ -506,6 +506,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(level.player_x == 0x001d8000L);
             CHECK(level.player_y == 0x00398000L);
             CHECK(level.player_angle == 0U);
+            CHECK(level.door_count > 0U);
             printf("%s map 0 player: (%u,%u) angle %u\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned)level.player_tile_x,
@@ -541,6 +542,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             {
                 CHECK(map.width == 64U);
                 CHECK(map.height == 64U);
+                CHECK(WG_LevelBuild(&map, &level));
+                CHECK(level.door_count <= WG_MAX_DOORS);
                 ++loaded_maps;
                 WG_MapFree(&map);
             }

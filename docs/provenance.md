@@ -25,7 +25,8 @@ than copied port code.
 
 The initial runtime-level conversion follows `SetupGameLevel` in original
 `WL_GAME.C`, including `AREATILE`, player object codes 19--22, tile-center
-coordinates, and starting-angle mapping. The deterministic random table and
+coordinates, starting-angle mapping, and the `SpawnDoor` scan contract from
+`WL_GAME.C`/`WL_ACT1.C`. The deterministic random table and
 increment-before-lookup behavior follow original `US_InitRndT`/`US_RndT` in
 `ID_US_1.C`; Wolf4SDL's `id_us_1.cpp` was used to cross-check the portable byte
 index behavior.
