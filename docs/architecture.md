@@ -124,17 +124,17 @@ Dog combat follows its separate original branch: `T_DogChase` always uses
 `SelectDodgeDir`, cannot cross doors, and begins the five-state jump when the
 next movement step reaches `MINACTORDIST` on both axes. The `10/10/10/10/10`
 jump sequence invokes `T_Bite` from its second state, retaining the two-tile
-axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sounds, boss
-projectiles beyond Schabbs's syringe, and the complete death/restart flow remain
-subsequent slices.
+axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sounds, Fake
+Hitler's flame projectiles, and the complete death/restart flow remain subsequent
+slices.
 
 The four hitscan bosses reuse `T_Shoot` with their original state tables. Hans
 and Gretel use eight firing states with six shot actions; Mecha-Hitler and
 Hitler use six states with five actions. All retain the `30`-tic windup,
 alternating second/third firing sprites, `10`-tic burst cadence, and class
 return to the first chase state. Hans alone retains the original boss accuracy
-and damage-distance advantage. Giftmacher, Fatface, and Fake Hitler's special
-projectile attacks remain pending.
+and damage-distance advantage. Fake Hitler's special flame attack remains
+pending.
 
 Schabbs uses his separate `T_Schabb` attack probability and two-state throw
 sequence. `T_SchabbThrow` quantizes the player bearing to the original 360-angle
@@ -144,6 +144,14 @@ domain and creates a reusable non-blocking syringe actor. Its four six-tic
 `(US_RndT() >> 3) + 20` damage; wall and player impacts remove the projectile.
 Removed slots are reused so repeated throws remain bounded by the original
 150-actor capacity.
+
+Giftmacher and Fatface share the original `T_GiftThrow` rocket construction and
+their close-range `SelectRunDir` retreat behavior. Giftmacher uses a two-state
+throw; Fatface follows the throw with four hitscan `T_Shoot` actions. Rockets
+use the original eight directional `SPR_ROCKET` views, three-tic smoke action,
+`0x2000` speed, and `(US_RndT() >> 3) + 30` player damage. Wall impacts enter
+the three six-tic `SPR_BOOM` states, while player impacts remove the rocket.
+Four smoke states age independently and reuse the same bounded transient slots.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
@@ -206,7 +214,8 @@ movement. `--fire-view` selects the original guard shot action and renders its
 resulting attack sprite and health change. `--bite-view` does the same for an
 original E1M1 dog's leap and bite. `--boss-fire-view` renders Hans's seeded
 hitscan attack on E1M9. `--needle-view` renders Schabbs's syringe in flight on
-E2M9 without altering normal captures.
+E2M9, and `--rocket-view` renders Giftmacher's rotating rocket and smoke trail
+on E4M9 without altering normal captures.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

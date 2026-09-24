@@ -569,7 +569,10 @@ static uint16_t WG_ActorShape(const wg_actor_t *actor, int projected_x,
                               uint16_t player_angle, int center_x)
 {
     int view_angle = (int)player_angle + (center_x - projected_x) / 8;
-    int angle = (view_angle - 180) - actor->direction * (WG_ANGLES / 8);
+    int actor_angle = actor->actor_class == WG_ACTOR_ROCKET
+                          ? actor->angle
+                          : actor->direction * (WG_ANGLES / 8);
+    int angle = (view_angle - 180) - actor_angle;
 
     if (actor->rotate == 0U)
     {

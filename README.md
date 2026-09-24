@@ -47,8 +47,9 @@ bar. Patrol movement, actor awareness, ordinary enemy chase movement, and the
 original guard/officer/mutant/SS hitscan and dog melee attack states are active.
 Hans, Gretel, Mecha-Hitler, and Hitler also retain their original hitscan burst
 states, and Dr. Schabbs throws moving, colliding syringe projectiles. The other
-projectile bosses, boss death transitions, and pushwall motion are not yet
-active:
+two rocket bosses—Giftmacher and Fatface—now retain their throws, smoke trails,
+explosions, and projectile damage. Fake Hitler's flame attack, boss death
+transitions, and pushwall motion are not yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -90,6 +91,13 @@ throw action on E2M9 and advances the four-frame syringe actor into flight:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 18 --needle-view --frame-hash --dump-frame schabbs-needle.ppm
+```
+
+The E4M9 rocket diagnostic holds Giftmacher in his throw frame and advances a
+rotating rocket and its original smoke trail toward the player:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 38 --rocket-view --frame-hash --dump-frame gift-rocket.ppm
 ```
 
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz

@@ -281,3 +281,25 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 18 --needle-view --frame-hash --dump-frame out\schabbs-needle.ppm
 ```
+
+## 2026-09-24: Giftmacher and Fatface rockets
+
+- Scope: original `T_Gift`/`T_Fat` attack and close-range retreat behavior,
+  Giftmacher's two-state throw, Fatface's rocket-plus-four-shot sequence,
+  directional rocket rendering, smoke trail, wall explosion, and player damage.
+- Focused tests verify both firing tables, `SelectRunDir`, rocket aim and speed,
+  angle-based sprite rotation data, smoke creation and timing, seeded 31-point
+  damage, wall impact, and the first two explosion frames.
+- The full-data diagnostic uses E4M9, holds Giftmacher in his second firing
+  frame, and advances a rocket eleven original 70 Hz tics with its smoke trail.
+- 320x200 indexed-frame FNV-1a: `c85b4f4095ac18f2`
+- This checkpoint requires WL6 because the shareware WL1 data contains only
+  Episode 1.
+
+![Giftmacher firing a rocket](../out/gift-rocket.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 38 --rocket-view --frame-hash --dump-frame out\gift-rocket.ppm
+```

@@ -31,9 +31,11 @@
 #define WG_SPR_MECHA_W1 334U
 #define WG_SPR_MECHA_SHOOT1 338U
 #define WG_SPR_GIFT_W1 360U
+#define WG_SPR_GIFT_SHOOT1 364U
 #define WG_SPR_GRETEL_W1 385U
 #define WG_SPR_GRETEL_SHOOT1 389U
 #define WG_SPR_FAT_W1 396U
+#define WG_SPR_FAT_SHOOT1 400U
 
 #define WG_SPEED_PATROL 512
 #define WG_SPEED_DOG 1500
@@ -107,8 +109,12 @@ static uint16_t WL_BossAttackShape(wg_actor_class_t actor_class)
         return WG_SPR_SCHABB_SHOOT1;
     case WG_ACTOR_MECHA_HITLER:
         return WG_SPR_MECHA_SHOOT1;
+    case WG_ACTOR_GIFT:
+        return WG_SPR_GIFT_SHOOT1;
     case WG_ACTOR_GRETEL:
         return WG_SPR_GRETEL_SHOOT1;
+    case WG_ACTOR_FAT:
+        return WG_SPR_FAT_SHOOT1;
     default:
         return 0U;
     }

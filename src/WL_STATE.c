@@ -13,6 +13,9 @@
 #define WG_PROJECTILE_SIZE INT32_C(0xc000)
 #define WG_PROJECTILE_COLLISION_SIZE INT32_C(0x2000)
 #define WG_SPR_HYPO1 317U
+#define WG_SPR_ROCKET1 370U
+#define WG_SPR_SMOKE1 378U
+#define WG_SPR_BOOM1 382U
 #define WG_TWO_PI 6.283185314
 
 static int WL_BeginAttack(wg_actor_t *actor);
@@ -52,6 +55,16 @@ static int WL_IsDogJumpState(wg_actor_state_t state)
 static int WL_IsNeedleState(wg_actor_state_t state)
 {
     return state >= WG_STATE_NEEDLE1 && state <= WG_STATE_NEEDLE4;
+}
+
+static int WL_IsSmokeState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_SMOKE1 && state <= WG_STATE_SMOKE4;
+}
+
+static int WL_IsBoomState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_BOOM1 && state <= WG_STATE_BOOM3;
 }
 
 static int32_t WL_StateDuration(wg_actor_state_t state)
@@ -550,6 +563,48 @@ static void WL_SelectChaseDir(wg_level_t *level, size_t actor_index)
     actor->direction = WG_NO_DIRECTION;
 }
 
+static void WL_SelectRunDir(wg_level_t *level, size_t actor_index)
+{
+    static const uint8_t forward_search[] = { 2U, 3U, 4U };
+    static const uint8_t reverse_search[] = { 4U, 3U, 2U };
+    wg_actor_t *actor = &level->actors[actor_index];
+    uint8_t directions[2];
+    uint8_t temporary;
+    const uint8_t *search;
+    int delta_x = WL_PlayerTileX(level) - actor->tile_x;
+    int delta_y = WL_PlayerTileY(level) - actor->tile_y;
+    size_t index;
+
+    directions[0] = delta_x < 0 ? 0U : 4U;
+    directions[1] = delta_y < 0 ? 6U : 2U;
+    if ((delta_y < 0 ? -delta_y : delta_y)
+        > (delta_x < 0 ? -delta_x : delta_x))
+    {
+        temporary = directions[0];
+        directions[0] = directions[1];
+        directions[1] = temporary;
+    }
+    for (index = 0U; index < 2U; ++index)
+    {
+        actor->direction = directions[index];
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    search = WG_RandomNext(&level->random) > 128U
+                 ? forward_search : reverse_search;
+    for (index = 0U; index < 3U; ++index)
+    {
+        actor->direction = search[index];
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    actor->direction = WG_NO_DIRECTION;
+}
+
 static void WL_MoveChase(wg_level_t *level, wg_actor_t *actor, int32_t move)
 {
     int32_t old_x = actor->x;
@@ -798,6 +853,40 @@ static void WL_RemoveProjectile(wg_actor_t *actor)
     actor->flags |= WG_ACTOR_FLAG_REMOVED;
 }
 
+static wg_actor_t *WL_AllocateTransientActor(wg_level_t *level)
+{
+    size_t index;
+
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        if ((level->actors[index].flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            memset(&level->actors[index], 0, sizeof(level->actors[index]));
+            return &level->actors[index];
+        }
+    }
+    if (level->actor_count >= WG_MAX_ACTORS)
+    {
+        return NULL;
+    }
+    memset(&level->actors[level->actor_count], 0,
+           sizeof(level->actors[level->actor_count]));
+    return &level->actors[level->actor_count++];
+}
+
+static void WL_BeginRocketExplosion(wg_actor_t *actor)
+{
+    actor->actor_class = WG_ACTOR_EXPLOSION;
+    actor->state = WG_STATE_BOOM1;
+    actor->shape = WG_SPR_BOOM1;
+    actor->rotate = 0U;
+    actor->speed = 0;
+    if (actor->tic_count <= 0)
+    {
+        actor->tic_count = 6;
+    }
+}
+
 static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
                             int32_t tics)
 {
@@ -819,7 +908,14 @@ static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
     actor->y += delta_y;
     if (!WL_ProjectileTryMove(level, actor))
     {
-        WL_RemoveProjectile(actor);
+        if (actor->actor_class == WG_ACTOR_ROCKET)
+        {
+            WL_BeginRocketExplosion(actor);
+        }
+        else
+        {
+            WL_RemoveProjectile(actor);
+        }
         return;
     }
     delta_x = actor->x - level->player_x;
@@ -828,7 +924,11 @@ static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
     delta_y = delta_y < 0 ? -delta_y : delta_y;
     if (delta_x < WG_PROJECTILE_SIZE && delta_y < WG_PROJECTILE_SIZE)
     {
-        WL_TakeDamage(level, (WG_RandomNext(&level->random) >> 3) + 20U);
+        unsigned base_damage = actor->actor_class == WG_ACTOR_ROCKET
+                                   ? 30U : 20U;
+
+        WL_TakeDamage(level, (WG_RandomNext(&level->random) >> 3)
+                             + base_damage);
         WL_RemoveProjectile(actor);
         return;
     }
@@ -836,22 +936,14 @@ static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
     actor->tile_y = (uint8_t)(actor->y / WG_FIXED_ONE);
 }
 
-static void WL_T_SchabbThrow(wg_level_t *level, const wg_actor_t *actor)
+static void WL_SpawnAimedProjectile(wg_level_t *level,
+                                    const wg_actor_t *actor,
+                                    wg_actor_class_t projectile_class)
 {
-    wg_actor_t *projectile;
+    wg_actor_t *projectile = WL_AllocateTransientActor(level);
     double angle;
-    size_t index;
 
-    projectile = NULL;
-    for (index = 0U; index < level->actor_count; ++index)
-    {
-        if ((level->actors[index].flags & WG_ACTOR_FLAG_REMOVED) != 0U)
-        {
-            projectile = &level->actors[index];
-            break;
-        }
-    }
-    if (projectile == NULL && level->actor_count >= WG_MAX_ACTORS)
+    if (projectile == NULL)
     {
         return;
     }
@@ -861,31 +953,130 @@ static void WL_T_SchabbThrow(wg_level_t *level, const wg_actor_t *actor)
     {
         angle += WG_TWO_PI;
     }
-    if (projectile == NULL)
-    {
-        projectile = &level->actors[level->actor_count++];
-    }
-    memset(projectile, 0, sizeof(*projectile));
     projectile->x = actor->x;
     projectile->y = actor->y;
-    projectile->shape = WG_SPR_HYPO1;
+    projectile->shape = projectile_class == WG_ACTOR_ROCKET
+                            ? WG_SPR_ROCKET1 : WG_SPR_HYPO1;
     projectile->tile_x = actor->tile_x;
     projectile->tile_y = actor->tile_y;
     projectile->direction = WG_NO_DIRECTION;
     projectile->area_number = actor->area_number;
     projectile->angle = (uint16_t)(angle / WG_TWO_PI * WG_ANGLES);
-    projectile->base_shape = WG_SPR_HYPO1;
+    projectile->base_shape = projectile->shape;
+    projectile->rotate = projectile_class == WG_ACTOR_ROCKET ? 1U : 0U;
     projectile->tic_count = 1;
     projectile->speed = 0x2000;
-    projectile->state = WG_STATE_NEEDLE1;
-    projectile->actor_class = WG_ACTOR_NEEDLE;
+    projectile->state = projectile_class == WG_ACTOR_ROCKET
+                            ? WG_STATE_ROCKET : WG_STATE_NEEDLE1;
+    projectile->actor_class = projectile_class;
 }
 
-static void WL_T_Schabb(wg_level_t *level, size_t actor_index,
-                        int32_t tics)
+static void WL_T_SchabbThrow(wg_level_t *level, const wg_actor_t *actor)
+{
+    WL_SpawnAimedProjectile(level, actor, WG_ACTOR_NEEDLE);
+}
+
+static void WL_T_GiftThrow(wg_level_t *level, const wg_actor_t *actor)
+{
+    WL_SpawnAimedProjectile(level, actor, WG_ACTOR_ROCKET);
+}
+
+static void WL_A_Smoke(wg_level_t *level, const wg_actor_t *rocket)
+{
+    wg_actor_t *smoke = WL_AllocateTransientActor(level);
+
+    if (smoke == NULL)
+    {
+        return;
+    }
+    smoke->x = rocket->x;
+    smoke->y = rocket->y;
+    smoke->shape = WG_SPR_SMOKE1;
+    smoke->tile_x = rocket->tile_x;
+    smoke->tile_y = rocket->tile_y;
+    smoke->direction = WG_NO_DIRECTION;
+    smoke->area_number = rocket->area_number;
+    smoke->base_shape = WG_SPR_SMOKE1;
+    smoke->tic_count = 6;
+    smoke->state = WG_STATE_SMOKE1;
+    smoke->actor_class = WG_ACTOR_SMOKE;
+}
+
+static void WL_MoveSpecialBoss(wg_level_t *level, size_t actor_index,
+                               int32_t tics, int dodge, int run_close,
+                               int distance)
 {
     wg_actor_t *actor = &level->actors[actor_index];
+    int32_t move;
+
+    if (actor->direction == WG_NO_DIRECTION)
+    {
+        if (dodge)
+        {
+            WL_SelectDodgeDir(level, actor_index);
+        }
+        else
+        {
+            WL_SelectChaseDir(level, actor_index);
+        }
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+    move = actor->speed * tics;
+    while (move > 0)
+    {
+        if (actor->distance < 0)
+        {
+            size_t door = (size_t)(-actor->distance - 1);
+
+            if (door >= level->door_count
+                || level->doors[door].position != 0xffffU)
+            {
+                return;
+            }
+            actor->distance = WG_FIXED_ONE;
+        }
+        if (move < actor->distance)
+        {
+            WL_MoveChase(level, actor, move);
+            return;
+        }
+        move -= actor->distance;
+        actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        if (run_close && distance < 4)
+        {
+            WL_SelectRunDir(level, actor_index);
+        }
+        else if (dodge)
+        {
+            WL_SelectDodgeDir(level, actor_index);
+        }
+        else
+        {
+            WL_SelectChaseDir(level, actor_index);
+        }
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+}
+
+static void WL_T_SpecialBoss(wg_level_t *level, size_t actor_index,
+                             int32_t tics, int run_close)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int delta_x = (int)actor->tile_x - WL_PlayerTileX(level);
+    int delta_y = (int)actor->tile_y - WL_PlayerTileY(level);
+    int distance;
     int dodge = 0;
+
+    delta_x = delta_x < 0 ? -delta_x : delta_x;
+    delta_y = delta_y < 0 ? -delta_y : delta_y;
+    distance = delta_x > delta_y ? delta_x : delta_y;
 
     if (WL_CheckLine(level, actor))
     {
@@ -896,7 +1087,7 @@ static void WL_T_Schabb(wg_level_t *level, size_t actor_index,
         }
         dodge = 1;
     }
-    WL_MoveChasingActor(level, actor_index, tics, dodge);
+    WL_MoveSpecialBoss(level, actor_index, tics, dodge, run_close, distance);
 }
 
 static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
@@ -938,6 +1129,10 @@ static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
         return stage == 1U ? 30 : (stage <= 6U ? 10 : 0);
     case WG_ACTOR_SCHABBS:
         return stage == 1U ? 30 : (stage == 2U ? 10 : 0);
+    case WG_ACTOR_GIFT:
+        return stage == 1U ? 30 : (stage == 2U ? 10 : 0);
+    case WG_ACTOR_FAT:
+        return stage == 1U ? 30 : (stage <= 6U ? 10 : 0);
     default:
         return 0;
     }
@@ -962,6 +1157,10 @@ static unsigned WL_ShootStateCount(wg_actor_class_t actor_class)
         return 6U;
     case WG_ACTOR_SCHABBS:
         return 2U;
+    case WG_ACTOR_GIFT:
+        return 2U;
+    case WG_ACTOR_FAT:
+        return 6U;
     default:
         return 0U;
     }
@@ -989,6 +1188,10 @@ static int WL_ShootStateHasAction(const wg_actor_t *actor)
         return stage >= 2U && stage <= 6U;
     case WG_ACTOR_SCHABBS:
         return stage == 2U;
+    case WG_ACTOR_GIFT:
+        return stage == 2U;
+    case WG_ACTOR_FAT:
+        return stage >= 2U && stage <= 6U;
     default:
         return 0;
     }
@@ -1012,6 +1215,10 @@ static unsigned WL_ShootShapeFrame(const wg_actor_t *actor)
             return 0U;
         }
         return (stage & 1U) == 0U ? 1U : 2U;
+    }
+    if (actor->actor_class == WG_ACTOR_FAT && stage >= 5U)
+    {
+        return stage == 5U ? 2U : 3U;
     }
     return stage - 1U;
 }
@@ -1187,6 +1394,53 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             WL_T_Projectile(level, actor, (int32_t)tics);
             continue;
         }
+        if (actor->state == WG_STATE_ROCKET)
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                WL_A_Smoke(level, actor);
+                actor->tic_count += 3;
+            }
+            WL_T_Projectile(level, actor, (int32_t)tics);
+            continue;
+        }
+        if (WL_IsSmokeState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                if (actor->state == WG_STATE_SMOKE4)
+                {
+                    WL_RemoveProjectile(actor);
+                    break;
+                }
+                actor->state = (wg_actor_state_t)(actor->state + 1);
+                actor->tic_count += 3;
+                actor->shape = (uint16_t)(WG_SPR_SMOKE1
+                                          + actor->state
+                                            - WG_STATE_SMOKE1);
+            }
+            continue;
+        }
+        if (WL_IsBoomState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                if (actor->state == WG_STATE_BOOM3)
+                {
+                    WL_RemoveProjectile(actor);
+                    break;
+                }
+                actor->state = (wg_actor_state_t)(actor->state + 1);
+                actor->tic_count += 6;
+                actor->shape = (uint16_t)(WG_SPR_BOOM1
+                                          + actor->state
+                                            - WG_STATE_BOOM1);
+            }
+            continue;
+        }
         if (WL_IsPathState(actor->state))
         {
             if (actor->tic_count != 0)
@@ -1224,6 +1478,8 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             }
             if (actor->actor_class != WG_ACTOR_DOG
                 && actor->actor_class != WG_ACTOR_SCHABBS
+                && actor->actor_class != WG_ACTOR_GIFT
+                && actor->actor_class != WG_ACTOR_FAT
                 && !WL_UsesStandardChase(actor->actor_class))
             {
                 continue;
@@ -1242,7 +1498,12 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             }
             else if (actor->actor_class == WG_ACTOR_SCHABBS)
             {
-                WL_T_Schabb(level, index, (int32_t)tics);
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 0);
+            }
+            else if (actor->actor_class == WG_ACTOR_GIFT
+                     || actor->actor_class == WG_ACTOR_FAT)
+            {
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 1);
             }
             else
             {
@@ -1271,6 +1532,12 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                     if (actor->actor_class == WG_ACTOR_SCHABBS)
                     {
                         WL_T_SchabbThrow(level, actor);
+                    }
+                    else if ((actor->actor_class == WG_ACTOR_GIFT
+                              || actor->actor_class == WG_ACTOR_FAT)
+                             && stage == 2U)
+                    {
+                        WL_T_GiftThrow(level, actor);
                     }
                     else
                     {
@@ -1307,7 +1574,13 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             else if (WL_ChaseHasThink(actor->state)
                      && actor->actor_class == WG_ACTOR_SCHABBS)
             {
-                WL_T_Schabb(level, index, (int32_t)tics);
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 0);
+            }
+            else if (WL_ChaseHasThink(actor->state)
+                     && (actor->actor_class == WG_ACTOR_GIFT
+                         || actor->actor_class == WG_ACTOR_FAT))
+            {
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 1);
             }
             continue;
         }

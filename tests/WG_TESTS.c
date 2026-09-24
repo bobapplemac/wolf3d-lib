@@ -195,8 +195,10 @@ static void TestBossAndGhostSetup(void)
     CHECK(level.actors[7].direction == 0U);
     CHECK(level.actors[0].attack_shape == 300U);
     CHECK(level.actors[1].attack_shape == 389U);
-    CHECK(level.actors[2].attack_shape == 0U);
+    CHECK(level.actors[2].attack_shape == 364U);
+    CHECK(level.actors[3].attack_shape == 400U);
     CHECK(level.actors[4].attack_shape == 311U);
+    CHECK(level.actors[5].attack_shape == 0U);
     CHECK(level.actors[6].attack_shape == 338U);
 }
 
@@ -717,6 +719,160 @@ static void TestSchabbsNeedle(void)
     CHECK(WL_TickActors(&level, 3U));
     CHECK((needle->flags & WG_ACTOR_FLAG_REMOVED) != 0U);
     CHECK(level.player_health == 79U);
+}
+
+static void TestRocketBossAttacks(void)
+{
+    wg_level_t level;
+    wg_actor_t *boss;
+    wg_actor_t *rocket;
+    wg_actor_t *smoke;
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 5 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 5U;
+    level.player_tile_y = 2U;
+    level.player_health = 100U;
+    level.difficulty = WG_DIFFICULTY_HARD;
+    level.actor_count = 1U;
+    boss = &level.actors[0];
+    boss->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    boss->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    boss->tile_x = 2U;
+    boss->tile_y = 2U;
+    boss->area_number = 0U;
+    boss->direction = 0U;
+    boss->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_ATTACK_MODE;
+    boss->actor_class = WG_ACTOR_GIFT;
+    boss->base_shape = 360U;
+    boss->attack_shape = 364U;
+    boss->state = WG_STATE_SHOOT1;
+    boss->tic_count = 30;
+    boss->shape = 364U;
+    boss->speed = 1536;
+    WG_RandomSeed(&level.random, 0U);
+
+    CHECK(WL_TickActors(&level, 30U));
+    CHECK(boss->state == WG_STATE_SHOOT2);
+    CHECK(boss->shape == 365U);
+    CHECK(level.actor_count == 1U);
+    boss->tic_count = 1;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actor_count == 3U);
+    rocket = &level.actors[1];
+    smoke = &level.actors[2];
+    CHECK(rocket->actor_class == WG_ACTOR_ROCKET);
+    CHECK(rocket->state == WG_STATE_ROCKET);
+    CHECK(rocket->shape == 370U);
+    CHECK(rocket->rotate == 1U);
+    CHECK(rocket->angle == 0U);
+    CHECK(rocket->tic_count == 3);
+    CHECK(rocket->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x2000);
+    CHECK(smoke->actor_class == WG_ACTOR_SMOKE);
+    CHECK(smoke->state == WG_STATE_SMOKE1);
+    CHECK(smoke->shape == 378U);
+    CHECK(smoke->tic_count == 5);
+    CHECK(smoke->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+
+    boss->flags |= WG_ACTOR_FLAG_REMOVED;
+    smoke->flags |= WG_ACTOR_FLAG_REMOVED;
+    rocket->x = level.player_x - 0xc000;
+    rocket->y = level.player_y;
+    rocket->tile_x = 4U;
+    rocket->tile_y = 2U;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK((rocket->flags & WG_ACTOR_FLAG_REMOVED) != 0U);
+    CHECK(level.player_health == 69U);
+
+    memset(rocket, 0, sizeof(*rocket));
+    rocket->x = 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    rocket->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    rocket->tile_x = 3U;
+    rocket->tile_y = 2U;
+    rocket->angle = 0U;
+    rocket->shape = 370U;
+    rocket->base_shape = 370U;
+    rocket->rotate = 1U;
+    rocket->tic_count = 3;
+    rocket->speed = 0x2000;
+    rocket->state = WG_STATE_ROCKET;
+    rocket->actor_class = WG_ACTOR_ROCKET;
+    level.tiles[2U * WG_LEVEL_SIZE + 4U] = 1U;
+    level.player_x = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 10U;
+    CHECK(WL_TickActors(&level, 3U));
+    CHECK(rocket->actor_class == WG_ACTOR_EXPLOSION);
+    CHECK(rocket->state == WG_STATE_BOOM1);
+    CHECK(rocket->shape == 382U);
+    CHECK(rocket->tic_count == 3);
+    CHECK(WL_TickActors(&level, 3U));
+    CHECK(rocket->state == WG_STATE_BOOM2);
+    CHECK(rocket->shape == 383U);
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 6 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 6U;
+    level.player_tile_y = 2U;
+    level.player_health = 100U;
+    level.difficulty = WG_DIFFICULTY_HARD;
+    level.actor_count = 1U;
+    boss = &level.actors[0];
+    boss->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    boss->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    boss->tile_x = 2U;
+    boss->tile_y = 2U;
+    boss->area_number = 0U;
+    boss->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_ATTACK_MODE
+                  | WG_ACTOR_FLAG_VISIBLE;
+    boss->actor_class = WG_ACTOR_FAT;
+    boss->base_shape = 396U;
+    boss->attack_shape = 400U;
+    boss->state = WG_STATE_SHOOT2;
+    boss->tic_count = 1;
+    boss->shape = 401U;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(boss->state == WG_STATE_SHOOT3);
+    CHECK(boss->shape == 402U);
+    CHECK(level.actor_count >= 2U);
+    CHECK(level.actors[1].actor_class == WG_ACTOR_ROCKET);
+    boss->tic_count = 1;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(boss->state == WG_STATE_SHOOT4);
+    CHECK(boss->shape == 403U);
+    CHECK(level.player_health == 94U);
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 5 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 5U;
+    level.player_tile_y = 2U;
+    level.player_health = 100U;
+    level.actor_count = 1U;
+    boss = &level.actors[0];
+    boss->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    boss->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    boss->tile_x = 3U;
+    boss->tile_y = 2U;
+    boss->area_number = 0U;
+    boss->direction = 0U;
+    boss->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_ATTACK_MODE;
+    boss->actor_class = WG_ACTOR_GIFT;
+    boss->base_shape = 360U;
+    boss->attack_shape = 364U;
+    boss->state = WG_STATE_CHASE1;
+    boss->tic_count = 10;
+    boss->speed = 1536;
+    boss->distance = 1000;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(boss->direction == 4U);
+    CHECK(boss->tile_x == 2U);
+    CHECK(boss->x == 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 536);
 }
 
 static void TestHuffman(void)
@@ -1488,6 +1644,7 @@ int main(int argc, char **argv)
     TestDogChaseAndBite();
     TestBossShootingStates();
     TestSchabbsNeedle();
+    TestRocketBossAttacks();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();
