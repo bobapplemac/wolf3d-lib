@@ -35,6 +35,8 @@ original title screen. To exercise it:
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
 ```
 
+Press Enter on the title screen to start the selected map (map 0 by default).
+
 Add `--play-view` to enter the current interactive game session. The original
 keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
 Shift runs, Control attacks, Space uses, 1-4 select weapons, and Escape quits.

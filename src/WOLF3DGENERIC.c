@@ -29,6 +29,7 @@ uint8_t WG_Palette[WG_PALETTE_COLORS * 3];
 
 static int wg_initialized;
 static int wg_data_loaded;
+static unsigned wg_start_map;
 static wg_data_set_t wg_data_set;
 
 typedef struct wg_game_session
@@ -1245,6 +1246,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
     }
+    wg_start_map = map_number;
     if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
         && WG_IsInteractive())
     {
@@ -1315,6 +1317,17 @@ wg_result_t wolf3dgeneric_Run(void)
                 {
                     return WG_RESULT_QUIT;
                 }
+                if (!wg_game.active && event.key == WG_KEY_ENTER
+                    && event.pressed)
+                {
+                    if (!WG_GameSessionOpen(wg_start_map))
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                    last_ticks = WG_GetTicksMs();
+                    accumulator = 0U;
+                    continue;
+                }
                 if (event.key < sizeof(wg_game.keys))
                 {
                     wg_game.keys[event.key] = event.pressed != 0;
@@ -1372,5 +1385,6 @@ void wolf3dgeneric_Shutdown(void)
     free(WG_ScreenBuffer);
     WG_ScreenBuffer = NULL;
     wg_data_loaded = 0;
+    wg_start_map = 0U;
     wg_initialized = 0;
 }
