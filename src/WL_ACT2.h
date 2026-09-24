@@ -65,6 +65,11 @@ typedef enum wg_actor_state
     WG_STATE_SHOOT7,
     WG_STATE_SHOOT8,
     WG_STATE_SHOOT9,
+    WG_STATE_DOG_JUMP1,
+    WG_STATE_DOG_JUMP2,
+    WG_STATE_DOG_JUMP3,
+    WG_STATE_DOG_JUMP4,
+    WG_STATE_DOG_JUMP5,
     WG_STATE_ATTACK_PENDING
 } wg_actor_state_t;
 

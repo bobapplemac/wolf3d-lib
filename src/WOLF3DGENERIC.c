@@ -7,6 +7,7 @@
 #include "WG_DATA.h"
 #include "WG_FIXED.h"
 #include "WG_GRAPHICS.h"
+#include "ID_US_1.h"
 #include "WL_AGENT.h"
 #include "WL_GAME.h"
 #include "WG_MAPS.h"
@@ -158,14 +159,33 @@ static const wg_actor_t *WG_FindPatrolViewActor(const wg_level_t *level)
     return NULL;
 }
 
-static int WG_SetActorViewPose(wg_level_t *level, const wg_actor_t *actor)
+static wg_actor_t *WG_FindDogViewActor(wg_level_t *level)
 {
-    static const int offsets_x[] = { -3, 3, 0, 0 };
-    static const int offsets_y[] = { 0, 0, -3, 3 };
+    size_t index;
+
+    if (level == NULL)
+    {
+        return NULL;
+    }
+    for (index = 0; index < level->actor_count; ++index)
+    {
+        if (level->actors[index].actor_class == WG_ACTOR_DOG)
+        {
+            return &level->actors[index];
+        }
+    }
+    return NULL;
+}
+
+static int WG_SetActorViewPose(wg_level_t *level, const wg_actor_t *actor,
+                               int distance)
+{
+    static const int directions_x[] = { -1, 1, 0, 0 };
+    static const int directions_y[] = { 0, 0, -1, 1 };
     static const uint16_t angles[] = { 0U, 180U, 270U, 90U };
     size_t direction;
 
-    if (level == NULL || actor == NULL)
+    if (level == NULL || actor == NULL || distance <= 0)
     {
         return 0;
     }
@@ -174,10 +194,10 @@ static int WG_SetActorViewPose(wg_level_t *level, const wg_actor_t *actor)
         int step;
         int clear = 1;
 
-        for (step = 1; step <= 3; ++step)
+        for (step = 1; step <= distance; ++step)
         {
-            int x = (int)actor->tile_x + offsets_x[direction] * step / 3;
-            int y = (int)actor->tile_y + offsets_y[direction] * step / 3;
+            int x = (int)actor->tile_x + directions_x[direction] * step;
+            int y = (int)actor->tile_y + directions_y[direction] * step;
 
             if (x < 0 || x >= WG_LEVEL_SIZE || y < 0 || y >= WG_LEVEL_SIZE
                 || level->tiles[(size_t)y * WG_LEVEL_SIZE + (size_t)x] != 0U)
@@ -188,8 +208,12 @@ static int WG_SetActorViewPose(wg_level_t *level, const wg_actor_t *actor)
         }
         if (clear)
         {
-            level->player_x = actor->x + offsets_x[direction] * WG_FIXED_ONE;
-            level->player_y = actor->y + offsets_y[direction] * WG_FIXED_ONE;
+            level->player_x = actor->x
+                              + directions_x[direction] * distance
+                                * WG_FIXED_ONE;
+            level->player_y = actor->y
+                              + directions_y[direction] * distance
+                                * WG_FIXED_ONE;
             level->player_angle = angles[direction];
             level->player_tile_x = (uint8_t)(level->player_x / WG_FIXED_ONE);
             level->player_tile_y = (uint8_t)(level->player_y / WG_FIXED_ONE);
@@ -239,7 +263,7 @@ static int WG_LoadTitleScreen(const char *data_path)
 static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int guard_view, int boss_view,
                                   int patrol_view, int alert_view,
-                                  int chase_view, int fire_view,
+                                  int chase_view, int fire_view, int bite_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -278,7 +302,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             level.doors[door].position = 0xffffU;
         }
     }
-    if (!chase_view && !fire_view && !WL_TickActors(&level, actor_tics))
+    if (!chase_view && !fire_view && !bite_view
+        && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
     }
@@ -307,7 +332,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         const wg_actor_t *actor = WG_FindBossViewActor(&level);
 
-        if (!WG_SetActorViewPose(&level, actor))
+        if (!WG_SetActorViewPose(&level, actor, 3))
         {
             goto cleanup;
         }
@@ -316,7 +341,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         const wg_actor_t *actor = WG_FindPatrolViewActor(&level);
 
-        if (!WG_SetActorViewPose(&level, actor))
+        if (!WG_SetActorViewPose(&level, actor, 3))
         {
             goto cleanup;
         }
@@ -343,6 +368,25 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         actor->tic_count = 1;
         actor->shape = (uint16_t)(actor->attack_shape + 1U);
         actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE | WG_ACTOR_FLAG_VISIBLE;
+        if (!WL_TickActors(&level, 1U))
+        {
+            goto cleanup;
+        }
+    }
+    if (bite_view)
+    {
+        wg_actor_t *actor = WG_FindDogViewActor(&level);
+
+        if (!WG_SetActorViewPose(&level, actor, 2)
+            || actor->attack_shape == 0U)
+        {
+            goto cleanup;
+        }
+        actor->state = WG_STATE_DOG_JUMP2;
+        actor->tic_count = 1;
+        actor->shape = (uint16_t)(actor->attack_shape + 1U);
+        actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE;
+        WG_RandomSeed(&level.random, 0U);
         if (!WL_TickActors(&level, 1U))
         {
             goto cleanup;
@@ -432,7 +476,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--patrol-view"),
             WG_HasArgument(argc, argv, "--alert-view"),
             WG_HasArgument(argc, argv, "--chase-view"),
-            WG_HasArgument(argc, argv, "--fire-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--fire-view"),
+            WG_HasArgument(argc, argv, "--bite-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

@@ -137,6 +137,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(fire-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "dbfa84e64bb68acf")
+        add_test(NAME bite-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --bite-view
+            --frame-hash)
+        set_tests_properties(bite-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "2391755b562c8744")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -165,5 +170,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(fire-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "dbfa84e64bb68acf")
+        add_test(NAME bite-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --bite-view
+            --frame-hash)
+        set_tests_properties(bite-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "2391755b562c8744")
     endif()
 endif()

@@ -44,8 +44,8 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status
 bar. Patrol movement, actor awareness, ordinary enemy chase movement, and the
-original guard/officer/mutant/SS hitscan attack states are active. Dog attacks,
-special boss combat, and pushwall motion are not yet active:
+original guard/officer/mutant/SS hitscan and dog melee attack states are active.
+Special boss combat and pushwall motion are not yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -106,6 +106,14 @@ health display:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --fire-view --frame-hash --dump-frame firing.ppm
+```
+
+The dog diagnostic selects an original E1M1 dog, places the player at the
+two-tile bite boundary, executes the seeded `T_Bite` action, and renders the
+third leap frame and resulting health change:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --bite-view --frame-hash --dump-frame dog-bite.ppm
 ```
 
 ## License

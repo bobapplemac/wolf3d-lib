@@ -36,6 +36,11 @@ static int WL_IsShootState(wg_actor_state_t state)
     return state >= WG_STATE_SHOOT1 && state <= WG_STATE_SHOOT9;
 }
 
+static int WL_IsDogJumpState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_DOG_JUMP1 && state <= WG_STATE_DOG_JUMP5;
+}
+
 static int32_t WL_StateDuration(wg_actor_state_t state)
 {
     switch (state)
@@ -626,6 +631,105 @@ static int WL_UsesStandardChase(wg_actor_class_t actor_class)
            || actor_class == WG_ACTOR_REAL_HITLER;
 }
 
+static void WL_BeginDogJump(wg_actor_t *actor)
+{
+    actor->state = WG_STATE_DOG_JUMP1;
+    actor->tic_count = 10;
+    actor->shape = actor->attack_shape;
+}
+
+static void WL_SetDogJumpShape(wg_actor_t *actor)
+{
+    switch (actor->state)
+    {
+    case WG_STATE_DOG_JUMP2:
+        actor->shape = (uint16_t)(actor->attack_shape + 1U);
+        break;
+    case WG_STATE_DOG_JUMP3:
+        actor->shape = (uint16_t)(actor->attack_shape + 2U);
+        break;
+    case WG_STATE_DOG_JUMP5:
+        actor->shape = actor->base_shape;
+        break;
+    default:
+        actor->shape = actor->attack_shape;
+        break;
+    }
+}
+
+static void WL_T_Bite(wg_level_t *level, const wg_actor_t *actor)
+{
+    int32_t delta_x = level->player_x - actor->x;
+    int32_t delta_y = level->player_y - actor->y;
+
+    delta_x = (delta_x < 0 ? -delta_x : delta_x) - WG_FIXED_ONE;
+    if (delta_x > WG_FIXED_ONE)
+    {
+        return;
+    }
+    delta_y = (delta_y < 0 ? -delta_y : delta_y) - WG_FIXED_ONE;
+    if (delta_y <= WG_FIXED_ONE && WG_RandomNext(&level->random) < 180U)
+    {
+        WL_TakeDamage(level, WG_RandomNext(&level->random) >> 4);
+    }
+}
+
+static void WL_T_DogChase(wg_level_t *level, size_t actor_index,
+                          int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int32_t move;
+
+    if (actor->direction == WG_NO_DIRECTION)
+    {
+        WL_SelectDodgeDir(level, actor_index);
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+    move = actor->speed * tics;
+    while (move > 0)
+    {
+        int32_t delta_x = level->player_x - actor->x;
+        int32_t delta_y = level->player_y - actor->y;
+
+        delta_x = (delta_x < 0 ? -delta_x : delta_x) - move;
+        delta_y = (delta_y < 0 ? -delta_y : delta_y) - move;
+        if (delta_x <= WG_FIXED_ONE && delta_y <= WG_FIXED_ONE)
+        {
+            WL_BeginDogJump(actor);
+            return;
+        }
+        if (actor->distance <= 0)
+        {
+            actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE
+                       + WG_FIXED_ONE / 2;
+            actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE
+                       + WG_FIXED_ONE / 2;
+            WL_SelectDodgeDir(level, actor_index);
+            if (actor->direction == WG_NO_DIRECTION)
+            {
+                return;
+            }
+            continue;
+        }
+        if (move < actor->distance)
+        {
+            WL_MoveChase(level, actor, move);
+            return;
+        }
+        move -= actor->distance;
+        actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        WL_SelectDodgeDir(level, actor_index);
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+}
+
 static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
                                      wg_actor_state_t state)
 {
@@ -890,8 +994,12 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                     WL_SetChaseShape(actor);
                 }
             }
-            if (!WL_ChaseHasThink(actor->state)
-                || !WL_UsesStandardChase(actor->actor_class))
+            if (!WL_ChaseHasThink(actor->state))
+            {
+                continue;
+            }
+            if (actor->actor_class != WG_ACTOR_DOG
+                && !WL_UsesStandardChase(actor->actor_class))
             {
                 continue;
             }
@@ -903,7 +1011,14 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 }
                 connectivity_ready = 1;
             }
-            WL_T_Chase(level, index, (int32_t)tics);
+            if (actor->actor_class == WG_ACTOR_DOG)
+            {
+                WL_T_DogChase(level, index, (int32_t)tics);
+            }
+            else
+            {
+                WL_T_Chase(level, index, (int32_t)tics);
+            }
             continue;
         }
         if (WL_IsShootState(actor->state))
@@ -952,6 +1067,50 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 && WL_UsesStandardChase(actor->actor_class))
             {
                 WL_T_Chase(level, index, (int32_t)tics);
+            }
+            continue;
+        }
+        if (WL_IsDogJumpState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0 && WL_IsDogJumpState(actor->state))
+            {
+                if (actor->state == WG_STATE_DOG_JUMP2)
+                {
+                    WL_T_Bite(level, actor);
+                }
+                if (actor->state == WG_STATE_DOG_JUMP5)
+                {
+                    actor->state = WG_STATE_CHASE1;
+                    actor->tic_count += WL_ChaseStateDuration(actor,
+                                                              actor->state);
+                    WL_SetChaseShape(actor);
+                }
+                else
+                {
+                    actor->state = (wg_actor_state_t)(actor->state + 1);
+                    actor->tic_count += 10;
+                    WL_SetDogJumpShape(actor);
+                }
+            }
+            while (actor->tic_count <= 0 && WL_IsChaseState(actor->state))
+            {
+                actor->state = WL_NextChaseState(actor->state);
+                actor->tic_count += WL_ChaseStateDuration(actor,
+                                                          actor->state);
+                WL_SetChaseShape(actor);
+            }
+            if (WL_ChaseHasThink(actor->state))
+            {
+                if (!connectivity_ready)
+                {
+                    if (!WL_UpdateAreaConnectivity(level))
+                    {
+                        return 0;
+                    }
+                    connectivity_ready = 1;
+                }
+                WL_T_DogChase(level, index, (int32_t)tics);
             }
         }
     }

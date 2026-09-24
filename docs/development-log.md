@@ -216,3 +216,25 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --fire-view --frame-hash --dump-frame out\guard-firing.ppm
 ```
+
+## 2026-09-24: Dog chase and bite
+
+- Scope: original dog-only `T_DogChase`, door-avoiding dodge selection,
+  movement-step leap test, five-state jump sequence, and `T_Bite` hit and
+  damage rolls.
+- The movement test covers the dog's doubled first-sighting speed, seeded
+  diagonal dodge, destination reservation, leap threshold, exact sprite order,
+  bite action timing, and deterministic six-point damage.
+- The diagnostic selects an original E1M1 dog, finds a clear two-tile viewing
+  pose, and executes the second jump state's action. The captured third jump
+  frame shows the dog airborne with health reduced from 100% to 94%.
+- 320x200 indexed-frame FNV-1a: `2391755b562c8744`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 dog landing a bite](../out/dog-bite.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --bite-view --frame-hash --dump-frame out\dog-bite.ppm
+```

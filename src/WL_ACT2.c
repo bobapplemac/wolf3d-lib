@@ -9,6 +9,7 @@
 #define WG_SPR_GRD_DEAD 95U
 #define WG_SPR_GRD_SHOOT1 96U
 #define WG_SPR_DOG_W1_1 99U
+#define WG_SPR_DOG_JUMP1 135U
 #define WG_SPR_SS_S_1 138U
 #define WG_SPR_SS_W1_1 146U
 #define WG_SPR_SS_SHOOT1 184U
@@ -85,6 +86,8 @@ static uint16_t WL_AttackShape(wg_actor_class_t actor_class)
         return WG_SPR_SS_SHOOT1;
     case WG_ACTOR_MUTANT:
         return WG_SPR_MUT_SHOOT1;
+    case WG_ACTOR_DOG:
+        return WG_SPR_DOG_JUMP1;
     default:
         return 0U;
     }

@@ -502,6 +502,73 @@ static void TestOrdinaryShootingStates(void)
     CHECK(level.player_dead != 0U);
 }
 
+static void TestDogChaseAndBite(void)
+{
+    uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_map_t map;
+    wg_level_t level;
+    wg_actor_t *dog;
+    size_t index;
+
+    memset(&map, 0, sizeof(map));
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        plane_zero[index] = WG_AREA_TILE;
+        plane_one[index] = 0U;
+    }
+    plane_one[2U * WG_LEVEL_SIZE + 2U] = 134U;
+    plane_one[2U * WG_LEVEL_SIZE + 5U] = 19U;
+    map.width = WG_LEVEL_SIZE;
+    map.height = WG_LEVEL_SIZE;
+    map.planes[0] = plane_zero;
+    map.planes[1] = plane_one;
+
+    CHECK(WG_LevelBuild(&map, &level));
+    CHECK(level.actor_count == 1U);
+    dog = &level.actors[0];
+    CHECK(dog->actor_class == WG_ACTOR_DOG);
+    CHECK(dog->attack_shape == 135U);
+    CHECK(WL_TickAwareness(&level, 1U, 0));
+    CHECK(dog->reaction_time == 2);
+    CHECK(WL_TickAwareness(&level, 2U, 0));
+    CHECK(dog->state == WG_STATE_CHASE1);
+    CHECK(dog->speed == 3000);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(dog->direction == 1U);
+    CHECK(dog->tile_x == 3U);
+    CHECK(dog->tile_y == 1U);
+    CHECK(dog->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 3000);
+    CHECK(dog->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 3000);
+    CHECK(dog->distance == WG_FIXED_ONE - 3000);
+    CHECK((dog->flags & WG_ACTOR_FLAG_FIRST_ATTACK) == 0U);
+
+    dog->x = level.player_x - WG_FIXED_ONE - 1000;
+    dog->y = level.player_y;
+    dog->tile_x = (uint8_t)(level.player_tile_x - 1U);
+    dog->tile_y = level.player_tile_y;
+    dog->direction = 0U;
+    dog->distance = WG_FIXED_ONE;
+    dog->state = WG_STATE_CHASE1;
+    dog->tic_count = 10;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(dog->state == WG_STATE_DOG_JUMP1);
+    CHECK(dog->tic_count == 10);
+    CHECK(dog->shape == 135U);
+    CHECK(WL_TickActors(&level, 10U));
+    CHECK(dog->state == WG_STATE_DOG_JUMP2);
+    CHECK(dog->shape == 136U);
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 10U));
+    CHECK(dog->state == WG_STATE_DOG_JUMP3);
+    CHECK(dog->shape == 137U);
+    CHECK(level.player_health == 94U);
+    CHECK(level.damage_count == 6U);
+    CHECK(WL_TickActors(&level, 20U));
+    CHECK(dog->state == WG_STATE_DOG_JUMP5);
+    CHECK(dog->shape == 99U);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -1268,6 +1335,7 @@ int main(int argc, char **argv)
     TestActorAwareness();
     TestDoorAreaConnectivity();
     TestOrdinaryShootingStates();
+    TestDogChaseAndBite();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

@@ -86,7 +86,7 @@ randomized initial tic phase, six-state `20/5/15/20/5/15` animation cycle,
 class-specific speed, destination-tile reservation, tile-center snapping, and
 direction arrows stored in map plane 1. Cardinal and diagonal wall/actor checks
 preserve the distinction between ordinary actors and dogs, and actors stop at
-closed doors until the door reaches its fully open position. Dog/special-boss
+closed doors until the door reaches its fully open position. Special-boss
 movement and player/actor contact remain subsequent slices. As in
 `DoActor`, only path states with a `T_Path` thinker move; the short `path1s` and
 `path3s` states update animation time without movement.
@@ -117,9 +117,14 @@ line checks, SS distance advantage, visible/running accuracy branches, original
 random consumption, and distance-scaled damage. `TakeDamage` owns player health,
 baby-mode quarter damage, death state, and accumulated red-flash damage in
 `WL_AGENT.c`. Actor flag values now exactly match the original bit layout, and
-the renderer maintains `FL_VISABLE` as the DOS `DrawScaleds` pass did. Sounds,
-dog bites, boss attacks, and the complete death/restart flow remain subsequent
-slices.
+the renderer maintains `FL_VISABLE` as the DOS `DrawScaleds` pass did.
+
+Dog combat follows its separate original branch: `T_DogChase` always uses
+`SelectDodgeDir`, cannot cross doors, and begins the five-state jump when the
+next movement step reaches `MINACTORDIST` on both axes. The `10/10/10/10/10`
+jump sequence invokes `T_Bite` from its second state, retaining the two-tile
+axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sounds, boss
+attacks, and the complete death/restart flow remain subsequent slices.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
@@ -179,8 +184,8 @@ pushwalls are still being added. The isolated
 `--alert-view` diagnostic advances the selected guard through awareness and its
 reaction delay. `--chase-view` then advances the original chase animation and
 movement. `--fire-view` selects the original guard shot action and renders its
-resulting attack sprite and health change without enabling combat in normal
-captures.
+resulting attack sprite and health change. `--bite-view` does the same for an
+original E1M1 dog's leap and bite without altering normal captures.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
