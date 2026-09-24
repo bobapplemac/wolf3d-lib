@@ -85,6 +85,12 @@ and perpendicular height calculation. It currently rejects doors and pushwalls
 instead of approximating them as fixed walls; their moving-plane hit paths will
 be added explicitly before this traversal is connected to gameplay rendering.
 
+An owned wall cache decodes every pre-sprite VSWAP page once into conventional
+row-major 64x64 pixels. The initial renderer composes the static traversal and
+wall scaler into the original 320x160 play view, using the per-level VGA ceiling
+colors and color 0x19 floor from `VGAClearScreen`. It is intentionally exposed
+as a static-view path until runtime door and pushwall state is represented.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a

@@ -15,6 +15,7 @@
 #include "wg_palette.h"
 #include "wg_random.h"
 #include "wg_raycast.h"
+#include "wg_renderer.h"
 #include "wg_scale.h"
 #include "wg_video.h"
 #include "wg_view.h"
@@ -276,6 +277,45 @@ static void TestStaticRaycaster(void)
     CHECK(hits[159].map_y == WG_LEVEL_SIZE - 1);
 }
 
+static void TestStaticRenderer(void)
+{
+    wg_level_t level;
+    wg_view_tables_t tables;
+    wg_wall_cache_t walls;
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT];
+    uint8_t wall_pixels[2 * WG_TEXTURE_SIZE * WG_TEXTURE_SIZE];
+    int x;
+    int y;
+
+    memset(&level, 0, sizeof(level));
+    memset(&tables, 0, sizeof(tables));
+    memset(framebuffer, 0, sizeof(framebuffer));
+    memset(wall_pixels, 66, WG_TEXTURE_SIZE * WG_TEXTURE_SIZE);
+    memset(wall_pixels + WG_TEXTURE_SIZE * WG_TEXTURE_SIZE, 77,
+           WG_TEXTURE_SIZE * WG_TEXTURE_SIZE);
+    walls.pixels = wall_pixels;
+    walls.count = 2;
+    for (x = 0; x < WG_LEVEL_SIZE; ++x)
+    {
+        level.tiles[x] = 1;
+        level.tiles[(WG_LEVEL_SIZE - 1) * WG_LEVEL_SIZE + x] = 1;
+    }
+    for (y = 0; y < WG_LEVEL_SIZE; ++y)
+    {
+        level.tiles[y * WG_LEVEL_SIZE] = 1;
+        level.tiles[y * WG_LEVEL_SIZE + WG_LEVEL_SIZE - 1] = 1;
+    }
+    WG_ViewBuildTrigTables(&tables);
+    CHECK(WG_ViewCalculateProjection(&tables, WG_MAX_VIEW_WIDTH,
+                                     WG_FOCAL_LENGTH));
+    CHECK(WG_RenderStaticView(framebuffer, &level, &tables, &walls, 0, 0,
+                              32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                              32 * WG_FIXED_ONE + WG_FIXED_ONE / 2, 0));
+    CHECK(framebuffer[0] == 0x1d);
+    CHECK(framebuffer[159 * WG_VIDEO_WIDTH] == 0x19);
+    CHECK(framebuffer[80 * WG_VIDEO_WIDTH + 159] == 77);
+}
+
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                         size_t expected_graphics_offsets)
 {
@@ -417,8 +457,12 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         {
             uint8_t wall[WG_TEXTURE_SIZE * WG_TEXTURE_SIZE];
             wg_sprite_image_t sprite;
+            wg_wall_cache_t wall_cache;
 
             CHECK(WG_DecodeWall(&pages, 0, wall));
+            CHECK(WG_WallCacheLoad(&wall_cache, &pages));
+            CHECK(wall_cache.count == data_set.sprite_start);
+            WG_WallCacheFree(&wall_cache);
             for (index = 0;
                  index < (size_t)(data_set.sound_start - data_set.sprite_start);
                  ++index)
@@ -533,6 +577,7 @@ int main(int argc, char **argv)
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();
+    TestStaticRenderer();
 
     if (argc == 4 && strcmp(argv[1], "--data") == 0)
     {
