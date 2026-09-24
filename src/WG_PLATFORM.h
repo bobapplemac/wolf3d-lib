@@ -12,5 +12,9 @@ int WG_PollEvent(wg_event_t *event);
 int WG_IsInteractive(void);
 void WG_SetWindowTitle(const char *title);
 void WG_ReportError(const char *message);
+int WG_PCMInit(uint32_t sample_rate, uint16_t channels);
+void WG_PCMShutdown(void);
+size_t WG_PCMWritableFrames(void);
+int WG_PCMSubmit(const int16_t *samples, size_t frame_count);
 
 #endif

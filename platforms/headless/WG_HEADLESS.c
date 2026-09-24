@@ -53,3 +53,22 @@ void WG_ReportError(const char *message)
 {
     fprintf(stderr, "wolf3dgeneric: %s\n", message);
 }
+
+int WG_PCMInit(uint32_t sample_rate, uint16_t channels)
+{
+    return sample_rate != 0U && channels != 0U;
+}
+
+void WG_PCMShutdown(void)
+{
+}
+
+size_t WG_PCMWritableFrames(void)
+{
+    return 0U;
+}
+
+int WG_PCMSubmit(const int16_t *samples, size_t frame_count)
+{
+    return samples != NULL || frame_count == 0U;
+}

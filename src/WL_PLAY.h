@@ -1,6 +1,7 @@
 #ifndef WL_PLAY_H
 #define WL_PLAY_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 struct wg_level;
@@ -26,6 +27,7 @@ typedef struct wl_play_state
 } wl_play_state_t;
 
 void WL_PlayStateReset(wl_play_state_t *state);
+size_t WL_MusicChunkForMap(unsigned map_number);
 int WL_PlayTick(struct wg_level *level,
                 const struct wg_view_tables *tables,
                 wl_play_state_t *state, const wl_input_t *input);

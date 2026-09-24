@@ -15,7 +15,8 @@ Development is currently in the bootstrap phase. See
 acceptance gates. [`docs/source-layout.md`](docs/source-layout.md) maps each
 portable translation unit to its original Wolfenstein 3D source owner, and the
 [`development log`](docs/development-log.md) records deterministic visual
-milestones.
+milestones. Third-party code and exact revisions are recorded in
+[`THIRD_PARTY.md`](THIRD_PARTY.md).
 
 ## Bootstrap build on Windows
 
@@ -38,7 +39,8 @@ Add `--play-view` to enter the current interactive game session. The original
 keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
 Shift runs, Control attacks, Space uses, 1-4 select weapons, and Escape quits.
 The game simulation advances at the original 70 Hz while the host remains free
-to present frames independently:
+to present frames independently. The Win32 host streams each map's original IMF
+music through the official Nuked-OPL3 implementation at 48 kHz:
 
 ```text
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data" --play-view
@@ -49,6 +51,13 @@ window:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
+```
+
+It can also render ten deterministic seconds of the selected map's music to a
+standard 16-bit stereo WAV without opening an audio device:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --dump-music e1m1.wav
 ```
 
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall

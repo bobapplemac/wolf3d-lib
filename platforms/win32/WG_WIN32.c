@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 static const wchar_t wg_window_class[] = L"wolf3dgeneric-window";
 static HWND wg_window;
@@ -13,6 +14,14 @@ static uint32_t wg_pixels[WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT];
 static LARGE_INTEGER wg_counter_frequency;
 static LARGE_INTEGER wg_counter_start;
 static int wg_quit_pending;
+
+#define WG_PCM_BUFFER_COUNT 4U
+#define WG_PCM_BUFFER_FRAMES 1024U
+static HWAVEOUT wg_wave_out;
+static WAVEHDR wg_wave_headers[WG_PCM_BUFFER_COUNT];
+static int16_t wg_wave_samples[WG_PCM_BUFFER_COUNT]
+                              [WG_PCM_BUFFER_FRAMES * 2U];
+static uint8_t wg_wave_used[WG_PCM_BUFFER_COUNT];
 
 #define WG_EVENT_QUEUE_CAPACITY 64U
 static wg_event_t wg_event_queue[WG_EVENT_QUEUE_CAPACITY];
@@ -115,6 +124,7 @@ int WG_Init(void)
 
 void WG_Shutdown(void)
 {
+    WG_PCMShutdown();
     if (wg_window != NULL)
     {
         DestroyWindow(wg_window);
@@ -235,6 +245,124 @@ void WG_SetWindowTitle(const char *title)
 void WG_ReportError(const char *message)
 {
     MessageBoxA(wg_window, message, "wolf3dgeneric", MB_OK | MB_ICONERROR);
+}
+
+int WG_PCMInit(uint32_t sample_rate, uint16_t channels)
+{
+    WAVEFORMATEX format;
+    size_t index;
+
+    if (sample_rate == 0U || channels != 2U)
+    {
+        return 0;
+    }
+    WG_PCMShutdown();
+    ZeroMemory(&format, sizeof(format));
+    format.wFormatTag = WAVE_FORMAT_PCM;
+    format.nChannels = channels;
+    format.nSamplesPerSec = sample_rate;
+    format.wBitsPerSample = 16U;
+    format.nBlockAlign = (WORD)(channels * sizeof(int16_t));
+    format.nAvgBytesPerSec = sample_rate * format.nBlockAlign;
+    if (waveOutOpen(&wg_wave_out, WAVE_MAPPER, &format, 0, 0,
+                    CALLBACK_NULL) != MMSYSERR_NOERROR)
+    {
+        wg_wave_out = NULL;
+        return 0;
+    }
+    ZeroMemory(wg_wave_headers, sizeof(wg_wave_headers));
+    ZeroMemory(wg_wave_used, sizeof(wg_wave_used));
+    for (index = 0U; index < WG_PCM_BUFFER_COUNT; ++index)
+    {
+        wg_wave_headers[index].lpData = (LPSTR)wg_wave_samples[index];
+        wg_wave_headers[index].dwBufferLength =
+            (DWORD)sizeof(wg_wave_samples[index]);
+        if (waveOutPrepareHeader(wg_wave_out, &wg_wave_headers[index],
+                                 sizeof(wg_wave_headers[index]))
+            != MMSYSERR_NOERROR)
+        {
+            WG_PCMShutdown();
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void WG_PCMShutdown(void)
+{
+    size_t index;
+
+    if (wg_wave_out == NULL)
+    {
+        return;
+    }
+    waveOutReset(wg_wave_out);
+    for (index = 0U; index < WG_PCM_BUFFER_COUNT; ++index)
+    {
+        if ((wg_wave_headers[index].dwFlags & WHDR_PREPARED) != 0U)
+        {
+            waveOutUnprepareHeader(wg_wave_out, &wg_wave_headers[index],
+                                   sizeof(wg_wave_headers[index]));
+        }
+    }
+    waveOutClose(wg_wave_out);
+    wg_wave_out = NULL;
+    ZeroMemory(wg_wave_headers, sizeof(wg_wave_headers));
+    ZeroMemory(wg_wave_used, sizeof(wg_wave_used));
+}
+
+size_t WG_PCMWritableFrames(void)
+{
+    size_t index;
+
+    if (wg_wave_out == NULL)
+    {
+        return 0U;
+    }
+    for (index = 0U; index < WG_PCM_BUFFER_COUNT; ++index)
+    {
+        if (wg_wave_used[index]
+            && (wg_wave_headers[index].dwFlags & WHDR_DONE) != 0U)
+        {
+            wg_wave_used[index] = 0U;
+        }
+        if (!wg_wave_used[index])
+        {
+            return WG_PCM_BUFFER_FRAMES;
+        }
+    }
+    return 0U;
+}
+
+int WG_PCMSubmit(const int16_t *samples, size_t frame_count)
+{
+    size_t index;
+
+    if (wg_wave_out == NULL || samples == NULL || frame_count == 0U
+        || frame_count > WG_PCM_BUFFER_FRAMES)
+    {
+        return 0;
+    }
+    for (index = 0U; index < WG_PCM_BUFFER_COUNT; ++index)
+    {
+        if (!wg_wave_used[index])
+        {
+            size_t byte_count = frame_count * 2U * sizeof(*samples);
+
+            memcpy(wg_wave_samples[index], samples, byte_count);
+            wg_wave_headers[index].dwBufferLength = (DWORD)byte_count;
+            wg_wave_headers[index].dwFlags &= ~WHDR_DONE;
+            if (waveOutWrite(wg_wave_out, &wg_wave_headers[index],
+                             sizeof(wg_wave_headers[index]))
+                != MMSYSERR_NOERROR)
+            {
+                return 0;
+            }
+            wg_wave_used[index] = 1U;
+            return 1;
+        }
+    }
+    return 0;
 }
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,

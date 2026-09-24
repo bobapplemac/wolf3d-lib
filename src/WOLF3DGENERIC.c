@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "WG_DATA.h"
+#include "WG_AUDIO.h"
 #include "WG_FIXED.h"
 #include "WG_GRAPHICS.h"
 #include "ID_US_1.h"
@@ -14,6 +15,7 @@
 #include "WG_MAPS.h"
 #include "WG_PALETTE.h"
 #include "ID_PM.h"
+#include "ID_SD.h"
 #include "WG_PLATFORM.h"
 #include "WG_RENDERER.h"
 #include "WL_DRAW.h"
@@ -36,10 +38,13 @@ typedef struct wg_game_session
     wg_wall_cache_t walls;
     wg_view_tables_t view;
     wg_graphics_t graphics;
+    wg_audio_t audio;
+    id_sd_music_t *music;
     wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
     uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     uint8_t keys[128];
     wl_play_state_t play;
+    uint8_t audio_active;
 } wg_game_session_t;
 
 static wg_game_session_t wg_game;
@@ -482,10 +487,37 @@ static int WG_LoadTitleScreen(const char *data_path)
 
 static void WG_GameSessionClose(void)
 {
+    WG_PCMShutdown();
+    ID_SD_MusicDestroy(wg_game.music);
+    WG_AudioClose(&wg_game.audio);
     WG_GraphicsClose(&wg_game.graphics);
     WG_WallCacheFree(&wg_game.walls);
     WG_PagesClose(&wg_game.pages);
     memset(&wg_game, 0, sizeof(wg_game));
+}
+
+static int WG_GameSessionPumpAudio(void)
+{
+    int16_t samples[1024U * 2U];
+    size_t frames;
+
+    if (!wg_game.audio_active)
+    {
+        return 1;
+    }
+    while ((frames = WG_PCMWritableFrames()) != 0U)
+    {
+        if (frames > 1024U)
+        {
+            frames = 1024U;
+        }
+        if (!ID_SD_MusicRender(wg_game.music, samples, frames)
+            || !WG_PCMSubmit(samples, frames))
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
 
 static int WG_GameSessionRender(void)
@@ -525,6 +557,8 @@ static int WG_GameSessionOpen(unsigned map_number)
     wg_maps_t maps;
     wg_map_t map;
     int success = 0;
+    const uint8_t *music_data;
+    size_t music_size;
 
     memset(&maps, 0, sizeof(maps));
     memset(&map, 0, sizeof(map));
@@ -534,7 +568,8 @@ static int WG_GameSessionOpen(unsigned map_number)
         || !WG_LevelBuild(&map, &wg_game.level)
         || !WG_PagesOpen(&wg_game.pages, &wg_data_set)
         || !WG_WallCacheLoad(&wg_game.walls, &wg_game.pages)
-        || !WG_GraphicsOpen(&wg_game.graphics, &wg_data_set))
+        || !WG_GraphicsOpen(&wg_game.graphics, &wg_data_set)
+        || !WG_AudioOpen(&wg_game.audio, &wg_data_set))
     {
         goto cleanup;
     }
@@ -549,6 +584,26 @@ static int WG_GameSessionOpen(unsigned map_number)
     if (!WG_GameSessionRender())
     {
         goto cleanup;
+    }
+    if (WG_AudioGetChunk(&wg_game.audio, WL_MusicChunkForMap(map_number),
+                         &music_data, &music_size))
+    {
+        wg_game.music = ID_SD_MusicCreate(48000U);
+        if (wg_game.music != NULL && WG_PCMInit(48000U, 2U)
+            && ID_SD_MusicStart(wg_game.music, music_data, music_size))
+        {
+            wg_game.audio_active = 1U;
+            if (!WG_GameSessionPumpAudio())
+            {
+                goto cleanup;
+            }
+        }
+        else
+        {
+            WG_PCMShutdown();
+            ID_SD_MusicDestroy(wg_game.music);
+            wg_game.music = NULL;
+        }
     }
     success = 1;
 
@@ -1143,6 +1198,11 @@ wg_result_t wolf3dgeneric_Run(void)
             if (ticks_run != 0U && !WG_GameSessionRender())
             {
                 WG_ReportError("The Wolf3D game renderer failed.");
+                return WG_RESULT_PLATFORM_ERROR;
+            }
+            if (!WG_GameSessionPumpAudio())
+            {
+                WG_ReportError("The Wolf3D audio stream failed.");
                 return WG_RESULT_PLATFORM_ERROR;
             }
         }

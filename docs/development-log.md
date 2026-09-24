@@ -524,3 +524,34 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --forward-tics 35 --frame-hash --dump-frame out\play-loop-forward.ppm
 ```
+
+## 2026-09-24: IMF music and official Nuked-OPL3
+
+- Ported the active IMF sequencer from `ID_SD.C`, including length-prefixed
+  event validation, zero-delay event batching, register/delay ordering, and
+  the original loop restart behavior.
+- Added a rational sample clock that produces exactly 700 IMF services per
+  second at both 44.1 and 48 kHz. Music timing is driven by generated sample
+  count and remains independent of the 70 Hz gameplay accumulator.
+- Vendored the official `nukeykt/Nuked-OPL3` revision
+  `765ec962e473aeb767e4cba74ffdc8f588ffbfe8`, with its LGPL-2.1-or-later
+  license and an independently replaceable CMake target. The reference files
+  match the supplied checkout after line-ending normalization.
+- Restored the original 60-map song table from `WL_PLAY.C`. E1M1 therefore
+  starts `GETTHEM_MUS`, rather than a generic test track.
+- Added platform-neutral signed stereo PCM submission. Win32 uses four 1,024-
+  frame `waveOut` buffers; the headless host can export a deterministic WAV.
+- Validated all 11 populated shareware and all 27 registered-edition music
+  chunks. The sparse shareware music slots remain valid empty archive entries.
+- One second of E1M1 music at 48 kHz has PCM FNV-1a `201858e57f147650`,
+  identical for supplied WL1/WL6 data and MSVC x86/x64 builds.
+- The ten-second WAV fixture is 48 kHz, stereo, signed 16-bit PCM with SHA-256
+  `40ecca1c103a8e38dab7e7eb4725f268348c18e8120a6c5e996984544df15e1e`.
+
+![Ten-second E1M1 Nuked-OPL3 reference render](../out/e1m1-nuked-opl3.wav)
+
+Regenerate it with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --dump-music out\e1m1-nuked-opl3.wav
+```

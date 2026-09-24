@@ -12,6 +12,7 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | --- | --- | --- |
 | `ID_CA.c` | `ID_CA.C` | Huffman, Carmack, and RLEW expansion |
 | `ID_PM.c` | `ID_PM.C` | Bounded VSWAP page access |
+| `ID_SD.c` | `ID_SD.C`, `ID_SD_A.ASM` | IMF sequencing, 700 Hz sample clock, and OPL music rendering |
 | `ID_VL.c` | `ID_VL.C` | Indexed framebuffer, blits, palettes, and fizzle fade |
 | `ID_VH.c` | `ID_VH.C` | Proportional font decoding and drawing |
 | `ID_US_1.c` | `ID_US_1.C` | Original deterministic random table |
@@ -38,6 +39,9 @@ They are deliberately small portability or safety layers:
 | `WG_RENDERER` | Composition layer over the translated drawing routines |
 | `WG_PLATFORM` | The doomgeneric-style host contract |
 | `WG_HEADLESS`, `WG_WIN32` | Reference implementations of that host contract |
+
+`third_party/Nuked-OPL3` is intentionally outside both groups: it is the
+unaltered LGPL OPL emulator selected by the project, built as its own library.
 
 `WOLF3DGENERIC.c` and `WOLF3DGENERIC.h` are the new public engine boundary.
 Routine and data names use the `WG_` namespace where exposing an original global

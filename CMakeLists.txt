@@ -12,6 +12,12 @@ if(NOT WIN32)
     set(WG_BUILD_WIN32 OFF CACHE BOOL "Win32 is only available on Windows" FORCE)
 endif()
 
+# Kept as a separate LGPL component so its upstream source and replacement
+# boundary remain independently reviewable.
+add_library(nuked-opl3 STATIC third_party/Nuked-OPL3/opl3.c)
+target_include_directories(nuked-opl3 PUBLIC third_party/Nuked-OPL3)
+target_compile_features(nuked-opl3 PUBLIC c_std_99)
+
 set(WG_CORE_SOURCES
     src/WG_ASSETS.c
     src/WG_AUDIO.c
@@ -24,6 +30,7 @@ set(WG_CORE_SOURCES
     src/WL_GAME.c
     src/WG_MAPS.c
     src/ID_PM.c
+    src/ID_SD.c
     src/WG_PALETTE.c
     src/ID_US_1.c
     src/WL_AGENT.c
@@ -40,6 +47,8 @@ set(WG_CORE_SOURCES
 )
 
 add_library(wolf3dgeneric STATIC ${WG_CORE_SOURCES})
+
+target_link_libraries(wolf3dgeneric PUBLIC nuked-opl3)
 
 target_include_directories(wolf3dgeneric
     PUBLIC include

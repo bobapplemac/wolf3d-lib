@@ -11,6 +11,21 @@
 #define WL_BASE_MOVE 35
 #define WL_RUN_MOVE 70
 
+size_t WL_MusicChunkForMap(unsigned map_number)
+{
+    static const uint8_t songs[60] =
+    {
+        3U, 11U, 9U, 12U, 3U, 11U, 9U, 12U, 2U, 0U,
+        8U, 18U, 17U, 4U, 8U, 18U, 4U, 17U, 2U, 1U,
+        6U, 20U, 22U, 21U, 6U, 20U, 22U, 21U, 19U, 26U,
+        3U, 11U, 9U, 12U, 3U, 11U, 9U, 12U, 2U, 0U,
+        8U, 18U, 17U, 4U, 8U, 18U, 4U, 17U, 2U, 1U,
+        6U, 20U, 22U, 21U, 6U, 20U, 22U, 21U, 19U, 15U
+    };
+
+    return 261U + songs[map_number < 60U ? map_number : 0U];
+}
+
 void WL_PlayStateReset(wl_play_state_t *state)
 {
     if (state != NULL)

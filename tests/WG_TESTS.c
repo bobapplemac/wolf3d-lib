@@ -14,6 +14,7 @@
 #include "WL_ACT1.h"
 #include "WG_MAPS.h"
 #include "ID_PM.h"
+#include "ID_SD.h"
 #include "WG_PALETTE.h"
 #include "ID_US_1.h"
 #include "WL_DRAW.h"
@@ -36,6 +37,83 @@ static int failures;
             ++failures;                                                         \
         }                                                                       \
     } while (0)
+
+typedef struct opl_write_log
+{
+    uint16_t registers[16];
+    uint8_t values[16];
+    size_t count;
+} opl_write_log_t;
+
+static void LogOPLWrite(void *user, uint16_t register_number, uint8_t value)
+{
+    opl_write_log_t *log = (opl_write_log_t *)user;
+
+    if (log->count < sizeof(log->registers) / sizeof(log->registers[0]))
+    {
+        log->registers[log->count] = register_number;
+        log->values[log->count] = value;
+        ++log->count;
+    }
+}
+
+static void TestIMFSequencer(void)
+{
+    static const uint8_t chunk[] =
+    {
+        12U, 0U,
+        0x20U, 0x01U, 2U, 0U,
+        0x40U, 0x02U, 0U, 0U,
+        0x60U, 0x03U, 1U, 0U
+    };
+    id_sd_imf_t sequence;
+    id_sd_sample_clock_t clock;
+    opl_write_log_t log;
+    unsigned index;
+    uint32_t ticks = 0U;
+
+    CHECK(WL_MusicChunkForMap(0U) == 264U);
+    CHECK(WL_MusicChunkForMap(8U) == 263U);
+    CHECK(WL_MusicChunkForMap(9U) == 261U);
+    CHECK(WL_MusicChunkForMap(59U) == 276U);
+    CHECK(WL_MusicChunkForMap(60U) == 264U);
+
+    memset(&sequence, 0, sizeof(sequence));
+    memset(&log, 0, sizeof(log));
+    CHECK(!ID_SD_IMFStart(&sequence, chunk, sizeof(chunk) - 1U,
+                          LogOPLWrite, &log));
+    CHECK(ID_SD_IMFStart(&sequence, chunk, sizeof(chunk), LogOPLWrite, &log));
+    ID_SD_IMFService(&sequence);
+    CHECK(log.count == 1U && log.registers[0] == 0x20U
+          && log.values[0] == 0x01U);
+    ID_SD_IMFService(&sequence);
+    CHECK(log.count == 1U);
+    ID_SD_IMFService(&sequence);
+    CHECK(log.count == 3U && log.registers[1] == 0x40U
+          && log.values[1] == 0x02U && log.registers[2] == 0x60U
+          && log.values[2] == 0x03U);
+    CHECK(sequence.position == 0U && sequence.time == 0U);
+    ID_SD_IMFService(&sequence);
+    CHECK(log.count == 4U && log.registers[3] == 0x20U);
+    ID_SD_IMFStop(&sequence);
+    ID_SD_IMFService(&sequence);
+    CHECK(log.count == 4U);
+
+    CHECK(!ID_SD_SampleClockStart(&clock, 699U));
+    CHECK(ID_SD_SampleClockStart(&clock, 48000U));
+    for (index = 0U; index < 48000U; ++index)
+    {
+        ticks += ID_SD_SampleClockAdvance(&clock, 1U);
+    }
+    CHECK(ticks == ID_SD_IMF_RATE);
+    CHECK(clock.phase == 0U);
+    CHECK(ID_SD_SampleClockFramesToTick(&clock) == 69U);
+
+    CHECK(ID_SD_SampleClockStart(&clock, 44100U));
+    CHECK(ID_SD_SampleClockFramesToTick(&clock) == 63U);
+    CHECK(ID_SD_SampleClockAdvance(&clock, 63U) == 1U);
+    CHECK(clock.phase == 0U);
+}
 
 static size_t ActorClassCount(const wg_level_t *level,
                               wg_actor_class_t actor_class)
@@ -2594,14 +2672,57 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     CHECK(WG_AudioOpen(&audio, &data_set));
     if (audio.offsets != NULL)
     {
+        id_sd_imf_t music;
+        id_sd_music_t *music_player;
+        opl_write_log_t log;
+        int16_t *music_pcm;
+        uint64_t music_hash = 1469598103934665603ULL;
+        size_t music_count = 0U;
+
         CHECK(audio.offset_count == 289U);
         CHECK(WG_AudioGetChunk(&audio, 261U, &page_data, &page_size));
         CHECK(page_size > 2U);
+        music_player = ID_SD_MusicCreate(48000U);
+        music_pcm = (int16_t *)malloc(48000U * 2U * sizeof(*music_pcm));
+        CHECK(music_player != NULL && music_pcm != NULL);
+        if (music_player != NULL && music_pcm != NULL)
+        {
+            const uint8_t *pcm_bytes = (const uint8_t *)music_pcm;
+
+            CHECK(ID_SD_MusicStart(music_player, page_data, page_size));
+            CHECK(ID_SD_MusicRender(music_player, music_pcm, 48000U));
+            for (index = 0U;
+                 index < 48000U * 2U * sizeof(*music_pcm); ++index)
+            {
+                music_hash ^= pcm_bytes[index];
+                music_hash *= 1099511628211ULL;
+            }
+            printf("%s one-second OPL music FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)music_hash);
+            CHECK(music_hash == 0x201858e57f147650ULL);
+        }
+        free(music_pcm);
+        ID_SD_MusicDestroy(music_player);
         CHECK(!WG_AudioGetChunk(&audio, 288U, &page_data, &page_size));
         for (index = 0; index + 1U < audio.offset_count; ++index)
         {
             CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));
         }
+        memset(&log, 0, sizeof(log));
+        for (index = 261U; index < 288U; ++index)
+        {
+            CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));
+            if (page_size >= 2U
+                && (page_data[0] != 0U || page_data[1] != 0U))
+            {
+                CHECK(ID_SD_IMFStart(&music, page_data, page_size,
+                                     LogOPLWrite, &log));
+                ++music_count;
+            }
+        }
+        CHECK(music_count == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                                  ? 11U : 27U));
         WG_AudioClose(&audio);
     }
     WG_DataClose(&data_set);
@@ -2609,6 +2730,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
 
 int main(int argc, char **argv)
 {
+    TestIMFSequencer();
     TestHuffman();
     TestCarmack();
     TestRLEW();

@@ -1,7 +1,13 @@
 #include "WOLF3DGENERIC.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#include "ID_SD.h"
+#include "WG_AUDIO.h"
+#include "WG_DATA.h"
+#include "WL_PLAY.h"
 
 static const char *WG_DumpPath(int argc, char **argv)
 {
@@ -15,6 +21,132 @@ static const char *WG_DumpPath(int argc, char **argv)
         }
     }
     return NULL;
+}
+
+static const char *WG_ArgumentValue(int argc, char **argv,
+                                    const char *argument)
+{
+    int index;
+
+    for (index = 1; index + 1 < argc; ++index)
+    {
+        if (strcmp(argv[index], argument) == 0)
+        {
+            return argv[index + 1];
+        }
+    }
+    return NULL;
+}
+
+static void WG_WriteLE16(FILE *stream, uint16_t value)
+{
+    uint8_t bytes[2];
+
+    bytes[0] = (uint8_t)value;
+    bytes[1] = (uint8_t)(value >> 8);
+    (void)fwrite(bytes, 1U, sizeof(bytes), stream);
+}
+
+static void WG_WriteLE32(FILE *stream, uint32_t value)
+{
+    uint8_t bytes[4];
+
+    bytes[0] = (uint8_t)value;
+    bytes[1] = (uint8_t)(value >> 8);
+    bytes[2] = (uint8_t)(value >> 16);
+    bytes[3] = (uint8_t)(value >> 24);
+    (void)fwrite(bytes, 1U, sizeof(bytes), stream);
+}
+
+static int WG_WriteMusic(const char *data_path, unsigned map_number,
+                         const char *output_path)
+{
+    enum { sample_rate = 48000, seconds = 10, block_frames = 1024 };
+    wg_data_set_t data_set;
+    wg_audio_t audio;
+    id_sd_music_t *music = NULL;
+    const uint8_t *chunk;
+    size_t chunk_size;
+    int16_t samples[block_frames * 2U];
+    uint8_t pcm_bytes[block_frames * 4U];
+    uint32_t frames_left = sample_rate * seconds;
+    uint32_t data_bytes = frames_left * 2U * sizeof(int16_t);
+    FILE *stream = NULL;
+    int success = 0;
+
+    memset(&data_set, 0, sizeof(data_set));
+    memset(&audio, 0, sizeof(audio));
+    if (!WG_DataOpen(&data_set, data_path)
+        || !WG_AudioOpen(&audio, &data_set)
+        || !WG_AudioGetChunk(&audio, WL_MusicChunkForMap(map_number),
+                             &chunk, &chunk_size))
+    {
+        goto cleanup;
+    }
+    music = ID_SD_MusicCreate(sample_rate);
+    if (music == NULL || !ID_SD_MusicStart(music, chunk, chunk_size))
+    {
+        goto cleanup;
+    }
+#ifdef _MSC_VER
+    if (fopen_s(&stream, output_path, "wb") != 0)
+    {
+        stream = NULL;
+    }
+#else
+    stream = fopen(output_path, "wb");
+#endif
+    if (stream == NULL)
+    {
+        goto cleanup;
+    }
+    (void)fwrite("RIFF", 1U, 4U, stream);
+    WG_WriteLE32(stream, 36U + data_bytes);
+    (void)fwrite("WAVEfmt ", 1U, 8U, stream);
+    WG_WriteLE32(stream, 16U);
+    WG_WriteLE16(stream, 1U);
+    WG_WriteLE16(stream, 2U);
+    WG_WriteLE32(stream, sample_rate);
+    WG_WriteLE32(stream, sample_rate * 4U);
+    WG_WriteLE16(stream, 4U);
+    WG_WriteLE16(stream, 16U);
+    (void)fwrite("data", 1U, 4U, stream);
+    WG_WriteLE32(stream, data_bytes);
+    while (frames_left != 0U)
+    {
+        uint32_t frames = frames_left < block_frames
+                              ? frames_left : block_frames;
+        size_t sample;
+
+        if (!ID_SD_MusicRender(music, samples, frames))
+        {
+            goto cleanup;
+        }
+        for (sample = 0U; sample < (size_t)frames * 2U; ++sample)
+        {
+            uint16_t value = (uint16_t)samples[sample];
+
+            pcm_bytes[sample * 2U] = (uint8_t)value;
+            pcm_bytes[sample * 2U + 1U] = (uint8_t)(value >> 8);
+        }
+        if (fwrite(pcm_bytes, 4U, frames, stream) != frames)
+        {
+            goto cleanup;
+        }
+        frames_left -= frames;
+    }
+    success = fclose(stream) == 0;
+    stream = NULL;
+
+cleanup:
+    if (stream != NULL)
+    {
+        fclose(stream);
+    }
+    ID_SD_MusicDestroy(music);
+    WG_AudioClose(&audio);
+    WG_DataClose(&data_set);
+    return success;
 }
 
 static int WG_HasArgument(int argc, char **argv, const char *argument)
@@ -85,9 +217,20 @@ int main(int argc, char **argv)
     wg_result_t result;
     int bootstrap_test;
     const char *dump_path;
+    const char *music_path;
+    const char *data_path;
+    const char *map_text;
+    unsigned map_number = 0U;
 
     bootstrap_test = argc == 2 && strcmp(argv[1], "--bootstrap-test") == 0;
     dump_path = WG_DumpPath(argc, argv);
+    music_path = WG_ArgumentValue(argc, argv, "--dump-music");
+    data_path = WG_ArgumentValue(argc, argv, "--data");
+    map_text = WG_ArgumentValue(argc, argv, "--map");
+    if (map_text != NULL)
+    {
+        map_number = (unsigned)strtoul(map_text, NULL, 10);
+    }
     result = wolf3dgeneric_Create(argc, argv);
     if (result != WG_RESULT_OK)
     {
@@ -106,6 +249,14 @@ int main(int argc, char **argv)
         wolf3dgeneric_Shutdown();
         return 1;
     }
+    if (music_path != NULL
+        && (data_path == NULL
+            || !WG_WriteMusic(data_path, map_number, music_path)))
+    {
+        fprintf(stderr, "Unable to write music dump: %s\n", music_path);
+        wolf3dgeneric_Shutdown();
+        return 1;
+    }
     wolf3dgeneric_Shutdown();
 
     if (bootstrap_test)
@@ -118,10 +269,9 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    if (dump_path == NULL)
+    if (dump_path == NULL && music_path == NULL)
     {
-        fprintf(stderr, "The engine is not playable yet (bootstrap result %d).\n",
-                (int)result);
+        fprintf(stderr, "Headless run completed with result %d.\n", (int)result);
     }
     return result == WG_RESULT_NOT_IMPLEMENTED ? 0 : 1;
 }

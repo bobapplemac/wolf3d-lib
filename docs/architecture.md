@@ -259,3 +259,12 @@ Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a
 measured-performance fallback, not the default.
+
+The first music slice now follows that design. `ID_SD.c` parses the original
+length-prefixed IMF event stream, preserves same-tic zero-delay register
+batches and end-of-sequence looping, and services it at 700 Hz. A rational
+sample accumulator splits Nuked-OPL3 generation at exact event boundaries; it
+therefore produces 700 services over 48,000 output frames without making the
+70 Hz gameplay loop run ten times faster. The generic layer submits signed
+48 kHz stereo PCM, while Win32 transports it through four reusable `waveOut`
+buffers and headless mode can emit the identical samples as a WAV fixture.
