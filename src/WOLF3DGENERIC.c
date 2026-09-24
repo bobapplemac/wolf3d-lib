@@ -52,6 +52,39 @@ static int WG_HasArgument(int argc, char **argv, const char *argument)
     return 0;
 }
 
+static int WG_FindMapNumber(int argc, char **argv, unsigned *map_number)
+{
+    int index;
+
+    if (map_number == NULL)
+    {
+        return 0;
+    }
+    *map_number = 0U;
+    for (index = 1; index < argc; ++index)
+    {
+        if (strcmp(argv[index], "--map") == 0)
+        {
+            char *end;
+            unsigned long value;
+
+            if (index + 1 >= argc)
+            {
+                return 0;
+            }
+            end = NULL;
+            value = strtoul(argv[index + 1], &end, 10);
+            if (end == argv[index + 1] || *end != '\0' || value > 99UL)
+            {
+                return 0;
+            }
+            *map_number = (unsigned)value;
+            return 1;
+        }
+    }
+    return 1;
+}
+
 static const wg_actor_t *WG_FindGuardViewActor(const wg_level_t *level)
 {
     size_t index;
@@ -71,6 +104,74 @@ static const wg_actor_t *WG_FindGuardViewActor(const wg_level_t *level)
         }
     }
     return NULL;
+}
+
+static int WG_IsBossClass(wg_actor_class_t actor_class)
+{
+    return actor_class == WG_ACTOR_BOSS
+           || actor_class == WG_ACTOR_SCHABBS
+           || actor_class == WG_ACTOR_FAKE
+           || actor_class == WG_ACTOR_MECHA_HITLER
+           || actor_class == WG_ACTOR_GRETEL
+           || actor_class == WG_ACTOR_GIFT
+           || actor_class == WG_ACTOR_FAT;
+}
+
+static const wg_actor_t *WG_FindBossViewActor(const wg_level_t *level)
+{
+    size_t index;
+
+    if (level == NULL)
+    {
+        return NULL;
+    }
+    for (index = 0; index < level->actor_count; ++index)
+    {
+        if (WG_IsBossClass(level->actors[index].actor_class))
+        {
+            return &level->actors[index];
+        }
+    }
+    return NULL;
+}
+
+static int WG_SetActorViewPose(wg_level_t *level, const wg_actor_t *actor)
+{
+    static const int offsets_x[] = { -3, 3, 0, 0 };
+    static const int offsets_y[] = { 0, 0, -3, 3 };
+    static const uint16_t angles[] = { 0U, 180U, 270U, 90U };
+    size_t direction;
+
+    if (level == NULL || actor == NULL)
+    {
+        return 0;
+    }
+    for (direction = 0; direction < 4U; ++direction)
+    {
+        int step;
+        int clear = 1;
+
+        for (step = 1; step <= 3; ++step)
+        {
+            int x = (int)actor->tile_x + offsets_x[direction] * step / 3;
+            int y = (int)actor->tile_y + offsets_y[direction] * step / 3;
+
+            if (x < 0 || x >= WG_LEVEL_SIZE || y < 0 || y >= WG_LEVEL_SIZE
+                || level->tiles[(size_t)y * WG_LEVEL_SIZE + (size_t)x] != 0U)
+            {
+                clear = 0;
+                break;
+            }
+        }
+        if (clear)
+        {
+            level->player_x = actor->x + offsets_x[direction] * WG_FIXED_ONE;
+            level->player_y = actor->y + offsets_y[direction] * WG_FIXED_ONE;
+            level->player_angle = angles[direction];
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static int WG_LoadTitleScreen(const char *data_path)
@@ -110,7 +211,8 @@ static int WG_LoadTitleScreen(const char *data_path)
     return 1;
 }
 
-static int WG_LoadInitialPlayView(int open_doors, int guard_view)
+static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
+                                  int guard_view, int boss_view)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -131,7 +233,7 @@ static int WG_LoadInitialPlayView(int open_doors, int guard_view)
     memset(&view, 0, sizeof(view));
     memset(&graphics, 0, sizeof(graphics));
     if (!WG_MapsOpen(&maps, &wg_data_set)
-        || !WG_MapsLoad(&maps, 0, &map)
+        || !WG_MapsLoad(&maps, map_number, &map)
         || !WG_LevelBuild(&map, &level)
         || !WG_PagesOpen(&pages, &wg_data_set)
         || !WG_WallCacheLoad(&walls, &pages)
@@ -163,6 +265,15 @@ static int WG_LoadInitialPlayView(int open_doors, int guard_view)
         player_tile = (size_t)actor->tile_y * WG_LEVEL_SIZE
                       + actor->tile_x - 3U;
         if (level.tiles[player_tile] != 0U)
+        {
+            goto cleanup;
+        }
+    }
+    if (boss_view)
+    {
+        const wg_actor_t *actor = WG_FindBossViewActor(&level);
+
+        if (!WG_SetActorViewPose(&level, actor))
         {
             goto cleanup;
         }
@@ -205,8 +316,10 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
 {
     size_t framebuffer_size;
     const char *data_path;
+    unsigned map_number;
 
-    if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL))
+    if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL)
+        || !WG_FindMapNumber(argc, argv, &map_number))
     {
         return WG_RESULT_INVALID_ARGUMENT;
     }
@@ -237,8 +350,10 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     }
     if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
         && !WG_LoadInitialPlayView(
+            map_number,
             WG_HasArgument(argc, argv, "--open-doors"),
-            WG_HasArgument(argc, argv, "--guard-view")))
+            WG_HasArgument(argc, argv, "--guard-view"),
+            WG_HasArgument(argc, argv, "--boss-view")))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

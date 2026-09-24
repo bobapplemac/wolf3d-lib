@@ -68,14 +68,17 @@ ammo-clip entry from `statinfo`.
 
 The active-object setup recognizes standing and patrolling guards, officers,
 SS, dogs, and mutants at the original easy, medium, and hard map-code
-thresholds, plus inert dead guards. Actors retain their tile-center 16.16
-position, eight-way direction, initial state shape, the original 150-object
-capacity, and `SpawnPatrol`'s one-tile destination advance. The original map
-format reserves standing-dog codes although the DOS `SpawnStand` switch omits
-the dog case; the portable setup gives those entries the dog's path pose without
-advancing it, avoiding the original undefined stale-object behavior. The legacy
-`WG_LevelBuild` entry point selects medium difficulty; an explicit difficulty
-entry point supports deterministic setup testing.
+thresholds, plus inert dead guards. The seven original bosses and four ghost
+states use their fixed initial shapes and original north, south, or east
+directions. Actors retain their tile-center 16.16 position, eight-way direction,
+initial state shape, the original 150-object capacity, and `SpawnPatrol`'s
+one-tile destination advance. The original map format reserves standing-dog
+codes although the DOS `SpawnStand` switch omits the dog case; the portable
+setup gives those entries the dog's path pose without advancing it, avoiding the
+original undefined stale-object behavior. The legacy `WG_LevelBuild` entry
+point selects medium difficulty; an explicit difficulty entry point supports
+deterministic setup testing. Corpus validation checks that every actor spawned
+by all 10 WL1 and 60 WL6 maps names a sprite page present in that edition.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
@@ -130,7 +133,7 @@ diagnostic exposes the scenery beyond E1M1's initially closed door without
 changing normal level state. Ordinary enemies and dead guards share the same
 visible-object list; live actors use the original larger `ACTORSIZE` projection
 adjustment and select one of eight rotations with `CalcRotate`. Actor state
-updates, AI, bosses, ghosts, and moving pushwalls are still being added.
+updates, AI, boss special behavior, and moving pushwalls are still being added.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

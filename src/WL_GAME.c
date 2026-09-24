@@ -182,6 +182,55 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                     return 0;
                 }
             }
+            else if (info == 214U
+                     && !WL_SpawnBoss(level, WG_ACTOR_BOSS,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (info == 197U
+                     && !WL_SpawnBoss(level, WG_ACTOR_GRETEL,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (info == 215U
+                     && !WL_SpawnBoss(level, WG_ACTOR_GIFT,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (info == 179U
+                     && !WL_SpawnBoss(level, WG_ACTOR_FAT,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (info == 196U
+                     && !WL_SpawnBoss(level, WG_ACTOR_SCHABBS,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (info == 160U
+                     && !WL_SpawnBoss(level, WG_ACTOR_FAKE,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (info == 178U
+                     && !WL_SpawnBoss(level, WG_ACTOR_MECHA_HITLER,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
             else if (WG_DifficultyDirection(info, 216U, 18U, difficulty,
                                             &direction))
             {
@@ -201,6 +250,14 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                 {
                     return 0;
                 }
+            }
+            else if (info >= 224U && info <= 227U
+                     && !WL_SpawnGhost(level,
+                         (wg_ghost_kind_t)(info - 224U),
+                         (uint8_t)(index % WG_LEVEL_SIZE),
+                         (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
             }
         }
     }

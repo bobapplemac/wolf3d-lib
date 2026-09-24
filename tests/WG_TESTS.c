@@ -140,6 +140,60 @@ static void TestActorSetup(void)
     CHECK(level.actor_count == 31U);
 }
 
+static void TestBossAndGhostSetup(void)
+{
+    static const uint16_t actor_codes[] =
+    {
+        214U, 197U, 215U, 179U, 196U, 160U, 178U,
+        224U, 225U, 226U, 227U
+    };
+    static const wg_actor_class_t expected_classes[] =
+    {
+        WG_ACTOR_BOSS, WG_ACTOR_GRETEL, WG_ACTOR_GIFT, WG_ACTOR_FAT,
+        WG_ACTOR_SCHABBS, WG_ACTOR_FAKE, WG_ACTOR_MECHA_HITLER,
+        WG_ACTOR_GHOST, WG_ACTOR_GHOST, WG_ACTOR_GHOST, WG_ACTOR_GHOST
+    };
+    static const uint16_t expected_shapes[] =
+    {
+        296U, 385U, 360U, 396U, 307U, 321U, 334U,
+        288U, 292U, 290U, 294U
+    };
+    uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_map_t map;
+    wg_level_t level;
+    size_t index;
+
+    memset(&map, 0, sizeof(map));
+    for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        plane_zero[index] = WG_AREA_TILE;
+        plane_one[index] = 0U;
+    }
+    plane_one[WG_LEVEL_SIZE + 1U] = 19U;
+    for (index = 0; index < sizeof(actor_codes) / sizeof(actor_codes[0]); ++index)
+    {
+        plane_one[2U * WG_LEVEL_SIZE + 2U + index] = actor_codes[index];
+    }
+    map.width = WG_LEVEL_SIZE;
+    map.height = WG_LEVEL_SIZE;
+    map.planes[0] = plane_zero;
+    map.planes[1] = plane_one;
+
+    CHECK(WG_LevelBuildForDifficulty(&map, WG_DIFFICULTY_BABY, &level));
+    CHECK(level.actor_count
+          == sizeof(actor_codes) / sizeof(actor_codes[0]));
+    for (index = 0; index < level.actor_count; ++index)
+    {
+        CHECK(level.actors[index].actor_class == expected_classes[index]);
+        CHECK(level.actors[index].shape == expected_shapes[index]);
+        CHECK(level.actors[index].rotate == 0U);
+    }
+    CHECK(level.actors[0].direction == 6U);
+    CHECK(level.actors[1].direction == 2U);
+    CHECK(level.actors[7].direction == 0U);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -474,10 +528,12 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t open_view_hash = 1469598103934665603ULL;
     uint64_t guard_view_hash = 1469598103934665603ULL;
     size_t index;
+    size_t actor_index;
     size_t decoded_graphics = 0;
     size_t loaded_maps = 0;
     size_t present_pages = 0;
     size_t decoded_sprites = 0;
+    size_t actor_classes[WG_ACTOR_FAT + 1] = { 0 };
 
     CHECK(WG_DataOpen(&data_set, path));
     if (data_set.variant == WG_GAME_UNKNOWN)
@@ -835,12 +891,42 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 CHECK(map.height == 64U);
                 CHECK(WG_LevelBuild(&map, &level));
                 CHECK(level.door_count <= WG_MAX_DOORS);
+                for (actor_index = 0; actor_index < level.actor_count;
+                     ++actor_index)
+                {
+                    const wg_actor_t *actor = &level.actors[actor_index];
+                    size_t sprite_page =
+                        (size_t)data_set.sprite_start + actor->shape;
+
+                    CHECK(actor->actor_class <= WG_ACTOR_FAT);
+                    if (actor->actor_class <= WG_ACTOR_FAT)
+                    {
+                        ++actor_classes[actor->actor_class];
+                    }
+                    CHECK(sprite_page < data_set.sound_start);
+                    if (sprite_page < data_set.sound_start)
+                    {
+                        CHECK(data_set.pages[sprite_page].offset != 0U);
+                        CHECK(data_set.pages[sprite_page].length != 0U);
+                    }
+                }
                 ++loaded_maps;
                 WG_MapFree(&map);
             }
         }
         CHECK(loaded_maps == (expected_variant
               == WG_GAME_WOLF3D_SHAREWARE_14 ? 10U : 60U));
+        CHECK(actor_classes[WG_ACTOR_BOSS] != 0U);
+        if (expected_variant == WG_GAME_WOLF3D_FULL_GT_14)
+        {
+            CHECK(actor_classes[WG_ACTOR_GHOST] != 0U);
+            CHECK(actor_classes[WG_ACTOR_SCHABBS] != 0U);
+            CHECK(actor_classes[WG_ACTOR_FAKE] != 0U);
+            CHECK(actor_classes[WG_ACTOR_MECHA_HITLER] != 0U);
+            CHECK(actor_classes[WG_ACTOR_GRETEL] != 0U);
+            CHECK(actor_classes[WG_ACTOR_GIFT] != 0U);
+            CHECK(actor_classes[WG_ACTOR_FAT] != 0U);
+        }
         WG_MapsClose(&maps);
     }
 
@@ -869,6 +955,7 @@ int main(int argc, char **argv)
     TestVideo();
     TestRandom();
     TestActorSetup();
+    TestBossAndGhostSetup();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

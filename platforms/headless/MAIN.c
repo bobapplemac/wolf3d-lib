@@ -17,6 +17,33 @@ static const char *WG_DumpPath(int argc, char **argv)
     return NULL;
 }
 
+static int WG_HasArgument(int argc, char **argv, const char *argument)
+{
+    int index;
+
+    for (index = 1; index < argc; ++index)
+    {
+        if (strcmp(argv[index], argument) == 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static unsigned long long WG_FrameHash(void)
+{
+    unsigned long long hash = 1469598103934665603ULL;
+    size_t index;
+
+    for (index = 0; index < WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT; ++index)
+    {
+        hash ^= WG_ScreenBuffer[index];
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
 static int WG_WriteFrame(const char *path)
 {
     FILE *stream;
@@ -69,6 +96,10 @@ int main(int argc, char **argv)
     }
 
     result = wolf3dgeneric_Run();
+    if (WG_HasArgument(argc, argv, "--frame-hash"))
+    {
+        printf("%016llx\n", WG_FrameHash());
+    }
     if (dump_path != NULL && !WG_WriteFrame(dump_path))
     {
         fprintf(stderr, "Unable to write frame dump: %s\n", dump_path);

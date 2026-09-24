@@ -111,8 +111,18 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     set(WG_TEST_WL6_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL6 data")
     if(WG_TEST_WL1_PATH)
         add_test(NAME data-wl1 COMMAND wg-tests --data wl1 "${WG_TEST_WL1_PATH}")
+        add_test(NAME boss-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --map 8 --boss-view
+            --frame-hash)
+        set_tests_properties(boss-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "a38a57b87c979508")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
+        add_test(NAME boss-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --map 8 --boss-view
+            --frame-hash)
+        set_tests_properties(boss-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "a38a57b87c979508")
     endif()
 endif()

@@ -1,4 +1,4 @@
-/* Portable initial SpawnStand construction from the original WL_ACT2.C. */
+/* Portable actor construction from the original WL_ACT2.C. */
 #include "WL_ACT2.h"
 
 #include "WG_FIXED.h"
@@ -14,6 +14,17 @@
 #define WG_SPR_MUT_W1_1 195U
 #define WG_SPR_OFC_S_1 238U
 #define WG_SPR_OFC_W1_1 246U
+#define WG_SPR_BLINKY_W1 288U
+#define WG_SPR_PINKY_W1 290U
+#define WG_SPR_CLYDE_W1 292U
+#define WG_SPR_INKY_W1 294U
+#define WG_SPR_BOSS_W1 296U
+#define WG_SPR_SCHABB_W1 307U
+#define WG_SPR_FAKE_W1 321U
+#define WG_SPR_MECHA_W1 334U
+#define WG_SPR_GIFT_W1 360U
+#define WG_SPR_GRETEL_W1 385U
+#define WG_SPR_FAT_W1 396U
 
 static uint16_t WL_StandingShape(wg_actor_class_t actor_class)
 {
@@ -150,5 +161,92 @@ int WL_SpawnDeadGuard(struct wg_level *level, uint8_t tile_x, uint8_t tile_y)
     actor->shape = WG_SPR_GRD_DEAD;
     actor->rotate = 0U;
     actor->actor_class = WG_ACTOR_INERT;
+    return 1;
+}
+
+int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
+                 uint8_t tile_x, uint8_t tile_y)
+{
+    wg_actor_t *actor;
+    uint16_t shape;
+    uint8_t direction;
+
+    switch (actor_class)
+    {
+    case WG_ACTOR_BOSS:
+        shape = WG_SPR_BOSS_W1;
+        direction = 6U;
+        break;
+    case WG_ACTOR_SCHABBS:
+        shape = WG_SPR_SCHABB_W1;
+        direction = 6U;
+        break;
+    case WG_ACTOR_FAKE:
+        shape = WG_SPR_FAKE_W1;
+        direction = 2U;
+        break;
+    case WG_ACTOR_MECHA_HITLER:
+        shape = WG_SPR_MECHA_W1;
+        direction = 6U;
+        break;
+    case WG_ACTOR_GRETEL:
+        shape = WG_SPR_GRETEL_W1;
+        direction = 2U;
+        break;
+    case WG_ACTOR_GIFT:
+        shape = WG_SPR_GIFT_W1;
+        direction = 2U;
+        break;
+    case WG_ACTOR_FAT:
+        shape = WG_SPR_FAT_W1;
+        direction = 6U;
+        break;
+    default:
+        return 0;
+    }
+    if (level == NULL || tile_x >= WG_LEVEL_SIZE || tile_y >= WG_LEVEL_SIZE
+        || level->actor_count >= WG_MAX_ACTORS)
+    {
+        return 0;
+    }
+    actor = &level->actors[level->actor_count++];
+    actor->x = (int32_t)tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->y = (int32_t)tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->tile_x = tile_x;
+    actor->tile_y = tile_y;
+    actor->direction = direction;
+    actor->shape = shape;
+    actor->rotate = 0U;
+    actor->actor_class = actor_class;
+    return 1;
+}
+
+int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
+                  uint8_t tile_x, uint8_t tile_y)
+{
+    static const uint16_t shapes[] =
+    {
+        WG_SPR_BLINKY_W1,
+        WG_SPR_CLYDE_W1,
+        WG_SPR_PINKY_W1,
+        WG_SPR_INKY_W1
+    };
+    wg_actor_t *actor;
+
+    if (level == NULL || ghost_kind < WG_GHOST_BLINKY
+        || ghost_kind > WG_GHOST_INKY || tile_x >= WG_LEVEL_SIZE
+        || tile_y >= WG_LEVEL_SIZE || level->actor_count >= WG_MAX_ACTORS)
+    {
+        return 0;
+    }
+    actor = &level->actors[level->actor_count++];
+    actor->x = (int32_t)tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->y = (int32_t)tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->tile_x = tile_x;
+    actor->tile_y = tile_y;
+    actor->direction = 0U;
+    actor->shape = shapes[ghost_kind];
+    actor->rotate = 0U;
+    actor->actor_class = WG_ACTOR_GHOST;
     return 1;
 }

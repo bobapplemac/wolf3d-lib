@@ -49,6 +49,10 @@ and status bar. Actor behavior and pushwall motion are not yet active:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
 ```
 
+Pass a zero-based `--map` number to capture another original map. The headless
+host can also print the indexed framebuffer's deterministic FNV-1a value with
+`--frame-hash`.
+
 For a renderer diagnostic that exposes the scenery beyond the initial closed
 door, add `--open-doors`. This only selects a fully-open door state for the
 captured frame; it does not change normal level initialization.
@@ -59,6 +63,14 @@ inspectable:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --guard-view --dump-frame guard.ppm
+```
+
+The corresponding boss diagnostic finds a boss on the selected map and chooses
+a clear three-tile viewing pose. For example, this renders Hans Grosse on
+Episode 1, Floor 9:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-view --dump-frame hans.ppm
 ```
 
 ## License

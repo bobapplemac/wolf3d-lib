@@ -103,3 +103,22 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame out\initial-standard-actors.ppm
 ```
+
+## 2026-09-23: Boss and ghost setup
+
+- Scope: original fixed-shape setup for Hans and Gretel Grosse, Dr. Schabbs,
+  Giftmacher, Fatface, Fake Hitler, Mecha Hitler, and the four Pac-Man ghosts.
+- All 10 WL1 and 60 WL6 maps are checked to ensure every spawned actor's initial
+  sprite page is present in that edition's sparse VSWAP table.
+- Added zero-based `--map`, `--boss-view`, and `--frame-hash` headless
+  diagnostics. The boss pose is selected only along a clear three-tile path.
+- 320x200 indexed-frame FNV-1a: `a38a57b87c979508`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![Hans Grosse on the original Episode 1 boss map](../out/hans-grosse.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-view --frame-hash --dump-frame out\hans-grosse.ppm
+```
