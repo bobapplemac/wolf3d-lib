@@ -241,6 +241,12 @@ long terminal sequences set victory and level-complete state on successive
 death-camera actions; Mecha Hitler instead leaves a corpse and spawns the
 independently damageable second phase. `--boss-death-view` captures Hans in the
 third collapse frame on E1M9.
+Map-authored and enemy-dropped bonuses share a single item type and the
+original `GetBonus` inventory rules. Consumed objects remain in the fixed
+static array with a removal flag, mirroring the original negative-shape marker
+without requiring a signed sprite index. `WL_CollectPlayerTileBonuses` is the
+movement-facing collection boundary; the `--pickup-view` checkpoint exercises
+it and renders the resulting live score, lives, keys, ammo, and weapon state.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

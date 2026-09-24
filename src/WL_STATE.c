@@ -213,7 +213,7 @@ static int WL_UsesDeathCam(wg_actor_class_t actor_class)
 }
 
 static int WL_DropItem(wg_level_t *level, uint8_t tile_x, uint8_t tile_y,
-                       uint16_t shape)
+                       uint16_t shape, wg_item_type_t item)
 {
     wg_static_object_t *object;
 
@@ -225,7 +225,9 @@ static int WL_DropItem(wg_level_t *level, uint8_t tile_x, uint8_t tile_y,
     object->tile_x = tile_x;
     object->tile_y = tile_y;
     object->blocking = 0U;
+    object->removed = 0U;
     object->shape = shape;
+    object->item = item;
     return 1;
 }
 
@@ -263,6 +265,7 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     wg_actor_t *actor;
     uint32_t points;
     int drop = 0;
+    wg_item_type_t drop_item = WG_ITEM_NONE;
 
     if (level == NULL || actor_index >= level->actor_count)
     {
@@ -279,19 +282,24 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     case WG_ACTOR_GUARD:
         points = 100U;
         drop = WG_SPR_STAT_CLIP2;
+        drop_item = WG_ITEM_CLIP2;
         break;
     case WG_ACTOR_OFFICER:
         points = 400U;
         drop = WG_SPR_STAT_CLIP2;
+        drop_item = WG_ITEM_CLIP2;
         break;
     case WG_ACTOR_MUTANT:
         points = 700U;
         drop = WG_SPR_STAT_CLIP2;
+        drop_item = WG_ITEM_CLIP2;
         break;
     case WG_ACTOR_SS:
         points = 500U;
         drop = level->player_best_weapon < 2U
                    ? WG_SPR_STAT_MACHINEGUN : WG_SPR_STAT_CLIP2;
+        drop_item = level->player_best_weapon < 2U
+                        ? WG_ITEM_MACHINEGUN : WG_ITEM_CLIP2;
         break;
     case WG_ACTOR_DOG:
         points = 200U;
@@ -300,6 +308,7 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     case WG_ACTOR_GRETEL:
         points = 5000U;
         drop = WG_SPR_STAT_KEY1;
+        drop_item = WG_ITEM_KEY1;
         break;
     case WG_ACTOR_FAKE:
         points = 2000U;
@@ -324,7 +333,7 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     if (drop != 0)
     {
         (void)WL_DropItem(level, actor->tile_x, actor->tile_y,
-                          (uint16_t)drop);
+                          (uint16_t)drop, drop_item);
     }
     actor->hit_points = 0;
     actor->state = WG_STATE_DIE1;
@@ -333,7 +342,7 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     actor->rotate = 0U;
     actor->flags = (uint16_t)(actor->flags & ~WG_ACTOR_FLAG_SHOOTABLE);
     actor->flags |= WG_ACTOR_FLAG_NONMARK;
-    level->score += points;
+    WL_GivePoints(level, points);
     ++level->kill_count;
     return 1;
 }

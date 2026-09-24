@@ -142,6 +142,58 @@ static void TestActorSetup(void)
     CHECK(level.actor_count == 31U);
 }
 
+static void TestStaticItemSetup(void)
+{
+    static const uint16_t item_codes[] =
+    {
+        29U, 43U, 44U, 47U, 48U, 49U, 50U, 51U,
+        52U, 53U, 54U, 55U, 56U, 57U, 61U, 71U
+    };
+    static const wg_item_type_t expected_items[] =
+    {
+        WG_ITEM_ALPO, WG_ITEM_KEY1, WG_ITEM_KEY2, WG_ITEM_FOOD,
+        WG_ITEM_FIRSTAID, WG_ITEM_CLIP, WG_ITEM_MACHINEGUN,
+        WG_ITEM_CHAINGUN, WG_ITEM_CROSS, WG_ITEM_CHALICE, WG_ITEM_BIBLE,
+        WG_ITEM_CROWN, WG_ITEM_FULLHEAL, WG_ITEM_GIBS, WG_ITEM_GIBS,
+        WG_ITEM_CLIP2
+    };
+    uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_map_t map;
+    wg_level_t level;
+    size_t index;
+
+    memset(&map, 0, sizeof(map));
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        plane_zero[index] = WG_AREA_TILE;
+        plane_one[index] = 0U;
+    }
+    plane_one[WG_LEVEL_SIZE + 1U] = 19U;
+    for (index = 0U; index < sizeof(item_codes) / sizeof(item_codes[0]);
+         ++index)
+    {
+        plane_one[2U * WG_LEVEL_SIZE + 2U + index] = item_codes[index];
+    }
+    map.width = WG_LEVEL_SIZE;
+    map.height = WG_LEVEL_SIZE;
+    map.planes[0] = plane_zero;
+    map.planes[1] = plane_one;
+
+    CHECK(WG_LevelBuild(&map, &level));
+    CHECK(level.static_count == sizeof(item_codes) / sizeof(item_codes[0]));
+    CHECK(level.player_lives == 3U);
+    CHECK(level.next_extra == 40000U);
+    for (index = 0U; index < level.static_count; ++index)
+    {
+        CHECK(level.statics[index].item == expected_items[index]);
+        CHECK(level.statics[index].removed == 0U);
+        CHECK(level.statics[index].shape
+              == (item_codes[index] == 71U ? 28U
+                                           : item_codes[index] - 21U));
+    }
+}
+
 static void TestBossAndGhostSetup(void)
 {
     static const uint16_t actor_codes[] =
@@ -1050,6 +1102,7 @@ static void TestActorDamageAndDeath(void)
     CHECK(level.static_count == 1U);
     CHECK(level.statics[0].shape == 28U);
     CHECK(level.statics[0].blocking == 0U);
+    CHECK(level.statics[0].item == WG_ITEM_CLIP2);
     CHECK(!WL_DamageActor(&level, 0U, 1U));
     CHECK(WL_TickActors(&level, 15U));
     CHECK(actor->state == WG_STATE_DIE2 && actor->shape == 92U);
@@ -1074,6 +1127,7 @@ static void TestActorDamageAndDeath(void)
     CHECK(actor->hit_points == 100);
     CHECK(WL_DamageActor(&level, 2U, 50U));
     CHECK(level.statics[1].shape == 29U);
+    CHECK(level.statics[1].item == WG_ITEM_MACHINEGUN);
     CHECK(level.score == 800U);
     CHECK(WL_TickActors(&level, 45U));
     CHECK(actor->state == WG_STATE_DEAD && actor->shape == 183U);
@@ -1101,11 +1155,13 @@ static void TestActorDamageAndDeath(void)
     CHECK(level.kill_count == 5U);
     CHECK(level.static_count == 4U);
     CHECK(level.statics[3].shape == 28U);
+    CHECK(level.statics[3].item == WG_ITEM_CLIP2);
 
     level.player_best_weapon = 2U;
     CHECK(WL_SpawnStand(&level, WG_ACTOR_SS, 15U, 10U, 0U));
     CHECK(WL_DamageActor(&level, 5U, 50U));
     CHECK(level.statics[4].shape == 28U);
+    CHECK(level.statics[4].item == WG_ITEM_CLIP2);
     CHECK(level.score == 2400U);
 }
 
@@ -1155,6 +1211,7 @@ static void TestBossDamageAndDeath(void)
         if (cases[index].drops_key)
         {
             CHECK(level.statics[0].shape == 22U);
+            CHECK(level.statics[0].item == WG_ITEM_KEY1);
         }
         if (cases[index].uses_death_cam)
         {
@@ -1342,6 +1399,123 @@ static void TestPlayerWeapons(void)
     CHECK(WL_TickPlayerAttack(&level, 18U, 1));
     CHECK(level.player_ammo == 1U);
     CHECK(level.attack_frame == 1U);
+}
+
+static void SetBonus(wg_level_t *level, wg_item_type_t item)
+{
+    memset(level, 0, sizeof(*level));
+    level->static_count = 1U;
+    level->statics[0].item = item;
+    level->statics[0].blocking = 1U;
+    level->player_health = 100U;
+    level->player_ammo = 8U;
+    level->player_lives = 3U;
+    level->player_weapon = WG_WEAPON_PISTOL;
+    level->player_chosen_weapon = WG_WEAPON_PISTOL;
+    level->player_best_weapon = WG_WEAPON_PISTOL;
+    level->next_extra = 40000U;
+}
+
+static void TestBonusPickups(void)
+{
+    wg_level_t level;
+
+    SetBonus(&level, WG_ITEM_FIRSTAID);
+    CHECK(!WL_GetBonus(&level, 0U));
+    CHECK(level.statics[0].removed == 0U);
+    level.player_health = 80U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_health == 100U);
+
+    SetBonus(&level, WG_ITEM_FOOD);
+    level.player_health = 95U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_health == 100U);
+    SetBonus(&level, WG_ITEM_ALPO);
+    level.player_health = 50U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_health == 54U);
+    SetBonus(&level, WG_ITEM_GIBS);
+    level.player_health = 11U;
+    CHECK(!WL_GetBonus(&level, 0U));
+    level.player_health = 10U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_health == 11U);
+
+    SetBonus(&level, WG_ITEM_CLIP);
+    level.player_ammo = 95U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_ammo == 99U);
+    CHECK(!WL_GetBonus(&level, 0U));
+    SetBonus(&level, WG_ITEM_CLIP2);
+    level.player_ammo = 0U;
+    level.player_weapon = WG_WEAPON_KNIFE;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_ammo == 4U);
+    CHECK(level.player_weapon == WG_WEAPON_PISTOL);
+    SetBonus(&level, WG_ITEM_CLIP);
+    level.player_ammo = 99U;
+    CHECK(!WL_GetBonus(&level, 0U));
+
+    SetBonus(&level, WG_ITEM_MACHINEGUN);
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_ammo == 14U);
+    CHECK(level.player_weapon == WG_WEAPON_MACHINEGUN);
+    CHECK(level.player_best_weapon == WG_WEAPON_MACHINEGUN);
+    SetBonus(&level, WG_ITEM_CHAINGUN);
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_weapon == WG_WEAPON_CHAINGUN);
+    CHECK(level.player_best_weapon == WG_WEAPON_CHAINGUN);
+
+    SetBonus(&level, WG_ITEM_KEY1);
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_keys == 1U);
+    SetBonus(&level, WG_ITEM_KEY2);
+    level.player_keys = 1U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_keys == 3U);
+
+    SetBonus(&level, WG_ITEM_CROSS);
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.score == 100U && level.treasure_count == 1U);
+    SetBonus(&level, WG_ITEM_CHALICE);
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.score == 500U && level.treasure_count == 1U);
+    SetBonus(&level, WG_ITEM_BIBLE);
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.score == 1000U && level.treasure_count == 1U);
+    SetBonus(&level, WG_ITEM_CROWN);
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.score == 5000U && level.treasure_count == 1U);
+
+    SetBonus(&level, WG_ITEM_FULLHEAL);
+    level.player_health = 1U;
+    level.player_ammo = 80U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_health == 100U);
+    CHECK(level.player_ammo == 99U);
+    CHECK(level.player_lives == 4U);
+    CHECK(level.treasure_count == 1U);
+    CHECK(level.bonus_count == 18U);
+    CHECK(level.statics[0].removed == 1U);
+    CHECK(level.statics[0].blocking == 0U);
+
+    memset(&level, 0, sizeof(level));
+    level.player_lives = 3U;
+    level.next_extra = 40000U;
+    WL_GivePoints(&level, 85000U);
+    CHECK(level.score == 85000U);
+    CHECK(level.next_extra == 120000U);
+    CHECK(level.player_lives == 5U);
+
+    SetBonus(&level, WG_ITEM_CROSS);
+    level.statics[0].tile_x = 7U;
+    level.statics[0].tile_y = 8U;
+    level.player_tile_x = 7U;
+    level.player_tile_y = 8U;
+    CHECK(WL_CollectPlayerTileBonuses(&level) == 1U);
+    CHECK(WL_CollectPlayerTileBonuses(&level) == 0U);
+    CHECK(level.score == 100U);
 }
 
 static void TestHuffman(void)
@@ -1789,6 +1963,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     size_t present_pages = 0;
     size_t decoded_sprites = 0;
     size_t actor_classes[WG_ACTOR_FAT + 1] = { 0 };
+    size_t item_types[WG_ITEM_CLIP2 + 1] = { 0 };
 
     CHECK(WG_DataOpen(&data_set, path));
     if (data_set.variant == WG_GAME_UNKNOWN)
@@ -2146,6 +2321,18 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 CHECK(map.height == 64U);
                 CHECK(WG_LevelBuild(&map, &level));
                 CHECK(level.door_count <= WG_MAX_DOORS);
+                for (actor_index = 0; actor_index < level.static_count;
+                     ++actor_index)
+                {
+                    const wg_static_object_t *object =
+                        &level.statics[actor_index];
+
+                    CHECK(object->item <= WG_ITEM_CLIP2);
+                    if (object->item <= WG_ITEM_CLIP2)
+                    {
+                        ++item_types[object->item];
+                    }
+                }
                 for (actor_index = 0; actor_index < level.actor_count;
                      ++actor_index)
                 {
@@ -2172,6 +2359,19 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(loaded_maps == (expected_variant
               == WG_GAME_WOLF3D_SHAREWARE_14 ? 10U : 60U));
         CHECK(actor_classes[WG_ACTOR_BOSS] != 0U);
+        CHECK(item_types[WG_ITEM_ALPO] != 0U);
+        CHECK(item_types[WG_ITEM_KEY1] != 0U);
+        CHECK(item_types[WG_ITEM_FOOD] != 0U);
+        CHECK(item_types[WG_ITEM_FIRSTAID] != 0U);
+        CHECK(item_types[WG_ITEM_CLIP] != 0U);
+        CHECK(item_types[WG_ITEM_MACHINEGUN] != 0U);
+        CHECK(item_types[WG_ITEM_CHAINGUN] != 0U);
+        CHECK(item_types[WG_ITEM_CROSS] != 0U);
+        CHECK(item_types[WG_ITEM_CHALICE] != 0U);
+        CHECK(item_types[WG_ITEM_BIBLE] != 0U);
+        CHECK(item_types[WG_ITEM_CROWN] != 0U);
+        CHECK(item_types[WG_ITEM_FULLHEAL] != 0U);
+        CHECK(item_types[WG_ITEM_GIBS] != 0U);
         if (expected_variant == WG_GAME_WOLF3D_FULL_GT_14)
         {
             CHECK(actor_classes[WG_ACTOR_GHOST] != 0U);
@@ -2210,6 +2410,7 @@ int main(int argc, char **argv)
     TestVideo();
     TestRandom();
     TestActorSetup();
+    TestStaticItemSetup();
     TestBossAndGhostSetup();
     TestPatrolMovement();
     TestActorAwareness();
@@ -2223,6 +2424,7 @@ int main(int argc, char **argv)
     TestActorDamageAndDeath();
     TestBossDamageAndDeath();
     TestPlayerWeapons();
+    TestBonusPickups();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

@@ -140,6 +140,14 @@ ammo, earned score, and struck guard:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-fire-view --frame-hash --dump-frame player-pistol.ppm
 ```
 
+The pickup diagnostic collects the first E1M1 cross through the player-tile
+bonus path, then frames its treasure room with the consumed cross absent and
+the live score updated to 100:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pickup-view --frame-hash --dump-frame pickup-cross.ppm
+```
+
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz
 tics and frame the first patrol, use:
 

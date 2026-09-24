@@ -167,6 +167,201 @@ void WL_TakeDamage(struct wg_level *level, unsigned points)
     }
 }
 
+static void WL_HealSelf(wg_level_t *level, unsigned points)
+{
+    unsigned health = level->player_health + points;
+
+    level->player_health = (uint16_t)(health > 100U ? 100U : health);
+}
+
+static void WL_GiveExtraMan(wg_level_t *level)
+{
+    if (level->player_lives < 9U)
+    {
+        ++level->player_lives;
+    }
+}
+
+void WL_GivePoints(struct wg_level *level, uint32_t points)
+{
+    if (level == NULL)
+    {
+        return;
+    }
+    if (level->next_extra == 0U)
+    {
+        level->next_extra = 40000U;
+    }
+    if (UINT32_MAX - level->score < points)
+    {
+        level->score = UINT32_MAX;
+    }
+    else
+    {
+        level->score += points;
+    }
+    while (level->score >= level->next_extra)
+    {
+        if (UINT32_MAX - level->next_extra < 40000U)
+        {
+            level->next_extra = UINT32_MAX;
+        }
+        else
+        {
+            level->next_extra += 40000U;
+        }
+        WL_GiveExtraMan(level);
+        if (level->next_extra == UINT32_MAX)
+        {
+            break;
+        }
+    }
+}
+
+static void WL_GiveAmmo(wg_level_t *level, unsigned ammo)
+{
+    unsigned total;
+
+    if (level->player_ammo == 0U && level->attack_frame == 0U)
+    {
+        level->player_weapon = level->player_chosen_weapon;
+    }
+    total = level->player_ammo + ammo;
+    level->player_ammo = (uint16_t)(total > 99U ? 99U : total);
+}
+
+static void WL_GiveWeapon(wg_level_t *level, wg_weapon_t weapon)
+{
+    WL_GiveAmmo(level, 6U);
+    if (level->player_best_weapon < (uint8_t)weapon)
+    {
+        level->player_best_weapon = (uint8_t)weapon;
+        level->player_weapon = (uint8_t)weapon;
+        level->player_chosen_weapon = (uint8_t)weapon;
+    }
+}
+
+int WL_GetBonus(struct wg_level *level, size_t static_index)
+{
+    wg_static_object_t *object;
+
+    if (level == NULL || static_index >= level->static_count)
+    {
+        return 0;
+    }
+    object = &level->statics[static_index];
+    if (object->removed != 0U || object->item == WG_ITEM_NONE)
+    {
+        return 0;
+    }
+    switch (object->item)
+    {
+    case WG_ITEM_FIRSTAID:
+        if (level->player_health == 100U)
+        {
+            return 0;
+        }
+        WL_HealSelf(level, 25U);
+        break;
+    case WG_ITEM_KEY1:
+    case WG_ITEM_KEY2:
+        level->player_keys |= (uint8_t)(1U << (object->item - WG_ITEM_KEY1));
+        break;
+    case WG_ITEM_CROSS:
+        WL_GivePoints(level, 100U);
+        ++level->treasure_count;
+        break;
+    case WG_ITEM_CHALICE:
+        WL_GivePoints(level, 500U);
+        ++level->treasure_count;
+        break;
+    case WG_ITEM_BIBLE:
+        WL_GivePoints(level, 1000U);
+        ++level->treasure_count;
+        break;
+    case WG_ITEM_CROWN:
+        WL_GivePoints(level, 5000U);
+        ++level->treasure_count;
+        break;
+    case WG_ITEM_CLIP:
+        if (level->player_ammo == 99U)
+        {
+            return 0;
+        }
+        WL_GiveAmmo(level, 8U);
+        break;
+    case WG_ITEM_CLIP2:
+        if (level->player_ammo == 99U)
+        {
+            return 0;
+        }
+        WL_GiveAmmo(level, 4U);
+        break;
+    case WG_ITEM_MACHINEGUN:
+        WL_GiveWeapon(level, WG_WEAPON_MACHINEGUN);
+        break;
+    case WG_ITEM_CHAINGUN:
+        WL_GiveWeapon(level, WG_WEAPON_CHAINGUN);
+        break;
+    case WG_ITEM_FULLHEAL:
+        WL_HealSelf(level, 99U);
+        WL_GiveAmmo(level, 25U);
+        WL_GiveExtraMan(level);
+        ++level->treasure_count;
+        break;
+    case WG_ITEM_FOOD:
+        if (level->player_health == 100U)
+        {
+            return 0;
+        }
+        WL_HealSelf(level, 10U);
+        break;
+    case WG_ITEM_ALPO:
+        if (level->player_health == 100U)
+        {
+            return 0;
+        }
+        WL_HealSelf(level, 4U);
+        break;
+    case WG_ITEM_GIBS:
+        if (level->player_health > 10U)
+        {
+            return 0;
+        }
+        WL_HealSelf(level, 1U);
+        break;
+    default:
+        return 0;
+    }
+    level->bonus_count = 18U;
+    object->removed = 1U;
+    object->blocking = 0U;
+    return 1;
+}
+
+unsigned WL_CollectPlayerTileBonuses(struct wg_level *level)
+{
+    size_t index;
+    unsigned collected = 0U;
+
+    if (level == NULL)
+    {
+        return 0U;
+    }
+    for (index = 0U; index < level->static_count; ++index)
+    {
+        const wg_static_object_t *object = &level->statics[index];
+
+        if (object->tile_x == level->player_tile_x
+            && object->tile_y == level->player_tile_y
+            && WL_GetBonus(level, index))
+        {
+            ++collected;
+        }
+    }
+    return collected;
+}
+
 static int WL_PlayerAttackTarget(const wg_level_t *level, size_t *target_index,
                                  int knife)
 {

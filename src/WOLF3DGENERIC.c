@@ -301,6 +301,72 @@ static int WG_SetPushWallView(wg_level_t *level)
     return 0;
 }
 
+static int WG_SetPickupView(wg_level_t *level)
+{
+    static const int directions_x[] = { -1, 1, 0, 0 };
+    static const int directions_y[] = { 0, 0, -1, 1 };
+    static const uint16_t angles[] = { 0U, 180U, 270U, 90U };
+    size_t index;
+
+    if (level == NULL)
+    {
+        return 0;
+    }
+    for (index = 0U; index < level->static_count; ++index)
+    {
+        const wg_static_object_t *object = &level->statics[index];
+        size_t direction;
+
+        if (object->item != WG_ITEM_CROSS || object->removed != 0U)
+        {
+            continue;
+        }
+        for (direction = 0U; direction < 4U; ++direction)
+        {
+            int step;
+            int clear = 1;
+
+            for (step = 1; step <= 2; ++step)
+            {
+                int x = (int)object->tile_x
+                        + directions_x[direction] * step;
+                int y = (int)object->tile_y
+                        + directions_y[direction] * step;
+
+                if (x < 0 || x >= WG_LEVEL_SIZE
+                    || y < 0 || y >= WG_LEVEL_SIZE
+                    || level->tiles[(size_t)y * WG_LEVEL_SIZE
+                                    + (size_t)x] != 0U)
+                {
+                    clear = 0;
+                    break;
+                }
+            }
+            if (clear)
+            {
+                int view_x = (int)object->tile_x
+                             + directions_x[direction] * 2;
+                int view_y = (int)object->tile_y
+                             + directions_y[direction] * 2;
+
+                level->player_tile_x = object->tile_x;
+                level->player_tile_y = object->tile_y;
+                if (WL_CollectPlayerTileBonuses(level) == 0U)
+                {
+                    return 0;
+                }
+                level->player_tile_x = (uint8_t)view_x;
+                level->player_tile_y = (uint8_t)view_y;
+                level->player_x = view_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+                level->player_y = view_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+                level->player_angle = angles[direction];
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 static int WG_LoadTitleScreen(const char *data_path)
 {
     wg_graphics_t graphics;
@@ -350,6 +416,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int death_view,
                                   int boss_death_view,
                                   int player_fire_view,
+                                  int pickup_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -610,6 +677,10 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    if (pickup_view && !WG_SetPickupView(&level))
+    {
+        goto cleanup;
+    }
     if (death_view)
     {
         wg_actor_t *actor = WG_FindGuardViewActor(&level);
@@ -685,6 +756,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     status.health = level.player_health;
     status.ammo = level.player_ammo;
     status.weapon = level.player_weapon;
+    status.lives = level.player_lives;
+    status.keys = level.player_keys;
     if (!WL_DrawStatusBar(WG_ScreenBuffer, &graphics, &status))
     {
         goto cleanup;
@@ -762,7 +835,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--pushwall-view"),
             WG_HasArgument(argc, argv, "--death-view"),
             WG_HasArgument(argc, argv, "--boss-death-view"),
-            WG_HasArgument(argc, argv, "--player-fire-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--player-fire-view"),
+            WG_HasArgument(argc, argv, "--pickup-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

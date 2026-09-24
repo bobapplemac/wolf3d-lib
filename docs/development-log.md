@@ -431,3 +431,33 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-fire-view --frame-hash --dump-frame out\player-pistol.ppm
 ```
+
+## 2026-09-24: Item pickups and inventory effects
+
+- Restored the original `statinfo` item identities alongside each portable
+  static sprite, including both gib entries and the duplicate dropped clip.
+- Ported `GetBonus`, `GiveAmmo`, `GiveWeapon`, `GivePoints`, `GiveExtraMan`,
+  and `HealSelf` behavior from `WL_AGENT.C`: rejection at full capacity,
+  original health/ammo values, weapon upgrades, key bits, treasure scores,
+  40,000-point extra lives, and the full-heal one-up are preserved.
+- Enemy ammo, machine-gun, and boss-key drops now use the same collectible
+  item types as map-authored bonuses.
+- Consumed statics disappear from sprite rendering and no longer obstruct
+  pushwalls; player-tile collection provides the movement-facing integration
+  point for the eventual interactive loop.
+- Connected live key and life inventory to the status bar.
+- Focused tests cover every Wolf3D bonus type, capacity rejection, healing
+  thresholds, score/life thresholds, repeat collection, map item decoding, and
+  enemy drop identities across all supplied maps.
+- The E1M1 diagnostic collects the first cross and frames the treasure room
+  with the cross removed and the score advanced to 100.
+- 320x200 indexed-frame FNV-1a: `3745f8af67b60f69`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 treasure room after collecting a cross](../out/pickup-cross.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pickup-view --frame-hash --dump-frame out\pickup-cross.ppm
+```

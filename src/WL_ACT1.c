@@ -33,7 +33,7 @@ static int WL_PushWallSpotBlocked(const wg_level_t *level, int tile_x,
     {
         const wg_static_object_t *object = &level->statics[index];
 
-        if (object->blocking != 0U
+        if (object->removed == 0U && object->blocking != 0U
             && object->tile_x == (uint8_t)tile_x
             && object->tile_y == (uint8_t)tile_y)
         {

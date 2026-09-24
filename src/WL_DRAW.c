@@ -714,10 +714,14 @@ int WL_DrawScaleds(
     for (index = 0; index < level->static_count; ++index)
     {
         wg_visible_object_t candidate;
+        size_t tile_index;
 
-        size_t tile_index =
-            (size_t)level->statics[index].tile_y * WG_LEVEL_SIZE
-            + level->statics[index].tile_x;
+        if (level->statics[index].removed != 0U)
+        {
+            continue;
+        }
+        tile_index = (size_t)level->statics[index].tile_y * WG_LEVEL_SIZE
+                     + level->statics[index].tile_x;
 
         if (visible_tiles[tile_index] != 0U
             && WG_TransformTile(tables, level->statics[index].tile_x,

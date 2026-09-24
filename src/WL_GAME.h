@@ -23,12 +23,34 @@ typedef enum wg_difficulty
     WG_DIFFICULTY_HARD
 } wg_difficulty_t;
 
+typedef enum wg_item_type
+{
+    WG_ITEM_NONE = 0,
+    WG_ITEM_ALPO,
+    WG_ITEM_KEY1,
+    WG_ITEM_KEY2,
+    WG_ITEM_FOOD,
+    WG_ITEM_FIRSTAID,
+    WG_ITEM_CLIP,
+    WG_ITEM_MACHINEGUN,
+    WG_ITEM_CHAINGUN,
+    WG_ITEM_CROSS,
+    WG_ITEM_CHALICE,
+    WG_ITEM_BIBLE,
+    WG_ITEM_CROWN,
+    WG_ITEM_FULLHEAL,
+    WG_ITEM_GIBS,
+    WG_ITEM_CLIP2
+} wg_item_type_t;
+
 typedef struct wg_static_object
 {
     uint8_t tile_x;
     uint8_t tile_y;
     uint8_t blocking;
+    uint8_t removed;
     uint16_t shape;
+    wg_item_type_t item;
 } wg_static_object_t;
 
 typedef enum wg_door_lock
@@ -66,7 +88,10 @@ typedef struct wg_level
     int32_t player_thrust_speed;
     uint16_t player_health;
     uint16_t player_ammo;
+    uint8_t player_keys;
+    uint8_t player_lives;
     uint16_t damage_count;
+    uint16_t bonus_count;
     uint8_t player_dead;
     uint8_t player_weapon;
     uint8_t player_chosen_weapon;
@@ -79,7 +104,9 @@ typedef struct wg_level
     uint8_t victory_flag;
     uint8_t level_completed;
     uint32_t score;
+    uint32_t next_extra;
     uint16_t kill_count;
+    uint16_t treasure_count;
     int32_t kill_x;
     int32_t kill_y;
     uint16_t secret_count;

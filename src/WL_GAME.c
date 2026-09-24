@@ -97,6 +97,31 @@ static int WG_StaticBlocks(unsigned type)
     }
 }
 
+static wg_item_type_t WG_StaticItem(unsigned type)
+{
+    switch (type)
+    {
+    case 6U: return WG_ITEM_ALPO;
+    case 20U: return WG_ITEM_KEY1;
+    case 21U: return WG_ITEM_KEY2;
+    case 24U: return WG_ITEM_FOOD;
+    case 25U: return WG_ITEM_FIRSTAID;
+    case 26U: return WG_ITEM_CLIP;
+    case 27U: return WG_ITEM_MACHINEGUN;
+    case 28U: return WG_ITEM_CHAINGUN;
+    case 29U: return WG_ITEM_CROSS;
+    case 30U: return WG_ITEM_CHALICE;
+    case 31U: return WG_ITEM_BIBLE;
+    case 32U: return WG_ITEM_CROWN;
+    case 33U: return WG_ITEM_FULLHEAL;
+    case 34U:
+    case 38U:
+        return WG_ITEM_GIBS;
+    default:
+        return WG_ITEM_NONE;
+    }
+}
+
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level)
 {
@@ -116,6 +141,8 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
     level->difficulty = difficulty;
     level->player_health = 100U;
     level->player_ammo = 8U;
+    level->player_lives = 3U;
+    level->next_extra = 40000U;
     level->player_weapon = 1U;
     level->player_chosen_weapon = 1U;
     level->player_best_weapon = 1U;
@@ -174,11 +201,14 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
             object->tile_x = (uint8_t)(index % WG_LEVEL_SIZE);
             object->tile_y = (uint8_t)(index / WG_LEVEL_SIZE);
             object->blocking = (uint8_t)WG_StaticBlocks(type);
+            object->removed = 0U;
             /*
              * SPR_DEMO and SPR_DEATHCAM precede SPR_STAT_0. The final
              * non-Spear statinfo entry is the duplicate ammo clip.
              */
             object->shape = info == 71U ? 28U : (uint16_t)(type + 2U);
+            object->item = info == 71U ? WG_ITEM_CLIP2
+                                       : WG_StaticItem(type);
         }
         else
         {

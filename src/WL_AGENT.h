@@ -1,6 +1,7 @@
 #ifndef WL_AGENT_H
 #define WL_AGENT_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "ID_VL.h"
@@ -30,6 +31,9 @@ typedef enum wg_weapon
 
 void WL_StatusDefaults(wl_status_t *status);
 void WL_TakeDamage(struct wg_level *level, unsigned points);
+void WL_GivePoints(struct wg_level *level, uint32_t points);
+int WL_GetBonus(struct wg_level *level, size_t static_index);
+unsigned WL_CollectPlayerTileBonuses(struct wg_level *level);
 int WL_GunAttack(struct wg_level *level);
 int WL_KnifeAttack(struct wg_level *level);
 int WL_StartAttack(struct wg_level *level);
