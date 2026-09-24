@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "wg_audio.h"
+#include "wg_assets.h"
 #include "wg_compression.h"
 #include "wg_data.h"
 #include "wg_font.h"
@@ -165,6 +166,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     size_t decoded_graphics = 0;
     size_t loaded_maps = 0;
     size_t present_pages = 0;
+    size_t decoded_sprites = 0;
 
     CHECK(WG_DataOpen(&data_set, path));
     if (data_set.variant == WG_GAME_UNKNOWN)
@@ -279,6 +281,36 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             }
         }
         CHECK(present_pages != 0U);
+        {
+            uint8_t wall[WG_TEXTURE_SIZE * WG_TEXTURE_SIZE];
+            wg_sprite_image_t sprite;
+
+            CHECK(WG_DecodeWall(&pages, 0, wall));
+            for (index = 0;
+                 index < (size_t)(data_set.sound_start - data_set.sprite_start);
+                 ++index)
+            {
+                size_t sprite_page = (size_t)data_set.sprite_start + index;
+
+                if (data_set.pages[sprite_page].offset == 0
+                    || data_set.pages[sprite_page].length == 0)
+                {
+                    continue;
+                }
+                if (!WG_DecodeSprite(&pages, index, &sprite))
+                {
+                    fprintf(stderr, "failed to decode sprite %u\n",
+                            (unsigned)index);
+                    CHECK(0);
+                }
+                else
+                {
+                    ++decoded_sprites;
+                }
+            }
+            CHECK(decoded_sprites == (expected_variant
+                  == WG_GAME_WOLF3D_SHAREWARE_14 ? 226U : 436U));
+        }
         WG_PagesClose(&pages);
     }
 

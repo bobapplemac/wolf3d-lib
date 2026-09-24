@@ -14,6 +14,8 @@ sized host-memory objects:
   and planar-to-chunky picture conversion.
 - `wg_maps`: MAPHEAD/GAMEMAPS headers and Carmack plus RLEW map-plane decoding.
 - `wg_pages`: bounds-checked VSWAP wall, sprite, and digitized-sound pages.
+- `wg_assets`: 64x64 wall textures and validated compiled-sprite post streams,
+  including the original signed pixel-pool offsets.
 - `wg_audio`: AUDIOHED/AUDIOT chunk lookup for PC speaker, AdLib, digitized
   sound metadata, and IMF music.
 
