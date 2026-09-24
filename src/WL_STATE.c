@@ -13,6 +13,7 @@
 #define WG_PROJECTILE_SIZE INT32_C(0xc000)
 #define WG_PROJECTILE_COLLISION_SIZE INT32_C(0x2000)
 #define WG_SPR_HYPO1 317U
+#define WG_SPR_FIRE1 326U
 #define WG_SPR_ROCKET1 370U
 #define WG_SPR_SMOKE1 378U
 #define WG_SPR_BOOM1 382U
@@ -65,6 +66,11 @@ static int WL_IsSmokeState(wg_actor_state_t state)
 static int WL_IsBoomState(wg_actor_state_t state)
 {
     return state >= WG_STATE_BOOM1 && state <= WG_STATE_BOOM3;
+}
+
+static int WL_IsFireState(wg_actor_state_t state)
+{
+    return state == WG_STATE_FIRE1 || state == WG_STATE_FIRE2;
 }
 
 static int32_t WL_StateDuration(wg_actor_state_t state)
@@ -924,8 +930,20 @@ static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
     delta_y = delta_y < 0 ? -delta_y : delta_y;
     if (delta_x < WG_PROJECTILE_SIZE && delta_y < WG_PROJECTILE_SIZE)
     {
-        unsigned base_damage = actor->actor_class == WG_ACTOR_ROCKET
-                                   ? 30U : 20U;
+        unsigned base_damage;
+
+        if (actor->actor_class == WG_ACTOR_ROCKET)
+        {
+            base_damage = 30U;
+        }
+        else if (actor->actor_class == WG_ACTOR_FIRE)
+        {
+            base_damage = 0U;
+        }
+        else
+        {
+            base_damage = 20U;
+        }
 
         WL_TakeDamage(level, (WG_RandomNext(&level->random) >> 3)
                              + base_damage);
@@ -979,6 +997,36 @@ static void WL_T_SchabbThrow(wg_level_t *level, const wg_actor_t *actor)
 static void WL_T_GiftThrow(wg_level_t *level, const wg_actor_t *actor)
 {
     WL_SpawnAimedProjectile(level, actor, WG_ACTOR_ROCKET);
+}
+
+static void WL_T_FakeFire(wg_level_t *level, const wg_actor_t *actor)
+{
+    wg_actor_t *fire = WL_AllocateTransientActor(level);
+    double angle;
+
+    if (fire == NULL)
+    {
+        return;
+    }
+    angle = atan2((double)(actor->y - level->player_y),
+                  (double)(level->player_x - actor->x));
+    if (angle < 0.0)
+    {
+        angle += WG_TWO_PI;
+    }
+    fire->x = actor->x;
+    fire->y = actor->y;
+    fire->shape = WG_SPR_FIRE1;
+    fire->tile_x = actor->tile_x;
+    fire->tile_y = actor->tile_y;
+    fire->direction = WG_NO_DIRECTION;
+    fire->area_number = actor->area_number;
+    fire->angle = (uint16_t)(angle / WG_TWO_PI * WG_ANGLES);
+    fire->base_shape = WG_SPR_FIRE1;
+    fire->tic_count = 1;
+    fire->speed = 0x1200;
+    fire->state = WG_STATE_FIRE1;
+    fire->actor_class = WG_ACTOR_FIRE;
 }
 
 static void WL_A_Smoke(wg_level_t *level, const wg_actor_t *rocket)
@@ -1090,6 +1138,19 @@ static void WL_T_SpecialBoss(wg_level_t *level, size_t actor_index,
     WL_MoveSpecialBoss(level, actor_index, tics, dodge, run_close, distance);
 }
 
+static void WL_T_Fake(wg_level_t *level, size_t actor_index, int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+
+    if (WL_CheckLine(level, actor)
+        && WG_RandomNext(&level->random) < tics * 2)
+    {
+        WL_BeginAttack(actor);
+        return;
+    }
+    WL_MoveSpecialBoss(level, actor_index, tics, 1, 0, 0);
+}
+
 static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
                                      wg_actor_state_t state)
 {
@@ -1133,6 +1194,8 @@ static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
         return stage == 1U ? 30 : (stage == 2U ? 10 : 0);
     case WG_ACTOR_FAT:
         return stage == 1U ? 30 : (stage <= 6U ? 10 : 0);
+    case WG_ACTOR_FAKE:
+        return stage <= 9U ? 8 : 0;
     default:
         return 0;
     }
@@ -1161,6 +1224,8 @@ static unsigned WL_ShootStateCount(wg_actor_class_t actor_class)
         return 2U;
     case WG_ACTOR_FAT:
         return 6U;
+    case WG_ACTOR_FAKE:
+        return 9U;
     default:
         return 0U;
     }
@@ -1192,6 +1257,8 @@ static int WL_ShootStateHasAction(const wg_actor_t *actor)
         return stage == 2U;
     case WG_ACTOR_FAT:
         return stage >= 2U && stage <= 6U;
+    case WG_ACTOR_FAKE:
+        return stage <= 8U;
     default:
         return 0;
     }
@@ -1201,6 +1268,10 @@ static unsigned WL_ShootShapeFrame(const wg_actor_t *actor)
 {
     unsigned stage = (unsigned)(actor->state - WG_STATE_SHOOT1) + 1U;
 
+    if (actor->actor_class == WG_ACTOR_FAKE)
+    {
+        return 0U;
+    }
     if ((actor->actor_class == WG_ACTOR_SS && stage >= 4U)
         || actor->actor_class == WG_ACTOR_BOSS
         || actor->actor_class == WG_ACTOR_GRETEL
@@ -1394,6 +1465,20 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             WL_T_Projectile(level, actor, (int32_t)tics);
             continue;
         }
+        if (WL_IsFireState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                actor->state = actor->state == WG_STATE_FIRE1
+                                   ? WG_STATE_FIRE2 : WG_STATE_FIRE1;
+                actor->tic_count += 6;
+                actor->shape = (uint16_t)(WG_SPR_FIRE1
+                                          + actor->state - WG_STATE_FIRE1);
+            }
+            WL_T_Projectile(level, actor, (int32_t)tics);
+            continue;
+        }
         if (actor->state == WG_STATE_ROCKET)
         {
             actor->tic_count -= (int32_t)tics;
@@ -1478,6 +1563,7 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             }
             if (actor->actor_class != WG_ACTOR_DOG
                 && actor->actor_class != WG_ACTOR_SCHABBS
+                && actor->actor_class != WG_ACTOR_FAKE
                 && actor->actor_class != WG_ACTOR_GIFT
                 && actor->actor_class != WG_ACTOR_FAT
                 && !WL_UsesStandardChase(actor->actor_class))
@@ -1499,6 +1585,10 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             else if (actor->actor_class == WG_ACTOR_SCHABBS)
             {
                 WL_T_SpecialBoss(level, index, (int32_t)tics, 0);
+            }
+            else if (actor->actor_class == WG_ACTOR_FAKE)
+            {
+                WL_T_Fake(level, index, (int32_t)tics);
             }
             else if (actor->actor_class == WG_ACTOR_GIFT
                      || actor->actor_class == WG_ACTOR_FAT)
@@ -1532,6 +1622,10 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                     if (actor->actor_class == WG_ACTOR_SCHABBS)
                     {
                         WL_T_SchabbThrow(level, actor);
+                    }
+                    else if (actor->actor_class == WG_ACTOR_FAKE)
+                    {
+                        WL_T_FakeFire(level, actor);
                     }
                     else if ((actor->actor_class == WG_ACTOR_GIFT
                               || actor->actor_class == WG_ACTOR_FAT)
@@ -1575,6 +1669,11 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                      && actor->actor_class == WG_ACTOR_SCHABBS)
             {
                 WL_T_SpecialBoss(level, index, (int32_t)tics, 0);
+            }
+            else if (WL_ChaseHasThink(actor->state)
+                     && actor->actor_class == WG_ACTOR_FAKE)
+            {
+                WL_T_Fake(level, index, (int32_t)tics);
             }
             else if (WL_ChaseHasThink(actor->state)
                      && (actor->actor_class == WG_ACTOR_GIFT

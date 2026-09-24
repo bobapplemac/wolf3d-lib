@@ -195,5 +195,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --rocket-view --frame-hash)
         set_tests_properties(rocket-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "c85b4f4095ac18f2")
+        add_test(NAME flame-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --map 28
+            --flame-view --frame-hash)
+        set_tests_properties(flame-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "ba572ca325d89701")
     endif()
 endif()

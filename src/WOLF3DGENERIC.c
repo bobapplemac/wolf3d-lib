@@ -286,6 +286,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int boss_fire_view,
                                   int needle_view,
                                   int rocket_view,
+                                  int flame_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -327,6 +328,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     if (!chase_view && !fire_view && !bite_view && !boss_fire_view
         && !needle_view
         && !rocket_view
+        && !flame_view
         && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
@@ -510,6 +512,32 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
+    if (flame_view)
+    {
+        wg_actor_t *actor = WG_FindActorClass(&level, WG_ACTOR_FAKE);
+        unsigned burst;
+
+        if (!WG_SetActorViewPose(&level, actor, 2)
+            || actor->attack_shape == 0U)
+        {
+            goto cleanup;
+        }
+        actor->state = WG_STATE_SHOOT1;
+        actor->tic_count = 1;
+        actor->shape = actor->attack_shape;
+        actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE;
+        if (!WL_TickActors(&level, 1U))
+        {
+            goto cleanup;
+        }
+        for (burst = 0U; burst < 3U; ++burst)
+        {
+            if (!WL_TickActors(&level, 8U))
+            {
+                goto cleanup;
+            }
+        }
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
@@ -598,7 +626,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--bite-view"),
             WG_HasArgument(argc, argv, "--boss-fire-view"),
             WG_HasArgument(argc, argv, "--needle-view"),
-            WG_HasArgument(argc, argv, "--rocket-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--rocket-view"),
+            WG_HasArgument(argc, argv, "--flame-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

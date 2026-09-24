@@ -124,17 +124,15 @@ Dog combat follows its separate original branch: `T_DogChase` always uses
 `SelectDodgeDir`, cannot cross doors, and begins the five-state jump when the
 next movement step reaches `MINACTORDIST` on both axes. The `10/10/10/10/10`
 jump sequence invokes `T_Bite` from its second state, retaining the two-tile
-axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sounds, Fake
-Hitler's flame projectiles, and the complete death/restart flow remain subsequent
-slices.
+axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sounds and the
+complete death/restart flow remain subsequent slices.
 
 The four hitscan bosses reuse `T_Shoot` with their original state tables. Hans
 and Gretel use eight firing states with six shot actions; Mecha-Hitler and
 Hitler use six states with five actions. All retain the `30`-tic windup,
 alternating second/third firing sprites, `10`-tic burst cadence, and class
 return to the first chase state. Hans alone retains the original boss accuracy
-and damage-distance advantage. Fake Hitler's special flame attack remains
-pending.
+and damage-distance advantage.
 
 Schabbs uses his separate `T_Schabb` attack probability and two-state throw
 sequence. `T_SchabbThrow` quantizes the player bearing to the original 360-angle
@@ -152,6 +150,13 @@ use the original eight directional `SPR_ROCKET` views, three-tic smoke action,
 `0x2000` speed, and `(US_RndT() >> 3) + 30` player damage. Wall impacts enter
 the three six-tic `SPR_BOOM` states, while player impacts remove the rocket.
 Four smoke states age independently and reuse the same bounded transient slots.
+
+Fake Hitler keeps his separate `T_Fake` thinker: a clear line consumes the
+original `US_RndT() < (tics << 1)` attack roll, while movement always uses
+`SelectDodgeDir` and refuses doors. His nine eight-tic firing states invoke
+`T_FakeFire` from the first eight states. Each non-rotating two-frame flame is
+aimed in the original 360-angle domain, moves at `0x1200`, disappears on a wall
+or player impact, and deals the original `US_RndT() >> 3` damage.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock

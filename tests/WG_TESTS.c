@@ -198,7 +198,7 @@ static void TestBossAndGhostSetup(void)
     CHECK(level.actors[2].attack_shape == 364U);
     CHECK(level.actors[3].attack_shape == 400U);
     CHECK(level.actors[4].attack_shape == 311U);
-    CHECK(level.actors[5].attack_shape == 0U);
+    CHECK(level.actors[5].attack_shape == 325U);
     CHECK(level.actors[6].attack_shape == 338U);
 }
 
@@ -873,6 +873,145 @@ static void TestRocketBossAttacks(void)
     CHECK(boss->direction == 4U);
     CHECK(boss->tile_x == 2U);
     CHECK(boss->x == 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 536);
+}
+
+static void TestFakeHitlerFlames(void)
+{
+    wg_level_t level;
+    wg_actor_t *fake;
+    wg_actor_t *fire;
+    unsigned stage;
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 5 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 5U;
+    level.player_tile_y = 2U;
+    level.player_health = 100U;
+    level.difficulty = WG_DIFFICULTY_HARD;
+    level.actor_count = 1U;
+    fake = &level.actors[0];
+    fake->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    fake->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    fake->tile_x = 2U;
+    fake->tile_y = 2U;
+    fake->area_number = 0U;
+    fake->direction = 0U;
+    fake->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_ATTACK_MODE;
+    fake->actor_class = WG_ACTOR_FAKE;
+    fake->base_shape = 321U;
+    fake->attack_shape = 325U;
+    fake->state = WG_STATE_SHOOT1;
+    fake->tic_count = 8;
+    fake->shape = 325U;
+    fake->speed = 1536;
+    WG_RandomSeed(&level.random, 0U);
+
+    CHECK(WL_TickActors(&level, 8U));
+    CHECK(fake->state == WG_STATE_SHOOT2);
+    CHECK(fake->tic_count == 8);
+    CHECK(fake->shape == 325U);
+    CHECK(level.actor_count == 2U);
+    fire = &level.actors[1];
+    CHECK(fire->actor_class == WG_ACTOR_FIRE);
+    CHECK(fire->state == WG_STATE_FIRE1);
+    CHECK(fire->shape == 326U);
+    CHECK(fire->angle == 0U);
+    CHECK(fire->speed == 0x1200);
+    CHECK(fire->tic_count == 5);
+    CHECK(fire->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x9000);
+
+    for (stage = 2U; stage <= 8U; ++stage)
+    {
+        fire->flags |= WG_ACTOR_FLAG_REMOVED;
+        fake->tic_count = 1;
+        CHECK(WL_TickActors(&level, 1U));
+        CHECK(fake->state == (wg_actor_state_t)(WG_STATE_SHOOT1 + stage));
+        CHECK(fake->shape == 325U);
+        fire = &level.actors[1];
+        CHECK(fire->actor_class == WG_ACTOR_FIRE);
+        CHECK((fire->flags & WG_ACTOR_FLAG_REMOVED) == 0U);
+    }
+    fire->flags |= WG_ACTOR_FLAG_REMOVED;
+    fake->tic_count = 1;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(fake->state == WG_STATE_CHASE1);
+    CHECK((fire->flags & WG_ACTOR_FLAG_REMOVED) != 0U);
+
+    memset(fire, 0, sizeof(*fire));
+    fake->flags |= WG_ACTOR_FLAG_REMOVED;
+    fire->x = level.player_x - 0xc000;
+    fire->y = level.player_y;
+    fire->tile_x = 4U;
+    fire->tile_y = 2U;
+    fire->angle = 0U;
+    fire->shape = 326U;
+    fire->base_shape = 326U;
+    fire->tic_count = 6;
+    fire->speed = 0x1200;
+    fire->state = WG_STATE_FIRE1;
+    fire->actor_class = WG_ACTOR_FIRE;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK((fire->flags & WG_ACTOR_FLAG_REMOVED) != 0U);
+    CHECK(level.player_health == 99U);
+
+    memset(fire, 0, sizeof(*fire));
+    fire->x = 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    fire->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    fire->tile_x = 3U;
+    fire->tile_y = 2U;
+    fire->angle = 0U;
+    fire->shape = 326U;
+    fire->base_shape = 326U;
+    fire->tic_count = 6;
+    fire->speed = 0x1200;
+    fire->state = WG_STATE_FIRE1;
+    fire->actor_class = WG_ACTOR_FIRE;
+    level.tiles[2U * WG_LEVEL_SIZE + 4U] = 1U;
+    level.player_x = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 10U;
+    CHECK(WL_TickActors(&level, 6U));
+    CHECK((fire->flags & WG_ACTOR_FLAG_REMOVED) != 0U);
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 5 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 5U;
+    level.player_tile_y = 2U;
+    level.player_health = 100U;
+    level.actor_count = 1U;
+    fake = &level.actors[0];
+    fake->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    fake->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    fake->tile_x = 2U;
+    fake->tile_y = 2U;
+    fake->area_number = 0U;
+    fake->direction = 0U;
+    fake->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_ATTACK_MODE;
+    fake->actor_class = WG_ACTOR_FAKE;
+    fake->base_shape = 321U;
+    fake->attack_shape = 325U;
+    fake->state = WG_STATE_CHASE1;
+    fake->tic_count = 10;
+    fake->shape = 321U;
+    fake->speed = 1536;
+    fake->distance = WG_FIXED_ONE;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 4U));
+    CHECK(fake->state == WG_STATE_CHASE1);
+    fake->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    fake->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    fake->tile_x = 2U;
+    fake->tile_y = 2U;
+    fake->direction = 0U;
+    fake->distance = WG_FIXED_ONE;
+    fake->tic_count = 10;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 5U));
+    CHECK(fake->state == WG_STATE_SHOOT1);
+    CHECK(fake->tic_count == 8);
+    CHECK(fake->shape == 325U);
 }
 
 static void TestHuffman(void)
@@ -1645,6 +1784,7 @@ int main(int argc, char **argv)
     TestBossShootingStates();
     TestSchabbsNeedle();
     TestRocketBossAttacks();
+    TestFakeHitlerFlames();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

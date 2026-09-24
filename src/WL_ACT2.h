@@ -33,7 +33,8 @@ typedef enum wg_actor_class
     WG_ACTOR_NEEDLE,
     WG_ACTOR_ROCKET,
     WG_ACTOR_SMOKE,
-    WG_ACTOR_EXPLOSION
+    WG_ACTOR_EXPLOSION,
+    WG_ACTOR_FIRE
 } wg_actor_class_t;
 
 typedef enum wg_ghost_kind
@@ -87,6 +88,8 @@ typedef enum wg_actor_state
     WG_STATE_BOOM1,
     WG_STATE_BOOM2,
     WG_STATE_BOOM3,
+    WG_STATE_FIRE1,
+    WG_STATE_FIRE2,
     WG_STATE_ATTACK_PENDING
 } wg_actor_state_t;
 

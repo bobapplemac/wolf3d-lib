@@ -303,3 +303,25 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 38 --rocket-view --frame-hash --dump-frame out\gift-rocket.ppm
 ```
+
+## 2026-09-24: Fake Hitler flame burst
+
+- Scope: original `T_Fake` attack probability and dodge-only movement,
+  nine-state firing table, eight `T_FakeFire` actions, two-frame flame
+  animation, projectile motion, collision, and damage.
+- Focused tests verify the constant firing sprite and eight-tic cadence, all
+  eight emissions, 360-angle aim, `0x1200` speed, animation timing, seeded
+  one-point damage, and the distinct `tics << 1` attack threshold.
+- The full-data diagnostic uses E3M9 and advances the first four flames of the
+  burst through their alternating animation and cumulative damage.
+- 320x200 indexed-frame FNV-1a: `ba572ca325d89701`
+- This checkpoint requires WL6 because the shareware WL1 data contains only
+  Episode 1.
+
+![Fake Hitler's flame burst](../out/fake-flames.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 28 --flame-view --frame-hash --dump-frame out\fake-flames.ppm
+```

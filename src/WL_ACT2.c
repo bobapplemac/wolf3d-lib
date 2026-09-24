@@ -28,6 +28,7 @@
 #define WG_SPR_SCHABB_W1 307U
 #define WG_SPR_SCHABB_SHOOT1 311U
 #define WG_SPR_FAKE_W1 321U
+#define WG_SPR_FAKE_SHOOT 325U
 #define WG_SPR_MECHA_W1 334U
 #define WG_SPR_MECHA_SHOOT1 338U
 #define WG_SPR_GIFT_W1 360U
@@ -107,6 +108,8 @@ static uint16_t WL_BossAttackShape(wg_actor_class_t actor_class)
         return WG_SPR_BOSS_SHOOT1;
     case WG_ACTOR_SCHABBS:
         return WG_SPR_SCHABB_SHOOT1;
+    case WG_ACTOR_FAKE:
+        return WG_SPR_FAKE_SHOOT;
     case WG_ACTOR_MECHA_HITLER:
         return WG_SPR_MECHA_SHOOT1;
     case WG_ACTOR_GIFT:
