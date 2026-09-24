@@ -8,9 +8,11 @@
 #include "wg_data.h"
 #include "wg_font.h"
 #include "wg_graphics.h"
+#include "wg_level.h"
 #include "wg_maps.h"
 #include "wg_pages.h"
 #include "wg_palette.h"
+#include "wg_random.h"
 #include "wg_video.h"
 
 static int failures;
@@ -144,6 +146,17 @@ static void TestVideo(void)
     CHECK(memcmp(source, destination, sizeof(source)) == 0);
 }
 
+static void TestRandom(void)
+{
+    wg_random_t random;
+
+    WG_RandomSeed(&random, 0);
+    CHECK(WG_RandomNext(&random) == 8U);
+    CHECK(WG_RandomNext(&random) == 109U);
+    WG_RandomSeed(&random, 255U);
+    CHECK(WG_RandomNext(&random) == 0U);
+}
+
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                         size_t expected_graphics_offsets)
 {
@@ -154,6 +167,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     wg_pages_t pages;
     wg_maps_t maps;
     wg_map_t map;
+    wg_level_t level;
     const uint8_t *page_data;
     size_t page_size;
     uint8_t framebuffer[320 * 200];
@@ -323,6 +337,17 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         {
             CHECK(map.width == 64U);
             CHECK(map.height == 64U);
+            CHECK(WG_LevelBuild(&map, &level));
+            CHECK(level.player_tile_x == 29U);
+            CHECK(level.player_tile_y == 57U);
+            CHECK(level.player_x == 0x001d8000L);
+            CHECK(level.player_y == 0x00398000L);
+            CHECK(level.player_angle == 0U);
+            printf("%s map 0 player: (%u,%u) angle %u\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned)level.player_tile_x,
+                   (unsigned)level.player_tile_y,
+                   (unsigned)level.player_angle);
             for (index = 0; index < (size_t)map.width * map.height; ++index)
             {
                 uint16_t value = map.planes[0][index];
@@ -385,6 +410,7 @@ int main(int argc, char **argv)
     TestRLEW();
     TestMalformedCompression();
     TestVideo();
+    TestRandom();
 
     if (argc == 4 && strcmp(argv[1], "--data") == 0)
     {

@@ -46,6 +46,18 @@ the headless host can also export any presented indexed frame as a PPM image.
 Keyboard events use the original IBM PC set-1 scan-code values so gameplay and
 menu code do not depend on a platform's virtual-key numbering.
 
+## Gameplay state boundary
+
+Map planes are converted into an explicitly sized 64x64 runtime level. Plane 0
+values below the original `AREATILE` value become collision tiles; area numbers
+remain zero in that byte map. Plane 1 is retained verbatim for actor and object
+spawning. The initial player position and direction use the original tile codes
+19 through 22 and 16.16 tile-center coordinates.
+
+The gameplay random generator is the original 256-byte lookup table and byte
+index progression rather than a host C library generator. Its state is held in
+an engine-owned object so tests and later demo playback can reset it exactly.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a
