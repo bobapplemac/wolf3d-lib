@@ -69,8 +69,12 @@ typedef struct wg_level
     uint8_t player_dead;
     uint8_t player_best_weapon;
     uint8_t made_noise;
+    uint8_t victory_flag;
+    uint8_t level_completed;
     uint32_t score;
     uint16_t kill_count;
+    int32_t kill_x;
+    int32_t kill_y;
     uint16_t secret_count;
     uint16_t pushwall_state;
     uint8_t pushwall_position;

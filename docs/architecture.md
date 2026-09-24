@@ -214,8 +214,7 @@ diagnostic exposes the scenery beyond E1M1's initially closed door without
 changing normal level state. Ordinary enemies and dead guards share the same
 visible-object list; live actors use the original larger `ACTORSIZE` projection
 adjustment and select one of eight rotations with `CalcRotate`. Patrol state
-updates now feed this same rendering path; boss death behavior is still being
-added. The isolated
+updates feed this same rendering path. The isolated
 `--alert-view` diagnostic advances the selected guard through awareness and its
 reaction delay. `--chase-view` then advances the original chase animation and
 movement. `--fire-view` selects the original guard shot action and renders its
@@ -227,7 +226,12 @@ on E4M9. `--pushwall-view` activates the first E1M1 secret and renders it at a
 half-tile offset without altering normal captures. Ordinary guards, officers,
 mutants, SS, and dogs now carry the original difficulty-indexed hit points and
 run through their pain, death, scoring, and item-drop paths. `--death-view`
-captures an E1M1 guard in the third collapse frame with his dropped clip.
+captures an E1M1 guard in the third collapse frame with his dropped clip. All
+Wolf3D bosses use their original score, item-drop, and death sequences. The
+long terminal sequences set victory and level-complete state on successive
+death-camera actions; Mecha Hitler instead leaves a corpse and spawns the
+independently damageable second phase. `--boss-death-view` captures Hans in the
+third collapse frame on E1M9.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

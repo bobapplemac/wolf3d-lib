@@ -123,6 +123,13 @@ clip dropped at his tile:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --death-view --frame-hash --dump-frame guard-death.ppm
 ```
 
+The boss-death diagnostic applies lethal surprise damage to Hans on E1M9 and
+advances his original collapse sequence by 30 tics:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-death-view --frame-hash --dump-frame hans-death.ppm
+```
+
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz
 tics and frame the first patrol, use:
 

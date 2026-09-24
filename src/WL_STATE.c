@@ -18,6 +18,7 @@
 #define WG_SPR_SMOKE1 378U
 #define WG_SPR_BOOM1 382U
 #define WG_TWO_PI 6.283185314
+#define WG_SPR_STAT_KEY1 22U
 #define WG_SPR_STAT_CLIP2 28U
 #define WG_SPR_STAT_MACHINEGUN 29U
 
@@ -27,6 +28,7 @@ static int32_t WL_ChaseStateDuration(const wg_actor_t *actor,
                                      wg_actor_state_t state);
 static wg_actor_state_t WL_NextChaseState(wg_actor_state_t state);
 static void WL_SetChaseShape(wg_actor_t *actor);
+static wg_actor_t *WL_AllocateTransientActor(wg_level_t *level);
 
 static int WL_IsPathState(wg_actor_state_t state)
 {
@@ -67,7 +69,7 @@ static int WL_IsPainState(wg_actor_state_t state)
 
 static int WL_IsDeathState(wg_actor_state_t state)
 {
-    return state >= WG_STATE_DIE1 && state <= WG_STATE_DIE4;
+    return state >= WG_STATE_DIE1 && state <= WG_STATE_DIE9;
 }
 
 static uint16_t WL_PainShape(wg_actor_class_t actor_class, int second)
@@ -97,13 +99,24 @@ static unsigned WL_DeathTimedFrames(wg_actor_class_t actor_class)
     case WG_ACTOR_GUARD:
     case WG_ACTOR_SS:
     case WG_ACTOR_DOG:
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+    case WG_ACTOR_MECHA_HITLER:
         return 3U;
+    case WG_ACTOR_SCHABBS:
+    case WG_ACTOR_FAKE:
+    case WG_ACTOR_GIFT:
+    case WG_ACTOR_FAT:
+        return 5U;
+    case WG_ACTOR_REAL_HITLER:
+        return 9U;
     default:
         return 0U;
     }
 }
 
-static int32_t WL_DeathFrameDuration(wg_actor_class_t actor_class)
+static int32_t WL_DeathFrameDuration(wg_actor_class_t actor_class,
+                                     unsigned frame)
 {
     switch (actor_class)
     {
@@ -111,6 +124,15 @@ static int32_t WL_DeathFrameDuration(wg_actor_class_t actor_class)
         return 11;
     case WG_ACTOR_MUTANT:
         return 7;
+    case WG_ACTOR_FAKE:
+    case WG_ACTOR_MECHA_HITLER:
+        return 10;
+    case WG_ACTOR_SCHABBS:
+        return frame == 1U ? 5 : 10;
+    case WG_ACTOR_GIFT:
+    case WG_ACTOR_FAT:
+    case WG_ACTOR_REAL_HITLER:
+        return frame == 0U ? 1 : frame == 1U ? 5 : 10;
     default:
         return 15;
     }
@@ -123,6 +145,15 @@ static uint16_t WL_DeathShape(wg_actor_class_t actor_class, unsigned frame)
     static const uint16_t mutant[] = {228U, 229U, 230U, 232U, 233U};
     static const uint16_t ss[] = {179U, 180U, 181U, 183U};
     static const uint16_t dog[] = {131U, 132U, 133U, 134U};
+    static const uint16_t boss[] = {304U, 305U, 306U, 303U};
+    static const uint16_t schabbs[] = {307U, 307U, 313U, 314U, 315U, 316U};
+    static const uint16_t fake[] = {328U, 329U, 330U, 331U, 332U, 333U};
+    static const uint16_t mecha[] = {342U, 343U, 344U, 341U};
+    static const uint16_t hitler[] =
+        {345U, 345U, 353U, 354U, 355U, 356U, 357U, 358U, 359U, 352U};
+    static const uint16_t gift[] = {360U, 360U, 366U, 367U, 368U, 369U};
+    static const uint16_t gretel[] = {393U, 394U, 395U, 392U};
+    static const uint16_t fat[] = {396U, 396U, 404U, 405U, 406U, 407U};
 
     switch (actor_class)
     {
@@ -136,9 +167,49 @@ static uint16_t WL_DeathShape(wg_actor_class_t actor_class, unsigned frame)
         return ss[frame];
     case WG_ACTOR_DOG:
         return dog[frame];
+    case WG_ACTOR_BOSS:
+        return boss[frame];
+    case WG_ACTOR_SCHABBS:
+        return schabbs[frame];
+    case WG_ACTOR_FAKE:
+        return fake[frame];
+    case WG_ACTOR_MECHA_HITLER:
+        return mecha[frame];
+    case WG_ACTOR_REAL_HITLER:
+        return hitler[frame];
+    case WG_ACTOR_GIFT:
+        return gift[frame];
+    case WG_ACTOR_GRETEL:
+        return gretel[frame];
+    case WG_ACTOR_FAT:
+        return fat[frame];
     default:
         return 0U;
     }
+}
+
+static int32_t WL_DeathTerminalDuration(wg_actor_class_t actor_class)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_DOG:
+        return 15;
+    case WG_ACTOR_SCHABBS:
+    case WG_ACTOR_GIFT:
+    case WG_ACTOR_FAT:
+    case WG_ACTOR_REAL_HITLER:
+        return 20;
+    default:
+        return 0;
+    }
+}
+
+static int WL_UsesDeathCam(wg_actor_class_t actor_class)
+{
+    return actor_class == WG_ACTOR_SCHABBS
+           || actor_class == WG_ACTOR_GIFT
+           || actor_class == WG_ACTOR_FAT
+           || actor_class == WG_ACTOR_REAL_HITLER;
 }
 
 static int WL_DropItem(wg_level_t *level, uint8_t tile_x, uint8_t tile_y,
@@ -155,6 +226,35 @@ static int WL_DropItem(wg_level_t *level, uint8_t tile_x, uint8_t tile_y,
     object->tile_y = tile_y;
     object->blocking = 0U;
     object->shape = shape;
+    return 1;
+}
+
+static int WL_SpawnRealHitler(wg_level_t *level, const wg_actor_t *mecha)
+{
+    static const int32_t hit_points[] = {500, 700, 800, 900};
+    wg_actor_t *actor = WL_AllocateTransientActor(level);
+
+    if (actor == NULL)
+    {
+        return 0;
+    }
+    actor->x = mecha->x;
+    actor->y = mecha->y;
+    actor->tile_x = mecha->tile_x;
+    actor->tile_y = mecha->tile_y;
+    actor->direction = mecha->direction;
+    actor->shape = 345U;
+    actor->base_shape = 345U;
+    actor->attack_shape = 349U;
+    actor->rotate = 0U;
+    actor->area_number = mecha->area_number;
+    actor->flags = mecha->flags | WG_ACTOR_FLAG_SHOOTABLE;
+    actor->tic_count = WG_RandomNext(&level->random) % 6U;
+    actor->speed = 512 * 5;
+    actor->distance = mecha->distance;
+    actor->hit_points = hit_points[level->difficulty];
+    actor->state = WG_STATE_CHASE1;
+    actor->actor_class = WG_ACTOR_REAL_HITLER;
     return 1;
 }
 
@@ -196,11 +296,31 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     case WG_ACTOR_DOG:
         points = 200U;
         break;
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+        points = 5000U;
+        drop = WG_SPR_STAT_KEY1;
+        break;
+    case WG_ACTOR_FAKE:
+        points = 2000U;
+        break;
+    case WG_ACTOR_SCHABBS:
+    case WG_ACTOR_MECHA_HITLER:
+    case WG_ACTOR_REAL_HITLER:
+    case WG_ACTOR_GIFT:
+    case WG_ACTOR_FAT:
+        points = 5000U;
+        break;
     default:
         return 0;
     }
     actor->tile_x = (uint8_t)(actor->x / WG_FIXED_ONE);
     actor->tile_y = (uint8_t)(actor->y / WG_FIXED_ONE);
+    if (WL_UsesDeathCam(actor->actor_class))
+    {
+        level->kill_x = level->player_x;
+        level->kill_y = level->player_y;
+    }
     if (drop != 0)
     {
         (void)WL_DropItem(level, actor->tile_x, actor->tile_y,
@@ -208,7 +328,7 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     }
     actor->hit_points = 0;
     actor->state = WG_STATE_DIE1;
-    actor->tic_count = WL_DeathFrameDuration(actor->actor_class);
+    actor->tic_count = WL_DeathFrameDuration(actor->actor_class, 0U);
     actor->shape = WL_DeathShape(actor->actor_class, 0U);
     actor->rotate = 0U;
     actor->flags = (uint16_t)(actor->flags & ~WG_ACTOR_FLAG_SHOOTABLE);
@@ -218,7 +338,8 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     return 1;
 }
 
-static void WL_TickPainOrDeath(wg_actor_t *actor, unsigned tics)
+static int WL_TickPainOrDeath(wg_level_t *level, wg_actor_t *actor,
+                              unsigned tics)
 {
     actor->tic_count -= (int32_t)tics;
     if (WL_IsPainState(actor->state))
@@ -237,7 +358,7 @@ static void WL_TickPainOrDeath(wg_actor_t *actor, unsigned tics)
             WL_SetChaseShape(actor);
             actor->rotate = 1U;
         }
-        return;
+        return 1;
     }
     while (actor->tic_count <= 0 && WL_IsDeathState(actor->state))
     {
@@ -245,15 +366,21 @@ static void WL_TickPainOrDeath(wg_actor_t *actor, unsigned tics)
 
         if (frame >= WL_DeathTimedFrames(actor->actor_class))
         {
+            if (actor->actor_class == WG_ACTOR_MECHA_HITLER
+                && !WL_SpawnRealHitler(level, actor))
+            {
+                return 0;
+            }
             actor->state = WG_STATE_DEAD;
             actor->shape = WL_DeathShape(actor->actor_class, frame);
-            actor->tic_count = actor->actor_class == WG_ACTOR_DOG ? 15 : 0;
-            return;
+            actor->tic_count = WL_DeathTerminalDuration(actor->actor_class);
+            return 1;
         }
         actor->state = (wg_actor_state_t)(actor->state + 1);
         actor->shape = WL_DeathShape(actor->actor_class, frame);
-        actor->tic_count += WL_DeathFrameDuration(actor->actor_class);
+        actor->tic_count += WL_DeathFrameDuration(actor->actor_class, frame);
     }
+    return 1;
 }
 
 static int WL_IsNeedleState(wg_actor_state_t state)
@@ -1654,17 +1781,34 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
         }
         if (WL_IsPainState(actor->state) || WL_IsDeathState(actor->state))
         {
-            WL_TickPainOrDeath(actor, tics);
+            if (!WL_TickPainOrDeath(level, actor, tics))
+            {
+                return 0;
+            }
             continue;
         }
         if (actor->state == WG_STATE_DEAD)
         {
-            if (actor->actor_class == WG_ACTOR_DOG)
+            int32_t terminal_duration =
+                WL_DeathTerminalDuration(actor->actor_class);
+
+            if (terminal_duration != 0)
             {
                 actor->tic_count -= (int32_t)tics;
                 while (actor->tic_count <= 0)
                 {
-                    actor->tic_count += 15;
+                    if (WL_UsesDeathCam(actor->actor_class))
+                    {
+                        if (level->victory_flag)
+                        {
+                            level->level_completed = 1U;
+                        }
+                        else
+                        {
+                            level->victory_flag = 1U;
+                        }
+                    }
+                    actor->tic_count += terminal_duration;
                 }
             }
             continue;

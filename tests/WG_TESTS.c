@@ -1109,6 +1109,113 @@ static void TestActorDamageAndDeath(void)
     CHECK(level.score == 2400U);
 }
 
+static void TestBossDamageAndDeath(void)
+{
+    static const struct boss_death_case
+    {
+        wg_actor_class_t actor_class;
+        int32_t hit_points;
+        unsigned death_tics;
+        uint16_t first_shape;
+        uint16_t dead_shape;
+        uint32_t points;
+        int drops_key;
+        int uses_death_cam;
+    } cases[] =
+    {
+        {WG_ACTOR_BOSS, 850, 45U, 304U, 303U, 5000U, 1, 0},
+        {WG_ACTOR_GRETEL, 850, 45U, 393U, 392U, 5000U, 1, 0},
+        {WG_ACTOR_FAKE, 200, 50U, 328U, 333U, 2000U, 0, 0},
+        {WG_ACTOR_SCHABBS, 850, 45U, 307U, 316U, 5000U, 0, 1},
+        {WG_ACTOR_GIFT, 850, 36U, 360U, 369U, 5000U, 0, 1},
+        {WG_ACTOR_FAT, 850, 36U, 396U, 407U, 5000U, 0, 1}
+    };
+    size_t index;
+
+    for (index = 0U; index < sizeof(cases) / sizeof(cases[0]); ++index)
+    {
+        wg_level_t level;
+        wg_actor_t *actor;
+
+        memset(&level, 0, sizeof(level));
+        level.difficulty = WG_DIFFICULTY_BABY;
+        level.player_x = 7 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        level.player_y = 8 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        CHECK(WL_SpawnBoss(&level, cases[index].actor_class,
+                           10U, 10U));
+        actor = &level.actors[0];
+        CHECK(actor->hit_points == cases[index].hit_points);
+        CHECK(WL_DamageActor(&level, 0U,
+                             (unsigned)cases[index].hit_points / 2U));
+        CHECK(actor->state == WG_STATE_DIE1);
+        CHECK(actor->shape == cases[index].first_shape);
+        CHECK(level.score == cases[index].points);
+        CHECK(level.kill_count == 1U);
+        CHECK(level.static_count == (uint16_t)cases[index].drops_key);
+        if (cases[index].drops_key)
+        {
+            CHECK(level.statics[0].shape == 22U);
+        }
+        if (cases[index].uses_death_cam)
+        {
+            CHECK(level.kill_x == level.player_x);
+            CHECK(level.kill_y == level.player_y);
+        }
+        CHECK(WL_TickActors(&level, cases[index].death_tics));
+        CHECK(actor->state == WG_STATE_DEAD);
+        CHECK(actor->shape == cases[index].dead_shape);
+        CHECK(level.victory_flag == 0U);
+        if (cases[index].uses_death_cam)
+        {
+            CHECK(actor->tic_count == 20);
+            CHECK(WL_TickActors(&level, 20U));
+            CHECK(level.victory_flag == 1U);
+            CHECK(level.level_completed == 0U);
+            CHECK(WL_TickActors(&level, 20U));
+            CHECK(level.level_completed == 1U);
+        }
+        else
+        {
+            CHECK(actor->tic_count == 0);
+        }
+    }
+
+    {
+        wg_level_t level;
+        wg_actor_t *mecha;
+        wg_actor_t *hitler;
+
+        memset(&level, 0, sizeof(level));
+        level.difficulty = WG_DIFFICULTY_BABY;
+        WG_RandomSeed(&level.random, 0U);
+        CHECK(WL_SpawnBoss(&level, WG_ACTOR_MECHA_HITLER, 10U, 10U));
+        mecha = &level.actors[0];
+        CHECK(mecha->hit_points == 800);
+        CHECK(WL_DamageActor(&level, 0U, 400U));
+        CHECK(mecha->shape == 342U);
+        CHECK(WL_TickActors(&level, 30U));
+        CHECK(mecha->state == WG_STATE_DEAD);
+        CHECK(mecha->shape == 341U);
+        CHECK(level.actor_count == 2U);
+        hitler = &level.actors[1];
+        CHECK(hitler->actor_class == WG_ACTOR_REAL_HITLER);
+        CHECK(hitler->hit_points == 500);
+        CHECK(hitler->base_shape == 345U);
+        CHECK(hitler->attack_shape == 349U);
+        CHECK(hitler->speed == 2560);
+        CHECK((hitler->flags & WG_ACTOR_FLAG_SHOOTABLE) != 0U);
+        CHECK(WL_DamageActor(&level, 1U, 250U));
+        CHECK(level.score == 10000U);
+        CHECK(level.kill_count == 2U);
+        CHECK(WL_TickActors(&level, 76U));
+        CHECK(hitler->state == WG_STATE_DEAD);
+        CHECK(hitler->shape == 352U);
+        CHECK(hitler->tic_count == 20);
+        CHECK(WL_TickActors(&level, 20U));
+        CHECK(level.victory_flag == 1U);
+    }
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -1986,6 +2093,7 @@ int main(int argc, char **argv)
     TestRocketBossAttacks();
     TestFakeHitlerFlames();
     TestActorDamageAndDeath();
+    TestBossDamageAndDeath();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

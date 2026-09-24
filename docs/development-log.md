@@ -377,3 +377,29 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --death-view --frame-hash --dump-frame out\guard-death.ppm
 ```
+
+## 2026-09-24: Wolf3D boss damage and death
+
+- Extended `DamageActor` and `KillActor` across Hans, Gretel, Schabbs, Fake
+  Hitler, Mecha Hitler, Hitler, Giftmacher, and Fatface with original scores,
+  gold-key drops, corpse marking, and kill-position capture.
+- Ported each boss's distinct sprite sequence and timing. Until digital audio
+  is present, speech-hold frames use the original `sds_Off` durations.
+- Terminal Schabbs, Giftmacher, Fatface, and Hitler corpses now drive the two
+  successive death-camera actions into victory and level-complete state.
+- Mecha Hitler's third death action spawns a separate Hitler actor with the
+  original difficulty-indexed 500/700/800/900 hit points, chase speed, inherited
+  position and direction, and independent final death sequence.
+- Focused tests exercise every boss chain, scores, keys, terminal timing,
+  victory transitions, both Mecha/Hitler health bars, and morph behavior.
+- The E1M9 diagnostic captures Hans after 30 tics in his third collapse frame.
+- 320x200 indexed-frame FNV-1a: `f33b87939760dc0c`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![Hans Grosse in the third death frame](../out/hans-death.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-death-view --frame-hash --dump-frame out\hans-death.ppm
+```
