@@ -193,6 +193,10 @@ static void TestBossAndGhostSetup(void)
     CHECK(level.actors[0].direction == 6U);
     CHECK(level.actors[1].direction == 2U);
     CHECK(level.actors[7].direction == 0U);
+    CHECK(level.actors[0].attack_shape == 300U);
+    CHECK(level.actors[1].attack_shape == 389U);
+    CHECK(level.actors[2].attack_shape == 0U);
+    CHECK(level.actors[6].attack_shape == 338U);
 }
 
 static void TestPatrolMovement(void)
@@ -567,6 +571,76 @@ static void TestDogChaseAndBite(void)
     CHECK(WL_TickActors(&level, 20U));
     CHECK(dog->state == WG_STATE_DOG_JUMP5);
     CHECK(dog->shape == 99U);
+}
+
+static void TestBossShootingStates(void)
+{
+    static const wg_actor_class_t classes[] =
+    {
+        WG_ACTOR_BOSS, WG_ACTOR_GRETEL,
+        WG_ACTOR_MECHA_HITLER, WG_ACTOR_REAL_HITLER
+    };
+    static const uint16_t attack_shapes[] = { 300U, 389U, 338U, 349U };
+    wg_level_t level;
+    size_t index;
+
+    for (index = 0U; index < sizeof(classes) / sizeof(classes[0]); ++index)
+    {
+        wg_actor_t *actor;
+
+        memset(&level, 0, sizeof(level));
+        level.player_x = 6 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        level.player_y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        level.player_tile_x = 6U;
+        level.player_tile_y = 2U;
+        level.player_health = 100U;
+        level.difficulty = WG_DIFFICULTY_HARD;
+        level.actor_count = 1U;
+        actor = &level.actors[0];
+        actor->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->tile_x = 2U;
+        actor->tile_y = 2U;
+        actor->area_number = 0U;
+        actor->direction = 0U;
+        actor->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_ATTACK_MODE
+                       | WG_ACTOR_FLAG_VISIBLE;
+        actor->actor_class = classes[index];
+        actor->base_shape = (uint16_t)(attack_shapes[index] - 4U);
+        actor->attack_shape = attack_shapes[index];
+        actor->state = WG_STATE_SHOOT1;
+        actor->tic_count = 30;
+        actor->shape = attack_shapes[index];
+        WG_RandomSeed(&level.random, 0U);
+
+        CHECK(WL_TickActors(&level, 30U));
+        CHECK(actor->state == WG_STATE_SHOOT2);
+        CHECK(actor->tic_count == 10);
+        CHECK(actor->shape == attack_shapes[index] + 1U);
+        CHECK(level.player_health == 100U);
+        CHECK(WL_TickActors(&level, 10U));
+        CHECK(actor->state == WG_STATE_SHOOT3);
+        CHECK(actor->shape == attack_shapes[index] + 2U);
+        CHECK(level.player_health
+              == (classes[index] == WG_ACTOR_BOSS ? 87U : 94U));
+
+        if (classes[index] == WG_ACTOR_BOSS
+            || classes[index] == WG_ACTOR_GRETEL)
+        {
+            CHECK(WL_TickActors(&level, 40U));
+            CHECK(actor->state == WG_STATE_SHOOT7);
+            CHECK(actor->shape == attack_shapes[index] + 2U);
+            CHECK(WL_TickActors(&level, 10U));
+            CHECK(actor->state == WG_STATE_SHOOT8);
+            CHECK(actor->shape == attack_shapes[index]);
+        }
+        else
+        {
+            CHECK(WL_TickActors(&level, 30U));
+            CHECK(actor->state == WG_STATE_SHOOT6);
+            CHECK(actor->shape == attack_shapes[index] + 1U);
+        }
+    }
 }
 
 static void TestHuffman(void)
@@ -1336,6 +1410,7 @@ int main(int argc, char **argv)
     TestDoorAreaConnectivity();
     TestOrdinaryShootingStates();
     TestDogChaseAndBite();
+    TestBossShootingStates();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

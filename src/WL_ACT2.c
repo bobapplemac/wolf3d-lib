@@ -24,11 +24,14 @@
 #define WG_SPR_CLYDE_W1 292U
 #define WG_SPR_INKY_W1 294U
 #define WG_SPR_BOSS_W1 296U
+#define WG_SPR_BOSS_SHOOT1 300U
 #define WG_SPR_SCHABB_W1 307U
 #define WG_SPR_FAKE_W1 321U
 #define WG_SPR_MECHA_W1 334U
+#define WG_SPR_MECHA_SHOOT1 338U
 #define WG_SPR_GIFT_W1 360U
 #define WG_SPR_GRETEL_W1 385U
+#define WG_SPR_GRETEL_SHOOT1 389U
 #define WG_SPR_FAT_W1 396U
 
 #define WG_SPEED_PATROL 512
@@ -88,6 +91,21 @@ static uint16_t WL_AttackShape(wg_actor_class_t actor_class)
         return WG_SPR_MUT_SHOOT1;
     case WG_ACTOR_DOG:
         return WG_SPR_DOG_JUMP1;
+    default:
+        return 0U;
+    }
+}
+
+static uint16_t WL_BossAttackShape(wg_actor_class_t actor_class)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_BOSS:
+        return WG_SPR_BOSS_SHOOT1;
+    case WG_ACTOR_MECHA_HITLER:
+        return WG_SPR_MECHA_SHOOT1;
+    case WG_ACTOR_GRETEL:
+        return WG_SPR_GRETEL_SHOOT1;
     default:
         return 0U;
     }
@@ -269,7 +287,7 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
     actor->direction = direction;
     actor->shape = shape;
     actor->base_shape = shape;
-    actor->attack_shape = 0U;
+    actor->attack_shape = WL_BossAttackShape(actor_class);
     actor->rotate = 0U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
     actor->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_AMBUSH;

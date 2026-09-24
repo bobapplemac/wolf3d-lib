@@ -238,3 +238,24 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --bite-view --frame-hash --dump-frame out\dog-bite.ppm
 ```
+
+## 2026-09-24: Hitscan boss bursts
+
+- Scope: original Hans, Gretel, Mecha-Hitler, and Hitler shooting state tables,
+  attack selection, sprite sequences, timing, and repeated `T_Shoot` actions.
+- Hans and Gretel retain their eight-state, six-shot bursts. Mecha-Hitler and
+  Hitler retain their six-state, five-shot bursts. Tests cover all four tables,
+  including the 30-tic windup, alternating firing shapes, action cadence, and
+  Hans's boss-only distance advantage.
+- The E1M9 diagnostic frames Hans at three tiles, executes the first shot, and
+  captures his third firing sprite with health reduced from 100% to 87%.
+- 320x200 indexed-frame FNV-1a: `cd8a4e5001298ee6`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![Hans Grosse firing his original burst](../out/hans-firing.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-fire-view --frame-hash --dump-frame out\hans-firing.ppm
+```

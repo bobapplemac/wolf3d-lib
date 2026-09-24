@@ -117,6 +117,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(boss-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "a38a57b87c979508")
+        add_test(NAME boss-fire-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --map 8
+            --boss-fire-view --frame-hash)
+        set_tests_properties(boss-fire-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "cd8a4e5001298ee6")
         add_test(NAME patrol-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --open-doors
             --patrol-view --actor-tics 127 --frame-hash)
@@ -150,6 +155,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(boss-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "a38a57b87c979508")
+        add_test(NAME boss-fire-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --map 8
+            --boss-fire-view --frame-hash)
+        set_tests_properties(boss-fire-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "cd8a4e5001298ee6")
         add_test(NAME patrol-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --open-doors
             --patrol-view --actor-tics 127 --frame-hash)

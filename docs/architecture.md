@@ -107,8 +107,9 @@ movement portion of `T_Chase` for guards, officers, mutants, SS, Hans, Gretel,
 Mecha Hitler, and Hitler. It retains first-attack turnaround permission, random
 dodge ordering, cardinal/diagonal collision rules, closed-door waiting,
 tile-center correction, and `MINACTORDIST` player separation. The ranged-attack
-probability consumes the original random value. Unsupported boss attacks remain
-in an explicit pending state until their class-specific thinkers are ported.
+probability consumes the original random value. Unsupported projectile-boss
+attacks remain in an explicit pending state until their class-specific thinkers
+are ported.
 
 Ordinary ranged combat retains the guard, officer, mutant, and SS attack state
 tables from `WL_ACT2.C`, including their distinct durations, sprite sequences,
@@ -124,7 +125,14 @@ Dog combat follows its separate original branch: `T_DogChase` always uses
 next movement step reaches `MINACTORDIST` on both axes. The `10/10/10/10/10`
 jump sequence invokes `T_Bite` from its second state, retaining the two-tile
 axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sounds, boss
-attacks, and the complete death/restart flow remain subsequent slices.
+projectiles, and the complete death/restart flow remain subsequent slices.
+
+The four hitscan bosses reuse `T_Shoot` with their original state tables. Hans
+and Gretel use eight firing states with six shot actions; Mecha-Hitler and
+Hitler use six states with five actions. All retain the `30`-tic windup,
+alternating second/third firing sprites, `10`-tic burst cadence, and class
+return to the first chase state. Hans alone retains the original boss accuracy
+and damage-distance advantage. Projectile-based boss attacks remain pending.
 
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
@@ -179,13 +187,14 @@ diagnostic exposes the scenery beyond E1M1's initially closed door without
 changing normal level state. Ordinary enemies and dead guards share the same
 visible-object list; live actors use the original larger `ACTORSIZE` projection
 adjustment and select one of eight rotations with `CalcRotate`. Patrol state
-updates now feed this same rendering path; boss special behavior and moving
-pushwalls are still being added. The isolated
+updates now feed this same rendering path; boss death/projectile behavior and
+moving pushwalls are still being added. The isolated
 `--alert-view` diagnostic advances the selected guard through awareness and its
 reaction delay. `--chase-view` then advances the original chase animation and
 movement. `--fire-view` selects the original guard shot action and renders its
 resulting attack sprite and health change. `--bite-view` does the same for an
-original E1M1 dog's leap and bite without altering normal captures.
+original E1M1 dog's leap and bite. `--boss-fire-view` renders Hans's seeded
+hitscan attack on E1M9 without altering normal captures.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

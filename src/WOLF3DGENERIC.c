@@ -122,7 +122,7 @@ static int WG_IsBossClass(wg_actor_class_t actor_class)
            || actor_class == WG_ACTOR_FAT;
 }
 
-static const wg_actor_t *WG_FindBossViewActor(const wg_level_t *level)
+static wg_actor_t *WG_FindBossViewActor(wg_level_t *level)
 {
     size_t index;
 
@@ -264,6 +264,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int guard_view, int boss_view,
                                   int patrol_view, int alert_view,
                                   int chase_view, int fire_view, int bite_view,
+                                  int boss_fire_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -302,7 +303,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             level.doors[door].position = 0xffffU;
         }
     }
-    if (!chase_view && !fire_view && !bite_view
+    if (!chase_view && !fire_view && !bite_view && !boss_fire_view
         && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
@@ -328,9 +329,9 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
-    if (boss_view)
+    if (boss_view || boss_fire_view)
     {
-        const wg_actor_t *actor = WG_FindBossViewActor(&level);
+        wg_actor_t *actor = WG_FindBossViewActor(&level);
 
         if (!WG_SetActorViewPose(&level, actor, 3))
         {
@@ -386,6 +387,24 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         actor->tic_count = 1;
         actor->shape = (uint16_t)(actor->attack_shape + 1U);
         actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE;
+        WG_RandomSeed(&level.random, 0U);
+        if (!WL_TickActors(&level, 1U))
+        {
+            goto cleanup;
+        }
+    }
+    if (boss_fire_view)
+    {
+        wg_actor_t *actor = WG_FindBossViewActor(&level);
+
+        if (actor == NULL || actor->attack_shape == 0U)
+        {
+            goto cleanup;
+        }
+        actor->state = WG_STATE_SHOOT2;
+        actor->tic_count = 1;
+        actor->shape = (uint16_t)(actor->attack_shape + 1U);
+        actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE | WG_ACTOR_FLAG_VISIBLE;
         WG_RandomSeed(&level.random, 0U);
         if (!WL_TickActors(&level, 1U))
         {
@@ -477,7 +496,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--alert-view"),
             WG_HasArgument(argc, argv, "--chase-view"),
             WG_HasArgument(argc, argv, "--fire-view"),
-            WG_HasArgument(argc, argv, "--bite-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--bite-view"),
+            WG_HasArgument(argc, argv, "--boss-fire-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

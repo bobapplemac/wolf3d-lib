@@ -45,7 +45,9 @@ The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status
 bar. Patrol movement, actor awareness, ordinary enemy chase movement, and the
 original guard/officer/mutant/SS hitscan and dog melee attack states are active.
-Special boss combat and pushwall motion are not yet active:
+Hans, Gretel, Mecha-Hitler, and Hitler also retain their original hitscan burst
+states. Projectile bosses, boss death transitions, and pushwall motion are not
+yet active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -73,6 +75,13 @@ Episode 1, Floor 9:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-view --dump-frame hans.ppm
+```
+
+To execute one seeded shot from Hans's original six-shot burst and render the
+third firing frame and resulting health change, use:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-fire-view --frame-hash --dump-frame hans-firing.ppm
 ```
 
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz

@@ -761,6 +761,12 @@ static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
             return 20;
         }
         return stage <= 9U ? 10 : 0;
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+        return stage == 1U ? 30 : (stage <= 8U ? 10 : 0);
+    case WG_ACTOR_MECHA_HITLER:
+    case WG_ACTOR_REAL_HITLER:
+        return stage == 1U ? 30 : (stage <= 6U ? 10 : 0);
     default:
         return 0;
     }
@@ -777,6 +783,12 @@ static unsigned WL_ShootStateCount(wg_actor_class_t actor_class)
         return 4U;
     case WG_ACTOR_SS:
         return 9U;
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+        return 8U;
+    case WG_ACTOR_MECHA_HITLER:
+    case WG_ACTOR_REAL_HITLER:
+        return 6U;
     default:
         return 0U;
     }
@@ -796,6 +808,12 @@ static int WL_ShootStateHasAction(const wg_actor_t *actor)
     case WG_ACTOR_SS:
         return stage == 2U || stage == 4U
                || stage == 6U || stage == 8U;
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+        return stage >= 2U && stage <= 7U;
+    case WG_ACTOR_MECHA_HITLER:
+    case WG_ACTOR_REAL_HITLER:
+        return stage >= 2U && stage <= 6U;
     default:
         return 0;
     }
@@ -805,8 +823,19 @@ static unsigned WL_ShootShapeFrame(const wg_actor_t *actor)
 {
     unsigned stage = (unsigned)(actor->state - WG_STATE_SHOOT1) + 1U;
 
-    if (actor->actor_class == WG_ACTOR_SS && stage >= 4U)
+    if ((actor->actor_class == WG_ACTOR_SS && stage >= 4U)
+        || actor->actor_class == WG_ACTOR_BOSS
+        || actor->actor_class == WG_ACTOR_GRETEL
+        || actor->actor_class == WG_ACTOR_MECHA_HITLER
+        || actor->actor_class == WG_ACTOR_REAL_HITLER)
     {
+        if (stage == 1U
+            || ((actor->actor_class == WG_ACTOR_BOSS
+                 || actor->actor_class == WG_ACTOR_GRETEL)
+                && stage == 8U))
+        {
+            return 0U;
+        }
         return (stage & 1U) == 0U ? 1U : 2U;
     }
     return stage - 1U;
