@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "ID_US_1.h"
 #include "WG_MAPS.h"
 #include "WL_ACT2.h"
 
@@ -60,6 +61,7 @@ typedef struct wg_level
     uint16_t static_count;
     wg_actor_t actors[WG_MAX_ACTORS];
     uint16_t actor_count;
+    wg_random_t random;
 } wg_level_t;
 
 int WG_LevelBuild(const wg_map_t *map, wg_level_t *level);

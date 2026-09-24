@@ -16,6 +16,7 @@
 #include "WG_RENDERER.h"
 #include "WL_DRAW.h"
 #include "WL_MAIN.h"
+#include "WL_STATE.h"
 
 uint8_t *WG_ScreenBuffer;
 uint8_t WG_Palette[WG_PALETTE_COLORS * 3];
@@ -52,18 +53,21 @@ static int WG_HasArgument(int argc, char **argv, const char *argument)
     return 0;
 }
 
-static int WG_FindMapNumber(int argc, char **argv, unsigned *map_number)
+static int WG_FindUnsignedArgument(int argc, char **argv,
+                                   const char *argument,
+                                   unsigned default_value,
+                                   unsigned maximum, unsigned *value_out)
 {
     int index;
 
-    if (map_number == NULL)
+    if (argument == NULL || value_out == NULL)
     {
         return 0;
     }
-    *map_number = 0U;
+    *value_out = default_value;
     for (index = 1; index < argc; ++index)
     {
-        if (strcmp(argv[index], "--map") == 0)
+        if (strcmp(argv[index], argument) == 0)
         {
             char *end;
             unsigned long value;
@@ -74,11 +78,11 @@ static int WG_FindMapNumber(int argc, char **argv, unsigned *map_number)
             }
             end = NULL;
             value = strtoul(argv[index + 1], &end, 10);
-            if (end == argv[index + 1] || *end != '\0' || value > 99UL)
+            if (end == argv[index + 1] || *end != '\0' || value > maximum)
             {
                 return 0;
             }
-            *map_number = (unsigned)value;
+            *value_out = (unsigned)value;
             return 1;
         }
     }
@@ -128,6 +132,25 @@ static const wg_actor_t *WG_FindBossViewActor(const wg_level_t *level)
     for (index = 0; index < level->actor_count; ++index)
     {
         if (WG_IsBossClass(level->actors[index].actor_class))
+        {
+            return &level->actors[index];
+        }
+    }
+    return NULL;
+}
+
+static const wg_actor_t *WG_FindPatrolViewActor(const wg_level_t *level)
+{
+    size_t index;
+
+    if (level == NULL)
+    {
+        return NULL;
+    }
+    for (index = 0; index < level->actor_count; ++index)
+    {
+        if (level->actors[index].state >= WG_STATE_PATH1
+            && level->actors[index].state <= WG_STATE_PATH4)
         {
             return &level->actors[index];
         }
@@ -212,7 +235,8 @@ static int WG_LoadTitleScreen(const char *data_path)
 }
 
 static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
-                                  int guard_view, int boss_view)
+                                  int guard_view, int boss_view,
+                                  int patrol_view, unsigned actor_tics)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -250,6 +274,10 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             level.doors[door].position = 0xffffU;
         }
     }
+    if (!WL_TickActors(&level, actor_tics))
+    {
+        goto cleanup;
+    }
     if (guard_view)
     {
         const wg_actor_t *actor = WG_FindGuardViewActor(&level);
@@ -272,6 +300,15 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     if (boss_view)
     {
         const wg_actor_t *actor = WG_FindBossViewActor(&level);
+
+        if (!WG_SetActorViewPose(&level, actor))
+        {
+            goto cleanup;
+        }
+    }
+    if (patrol_view)
+    {
+        const wg_actor_t *actor = WG_FindPatrolViewActor(&level);
 
         if (!WG_SetActorViewPose(&level, actor))
         {
@@ -317,9 +354,13 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     size_t framebuffer_size;
     const char *data_path;
     unsigned map_number;
+    unsigned actor_tics;
 
     if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL)
-        || !WG_FindMapNumber(argc, argv, &map_number))
+        || !WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
+                                    &map_number)
+        || !WG_FindUnsignedArgument(argc, argv, "--actor-tics", 0U,
+                                    10000U, &actor_tics))
     {
         return WG_RESULT_INVALID_ARGUMENT;
     }
@@ -353,7 +394,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             map_number,
             WG_HasArgument(argc, argv, "--open-doors"),
             WG_HasArgument(argc, argv, "--guard-view"),
-            WG_HasArgument(argc, argv, "--boss-view")))
+            WG_HasArgument(argc, argv, "--boss-view"),
+            WG_HasArgument(argc, argv, "--patrol-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

@@ -80,6 +80,15 @@ point selects medium difficulty; an explicit difficulty entry point supports
 deterministic setup testing. Corpus validation checks that every actor spawned
 by all 10 WL1 and 60 WL6 maps names a sprite page present in that edition.
 
+The first dynamic actor slice ports the original path-state timing and
+`T_Path`/`SelectPathDir` movement into `WL_STATE.c`. Patrol actors retain the
+randomized initial tic phase, six-state `20/5/15/20/5/15` animation cycle,
+class-specific speed, destination-tile reservation, tile-center snapping, and
+direction arrows stored in map plane 1. Cardinal and diagonal wall/actor checks
+preserve the distinction between ordinary actors and dogs, and actors stop at
+closed doors until the door reaches its fully open position. Player awareness,
+combat states, and player/actor contact remain subsequent slices.
+
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
 type, occupy the original `0x80 | index` tile value, and mark the adjacent wall
@@ -132,8 +141,9 @@ wall-height tests for per-column occlusion. The headless `--open-doors`
 diagnostic exposes the scenery beyond E1M1's initially closed door without
 changing normal level state. Ordinary enemies and dead guards share the same
 visible-object list; live actors use the original larger `ACTORSIZE` projection
-adjustment and select one of eight rotations with `CalcRotate`. Actor state
-updates, AI, boss special behavior, and moving pushwalls are still being added.
+adjustment and select one of eight rotations with `CalcRotate`. Patrol state
+updates now feed this same rendering path; awareness and combat AI, boss special
+behavior, and moving pushwalls are still being added.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

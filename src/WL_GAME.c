@@ -47,6 +47,7 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
         return 0;
     }
     memset(level, 0, sizeof(*level));
+    WG_RandomSeed(&level->random, 0U);
     for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
     {
         uint16_t tile = map->planes[0][index];

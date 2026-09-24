@@ -122,3 +122,21 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-view --frame-hash --dump-frame out\hans-grosse.ppm
 ```
+
+## 2026-09-23: Timed patrol movement
+
+- Scope: original randomized initial state phase, six-state walk animation,
+  `T_Path` distance consumption, `SelectPathDir` map arrows, tile-center
+  snapping, class speeds, collision checks, and closed-door waiting.
+- The diagnostic advances all actors by 128 original 70 Hz tics, opens doors to
+  keep the selected E1M1 patrol visible, and chooses a clear viewing pose.
+- 320x200 indexed-frame FNV-1a: `b2d1e5360eae2135`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 guard following his original patrol path](../out/moving-patrol.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --patrol-view --actor-tics 128 --frame-hash --dump-frame out\moving-patrol.ppm
+```

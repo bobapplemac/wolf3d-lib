@@ -18,6 +18,7 @@
 #include "WL_DRAW.h"
 #include "WG_RENDERER.h"
 #include "WL_SCALE.h"
+#include "WL_STATE.h"
 #include "ID_VL.h"
 #include "WL_MAIN.h"
 
@@ -192,6 +193,54 @@ static void TestBossAndGhostSetup(void)
     CHECK(level.actors[0].direction == 6U);
     CHECK(level.actors[1].direction == 2U);
     CHECK(level.actors[7].direction == 0U);
+}
+
+static void TestPatrolMovement(void)
+{
+    uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_map_t map;
+    wg_level_t level;
+    wg_actor_t *actor;
+    size_t index;
+
+    memset(&map, 0, sizeof(map));
+    for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        plane_zero[index] = WG_AREA_TILE;
+        plane_one[index] = 0U;
+    }
+    plane_one[WG_LEVEL_SIZE + 1U] = 19U;
+    plane_one[2U * WG_LEVEL_SIZE + 2U] = 112U;
+    plane_one[2U * WG_LEVEL_SIZE + 3U] = 96U;
+    map.width = WG_LEVEL_SIZE;
+    map.height = WG_LEVEL_SIZE;
+    map.planes[0] = plane_zero;
+    map.planes[1] = plane_one;
+
+    CHECK(WG_LevelBuild(&map, &level));
+    CHECK(level.actor_count == 1U);
+    actor = &level.actors[0];
+    CHECK(actor->state == WG_STATE_PATH1);
+    CHECK(actor->tic_count == 8);
+    CHECK(actor->speed == 512);
+    CHECK(actor->distance == WG_FIXED_ONE);
+    CHECK(actor->tile_x == 3U);
+    CHECK(actor->tile_y == 2U);
+    CHECK(WL_TickActors(&level, 128U));
+    CHECK(actor->state == WG_STATE_PATH3S);
+    CHECK(actor->tic_count == 5);
+    CHECK(actor->shape == 74U);
+    CHECK(actor->x == 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(actor->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(actor->direction == 6U);
+    CHECK(actor->tile_x == 3U);
+    CHECK(actor->tile_y == 3U);
+    CHECK(actor->distance == WG_FIXED_ONE);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(actor->x == 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(actor->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 512);
+    CHECK(actor->distance == WG_FIXED_ONE - 512);
 }
 
 static void TestHuffman(void)
@@ -956,6 +1005,7 @@ int main(int argc, char **argv)
     TestRandom();
     TestActorSetup();
     TestBossAndGhostSetup();
+    TestPatrolMovement();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

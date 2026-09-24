@@ -26,6 +26,9 @@
 #define WG_SPR_GRETEL_W1 385U
 #define WG_SPR_FAT_W1 396U
 
+#define WG_SPEED_PATROL 512
+#define WG_SPEED_DOG 1500
+
 static uint16_t WL_StandingShape(wg_actor_class_t actor_class)
 {
     switch (actor_class)
@@ -110,7 +113,13 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
     actor->tile_y = (uint8_t)destination_y;
     actor->direction = (uint8_t)(map_direction * 2U);
     actor->shape = shape;
+    actor->base_shape = shape;
     actor->rotate = 1U;
+    actor->tic_count = patrol ? WG_RandomNext(&level->random) % 20U : 0;
+    actor->speed = actor_class == WG_ACTOR_DOG
+                       ? WG_SPEED_DOG : WG_SPEED_PATROL;
+    actor->distance = patrol ? WG_FIXED_ONE : 0;
+    actor->state = patrol ? WG_STATE_PATH1 : WG_STATE_STAND;
     actor->actor_class = actor_class;
     return 1;
 }
@@ -159,7 +168,9 @@ int WL_SpawnDeadGuard(struct wg_level *level, uint8_t tile_x, uint8_t tile_y)
     actor->tile_y = tile_y;
     actor->direction = 0U;
     actor->shape = WG_SPR_GRD_DEAD;
+    actor->base_shape = WG_SPR_GRD_DEAD;
     actor->rotate = 0U;
+    actor->state = WG_STATE_NONE;
     actor->actor_class = WG_ACTOR_INERT;
     return 1;
 }
@@ -216,7 +227,10 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
     actor->tile_y = tile_y;
     actor->direction = direction;
     actor->shape = shape;
+    actor->base_shape = shape;
     actor->rotate = 0U;
+    actor->speed = WG_SPEED_PATROL;
+    actor->state = WG_STATE_STAND;
     actor->actor_class = actor_class;
     return 1;
 }
@@ -246,7 +260,11 @@ int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
     actor->tile_y = tile_y;
     actor->direction = 0U;
     actor->shape = shapes[ghost_kind];
+    actor->base_shape = shapes[ghost_kind];
     actor->rotate = 0U;
+    actor->tic_count = WG_RandomNext(&level->random) % 10U;
+    actor->speed = WG_SPEED_DOG;
+    actor->state = WG_STATE_GHOST1;
     actor->actor_class = WG_ACTOR_GHOST;
     return 1;
 }
