@@ -12,7 +12,7 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | --- | --- | --- |
 | `ID_CA.c` | `ID_CA.C` | Huffman, Carmack, and RLEW expansion |
 | `ID_PM.c` | `ID_PM.C` | Bounded VSWAP page access |
-| `ID_SD.c` | `ID_SD.C`, `ID_SD_A.ASM` | IMF sequencing, 700 Hz sample clock, and OPL music rendering |
+| `ID_SD.c` | `ID_SD.C`, `ID_SD_A.ASM` | IMF/AdLib service, VSWAP digitized effects, resampling, and PCM mixing |
 | `ID_VL.c` | `ID_VL.C` | Indexed framebuffer, blits, palettes, and fizzle fade |
 | `ID_VH.c` | `ID_VH.C` | Proportional font decoding and drawing |
 | `ID_US_1.c` | `ID_US_1.C` | Original deterministic random table |

@@ -8,6 +8,7 @@
 #include "WG_AUDIO.h"
 #include "WG_FIXED.h"
 #include "WG_GRAPHICS.h"
+#include "WG_ENDIAN.h"
 #include "ID_US_1.h"
 #include "WL_AGENT.h"
 #include "WL_ACT1.h"
@@ -39,6 +40,7 @@ typedef struct wg_game_session
     wg_view_tables_t view;
     wg_graphics_t graphics;
     wg_audio_t audio;
+    id_sd_digi_bank_t digi_bank;
     id_sd_music_t *music;
     wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
     uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
@@ -569,6 +571,7 @@ static int WG_GameSessionOpen(unsigned map_number)
         || !WG_PagesOpen(&wg_game.pages, &wg_data_set)
         || !WG_WallCacheLoad(&wg_game.walls, &wg_game.pages)
         || !WG_GraphicsOpen(&wg_game.graphics, &wg_data_set)
+        || !ID_SD_DigiBankOpen(&wg_game.digi_bank, &wg_game.pages)
         || !WG_AudioOpen(&wg_game.audio, &wg_data_set))
     {
         goto cleanup;
@@ -664,11 +667,33 @@ static int WG_GameSessionTick(void)
         {
             const uint8_t *data;
             size_t size;
-            size_t chunk = 87U + wg_game.level.sound_events[sound];
+            unsigned sound_number = wg_game.level.sound_events[sound];
+            size_t chunk = 87U + sound_number;
+            int digital_number = ID_SD_DigitalNumberForSound(sound_number);
 
             if (WG_AudioGetChunk(&wg_game.audio, chunk, &data, &size))
             {
-                (void)ID_SD_EffectStart(wg_game.music, data, size);
+                int played = 0;
+
+                if (digital_number >= 0 && size >= 6U)
+                {
+                    uint8_t *digital_data;
+                    size_t digital_length;
+
+                    if (ID_SD_DigiBankLoad(&wg_game.digi_bank,
+                                           (size_t)digital_number,
+                                           &digital_data, &digital_length))
+                    {
+                        played = ID_SD_DigitalStart(
+                            wg_game.music, digital_data, digital_length,
+                            WG_ReadLE16(data + 4U), 0U, 0U);
+                        free(digital_data);
+                    }
+                }
+                if (!played)
+                {
+                    (void)ID_SD_EffectStart(wg_game.music, data, size);
+                }
             }
         }
     }

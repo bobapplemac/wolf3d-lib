@@ -582,3 +582,33 @@ Regenerate it with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --dump-music out\e1m1-pistol-opl.wav
 ```
+
+## 2026-09-24: VSWAP digitized sound effects
+
+- Ported the original terminal VSWAP sound-info table and page-spanning sample
+  loading into `ID_SD.c`, with checked offsets and lengths instead of the DOS
+  page manager's far pointers.
+- Restored the original `wolfdigimap` mapping and AdLib-derived priority for all
+  46 mapped effects. Live playback selects the Sound Blaster sample when it is
+  present and falls back to the matching AdLib effect when it is not.
+- Mixed unsigned 8-bit samples into the existing signed stereo stream using the
+  original Sound Blaster Pro 0-15 attenuation scale and priority replacement.
+- Resampling uses a deterministic integer phase accumulator and zero-order hold
+  at 7,042 Hz, matching the effective rate of the original integer Sound Blaster
+  DSP time constant (`256 - 1000000 / 7000`).
+- The registered VSWAP supplies all 46 entries. The supplied shareware VSWAP
+  retains the 46-entry table but has 20 physically loadable samples; this sparse
+  layout is explicitly tested and its missing entries follow the AdLib fallback.
+- One second of the centered pistol sample at 48 kHz has PCM FNV-1a
+  `44dc84b3f78798a3`, identical for supplied WL1/WL6 data and MSVC x86/x64
+  builds.
+- The ten-second E1M1-plus-pistol WAV has SHA-256
+  `61376fcbeb1199d909ef084cbaa6ba4a3db4a4e5d0609758f21fc7f4083f86b5`.
+
+![E1M1 music with the original digitized pistol sample](../out/e1m1-pistol-digital.wav)
+
+Regenerate the ten-second reference render with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digitized --dump-music out\e1m1-pistol-digital.wav
+```

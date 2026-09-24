@@ -271,3 +271,12 @@ buffers and headless mode can emit the identical samples as a WAV fixture.
 AdLib effects share Nuked's channel 0 with the music chip, retain original
 priority replacement and instrument programming, and consume one pitch byte at
 140 Hz (every fifth IMF service), just as the fast DOS timer ISR did.
+
+Digitized effects retain the original VSWAP layout and `wolfdigimap` selection.
+`ID_SD.c` reads the terminal `(start page, byte length)` table, joins each
+page-spanning unsigned 8-bit sample, applies the original priority rules and
+Sound Blaster Pro 0-15 stereo attenuation, and mixes it into the same signed
+48 kHz stream. The zero-order hold advances at 7,042 Hz, matching the effective
+rate produced by the original integer DSP time constant for its nominal 7 kHz
+configuration. Missing sample pages in the shareware archive fall back to the
+corresponding AdLib effect at runtime.

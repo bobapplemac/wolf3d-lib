@@ -61,7 +61,13 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --dump-music e1m1
 ```
 
 Add `--sound N` to start one of the original zero-based AdLib effects in that
-render; for example, `--sound 24` mixes the pistol with E1M1's music.
+render; for example, `--sound 24` mixes the pistol with E1M1's music. Add
+`--digitized` to select the corresponding original Sound Blaster sample from
+VSWAP instead:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digitized --dump-music e1m1-pistol.wav
+```
 
 The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status

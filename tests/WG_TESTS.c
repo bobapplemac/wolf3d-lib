@@ -87,12 +87,15 @@ static void TestIMFSequencer(void)
     uint32_t ticks = 0U;
     id_sd_music_t *music;
     int16_t effect_pcm[1200U * 2U];
+    static const uint8_t digital_samples[] = { 0U, 255U };
 
     CHECK(WL_MusicChunkForMap(0U) == 264U);
     CHECK(WL_MusicChunkForMap(8U) == 263U);
     CHECK(WL_MusicChunkForMap(9U) == 261U);
     CHECK(WL_MusicChunkForMap(59U) == 276U);
     CHECK(WL_MusicChunkForMap(60U) == 264U);
+    CHECK(ID_SD_DigitalNumberForSound(WG_SOUND_ATTACK_PISTOL) == 5);
+    CHECK(ID_SD_DigitalNumberForSound(WG_SOUND_ATTACK_KNIFE) == -1);
 
     memset(&sequence, 0, sizeof(sequence));
     memset(&log, 0, sizeof(log));
@@ -140,6 +143,21 @@ static void TestIMFSequencer(void)
                                  sizeof(low_priority_effect)));
         CHECK(ID_SD_MusicRender(music, effect_pcm, 1200U));
         CHECK(!ID_SD_EffectPlaying(music));
+        ID_SD_MusicDestroy(music);
+    }
+    music = ID_SD_MusicCreate(48000U);
+    CHECK(music != NULL);
+    if (music != NULL)
+    {
+        memset(effect_pcm, 0, sizeof(effect_pcm));
+        CHECK(ID_SD_DigitalStart(music, digital_samples,
+                                 sizeof(digital_samples), 5U, 0U, 14U));
+        CHECK(!ID_SD_DigitalStart(music, digital_samples,
+                                  sizeof(digital_samples), 4U, 0U, 0U));
+        CHECK(ID_SD_MusicRender(music, effect_pcm, 20U));
+        CHECK(effect_pcm[0] == INT16_MIN);
+        CHECK(effect_pcm[1] < 0 && effect_pcm[1] > effect_pcm[0]);
+        CHECK(!ID_SD_DigitalPlaying(music));
         ID_SD_MusicDestroy(music);
     }
 }
@@ -2715,6 +2733,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         int16_t *music_pcm;
         uint64_t music_hash = 1469598103934665603ULL;
         uint64_t mixed_hash = 1469598103934665603ULL;
+        uint64_t digital_hash = 1469598103934665603ULL;
         const uint8_t *music_data;
         size_t music_size;
         size_t music_count = 0U;
@@ -2765,6 +2784,55 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));
                 ID_SD_EffectStop(music_player);
                 CHECK(ID_SD_EffectStart(music_player, page_data, page_size));
+            }
+            CHECK(WG_PagesOpen(&pages, &data_set));
+            if (pages.data_set != NULL)
+            {
+                id_sd_digi_bank_t digi_bank;
+                uint8_t *digital_data = NULL;
+                size_t digital_length = 0U;
+                size_t loaded_digital = 0U;
+
+                CHECK(ID_SD_DigiBankOpen(&digi_bank, &pages));
+                CHECK(digi_bank.count == 46U);
+                for (index = 0U; index < digi_bank.count; ++index)
+                {
+                    if (ID_SD_DigiBankLoad(&digi_bank, index,
+                                           &digital_data, &digital_length))
+                    {
+                        CHECK(digital_length
+                              == digi_bank.entries[index].length);
+                        ++loaded_digital;
+                        free(digital_data);
+                        digital_data = NULL;
+                    }
+                }
+                printf("%s loadable digitized sounds: %llu/%llu\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned long long)loaded_digital,
+                       (unsigned long long)digi_bank.count);
+                CHECK(loaded_digital
+                      == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                              ? 20U : 46U));
+                CHECK(ID_SD_DigiBankLoad(&digi_bank, 5U,
+                                         &digital_data, &digital_length));
+                ID_SD_MusicDestroy(music_player);
+                music_player = ID_SD_MusicCreate(48000U);
+                CHECK(ID_SD_DigitalStart(music_player, digital_data,
+                                         digital_length, 10U, 0U, 0U));
+                CHECK(ID_SD_MusicRender(music_player, music_pcm, 48000U));
+                for (index = 0U;
+                     index < 48000U * 2U * sizeof(*music_pcm); ++index)
+                {
+                    digital_hash ^= pcm_bytes[index];
+                    digital_hash *= 1099511628211ULL;
+                }
+                printf("%s one-second digital pistol FNV-1a: %016llx\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned long long)digital_hash);
+                CHECK(digital_hash == 0x44dc84b3f78798a3ULL);
+                free(digital_data);
+                WG_PagesClose(&pages);
             }
         }
         free(music_pcm);

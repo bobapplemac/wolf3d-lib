@@ -4,7 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "ID_PM.h"
+
 #define ID_SD_IMF_RATE 700U
+#define ID_SD_DIGITAL_RATE 7042U
 
 typedef void (*id_sd_opl_write_fn)(void *user, uint16_t register_number,
                                    uint8_t value);
@@ -29,6 +32,21 @@ typedef struct id_sd_sample_clock
 
 typedef struct id_sd_music id_sd_music_t;
 
+#define ID_SD_MAX_DIGITIZED_SOUNDS 64
+
+typedef struct id_sd_digi_entry
+{
+    uint16_t start_page;
+    uint16_t length;
+} id_sd_digi_entry_t;
+
+typedef struct id_sd_digi_bank
+{
+    const wg_pages_t *pages;
+    id_sd_digi_entry_t entries[ID_SD_MAX_DIGITIZED_SOUNDS];
+    size_t count;
+} id_sd_digi_bank_t;
+
 int ID_SD_IMFStart(id_sd_imf_t *sequence, const uint8_t *chunk,
                    size_t chunk_size, id_sd_opl_write_fn write,
                    void *write_user);
@@ -52,5 +70,14 @@ int ID_SD_EffectStart(id_sd_music_t *music, const uint8_t *chunk,
                       size_t chunk_size);
 void ID_SD_EffectStop(id_sd_music_t *music);
 int ID_SD_EffectPlaying(const id_sd_music_t *music);
+int ID_SD_DigiBankOpen(id_sd_digi_bank_t *bank, const wg_pages_t *pages);
+int ID_SD_DigiBankLoad(const id_sd_digi_bank_t *bank, size_t sound,
+                       uint8_t **data, size_t *length);
+int ID_SD_DigitalNumberForSound(unsigned sound);
+int ID_SD_DigitalStart(id_sd_music_t *music, const uint8_t *data,
+                       size_t length, uint16_t priority,
+                       uint8_t left_position, uint8_t right_position);
+void ID_SD_DigitalStop(id_sd_music_t *music);
+int ID_SD_DigitalPlaying(const id_sd_music_t *music);
 
 #endif

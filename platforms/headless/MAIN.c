@@ -5,8 +5,10 @@
 #include <string.h>
 
 #include "ID_SD.h"
+#include "ID_PM.h"
 #include "WG_AUDIO.h"
 #include "WG_DATA.h"
+#include "WG_ENDIAN.h"
 #include "WL_PLAY.h"
 
 static const char *WG_DumpPath(int argc, char **argv)
@@ -59,11 +61,14 @@ static void WG_WriteLE32(FILE *stream, uint32_t value)
 }
 
 static int WG_WriteMusic(const char *data_path, unsigned map_number,
-                         int sound_number, const char *output_path)
+                         int sound_number, int digitized,
+                         const char *output_path)
 {
     enum { sample_rate = 48000, seconds = 10, block_frames = 1024 };
     wg_data_set_t data_set;
     wg_audio_t audio;
+    wg_pages_t pages;
+    id_sd_digi_bank_t digi_bank;
     id_sd_music_t *music = NULL;
     const uint8_t *chunk;
     size_t chunk_size;
@@ -76,6 +81,8 @@ static int WG_WriteMusic(const char *data_path, unsigned map_number,
 
     memset(&data_set, 0, sizeof(data_set));
     memset(&audio, 0, sizeof(audio));
+    memset(&pages, 0, sizeof(pages));
+    memset(&digi_bank, 0, sizeof(digi_bank));
     if (!WG_DataOpen(&data_set, data_path)
         || !WG_AudioOpen(&audio, &data_set)
         || !WG_AudioGetChunk(&audio, WL_MusicChunkForMap(map_number),
@@ -90,10 +97,39 @@ static int WG_WriteMusic(const char *data_path, unsigned map_number,
     }
     if (sound_number >= 0)
     {
+        int played = 0;
+
         if (sound_number > 86
             || !WG_AudioGetChunk(&audio, 87U + (size_t)sound_number,
-                                 &chunk, &chunk_size)
-            || !ID_SD_EffectStart(music, chunk, chunk_size))
+                                 &chunk, &chunk_size))
+        {
+            goto cleanup;
+        }
+        if (digitized)
+        {
+            int digital_number = ID_SD_DigitalNumberForSound(
+                (unsigned)sound_number);
+            uint8_t *digital_data = NULL;
+            size_t digital_length = 0U;
+
+            if (digital_number < 0 || chunk_size < 6U
+                || !WG_PagesOpen(&pages, &data_set)
+                || !ID_SD_DigiBankOpen(&digi_bank, &pages)
+                || !ID_SD_DigiBankLoad(&digi_bank, (size_t)digital_number,
+                                       &digital_data, &digital_length))
+            {
+                free(digital_data);
+                goto cleanup;
+            }
+            played = ID_SD_DigitalStart(music, digital_data, digital_length,
+                                        WG_ReadLE16(chunk + 4U), 0U, 0U);
+            free(digital_data);
+        }
+        else
+        {
+            played = ID_SD_EffectStart(music, chunk, chunk_size);
+        }
+        if (!played)
         {
             goto cleanup;
         }
@@ -154,6 +190,7 @@ cleanup:
         fclose(stream);
     }
     ID_SD_MusicDestroy(music);
+    WG_PagesClose(&pages);
     WG_AudioClose(&audio);
     WG_DataClose(&data_set);
     return success;
@@ -231,6 +268,7 @@ int main(int argc, char **argv)
     const char *data_path;
     const char *map_text;
     const char *sound_text;
+    int digitized;
     unsigned map_number = 0U;
     int sound_number = -1;
 
@@ -240,6 +278,7 @@ int main(int argc, char **argv)
     data_path = WG_ArgumentValue(argc, argv, "--data");
     map_text = WG_ArgumentValue(argc, argv, "--map");
     sound_text = WG_ArgumentValue(argc, argv, "--sound");
+    digitized = WG_HasArgument(argc, argv, "--digitized");
     if (map_text != NULL)
     {
         map_number = (unsigned)strtoul(map_text, NULL, 10);
@@ -268,7 +307,7 @@ int main(int argc, char **argv)
     }
     if (music_path != NULL
         && (data_path == NULL
-            || !WG_WriteMusic(data_path, map_number, sound_number,
+            || !WG_WriteMusic(data_path, map_number, sound_number, digitized,
                               music_path)))
     {
         fprintf(stderr, "Unable to write music dump: %s\n", music_path);

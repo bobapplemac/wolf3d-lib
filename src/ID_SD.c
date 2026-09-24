@@ -20,6 +20,13 @@ struct id_sd_music
     uint16_t effect_priority;
     uint8_t effect_block;
     uint8_t effect_divider;
+    uint8_t *digital_data;
+    size_t digital_length;
+    size_t digital_position;
+    uint32_t digital_phase;
+    uint16_t digital_priority;
+    uint8_t digital_left;
+    uint8_t digital_right;
 };
 
 int ID_SD_IMFStart(id_sd_imf_t *sequence, const uint8_t *chunk,
@@ -157,6 +164,10 @@ id_sd_music_t *ID_SD_MusicCreate(uint32_t sample_rate)
 
 void ID_SD_MusicDestroy(id_sd_music_t *music)
 {
+    if (music != NULL)
+    {
+        free(music->digital_data);
+    }
     free(music);
 }
 
@@ -224,6 +235,218 @@ void ID_SD_EffectStop(id_sd_music_t *music)
 int ID_SD_EffectPlaying(const id_sd_music_t *music)
 {
     return music != NULL && music->effect_data != NULL;
+}
+
+int ID_SD_DigiBankOpen(id_sd_digi_bank_t *bank, const wg_pages_t *pages)
+{
+    const uint8_t *table;
+    size_t table_size;
+    size_t offset;
+    size_t page;
+
+    if (bank == NULL || pages == NULL || pages->data_set == NULL
+        || pages->data_set->page_count == 0U)
+    {
+        return 0;
+    }
+    memset(bank, 0, sizeof(*bank));
+    if (!WG_PagesGet(pages, pages->data_set->page_count - 1U,
+                     &table, &table_size)
+        || table_size % 4U != 0U)
+    {
+        return 0;
+    }
+    page = pages->data_set->sound_start;
+    for (offset = 0U;
+         offset + 4U <= table_size
+         && page < pages->data_set->page_count - 1U; offset += 4U)
+    {
+        uint16_t start_page = WG_ReadLE16(table + offset);
+        uint16_t length = WG_ReadLE16(table + offset + 2U);
+        size_t page_count;
+
+        if (bank->count == ID_SD_MAX_DIGITIZED_SOUNDS || length == 0U
+            || start_page != page - pages->data_set->sound_start)
+        {
+            return 0;
+        }
+        page_count = ((size_t)length + 4095U) / 4096U;
+        if ((size_t)pages->data_set->sound_start + start_page
+                >= pages->data_set->page_count - 1U
+            || page_count > pages->data_set->page_count - 1U
+                                - pages->data_set->sound_start - start_page)
+        {
+            return 0;
+        }
+        bank->entries[bank->count].start_page = start_page;
+        bank->entries[bank->count].length = length;
+        ++bank->count;
+        page += page_count;
+    }
+    bank->pages = pages;
+    return bank->count != 0U;
+}
+
+int ID_SD_DigiBankLoad(const id_sd_digi_bank_t *bank, size_t sound,
+                       uint8_t **data, size_t *length)
+{
+    const id_sd_digi_entry_t *entry;
+    uint8_t *copy;
+    size_t copied = 0U;
+    size_t page_index;
+
+    if (bank == NULL || bank->pages == NULL || data == NULL || length == NULL
+        || sound >= bank->count)
+    {
+        return 0;
+    }
+    entry = &bank->entries[sound];
+    copy = (uint8_t *)malloc(entry->length);
+    if (copy == NULL)
+    {
+        return 0;
+    }
+    page_index = bank->pages->data_set->sound_start + entry->start_page;
+    while (copied < entry->length)
+    {
+        const uint8_t *page_data;
+        size_t page_size;
+        size_t amount;
+
+        if (!WG_PagesGet(bank->pages, page_index++, &page_data, &page_size))
+        {
+            free(copy);
+            return 0;
+        }
+        amount = entry->length - copied;
+        if (amount > page_size)
+        {
+            amount = page_size;
+        }
+        memcpy(copy + copied, page_data, amount);
+        copied += amount;
+    }
+    *data = copy;
+    *length = entry->length;
+    return 1;
+}
+
+int ID_SD_DigitalNumberForSound(unsigned sound)
+{
+    static const uint8_t mapping[][2] =
+    {
+        {21U, 0U}, {41U, 1U}, {19U, 2U}, {18U, 3U}, {26U, 4U},
+        {24U, 5U}, {11U, 6U}, {51U, 7U}, {55U, 8U}, {50U, 9U},
+        {59U, 10U}, {60U, 11U}, {29U, 12U}, {22U, 13U}, {25U, 13U},
+        {16U, 14U}, {46U, 15U}, {10U, 16U}, {52U, 17U}, {53U, 18U},
+        {54U, 19U}, {56U, 20U}, {58U, 21U}, {61U, 22U}, {62U, 23U},
+        {63U, 24U}, {64U, 25U}, {65U, 26U}, {66U, 27U}, {67U, 28U},
+        {68U, 29U}, {40U, 30U}, {70U, 31U}, {72U, 32U}, {57U, 33U},
+        {73U, 34U}, {74U, 35U}, {79U, 36U}, {80U, 37U}, {81U, 38U},
+        {75U, 39U}, {76U, 40U}, {77U, 41U}, {78U, 42U}, {82U, 43U},
+        {83U, 44U}, {84U, 45U}
+    };
+    size_t index;
+
+    for (index = 0U; index < sizeof(mapping) / sizeof(mapping[0]); ++index)
+    {
+        if (mapping[index][0] == sound)
+        {
+            return mapping[index][1];
+        }
+    }
+    return -1;
+}
+
+int ID_SD_DigitalStart(id_sd_music_t *music, const uint8_t *data,
+                       size_t length, uint16_t priority,
+                       uint8_t left_position, uint8_t right_position)
+{
+    uint8_t *copy;
+
+    if (music == NULL || data == NULL || length == 0U
+        || left_position > 15U || right_position > 15U
+        || (left_position == 15U && right_position == 15U)
+        || (music->digital_data != NULL
+            && priority < music->digital_priority))
+    {
+        return 0;
+    }
+    copy = (uint8_t *)malloc(length);
+    if (copy == NULL)
+    {
+        return 0;
+    }
+    memcpy(copy, data, length);
+    ID_SD_DigitalStop(music);
+    music->digital_data = copy;
+    music->digital_length = length;
+    music->digital_priority = priority;
+    music->digital_left = left_position;
+    music->digital_right = right_position;
+    return 1;
+}
+
+void ID_SD_DigitalStop(id_sd_music_t *music)
+{
+    if (music == NULL)
+    {
+        return;
+    }
+    free(music->digital_data);
+    music->digital_data = NULL;
+    music->digital_length = 0U;
+    music->digital_position = 0U;
+    music->digital_phase = 0U;
+    music->digital_priority = 0U;
+}
+
+int ID_SD_DigitalPlaying(const id_sd_music_t *music)
+{
+    return music != NULL && music->digital_data != NULL;
+}
+
+static int16_t ID_SD_ClampSample(int32_t sample)
+{
+    if (sample > INT16_MAX)
+    {
+        return INT16_MAX;
+    }
+    if (sample < INT16_MIN)
+    {
+        return INT16_MIN;
+    }
+    return (int16_t)sample;
+}
+
+static void ID_SD_DigitalMix(id_sd_music_t *music, int16_t *stereo,
+                             uint32_t frame_count)
+{
+    uint32_t frame;
+
+    for (frame = 0U; frame < frame_count && music->digital_data != NULL;
+         ++frame)
+    {
+        int32_t sample = ((int32_t)music->digital_data[music->digital_position]
+                          - 128) << 8;
+        int32_t left = sample * (15 - music->digital_left) / 15;
+        int32_t right = sample * (15 - music->digital_right) / 15;
+
+        stereo[frame * 2U] =
+            ID_SD_ClampSample((int32_t)stereo[frame * 2U] + left);
+        stereo[frame * 2U + 1U] =
+            ID_SD_ClampSample((int32_t)stereo[frame * 2U + 1U] + right);
+        music->digital_phase += ID_SD_DIGITAL_RATE;
+        while (music->digital_phase >= music->sample_rate)
+        {
+            music->digital_phase -= music->sample_rate;
+            if (++music->digital_position == music->digital_length)
+            {
+                ID_SD_DigitalStop(music);
+                break;
+            }
+        }
+    }
 }
 
 static void ID_SD_EffectService(id_sd_music_t *music)
@@ -304,6 +527,7 @@ int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
             return 0;
         }
         OPL3_GenerateStream(&music->chip, stereo, frames);
+        ID_SD_DigitalMix(music, stereo, frames);
         stereo += (size_t)frames * 2U;
         frame_count -= frames;
         ticks = ID_SD_SampleClockAdvance(&music->clock, frames);
