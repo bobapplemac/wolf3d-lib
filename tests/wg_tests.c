@@ -107,6 +107,9 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t frame_hash = 1469598103934665603ULL;
     uint64_t map_hash = 1469598103934665603ULL;
     size_t index;
+    size_t decoded_graphics = 0;
+    size_t loaded_maps = 0;
+    size_t present_pages = 0;
 
     CHECK(WG_DataOpen(&data_set, path));
     if (data_set.variant == WG_GAME_UNKNOWN)
@@ -152,6 +155,37 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(picture_height == 40U);
             free(picture_pixels);
         }
+        for (index = 0; index + 1U < graphics.offset_count; ++index)
+        {
+            uint8_t *chunk_data = NULL;
+            size_t chunk_size;
+
+            if (graphics.offsets[index] == 0x00ffffffU)
+            {
+                continue;
+            }
+            if ((expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                 && index == 147U)
+                || (expected_variant == WG_GAME_WOLF3D_FULL_GT_14
+                    && index == 135U))
+            {
+                continue;
+            }
+            if (!WG_GraphicsDecodeChunk(&graphics, index,
+                                         &chunk_data, &chunk_size))
+            {
+                fprintf(stderr, "failed to decode graphics chunk %u\n",
+                        (unsigned)index);
+                CHECK(0);
+            }
+            if (chunk_data != NULL)
+            {
+                CHECK(chunk_size != 0U);
+                ++decoded_graphics;
+                free(chunk_data);
+            }
+        }
+        CHECK(decoded_graphics != 0U);
         WG_GraphicsClose(&graphics);
     }
 
@@ -165,6 +199,21 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(page_size != 0U);
         CHECK(!WG_PagesGet(&pages, data_set.page_count,
                            &page_data, &page_size));
+        for (index = 0; index < data_set.page_count; ++index)
+        {
+            if (data_set.pages[index].offset == 0
+                || data_set.pages[index].length == 0)
+            {
+                continue;
+            }
+            CHECK(WG_PagesGet(&pages, index, &page_data, &page_size));
+            if (page_data != NULL)
+            {
+                CHECK(page_size == data_set.pages[index].length);
+                ++present_pages;
+            }
+        }
+        CHECK(present_pages != 0U);
         WG_PagesClose(&pages);
     }
 
@@ -191,6 +240,28 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(map_hash == 0x2f163ae2e768c7e8ULL);
             WG_MapFree(&map);
         }
+        for (index = 0; index < maps.header_offset_count; ++index)
+        {
+            if (maps.header_offsets[index] == 0xffffffffU
+                || maps.header_offsets[index] == 0U)
+            {
+                continue;
+            }
+            if (!WG_MapsLoad(&maps, index, &map))
+            {
+                fprintf(stderr, "failed to load map %u\n", (unsigned)index);
+                CHECK(0);
+            }
+            if (map.planes[0] != NULL)
+            {
+                CHECK(map.width == 64U);
+                CHECK(map.height == 64U);
+                ++loaded_maps;
+                WG_MapFree(&map);
+            }
+        }
+        CHECK(loaded_maps == (expected_variant
+              == WG_GAME_WOLF3D_SHAREWARE_14 ? 10U : 60U));
         WG_MapsClose(&maps);
     }
 
@@ -201,6 +272,10 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(WG_AudioGetChunk(&audio, 261U, &page_data, &page_size));
         CHECK(page_size > 2U);
         CHECK(!WG_AudioGetChunk(&audio, 288U, &page_data, &page_size));
+        for (index = 0; index + 1U < audio.offset_count; ++index)
+        {
+            CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));
+        }
         WG_AudioClose(&audio);
     }
     WG_DataClose(&data_set);

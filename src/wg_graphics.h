@@ -10,6 +10,7 @@
 
 typedef struct wg_graphics
 {
+    wg_game_variant_t variant;
     wg_huffman_node_t dictionary[255];
     uint32_t *offsets;
     size_t offset_count;

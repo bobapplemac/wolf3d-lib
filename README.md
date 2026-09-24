@@ -31,6 +31,13 @@ original title screen. It is not yet a playable engine. To exercise it:
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
 ```
 
+The headless host can export its current indexed frame for inspection without a
+window:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
+```
+
 ## License
 
 The project is licensed under GPL-2.0-only. Game data is not covered by this

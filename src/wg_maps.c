@@ -9,6 +9,7 @@
 
 #define WG_MAP_HEADER_SIZE 38U
 #define WG_SPARSE_MAP_OFFSET 0xffffffffU
+#define WG_ORIGINAL_MAP_COUNT 60U
 
 static int WG_MapsPath(char *destination, size_t destination_size,
                        const wg_data_set_t *data_set, const char *base)
@@ -38,6 +39,10 @@ int WG_MapsOpen(wg_maps_t *maps, const wg_data_set_t *data_set)
     }
     maps->rlew_tag = WG_ReadLE16(header.data);
     maps->header_offset_count = (header.size - 2U) / 4U;
+    if (maps->header_offset_count > WG_ORIGINAL_MAP_COUNT)
+    {
+        maps->header_offset_count = WG_ORIGINAL_MAP_COUNT;
+    }
     maps->header_offsets = (uint32_t *)malloc(maps->header_offset_count
                                                * sizeof(*maps->header_offsets));
     if (maps->header_offsets == NULL)

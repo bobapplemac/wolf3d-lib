@@ -42,6 +42,7 @@ int WG_GraphicsOpen(wg_graphics_t *graphics, const wg_data_set_t *data_set)
         return 0;
     }
     memset(graphics, 0, sizeof(*graphics));
+    graphics->variant = data_set->variant;
     memset(&dictionary, 0, sizeof(dictionary));
     memset(&header, 0, sizeof(header));
 
@@ -150,6 +151,7 @@ int WG_GraphicsDecodeChunk(const wg_graphics_t *graphics, size_t chunk,
     size_t end;
     size_t expanded_size;
     uint8_t *output;
+    size_t payload_offset;
 
     if (graphics == NULL || decoded == NULL || decoded_size == NULL
         || graphics->offset_count < 2U || chunk + 1U >= graphics->offset_count)
@@ -176,11 +178,28 @@ int WG_GraphicsDecodeChunk(const wg_graphics_t *graphics, size_t chunk,
 
     start = graphics->offsets[chunk];
     end = graphics->offsets[next];
-    if (end < start || end > graphics->graph.size || end - start < 4U)
+    if (end < start || end > graphics->graph.size)
     {
         return 0;
     }
-    expanded_size = WG_ReadLE32(graphics->graph.data + start);
+    if ((graphics->variant == WG_GAME_WOLF3D_FULL_GT_14 && chunk == 135U)
+        || (graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14 && chunk == 147U))
+    {
+        /* The generated headers give TILE8 an implicit size. Keep it bounded;
+           unlike the original routine, Huffman expansion must never read into
+           the following chunk if a particular data revision disagrees. */
+        expanded_size = 72U * 8U * 8U;
+        payload_offset = 0;
+    }
+    else
+    {
+        if (end - start < 4U)
+        {
+            return 0;
+        }
+        expanded_size = WG_ReadLE32(graphics->graph.data + start);
+        payload_offset = 4U;
+    }
     if (expanded_size == 0)
     {
         return 0;
@@ -191,8 +210,8 @@ int WG_GraphicsDecodeChunk(const wg_graphics_t *graphics, size_t chunk,
     {
         return 0;
     }
-    if (!WG_HuffmanExpand(graphics->graph.data + start + 4U,
-                          end - start - 4U, output, expanded_size,
+    if (!WG_HuffmanExpand(graphics->graph.data + start + payload_offset,
+                          end - start - payload_offset, output, expanded_size,
                           graphics->dictionary))
     {
         free(output);

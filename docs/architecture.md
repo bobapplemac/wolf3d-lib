@@ -22,6 +22,14 @@ packing, native pointer width, or unaligned host access is part of the format
 contract. Malformed offsets and compressed streams fail at the resource
 boundary instead of propagating unchecked pointers into game code.
 
+The generated headers assign an implicit 4,608-byte expanded size to the TILE8
+chunk. The supplied v1.4 streams do not produce that many bytes before their
+record boundary under the otherwise verified Huffman tree. The original cache
+routine has no input bound and can read into its scratch buffer. wolf3dgeneric
+does not reproduce that unsafe over-read: TILE8 remains isolated pending a
+reference-behavior capture. All explicit-size graphics chunks used by the title,
+menus, status bar, and game flow are decoded and corpus-tested.
+
 ## Presentation boundary
 
 The core owns one 320x200 byte-per-pixel framebuffer and a 256-entry RGB
