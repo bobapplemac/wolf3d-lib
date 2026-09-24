@@ -44,6 +44,7 @@ typedef enum wg_key
     WG_KEY_RIGHT_SHIFT = 0x36,
     WG_KEY_ALT = 0x38,
     WG_KEY_SPACE = 0x39,
+    WG_KEY_PAUSE = 0xe1,
     WG_KEY_LEFT = 0x4b,
     WG_KEY_UP = 0x48,
     WG_KEY_RIGHT = 0x4d,

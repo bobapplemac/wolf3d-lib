@@ -54,6 +54,7 @@ typedef struct wg_game_session
     uint8_t audio_active;
     uint8_t sound_positioned;
     uint8_t game_over;
+    uint8_t paused;
     uint16_t death_tics;
     unsigned map_number;
     uint32_t level_start_score;
@@ -566,6 +567,21 @@ static int WG_GameSessionRender(void)
     return WL_DrawStatusBar(WG_ScreenBuffer, &wg_game.graphics, &status);
 }
 
+static int WG_GameSessionSetPaused(int paused)
+{
+    wg_game.paused = paused != 0;
+    memset(wg_game.keys, 0, sizeof(wg_game.keys));
+    wg_game.mouse_buttons = 0U;
+    wg_game.mouse_x = 0;
+    wg_game.mouse_y = 0;
+    ID_SD_MusicSetPaused(wg_game.music, wg_game.paused);
+    if (wg_game.paused)
+    {
+        return WL_DrawPaused(WG_ScreenBuffer, &wg_game.graphics);
+    }
+    return WG_GameSessionRender();
+}
+
 static int WG_GameSessionOpen(unsigned map_number)
 {
     wg_maps_t maps;
@@ -834,6 +850,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int player_fire_view,
                                   int pickup_view,
                                   int door_use_view,
+                                  int pause_view,
                                   unsigned actor_tics,
                                   unsigned forward_tics)
 {
@@ -1205,6 +1222,10 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    if (pause_view && !WL_DrawPaused(WG_ScreenBuffer, &graphics))
+    {
+        goto cleanup;
+    }
     success = 1;
 
 cleanup:
@@ -1293,7 +1314,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--boss-death-view"),
             WG_HasArgument(argc, argv, "--player-fire-view"),
             WG_HasArgument(argc, argv, "--pickup-view"),
-            WG_HasArgument(argc, argv, "--door-use-view"), actor_tics,
+            WG_HasArgument(argc, argv, "--door-use-view"),
+            WG_HasArgument(argc, argv, "--pause-view"), actor_tics,
             forward_tics))
     {
         wolf3dgeneric_Shutdown();
@@ -1330,6 +1352,27 @@ wg_result_t wolf3dgeneric_Run(void)
             }
             if (event.type == WG_EVENT_KEY)
             {
+                if (wg_game.active && wg_game.paused && event.pressed)
+                {
+                    if (!WG_GameSessionSetPaused(0))
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                    last_ticks = WG_GetTicksMs();
+                    accumulator = 0U;
+                    continue;
+                }
+                if (wg_game.active && event.key == WG_KEY_PAUSE
+                    && event.pressed)
+                {
+                    if (!WG_GameSessionSetPaused(1))
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                    last_ticks = WG_GetTicksMs();
+                    accumulator = 0U;
+                    continue;
+                }
                 if (event.key == WG_KEY_ESCAPE && event.pressed)
                 {
                     return WG_RESULT_QUIT;
@@ -1351,7 +1394,7 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
             }
             else if (event.type == WG_EVENT_MOUSE_MOTION
-                     && wg_game.active)
+                     && wg_game.active && !wg_game.paused)
             {
                 wg_game.mouse_x += event.x;
                 wg_game.mouse_y += event.y;
@@ -1362,6 +1405,16 @@ wg_result_t wolf3dgeneric_Run(void)
             {
                 uint8_t mask = (uint8_t)(1U << (event.button - 1U));
 
+                if (wg_game.paused && event.pressed)
+                {
+                    if (!WG_GameSessionSetPaused(0))
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                    last_ticks = WG_GetTicksMs();
+                    accumulator = 0U;
+                    continue;
+                }
                 if (event.pressed)
                 {
                     wg_game.mouse_buttons |= mask;
@@ -1380,6 +1433,11 @@ wg_result_t wolf3dgeneric_Run(void)
             unsigned ticks_run = 0U;
 
             last_ticks = now;
+            if (wg_game.paused)
+            {
+                accumulator = 0U;
+                elapsed = 0U;
+            }
             if (elapsed > 250U)
             {
                 elapsed = 250U;

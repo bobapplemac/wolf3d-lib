@@ -7,10 +7,28 @@
 #include "WL_AGENT.h"
 #include "WL_GAME.h"
 #include "WL_STATE.h"
+#include "ID_VL.h"
 
 #define WL_BASE_MOVE 35
 #define WL_RUN_MOVE 70
 #define WL_MOUSE_ADJUSTMENT 5
+
+int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics)
+{
+    size_t chunk;
+
+    if (framebuffer == NULL || graphics == NULL)
+    {
+        return 0;
+    }
+    /* The supplied Apogee v1.4 WL1 graph uses the later layout also used by
+       its status bar: PAUSEDPIC is chunk 145 rather than the source release's
+       early generated-header values. */
+    chunk = graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14 ? 145U : 133U;
+    /* Original LatchDrawPic(20-4, 80-2*8, PAUSEDPIC): its x unit was
+       eight pixels, hence the centered 128,64 destination below. */
+    return WG_VideoDrawPicture(framebuffer, graphics, chunk, 128, 64);
+}
 
 size_t WL_MusicChunkForMap(unsigned map_number)
 {

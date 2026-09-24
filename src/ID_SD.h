@@ -64,6 +64,7 @@ void ID_SD_MusicDestroy(id_sd_music_t *music);
 int ID_SD_MusicStart(id_sd_music_t *music, const uint8_t *chunk,
                      size_t chunk_size);
 void ID_SD_MusicStop(id_sd_music_t *music);
+void ID_SD_MusicSetPaused(id_sd_music_t *music, int paused);
 int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
                       size_t frame_count);
 int ID_SD_EffectStart(id_sd_music_t *music, const uint8_t *chunk,

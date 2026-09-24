@@ -27,6 +27,7 @@ struct id_sd_music
     uint16_t digital_priority;
     uint8_t digital_left;
     uint8_t digital_right;
+    uint8_t music_paused;
 };
 
 int ID_SD_IMFStart(id_sd_imf_t *sequence, const uint8_t *chunk,
@@ -500,6 +501,7 @@ int ID_SD_MusicStart(id_sd_music_t *music, const uint8_t *chunk,
         return 0;
     }
     ID_SD_MusicStop(music);
+    music->music_paused = 0U;
     if (!ID_SD_SampleClockStart(&music->clock, music->sample_rate)
         || !ID_SD_IMFStart(&music->sequence, chunk, chunk_size,
                            ID_SD_MusicWrite, music))
@@ -520,6 +522,29 @@ void ID_SD_MusicStop(id_sd_music_t *music)
         return;
     }
     ID_SD_IMFStop(&music->sequence);
+    OPL3_WriteReg(&music->chip, 0xbdU, 0U);
+    for (channel = 1U; channel < 9U; ++channel)
+    {
+        OPL3_WriteReg(&music->chip, (uint16_t)(0xb0U + channel), 0U);
+    }
+}
+
+void ID_SD_MusicSetPaused(id_sd_music_t *music, int paused)
+{
+    uint16_t channel;
+
+    if (music == NULL)
+    {
+        return;
+    }
+    music->music_paused = paused != 0;
+    if (!music->music_paused)
+    {
+        return;
+    }
+
+    /* SD_MusicOff silenced the rhythm register and music channels while
+       leaving the sequencer position intact for SD_MusicOn. */
     OPL3_WriteReg(&music->chip, 0xbdU, 0U);
     for (channel = 1U; channel < 9U; ++channel)
     {
@@ -552,7 +577,10 @@ int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
         ticks = ID_SD_SampleClockAdvance(&music->clock, frames);
         while (ticks-- != 0U)
         {
-            ID_SD_IMFService(&music->sequence);
+            if (!music->music_paused)
+            {
+                ID_SD_IMFService(&music->sequence);
+            }
             if (++music->effect_divider == 5U)
             {
                 music->effect_divider = 0U;

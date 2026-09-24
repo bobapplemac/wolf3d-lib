@@ -42,6 +42,8 @@ keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
 Shift runs, Control attacks, Space uses, 1-4 select weapons, and Escape quits.
 Raw mouse motion turns and moves with the original default sensitivity; left
 button attacks, right button strafes, and middle button uses.
+The Pause key displays the original pause plaque, freezes game tics, and
+temporarily silences the IMF sequencer until the next key or mouse-button press.
 The game simulation advances at the original 70 Hz while the host remains free
 to present frames independently. The Win32 host streams each map's original IMF
 music through the official Nuked-OPL3 implementation at 48 kHz:
@@ -102,6 +104,12 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame 
 Pass a zero-based `--map` number to capture another original map. The headless
 host can also print the indexed framebuffer's deterministic FNV-1a value with
 `--frame-hash`.
+
+To render the original pause plaque over the initial play view, use:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pause-view --frame-hash --dump-frame paused.ppm
+```
 
 The deterministic `--forward-tics N` diagnostic holds the original forward
 control for exactly `N` complete play-loop tics, including doors, pushwalls,

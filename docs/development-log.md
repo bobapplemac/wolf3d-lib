@@ -678,3 +678,26 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 1 --play-view --fra
   Keyboard and mouse states combine through the same attack/use edge handling.
 - Added focused deterministic tests for simultaneous mouse turn and forward
   movement; the complete 37-test WL1/WL6 suite remains stable on x86 and x64.
+
+## 2026-09-24: Original Pause-key behavior
+
+- Mapped the PC Pause key explicitly at the generic input boundary, preserving
+  its original special status rather than treating it as a normal held key.
+- Restored `CheckKeys` pause semantics: simulation and IMF sequence time freeze,
+  the music channels key off without rewinding, and any subsequent key or mouse
+  button acknowledges the pause and redraws the live game view.
+- Draws the original 64x32 `PAUSEDPIC` at the original `(128,64)` coordinates.
+  The supplied late Apogee WL1 graph places this at chunk 145 rather than either
+  generated WL1 header retained in the source release; WL6 uses chunk 133.
+- Both editions decode to the identical pause overlay framebuffer hash
+  `ee855388f16e0af7` on an otherwise color-zero 320x200 frame.
+- The complete E1M1 paused view is identical for WL1 and WL6, with indexed
+  framebuffer FNV-1a `fb088c39d6f75570`.
+
+![Original pause plaque over the live E1M1 view](../out/paused.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pause-view --frame-hash --dump-frame out\paused.ppm
+```

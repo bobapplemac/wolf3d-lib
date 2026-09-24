@@ -271,6 +271,13 @@ default `PollMouseMove` scale (`x * 10 / 8`, `y * 20 / 8`) before the same
 per-tic ±100 control clamp used by keyboard/demo input. The original default
 button mapping is retained: left attacks, right strafes, and middle uses.
 
+The DOS Pause interrupt remains a distinct generic key rather than masquerading
+as an ordinary scan code. While paused, the host continues pumping PCM so sound
+effects and device transport remain live, but gameplay tics and IMF sequence
+time stop. `ID_SD_MusicSetPaused` applies the original `SD_MusicOff` channel
+key-offs without discarding the sequencer position; the next key or mouse-button
+press restores play and redraws the unobscured game frame.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a

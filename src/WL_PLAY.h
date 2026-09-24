@@ -6,6 +6,7 @@
 
 struct wg_level;
 struct wg_view_tables;
+struct wg_graphics;
 
 typedef struct wl_input
 {
@@ -30,6 +31,7 @@ typedef struct wl_play_state
 
 void WL_PlayStateReset(wl_play_state_t *state);
 size_t WL_MusicChunkForMap(unsigned map_number);
+int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics);
 int WL_PlayTick(struct wg_level *level,
                 const struct wg_view_tables *tables,
                 wl_play_state_t *state, const wl_input_t *input);

@@ -2387,6 +2387,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t hud_hash = 1469598103934665603ULL;
     uint64_t open_view_hash = 1469598103934665603ULL;
     uint64_t guard_view_hash = 1469598103934665603ULL;
+    uint64_t pause_hash = 1469598103934665603ULL;
     size_t index;
     size_t actor_index;
     size_t decoded_graphics = 0;
@@ -2450,6 +2451,30 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(picture_height == 40U);
             free(picture_pixels);
         }
+        CHECK(WG_GraphicsDecodePicture(
+            &graphics,
+            expected_variant == WG_GAME_WOLF3D_SHAREWARE_14 ? 145U : 133U,
+            &picture_pixels, &picture_width, &picture_height));
+        if (picture_pixels != NULL)
+        {
+            printf("%s pause picture dimensions: %ux%u\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned)picture_width, (unsigned)picture_height);
+            CHECK(picture_width == 64U);
+            CHECK(picture_height == 32U);
+            free(picture_pixels);
+        }
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawPaused(framebuffer, &graphics));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            pause_hash ^= framebuffer[index];
+            pause_hash *= 1099511628211ULL;
+        }
+        printf("%s pause overlay FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)pause_hash);
+        CHECK(pause_hash == 0xee855388f16e0af7ULL);
         for (index = 0; index + 1U < graphics.offset_count; ++index)
         {
             uint8_t *chunk_data = NULL;

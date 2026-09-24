@@ -68,7 +68,9 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
 
             event.type = WG_EVENT_KEY;
             event.pressed = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-            event.key = (uint16_t)((lparam >> 16) & 0xff);
+            event.key = wparam == VK_PAUSE
+                            ? WG_KEY_PAUSE
+                            : (uint16_t)((lparam >> 16) & 0xff);
             event.x = 0;
             event.y = 0;
             event.button = 0;
