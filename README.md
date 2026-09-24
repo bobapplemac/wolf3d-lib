@@ -46,8 +46,9 @@ view, static scenery, ordinary enemies and dead guards, ready pistol, and status
 bar. Patrol movement, actor awareness, ordinary enemy chase movement, and the
 original guard/officer/mutant/SS hitscan and dog melee attack states are active.
 Hans, Gretel, Mecha-Hitler, and Hitler also retain their original hitscan burst
-states. Projectile bosses, boss death transitions, and pushwall motion are not
-yet active:
+states, and Dr. Schabbs throws moving, colliding syringe projectiles. The other
+projectile bosses, boss death transitions, and pushwall motion are not yet
+active:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -82,6 +83,13 @@ third firing frame and resulting health change, use:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-fire-view --frame-hash --dump-frame hans-firing.ppm
+```
+
+With the full WL6 data, the projectile diagnostic executes Schabbs's original
+throw action on E2M9 and advances the four-frame syringe actor into flight:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 18 --needle-view --frame-hash --dump-frame schabbs-needle.ppm
 ```
 
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz

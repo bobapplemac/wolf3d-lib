@@ -177,6 +177,25 @@ static wg_actor_t *WG_FindDogViewActor(wg_level_t *level)
     return NULL;
 }
 
+static wg_actor_t *WG_FindActorClass(wg_level_t *level,
+                                     wg_actor_class_t actor_class)
+{
+    size_t index;
+
+    if (level == NULL)
+    {
+        return NULL;
+    }
+    for (index = 0; index < level->actor_count; ++index)
+    {
+        if (level->actors[index].actor_class == actor_class)
+        {
+            return &level->actors[index];
+        }
+    }
+    return NULL;
+}
+
 static int WG_SetActorViewPose(wg_level_t *level, const wg_actor_t *actor,
                                int distance)
 {
@@ -265,6 +284,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int patrol_view, int alert_view,
                                   int chase_view, int fire_view, int bite_view,
                                   int boss_fire_view,
+                                  int needle_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -304,6 +324,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         }
     }
     if (!chase_view && !fire_view && !bite_view && !boss_fire_view
+        && !needle_view
         && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
@@ -411,6 +432,44 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
+    if (needle_view)
+    {
+        wg_actor_t *actor = WG_FindActorClass(&level, WG_ACTOR_SCHABBS);
+        int32_t actor_x;
+        int32_t actor_y;
+        uint8_t actor_tile_x;
+        uint8_t actor_tile_y;
+
+        if (!WG_SetActorViewPose(&level, actor, 2)
+            || actor->attack_shape == 0U)
+        {
+            goto cleanup;
+        }
+        actor_x = actor->x;
+        actor_y = actor->y;
+        actor_tile_x = actor->tile_x;
+        actor_tile_y = actor->tile_y;
+        actor->state = WG_STATE_SHOOT2;
+        actor->tic_count = 1;
+        actor->shape = (uint16_t)(actor->attack_shape + 1U);
+        actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE;
+        WG_RandomSeed(&level.random, 0U);
+        if (!WL_TickActors(&level, 1U))
+        {
+            goto cleanup;
+        }
+        actor->x = actor_x;
+        actor->y = actor_y;
+        actor->tile_x = actor_tile_x;
+        actor->tile_y = actor_tile_y;
+        actor->state = WG_STATE_SHOOT2;
+        actor->tic_count = 100;
+        actor->shape = (uint16_t)(actor->attack_shape + 1U);
+        if (!WL_TickActors(&level, 8U))
+        {
+            goto cleanup;
+        }
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
@@ -497,7 +556,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--chase-view"),
             WG_HasArgument(argc, argv, "--fire-view"),
             WG_HasArgument(argc, argv, "--bite-view"),
-            WG_HasArgument(argc, argv, "--boss-fire-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--boss-fire-view"),
+            WG_HasArgument(argc, argv, "--needle-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

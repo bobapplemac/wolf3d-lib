@@ -259,3 +259,25 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-fire-view --frame-hash --dump-frame out\hans-firing.ppm
 ```
+
+## 2026-09-24: Schabbs syringe projectiles
+
+- Scope: original `T_Schabb` attack probability, two-state throw sequence,
+  360-angle aim, four-frame syringe animation, `T_Projectile` motion, wall and
+  player collision, damage, removal, and bounded actor-slot reuse.
+- Focused tests verify the 30-tic windup and throw action, exact projectile
+  speed and first animation transition, straight-ahead fixed-point movement,
+  seeded 21-point player damage, and solid-wall removal.
+- The full-data diagnostic uses E2M9, holds Schabbs in his second throw frame,
+  and advances the syringe nine original 70 Hz tics toward the player.
+- 320x200 indexed-frame FNV-1a: `581ce5d3716e7ca0`
+- This checkpoint requires WL6 because the shareware WL1 data contains only
+  Episode 1.
+
+![Dr. Schabbs throwing a syringe](../out/schabbs-needle.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 18 --needle-view --frame-hash --dump-frame out\schabbs-needle.ppm
+```

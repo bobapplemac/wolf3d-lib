@@ -26,6 +26,7 @@
 #define WG_SPR_BOSS_W1 296U
 #define WG_SPR_BOSS_SHOOT1 300U
 #define WG_SPR_SCHABB_W1 307U
+#define WG_SPR_SCHABB_SHOOT1 311U
 #define WG_SPR_FAKE_W1 321U
 #define WG_SPR_MECHA_W1 334U
 #define WG_SPR_MECHA_SHOOT1 338U
@@ -102,6 +103,8 @@ static uint16_t WL_BossAttackShape(wg_actor_class_t actor_class)
     {
     case WG_ACTOR_BOSS:
         return WG_SPR_BOSS_SHOOT1;
+    case WG_ACTOR_SCHABBS:
+        return WG_SPR_SCHABB_SHOOT1;
     case WG_ACTOR_MECHA_HITLER:
         return WG_SPR_MECHA_SHOOT1;
     case WG_ACTOR_GRETEL:
@@ -159,6 +162,7 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
     actor->attack_shape = WL_AttackShape(actor_class);
     actor->rotate = 1U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
+    actor->angle = 0U;
     actor->flags = WG_ACTOR_FLAG_SHOOTABLE;
     if (!patrol
         && level->ambush_tiles[(size_t)tile_y * WG_LEVEL_SIZE + tile_x])
@@ -224,6 +228,7 @@ int WL_SpawnDeadGuard(struct wg_level *level, uint8_t tile_x, uint8_t tile_y)
     actor->attack_shape = 0U;
     actor->rotate = 0U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
+    actor->angle = 0U;
     actor->flags = 0U;
     actor->tic_count = 0;
     actor->reaction_time = 0;
@@ -290,6 +295,7 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
     actor->attack_shape = WL_BossAttackShape(actor_class);
     actor->rotate = 0U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
+    actor->angle = 0U;
     actor->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_AMBUSH;
     actor->tic_count = 0;
     actor->reaction_time = 0;
@@ -329,6 +335,7 @@ int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
     actor->attack_shape = 0U;
     actor->rotate = 0U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
+    actor->angle = 0U;
     actor->flags = WG_ACTOR_FLAG_AMBUSH;
     actor->tic_count = WG_RandomNext(&level->random) % 10U;
     actor->reaction_time = 0;

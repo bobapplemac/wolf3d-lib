@@ -646,6 +646,10 @@ int WL_DrawScaleds(
         wg_actor_t *actor = &level->actors[index];
         wg_visible_object_t candidate;
 
+        if ((actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            continue;
+        }
         actor->flags = (uint16_t)(actor->flags & 0xfff7U);
         if (WG_ActorTileIsVisible(level, visible_tiles,
                                   actor->tile_x, actor->tile_y)

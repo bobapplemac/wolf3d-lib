@@ -11,6 +11,7 @@
 #define WG_ACTOR_FLAG_FIRST_ATTACK 0x0020U
 #define WG_ACTOR_FLAG_AMBUSH 0x0040U
 #define WG_ACTOR_FLAG_ATTACK_PENDING 0x0100U
+#define WG_ACTOR_FLAG_REMOVED 0x0200U
 
 typedef enum wg_actor_class
 {
@@ -28,7 +29,8 @@ typedef enum wg_actor_class
     WG_ACTOR_REAL_HITLER,
     WG_ACTOR_GRETEL,
     WG_ACTOR_GIFT,
-    WG_ACTOR_FAT
+    WG_ACTOR_FAT,
+    WG_ACTOR_NEEDLE
 } wg_actor_class_t;
 
 typedef enum wg_ghost_kind
@@ -70,6 +72,10 @@ typedef enum wg_actor_state
     WG_STATE_DOG_JUMP3,
     WG_STATE_DOG_JUMP4,
     WG_STATE_DOG_JUMP5,
+    WG_STATE_NEEDLE1,
+    WG_STATE_NEEDLE2,
+    WG_STATE_NEEDLE3,
+    WG_STATE_NEEDLE4,
     WG_STATE_ATTACK_PENDING
 } wg_actor_state_t;
 
@@ -83,6 +89,7 @@ typedef struct wg_actor
     uint8_t direction;
     uint8_t rotate;
     uint8_t area_number;
+    uint16_t angle;
     uint16_t base_shape;
     uint16_t attack_shape;
     uint16_t flags;

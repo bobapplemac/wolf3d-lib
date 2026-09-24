@@ -196,6 +196,7 @@ static void TestBossAndGhostSetup(void)
     CHECK(level.actors[0].attack_shape == 300U);
     CHECK(level.actors[1].attack_shape == 389U);
     CHECK(level.actors[2].attack_shape == 0U);
+    CHECK(level.actors[4].attack_shape == 311U);
     CHECK(level.actors[6].attack_shape == 338U);
 }
 
@@ -641,6 +642,81 @@ static void TestBossShootingStates(void)
             CHECK(actor->shape == attack_shapes[index] + 1U);
         }
     }
+}
+
+static void TestSchabbsNeedle(void)
+{
+    wg_level_t level;
+    wg_actor_t *schabbs;
+    wg_actor_t *needle;
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 5 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 5U;
+    level.player_tile_y = 2U;
+    level.player_health = 100U;
+    level.difficulty = WG_DIFFICULTY_HARD;
+    level.actor_count = 1U;
+    schabbs = &level.actors[0];
+    schabbs->x = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    schabbs->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    schabbs->tile_x = 2U;
+    schabbs->tile_y = 2U;
+    schabbs->area_number = 0U;
+    schabbs->direction = 0U;
+    schabbs->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_ATTACK_MODE;
+    schabbs->actor_class = WG_ACTOR_SCHABBS;
+    schabbs->base_shape = 307U;
+    schabbs->attack_shape = 311U;
+    schabbs->state = WG_STATE_SHOOT1;
+    schabbs->tic_count = 30;
+    schabbs->shape = 311U;
+    schabbs->speed = 1536;
+    WG_RandomSeed(&level.random, 0U);
+
+    CHECK(WL_TickActors(&level, 30U));
+    CHECK(schabbs->state == WG_STATE_SHOOT2);
+    CHECK(schabbs->tic_count == 10);
+    CHECK(schabbs->shape == 312U);
+    CHECK(level.actor_count == 1U);
+    schabbs->tic_count = 1;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actor_count == 2U);
+    needle = &level.actors[1];
+    CHECK(needle->actor_class == WG_ACTOR_NEEDLE);
+    CHECK(needle->state == WG_STATE_NEEDLE2);
+    CHECK(needle->tic_count == 6);
+    CHECK(needle->shape == 318U);
+    CHECK(needle->angle == 0U);
+    CHECK(needle->speed == 0x2000);
+    CHECK(needle->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x2000);
+    CHECK(needle->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+
+    needle->x = level.player_x - 0xc000;
+    needle->y = level.player_y;
+    needle->tile_x = 4U;
+    needle->tile_y = 2U;
+    schabbs->flags |= WG_ACTOR_FLAG_REMOVED;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK((needle->flags & WG_ACTOR_FLAG_REMOVED) != 0U);
+    CHECK(level.player_health == 79U);
+
+    needle->x = 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    needle->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    needle->tile_x = 3U;
+    needle->tile_y = 2U;
+    needle->angle = 0U;
+    needle->state = WG_STATE_NEEDLE1;
+    needle->tic_count = 6;
+    needle->flags = 0U;
+    level.tiles[2U * WG_LEVEL_SIZE + 4U] = 1U;
+    level.player_x = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 10U;
+    CHECK(WL_TickActors(&level, 3U));
+    CHECK((needle->flags & WG_ACTOR_FLAG_REMOVED) != 0U);
+    CHECK(level.player_health == 79U);
 }
 
 static void TestHuffman(void)
@@ -1411,6 +1487,7 @@ int main(int argc, char **argv)
     TestOrdinaryShootingStates();
     TestDogChaseAndBite();
     TestBossShootingStates();
+    TestSchabbsNeedle();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

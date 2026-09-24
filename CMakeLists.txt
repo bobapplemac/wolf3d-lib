@@ -185,5 +185,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(bite-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "2391755b562c8744")
+        add_test(NAME needle-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --map 18
+            --needle-view --frame-hash)
+        set_tests_properties(needle-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "581ce5d3716e7ca0")
     endif()
 endif()

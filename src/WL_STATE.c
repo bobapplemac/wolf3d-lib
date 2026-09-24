@@ -2,12 +2,20 @@
 #include "WL_STATE.h"
 
 #include <limits.h>
+#include <math.h>
 #include <string.h>
 
 #include "WG_FIXED.h"
 #include "WL_AGENT.h"
+#include "WL_MAIN.h"
 
 #define WG_NO_DIRECTION 8U
+#define WG_PROJECTILE_SIZE INT32_C(0xc000)
+#define WG_PROJECTILE_COLLISION_SIZE INT32_C(0x2000)
+#define WG_SPR_HYPO1 317U
+#define WG_TWO_PI 6.283185314
+
+static int WL_BeginAttack(wg_actor_t *actor);
 
 static int WL_IsPathState(wg_actor_state_t state)
 {
@@ -39,6 +47,11 @@ static int WL_IsShootState(wg_actor_state_t state)
 static int WL_IsDogJumpState(wg_actor_state_t state)
 {
     return state >= WG_STATE_DOG_JUMP1 && state <= WG_STATE_DOG_JUMP5;
+}
+
+static int WL_IsNeedleState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_NEEDLE1 && state <= WG_STATE_NEEDLE4;
 }
 
 static int32_t WL_StateDuration(wg_actor_state_t state)
@@ -730,6 +743,162 @@ static void WL_T_DogChase(wg_level_t *level, size_t actor_index,
     }
 }
 
+static const wg_view_tables_t *WL_ProjectileTrigTables(void)
+{
+    static wg_view_tables_t tables;
+    static int initialized;
+
+    if (!initialized)
+    {
+        WG_ViewBuildTrigTables(&tables);
+        initialized = 1;
+    }
+    return &tables;
+}
+
+static int WL_ProjectileTryMove(const wg_level_t *level,
+                                const wg_actor_t *actor)
+{
+    int low_x;
+    int low_y;
+    int high_x;
+    int high_y;
+    int x;
+    int y;
+
+    if (actor->x < WG_PROJECTILE_COLLISION_SIZE
+        || actor->y < WG_PROJECTILE_COLLISION_SIZE
+        || actor->x >= WG_LEVEL_SIZE * WG_FIXED_ONE
+                       - WG_PROJECTILE_COLLISION_SIZE
+        || actor->y >= WG_LEVEL_SIZE * WG_FIXED_ONE
+                       - WG_PROJECTILE_COLLISION_SIZE)
+    {
+        return 0;
+    }
+    low_x = (actor->x - WG_PROJECTILE_COLLISION_SIZE) / WG_FIXED_ONE;
+    low_y = (actor->y - WG_PROJECTILE_COLLISION_SIZE) / WG_FIXED_ONE;
+    high_x = (actor->x + WG_PROJECTILE_COLLISION_SIZE) / WG_FIXED_ONE;
+    high_y = (actor->y + WG_PROJECTILE_COLLISION_SIZE) / WG_FIXED_ONE;
+    for (y = low_y; y <= high_y; ++y)
+    {
+        for (x = low_x; x <= high_x; ++x)
+        {
+            if (level->tiles[(size_t)y * WG_LEVEL_SIZE + (size_t)x] != 0U)
+            {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+static void WL_RemoveProjectile(wg_actor_t *actor)
+{
+    actor->state = WG_STATE_NONE;
+    actor->flags |= WG_ACTOR_FLAG_REMOVED;
+}
+
+static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
+                            int32_t tics)
+{
+    const wg_view_tables_t *tables = WL_ProjectileTrigTables();
+    const int32_t *cosine = WG_ViewCosineTable(tables);
+    int32_t speed = actor->speed * tics;
+    int32_t delta_x = WG_FixedMul(speed, cosine[actor->angle]);
+    int32_t delta_y = -WG_FixedMul(speed, tables->sine[actor->angle]);
+
+    if (delta_x > WG_FIXED_ONE)
+    {
+        delta_x = WG_FIXED_ONE;
+    }
+    if (delta_y > WG_FIXED_ONE)
+    {
+        delta_y = WG_FIXED_ONE;
+    }
+    actor->x += delta_x;
+    actor->y += delta_y;
+    if (!WL_ProjectileTryMove(level, actor))
+    {
+        WL_RemoveProjectile(actor);
+        return;
+    }
+    delta_x = actor->x - level->player_x;
+    delta_y = actor->y - level->player_y;
+    delta_x = delta_x < 0 ? -delta_x : delta_x;
+    delta_y = delta_y < 0 ? -delta_y : delta_y;
+    if (delta_x < WG_PROJECTILE_SIZE && delta_y < WG_PROJECTILE_SIZE)
+    {
+        WL_TakeDamage(level, (WG_RandomNext(&level->random) >> 3) + 20U);
+        WL_RemoveProjectile(actor);
+        return;
+    }
+    actor->tile_x = (uint8_t)(actor->x / WG_FIXED_ONE);
+    actor->tile_y = (uint8_t)(actor->y / WG_FIXED_ONE);
+}
+
+static void WL_T_SchabbThrow(wg_level_t *level, const wg_actor_t *actor)
+{
+    wg_actor_t *projectile;
+    double angle;
+    size_t index;
+
+    projectile = NULL;
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        if ((level->actors[index].flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            projectile = &level->actors[index];
+            break;
+        }
+    }
+    if (projectile == NULL && level->actor_count >= WG_MAX_ACTORS)
+    {
+        return;
+    }
+    angle = atan2((double)(actor->y - level->player_y),
+                  (double)(level->player_x - actor->x));
+    if (angle < 0.0)
+    {
+        angle += WG_TWO_PI;
+    }
+    if (projectile == NULL)
+    {
+        projectile = &level->actors[level->actor_count++];
+    }
+    memset(projectile, 0, sizeof(*projectile));
+    projectile->x = actor->x;
+    projectile->y = actor->y;
+    projectile->shape = WG_SPR_HYPO1;
+    projectile->tile_x = actor->tile_x;
+    projectile->tile_y = actor->tile_y;
+    projectile->direction = WG_NO_DIRECTION;
+    projectile->area_number = actor->area_number;
+    projectile->angle = (uint16_t)(angle / WG_TWO_PI * WG_ANGLES);
+    projectile->base_shape = WG_SPR_HYPO1;
+    projectile->tic_count = 1;
+    projectile->speed = 0x2000;
+    projectile->state = WG_STATE_NEEDLE1;
+    projectile->actor_class = WG_ACTOR_NEEDLE;
+}
+
+static void WL_T_Schabb(wg_level_t *level, size_t actor_index,
+                        int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int dodge = 0;
+
+    if (WL_CheckLine(level, actor))
+    {
+        if (WG_RandomNext(&level->random) < tics * 8)
+        {
+            WL_BeginAttack(actor);
+            return;
+        }
+        dodge = 1;
+    }
+    WL_MoveChasingActor(level, actor_index, tics, dodge);
+}
+
 static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
                                      wg_actor_state_t state)
 {
@@ -767,6 +936,8 @@ static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
     case WG_ACTOR_MECHA_HITLER:
     case WG_ACTOR_REAL_HITLER:
         return stage == 1U ? 30 : (stage <= 6U ? 10 : 0);
+    case WG_ACTOR_SCHABBS:
+        return stage == 1U ? 30 : (stage == 2U ? 10 : 0);
     default:
         return 0;
     }
@@ -789,6 +960,8 @@ static unsigned WL_ShootStateCount(wg_actor_class_t actor_class)
     case WG_ACTOR_MECHA_HITLER:
     case WG_ACTOR_REAL_HITLER:
         return 6U;
+    case WG_ACTOR_SCHABBS:
+        return 2U;
     default:
         return 0U;
     }
@@ -814,6 +987,8 @@ static int WL_ShootStateHasAction(const wg_actor_t *actor)
     case WG_ACTOR_MECHA_HITLER:
     case WG_ACTOR_REAL_HITLER:
         return stage >= 2U && stage <= 6U;
+    case WG_ACTOR_SCHABBS:
+        return stage == 2U;
     default:
         return 0;
     }
@@ -992,6 +1167,26 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
     {
         wg_actor_t *actor = &level->actors[index];
 
+        if ((actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            continue;
+        }
+        if (WL_IsNeedleState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                actor->state = actor->state == WG_STATE_NEEDLE4
+                                   ? WG_STATE_NEEDLE1
+                                   : (wg_actor_state_t)(actor->state + 1);
+                actor->tic_count += 6;
+                actor->shape = (uint16_t)(WG_SPR_HYPO1
+                                          + actor->state
+                                            - WG_STATE_NEEDLE1);
+            }
+            WL_T_Projectile(level, actor, (int32_t)tics);
+            continue;
+        }
         if (WL_IsPathState(actor->state))
         {
             if (actor->tic_count != 0)
@@ -1028,6 +1223,7 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 continue;
             }
             if (actor->actor_class != WG_ACTOR_DOG
+                && actor->actor_class != WG_ACTOR_SCHABBS
                 && !WL_UsesStandardChase(actor->actor_class))
             {
                 continue;
@@ -1043,6 +1239,10 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             if (actor->actor_class == WG_ACTOR_DOG)
             {
                 WL_T_DogChase(level, index, (int32_t)tics);
+            }
+            else if (actor->actor_class == WG_ACTOR_SCHABBS)
+            {
+                WL_T_Schabb(level, index, (int32_t)tics);
             }
             else
             {
@@ -1068,7 +1268,14 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
 
                 if (WL_ShootStateHasAction(actor))
                 {
-                    WL_T_Shoot(level, actor);
+                    if (actor->actor_class == WG_ACTOR_SCHABBS)
+                    {
+                        WL_T_SchabbThrow(level, actor);
+                    }
+                    else
+                    {
+                        WL_T_Shoot(level, actor);
+                    }
                 }
                 if (stage >= WL_ShootStateCount(actor->actor_class))
                 {
@@ -1096,6 +1303,11 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 && WL_UsesStandardChase(actor->actor_class))
             {
                 WL_T_Chase(level, index, (int32_t)tics);
+            }
+            else if (WL_ChaseHasThink(actor->state)
+                     && actor->actor_class == WG_ACTOR_SCHABBS)
+            {
+                WL_T_Schabb(level, index, (int32_t)tics);
             }
             continue;
         }
