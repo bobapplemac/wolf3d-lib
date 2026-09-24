@@ -13,6 +13,9 @@ if(NOT WIN32)
 endif()
 
 add_library(wolf3dgeneric STATIC
+    src/wg_compression.c
+    src/wg_data.c
+    src/wg_file.c
     src/wolf3dgeneric.c
 )
 
@@ -76,4 +79,17 @@ endif()
 
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     add_test(NAME bootstrap-headless COMMAND wolf3dgeneric-headless --bootstrap-test)
+
+    add_executable(wg-tests tests/wg_tests.c)
+    wg_configure_host(wg-tests)
+    add_test(NAME unit-tests COMMAND wg-tests)
+
+    set(WG_TEST_WL1_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL1 data")
+    set(WG_TEST_WL6_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL6 data")
+    if(WG_TEST_WL1_PATH)
+        add_test(NAME data-wl1 COMMAND wg-tests --data wl1 "${WG_TEST_WL1_PATH}")
+    endif()
+    if(WG_TEST_WL6_PATH)
+        add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
+    endif()
 endif()
