@@ -1,9 +1,201 @@
-/* Portable PushWall and MovePWalls from the original WL_ACT1.C. */
+/* Portable door and pushwall actions from the original WL_ACT1.C. */
 #include "WL_ACT1.h"
 
 #include <stddef.h>
 
+#include "WG_FIXED.h"
 #include "WL_GAME.h"
+#include "WL_MAIN.h"
+#include "WL_STATE.h"
+
+#define WG_DOOR_OPEN_TICS 300U
+
+static int WL_DoorIsObstructed(const wg_level_t *level,
+                               const wg_door_t *door)
+{
+    size_t index;
+
+    if (level->player_tile_x == door->tile_x
+        && level->player_tile_y == door->tile_y)
+    {
+        return 1;
+    }
+    if (door->vertical != 0U && level->player_tile_y == door->tile_y
+        && (((level->player_x + WG_MIN_DISTANCE) / WG_FIXED_ONE
+             == door->tile_x)
+            || ((level->player_x - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_x)))
+    {
+        return 1;
+    }
+    if (door->vertical == 0U && level->player_tile_x == door->tile_x
+        && (((level->player_y + WG_MIN_DISTANCE) / WG_FIXED_ONE
+             == door->tile_y)
+            || ((level->player_y - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_y)))
+    {
+        return 1;
+    }
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        const wg_actor_t *actor = &level->actors[index];
+
+        if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U
+            || (actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            continue;
+        }
+        if (actor->tile_x == door->tile_x && actor->tile_y == door->tile_y)
+        {
+            return 1;
+        }
+        if (door->vertical != 0U && actor->tile_y == door->tile_y
+            && (((actor->x + WG_MIN_DISTANCE) / WG_FIXED_ONE
+                 == door->tile_x)
+                || ((actor->x - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                    == door->tile_x)))
+        {
+            return 1;
+        }
+        if (door->vertical == 0U && actor->tile_x == door->tile_x
+            && (((actor->y + WG_MIN_DISTANCE) / WG_FIXED_ONE
+                 == door->tile_y)
+                || ((actor->y - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                    == door->tile_y)))
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int WL_OpenDoor(struct wg_level *level, size_t door_index)
+{
+    wg_door_t *door;
+
+    if (level == NULL || door_index >= level->door_count)
+    {
+        return 0;
+    }
+    door = &level->doors[door_index];
+    if (door->action == WG_DOOR_OPEN)
+    {
+        door->tic_count = 0U;
+    }
+    else
+    {
+        door->action = WG_DOOR_OPENING;
+        (void)WL_UpdateAreaConnectivity(level);
+    }
+    return 1;
+}
+
+int WL_CloseDoor(struct wg_level *level, size_t door_index)
+{
+    wg_door_t *door;
+
+    if (level == NULL || door_index >= level->door_count)
+    {
+        return 0;
+    }
+    door = &level->doors[door_index];
+    if (WL_DoorIsObstructed(level, door))
+    {
+        return 0;
+    }
+    door->action = WG_DOOR_CLOSING;
+    return 1;
+}
+
+int WL_OperateDoor(struct wg_level *level, size_t door_index)
+{
+    wg_door_t *door;
+
+    if (level == NULL || door_index >= level->door_count)
+    {
+        return 0;
+    }
+    door = &level->doors[door_index];
+    if (door->lock >= WG_DOOR_LOCK_1 && door->lock <= WG_DOOR_LOCK_4
+        && (level->player_keys
+            & (1U << (door->lock - WG_DOOR_LOCK_1))) == 0U)
+    {
+        return 0;
+    }
+    if (door->action == WG_DOOR_CLOSED
+        || door->action == WG_DOOR_CLOSING)
+    {
+        return WL_OpenDoor(level, door_index);
+    }
+    return WL_CloseDoor(level, door_index);
+}
+
+int WL_MoveDoors(struct wg_level *level, unsigned tics)
+{
+    size_t index;
+
+    if (level == NULL)
+    {
+        return 0;
+    }
+    if (level->victory_flag != 0U)
+    {
+        return 1;
+    }
+    for (index = 0U; index < level->door_count; ++index)
+    {
+        wg_door_t *door = &level->doors[index];
+
+        if (door->action == WG_DOOR_OPEN)
+        {
+            uint64_t elapsed = (uint64_t)door->tic_count + tics;
+
+            door->tic_count = (uint16_t)(elapsed > UINT16_MAX
+                                             ? UINT16_MAX : elapsed);
+            if (elapsed >= WG_DOOR_OPEN_TICS)
+            {
+                (void)WL_CloseDoor(level, index);
+            }
+        }
+        else if (door->action == WG_DOOR_OPENING)
+        {
+            if (tics >= 64U
+                || (uint32_t)door->position + ((uint32_t)tics << 10)
+                       >= 0xffffU)
+            {
+                door->position = 0xffffU;
+                door->tic_count = 0U;
+                door->action = WG_DOOR_OPEN;
+            }
+            else
+            {
+                door->position = (uint16_t)(door->position
+                                             + ((uint32_t)tics << 10));
+            }
+        }
+        else if (door->action == WG_DOOR_CLOSING)
+        {
+            uint32_t movement = tics >= 64U ? 0xffffU
+                                            : (uint32_t)tics << 10;
+
+            if (WL_DoorIsObstructed(level, door))
+            {
+                (void)WL_OpenDoor(level, index);
+            }
+            else if (movement >= door->position)
+            {
+                door->position = 0U;
+                door->action = WG_DOOR_CLOSED;
+                (void)WL_UpdateAreaConnectivity(level);
+            }
+            else
+            {
+                door->position = (uint16_t)(door->position - movement);
+            }
+        }
+    }
+    return 1;
+}
 
 static int WL_PushWallSpotBlocked(const wg_level_t *level, int tile_x,
                                   int tile_y)

@@ -461,3 +461,38 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pickup-view --frame-hash --dump-frame out\pickup-cross.ppm
 ```
+
+## 2026-09-24: Player movement, use actions, and live doors
+
+- Ported the original `ControlMovement`, `TryMove`, `ClipMove`, and `Thrust`
+  paths with angle-fraction accumulation, forward/backward speed scales,
+  strafing, the original movement cap, fixed-radius collision, and axis sliding.
+- Player collision now accounts for walls, partially open doors, blocking
+  statics, and shootable actors. Successful movement updates tile/area state,
+  collects bonuses, and recognizes the original exit-tile marker.
+- Ported cardinal `Cmd_Use` dispatch for pushwalls, elevators, secret exits,
+  locked doors, and ordinary doors.
+- Added the original closed/opening/open/closing door cycle, 64-tic travel,
+  300-tic open wait, lock/key checks, player/actor obstruction reversal, and
+  area connectivity from the first opening tic.
+- Enemies waiting at a door now request that it open, matching the original
+  chase and path logic rather than waiting on externally forced door state.
+- Corrected `SetupGameLevel` parity by converting ambush markers to walkable
+  floor after retaining their spawn flag and by assigning door tiles an
+  adjacent floor area.
+- Focused tests cover wall/corner sliding, static and actor collision, movement
+  pickup and exit effects, turning, locked doors, partial/full door collision,
+  automatic closing, obstruction reversal, area connectivity, pushwall use,
+  and elevator completion.
+- The E1M1 diagnostic uses a real door and renders its sliding plane after 32
+  of the original 64 opening tics.
+- 320x200 indexed-frame FNV-1a: `d5720a5ad520646d`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 door halfway open after use](../out/door-use.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --door-use-view --frame-hash --dump-frame out\door-use.ppm
+```

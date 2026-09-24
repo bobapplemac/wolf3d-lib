@@ -154,7 +154,7 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
 
         if (tile == WG_AMBUSH_TILE)
         {
-            level->tiles[index] = WG_AMBUSH_TILE;
+            level->tiles[index] = 0U;
             level->ambush_tiles[index] = 1U;
             if (!WG_AmbushArea(map, index, &level->areas[index]))
             {
@@ -403,22 +403,27 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
             door->vertical = (uint8_t)((tile & 1U) == 0U);
             door->lock = (wg_door_lock_t)((tile - (door->vertical ? 90U : 91U))
                                           / 2U);
+            door->action = WG_DOOR_CLOSED;
             level->tiles[index] = (uint8_t)(0x80U | level->door_count);
             if (door->vertical)
             {
-                if (y == 0U || y + 1U >= WG_LEVEL_SIZE)
+                if (x == 0U || x + 1U >= WG_LEVEL_SIZE
+                    || y == 0U || y + 1U >= WG_LEVEL_SIZE)
                 {
                     return 0;
                 }
+                level->areas[index] = level->areas[y * WG_LEVEL_SIZE + x - 1U];
                 level->tiles[(y - 1U) * WG_LEVEL_SIZE + x] |= 0x40U;
                 level->tiles[(y + 1U) * WG_LEVEL_SIZE + x] |= 0x40U;
             }
             else
             {
-                if (x == 0U || x + 1U >= WG_LEVEL_SIZE)
+                if (x == 0U || x + 1U >= WG_LEVEL_SIZE
+                    || y == 0U || y + 1U >= WG_LEVEL_SIZE)
                 {
                     return 0;
                 }
+                level->areas[index] = level->areas[(y - 1U) * WG_LEVEL_SIZE + x];
                 level->tiles[y * WG_LEVEL_SIZE + x - 1U] |= 0x40U;
                 level->tiles[y * WG_LEVEL_SIZE + x + 1U] |= 0x40U;
             }

@@ -173,6 +173,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(pickup-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "3745f8af67b60f69")
+        add_test(NAME door-use-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --door-use-view
+            --frame-hash)
+        set_tests_properties(door-use-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "d5720a5ad520646d")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -251,5 +256,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(pickup-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "3745f8af67b60f69")
+        add_test(NAME door-use-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --door-use-view
+            --frame-hash)
+        set_tests_properties(door-use-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "d5720a5ad520646d")
     endif()
 endif()

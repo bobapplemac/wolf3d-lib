@@ -63,13 +63,23 @@ typedef enum wg_door_lock
     WG_DOOR_ELEVATOR
 } wg_door_lock_t;
 
+typedef enum wg_door_action
+{
+    WG_DOOR_CLOSED = 0,
+    WG_DOOR_OPENING,
+    WG_DOOR_OPEN,
+    WG_DOOR_CLOSING
+} wg_door_action_t;
+
 typedef struct wg_door
 {
     uint16_t position;
+    uint16_t tic_count;
     uint8_t tile_x;
     uint8_t tile_y;
     uint8_t vertical;
     wg_door_lock_t lock;
+    wg_door_action_t action;
 } wg_door_t;
 
 typedef struct wg_level
@@ -81,6 +91,7 @@ typedef struct wg_level
     uint16_t info[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     int32_t player_x;
     int32_t player_y;
+    int32_t player_angle_fraction;
     uint16_t player_angle;
     uint8_t player_tile_x;
     uint8_t player_tile_y;
@@ -103,6 +114,7 @@ typedef struct wg_level
     uint8_t made_noise;
     uint8_t victory_flag;
     uint8_t level_completed;
+    uint8_t secret_level;
     uint32_t score;
     uint32_t next_extra;
     uint16_t kill_count;

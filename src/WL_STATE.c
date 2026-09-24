@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "WG_FIXED.h"
+#include "WL_ACT1.h"
 #include "WL_AGENT.h"
 #include "WL_MAIN.h"
 
@@ -1002,8 +1003,12 @@ static void WL_MoveChasingActor(wg_level_t *level, size_t actor_index,
         {
             size_t door = (size_t)(-actor->distance - 1);
 
-            if (door >= level->door_count
-                || level->doors[door].position != 0xffffU)
+            if (door >= level->door_count)
+            {
+                return;
+            }
+            (void)WL_OpenDoor(level, door);
+            if (level->doors[door].position != 0xffffU)
             {
                 return;
             }
@@ -1418,8 +1423,12 @@ static void WL_MoveSpecialBoss(wg_level_t *level, size_t actor_index,
         {
             size_t door = (size_t)(-actor->distance - 1);
 
-            if (door >= level->door_count
-                || level->doors[door].position != 0xffffU)
+            if (door >= level->door_count)
+            {
+                return;
+            }
+            (void)WL_OpenDoor(level, door);
+            if (level->doors[door].position != 0xffffU)
             {
                 return;
             }
@@ -1748,8 +1757,12 @@ static void WL_T_Path(wg_level_t *level, size_t actor_index, int32_t tics)
         {
             size_t door = (size_t)(-actor->distance - 1);
 
-            if (door >= level->door_count
-                || level->doors[door].position != 0xffffU)
+            if (door >= level->door_count)
+            {
+                return;
+            }
+            (void)WL_OpenDoor(level, door);
+            if (level->doors[door].position != 0xffffU)
             {
                 return;
             }
@@ -2142,7 +2155,8 @@ int WL_UpdateAreaConnectivity(wg_level_t *level)
         uint8_t first_area;
         uint8_t second_area;
 
-        if (door->position != 0xffffU)
+        if (door->action == WG_DOOR_CLOSED
+            && door->position != 0xffffU)
         {
             continue;
         }

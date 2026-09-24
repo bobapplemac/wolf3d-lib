@@ -15,8 +15,8 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | `ID_VL.c` | `ID_VL.C` | Indexed framebuffer, blits, palettes, and fizzle fade |
 | `ID_VH.c` | `ID_VH.C` | Proportional font decoding and drawing |
 | `ID_US_1.c` | `ID_US_1.C` | Original deterministic random table |
-| `WL_AGENT.c` | `WL_AGENT.C`, `WL_GAME.C` | Player damage plus status bar and HUD drawing |
-| `WL_ACT1.c` | `WL_ACT1.C` | Pushwall activation and movement |
+| `WL_AGENT.c` | `WL_AGENT.C`, `WL_GAME.C` | Player movement, use, combat, pickups, status, and HUD drawing |
+| `WL_ACT1.c` | `WL_ACT1.C` | Door and pushwall state, obstruction, and movement |
 | `WL_ACT2.c` | `WL_ACT2.C` | Actor construction and initial state metadata |
 | `WL_STATE.c` | `WL_STATE.C`, `WL_ACT2.C` | Actor timing, path/chase/combat states, sight, and awareness |
 | `WL_GAME.c` | `WL_GAME.C` | Runtime level, area, player, door, and static-object construction |

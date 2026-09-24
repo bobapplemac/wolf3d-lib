@@ -402,7 +402,8 @@ static void TestActorAwareness(void)
     plane_one[2U * WG_LEVEL_SIZE + 2U] = 180U;
     CHECK(WG_LevelBuild(&map, &level));
     CHECK(level.actor_count == 0U);
-    CHECK(level.tiles[2U * WG_LEVEL_SIZE + 2U] == WG_AMBUSH_TILE);
+    CHECK(level.tiles[2U * WG_LEVEL_SIZE + 2U] == 0U);
+    CHECK(level.ambush_tiles[2U * WG_LEVEL_SIZE + 2U] == 1U);
 
     plane_one[2U * WG_LEVEL_SIZE + 2U] = 108U;
     plane_zero[2U * WG_LEVEL_SIZE + 2U] = WG_AREA_TILE;
@@ -452,6 +453,7 @@ static void TestDoorAreaConnectivity(void)
 
     CHECK(WG_LevelBuild(&map, &level));
     CHECK(level.door_count == 1U);
+    CHECK(level.areas[2U * WG_LEVEL_SIZE + 3U] == 0U);
     CHECK(WL_UpdateAreaConnectivity(&level));
     CHECK(level.area_by_player[0] != 0U);
     CHECK(level.area_by_player[1] == 0U);
@@ -464,6 +466,7 @@ static void TestDoorAreaConnectivity(void)
     CHECK(level.actors[0].tile_x == 3U);
     CHECK(level.actors[0].tile_y == 2U);
     CHECK(level.actors[0].distance == -1);
+    CHECK(level.doors[0].action == WG_DOOR_OPENING);
     CHECK(level.actors[0].x == 4 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
     level.doors[0].position = 0xffffU;
     CHECK(WL_UpdateAreaConnectivity(&level));
@@ -1518,6 +1521,149 @@ static void TestBonusPickups(void)
     CHECK(level.score == 100U);
 }
 
+static void SetPlayerMovementLevel(wg_level_t *level)
+{
+    memset(level, 0, sizeof(*level));
+    level->player_x = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level->player_y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level->player_tile_x = 10U;
+    level->player_tile_y = 10U;
+    level->player_health = 100U;
+    level->player_ammo = 8U;
+    level->player_lives = 3U;
+    level->player_weapon = WG_WEAPON_PISTOL;
+    level->player_chosen_weapon = WG_WEAPON_PISTOL;
+    level->player_best_weapon = WG_WEAPON_PISTOL;
+    level->next_extra = 40000U;
+}
+
+static void TestPlayerMovementAndUse(void)
+{
+    wg_level_t level;
+    wg_view_tables_t tables;
+    int32_t start_x;
+    int32_t start_y;
+
+    memset(&tables, 0, sizeof(tables));
+    WG_ViewBuildTrigTables(&tables);
+
+    SetPlayerMovementLevel(&level);
+    start_x = level.player_x;
+    start_y = level.player_y;
+    level.tiles[10U * WG_LEVEL_SIZE + 11U] = 1U;
+    CHECK(!WL_TryMove(&level, start_x + WG_MIN_DISTANCE * 2,
+                      start_y));
+    CHECK(WL_Thrust(&level, &tables, 0U, WG_MIN_DISTANCE * 2));
+    CHECK(level.player_x == start_x && level.player_y == start_y);
+    CHECK(level.player_thrust_speed == WG_MIN_DISTANCE * 2);
+
+    SetPlayerMovementLevel(&level);
+    start_x = level.player_x;
+    start_y = level.player_y;
+    level.tiles[11U * WG_LEVEL_SIZE + 11U] = 1U;
+    CHECK(WL_Thrust(&level, &tables, 315U, WG_MIN_DISTANCE * 2));
+    CHECK(level.player_x > start_x);
+    CHECK(level.player_y == start_y);
+
+    SetPlayerMovementLevel(&level);
+    level.static_count = 1U;
+    level.statics[0].tile_x = 11U;
+    level.statics[0].tile_y = 10U;
+    level.statics[0].blocking = 1U;
+    CHECK(!WL_TryMove(&level, 11 * WG_FIXED_ONE, level.player_y));
+    level.statics[0].removed = 1U;
+    CHECK(WL_TryMove(&level, 11 * WG_FIXED_ONE, level.player_y));
+
+    SetPlayerMovementLevel(&level);
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
+    CHECK(!WL_TryMove(&level, 11 * WG_FIXED_ONE, level.player_y));
+    level.actors[0].flags = (uint16_t)(level.actors[0].flags
+                                       & ~WG_ACTOR_FLAG_SHOOTABLE);
+    CHECK(WL_TryMove(&level, 11 * WG_FIXED_ONE, level.player_y));
+
+    SetPlayerMovementLevel(&level);
+    level.static_count = 1U;
+    level.statics[0].tile_x = 11U;
+    level.statics[0].tile_y = 10U;
+    level.statics[0].item = WG_ITEM_CROSS;
+    CHECK(WL_Thrust(&level, &tables, 0U, WG_MIN_DISTANCE * 2));
+    CHECK(level.player_tile_x == 11U);
+    CHECK(level.statics[0].removed == 1U);
+    CHECK(level.score == 100U);
+
+    SetPlayerMovementLevel(&level);
+    level.info[10U * WG_LEVEL_SIZE + 11U] = 99U;
+    CHECK(WL_Thrust(&level, &tables, 0U, WG_MIN_DISTANCE * 2));
+    CHECK(level.victory_flag == 1U);
+
+    SetPlayerMovementLevel(&level);
+    CHECK(WL_ControlMovement(&level, &tables, 20, 0, 0));
+    CHECK(level.player_angle == 359U);
+    CHECK(level.player_angle_fraction == 0);
+    CHECK(WL_ControlMovement(&level, &tables, 0, -10, 0));
+    CHECK(level.player_thrust_speed == 1500);
+    CHECK(level.player_x > 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+
+    SetPlayerMovementLevel(&level);
+    level.door_count = 1U;
+    level.doors[0].tile_x = 11U;
+    level.doors[0].tile_y = 10U;
+    level.doors[0].vertical = 1U;
+    level.doors[0].lock = WG_DOOR_LOCK_1;
+    level.doors[0].action = WG_DOOR_CLOSED;
+    level.tiles[10U * WG_LEVEL_SIZE + 11U] = 0x80U;
+    level.areas[10U * WG_LEVEL_SIZE + 10U] = 0U;
+    level.areas[10U * WG_LEVEL_SIZE + 12U] = 1U;
+    CHECK(!WL_CmdUse(&level));
+    CHECK(level.doors[0].action == WG_DOOR_CLOSED);
+    level.player_keys = 1U;
+    CHECK(WL_CmdUse(&level));
+    CHECK(level.doors[0].action == WG_DOOR_OPENING);
+    CHECK(WL_MoveDoors(&level, 32U));
+    CHECK(level.doors[0].position == 32768U);
+    CHECK(!WL_TryMove(&level, 11 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                      level.player_y));
+    CHECK(WL_UpdateAreaConnectivity(&level));
+    CHECK(level.area_by_player[0] != 0U);
+    CHECK(level.area_by_player[1] != 0U);
+    CHECK(WL_MoveDoors(&level, 32U));
+    CHECK(level.doors[0].position == 0xffffU);
+    CHECK(level.doors[0].action == WG_DOOR_OPEN);
+    CHECK(WL_TryMove(&level, 11 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                     level.player_y));
+    level.player_x = 8 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 8U;
+    CHECK(WL_MoveDoors(&level, 300U));
+    CHECK(level.doors[0].action == WG_DOOR_CLOSING);
+    CHECK(WL_MoveDoors(&level, 64U));
+    CHECK(level.doors[0].position == 0U);
+    CHECK(level.doors[0].action == WG_DOOR_CLOSED);
+
+    level.doors[0].position = 0xffffU;
+    level.doors[0].action = WG_DOOR_OPEN;
+    level.player_x = 11 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 11U;
+    CHECK(!WL_CloseDoor(&level, 0U));
+    level.doors[0].action = WG_DOOR_CLOSING;
+    CHECK(WL_MoveDoors(&level, 1U));
+    CHECK(level.doors[0].action == WG_DOOR_OPENING);
+
+    SetPlayerMovementLevel(&level);
+    level.tiles[10U * WG_LEVEL_SIZE + 11U] = 2U;
+    level.info[10U * WG_LEVEL_SIZE + 11U] = 98U;
+    CHECK(WL_CmdUse(&level));
+    CHECK(level.pushwall_state == 1U);
+    CHECK(level.pushwall_direction == 0U);
+
+    SetPlayerMovementLevel(&level);
+    level.tiles[10U * WG_LEVEL_SIZE + 11U] = 21U;
+    level.areas[10U * WG_LEVEL_SIZE + 10U] = 0U;
+    CHECK(WL_CmdUse(&level));
+    CHECK(level.tiles[10U * WG_LEVEL_SIZE + 11U] == 22U);
+    CHECK(level.level_completed == 1U);
+    CHECK(level.secret_level == 1U);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -2425,6 +2571,7 @@ int main(int argc, char **argv)
     TestBossDamageAndDeath();
     TestPlayerWeapons();
     TestBonusPickups();
+    TestPlayerMovementAndUse();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

@@ -52,7 +52,9 @@ explosions, and projectile damage. Fake Hitler also retains his original
 eight-flame burst. Pushwall activation, movement, blocking, and moving-plane
 rendering are active. Ordinary and boss damage/death paths are active, and the
 player pistol, machine gun, chaingun, and knife now use their original attack
-cadence and targeting rules:
+cadence and targeting rules. Player turning, thrust, collision, item collection,
+cardinal use actions, locked doors, sliding-door timing, elevators, and exit
+tiles now follow their original gameplay rules:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -146,6 +148,13 @@ the live score updated to 100:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pickup-view --frame-hash --dump-frame pickup-cross.ppm
+```
+
+The door-use diagnostic invokes the original use-button path on an E1M1 door
+and advances its sliding plane through half of the opening cycle:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --door-use-view --frame-hash --dump-frame door-use.ppm
 ```
 
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz

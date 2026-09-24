@@ -247,6 +247,13 @@ static array with a removal flag, mirroring the original negative-shape marker
 without requiring a signed sprite index. `WL_CollectPlayerTileBonuses` is the
 movement-facing collection boundary; the `--pickup-view` checkpoint exercises
 it and renders the resulting live score, lives, keys, ammo, and weapon state.
+The same player layer now owns original-scale turning and thrust, fixed-radius
+collision against walls, closed doors, blocking statics, and live actors, plus
+axis-by-axis wall sliding. Cardinal use dispatches to pushwalls, elevators, or
+the door state machine. Doors connect areas as soon as opening begins, admit
+movement only when fully open, wait 300 tics before closing, and reverse when
+the player or an actor obstructs the moving plane. `--door-use-view` renders a
+real E1M1 door halfway through its use-triggered opening cycle.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

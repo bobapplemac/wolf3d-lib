@@ -65,6 +65,13 @@ bits, treasure scoring, and 40,000-point extra-life thresholds are direct
 translations of `GetBonus`, `HealSelf`, `GiveAmmo`, `GiveWeapon`, `GiveKey`,
 `GivePoints`, and `GiveExtraMan` in original `WL_AGENT.C`. The portable
 `removed` flag represents the original `shapenum = -1` consumption marker.
+Player turning, strafing, forward/backward thrust, speed limiting, axis-sliding
+collision, exit detection, and cardinal use targeting follow `ControlMovement`,
+`TryMove`, `ClipMove`, `Thrust`, and `Cmd_Use` in original `WL_AGENT.C`.
+Door locks and the closed/opening/open/closing state machine follow `OpenDoor`,
+`CloseDoor`, `OperateDoor`, `DoorOpen`, `DoorOpening`, `DoorClosing`, and
+`MoveDoors` in original `WL_ACT1.C`. Ambush tiles and door-floor area assignment
+follow the post-scan cleanup and `SpawnDoor` logic in original `WL_GAME.C`.
 Standing and patrolling guard map codes and difficulty fallthrough follow
 `ScanInfoPlane` in original `WL_GAME.C`. Their tile-center construction,
 direction mapping, and patrol destination adjustment follow `SpawnNewObj`,

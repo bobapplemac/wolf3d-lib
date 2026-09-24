@@ -367,6 +367,65 @@ static int WG_SetPickupView(wg_level_t *level)
     return 0;
 }
 
+static int WG_SetDoorUseView(wg_level_t *level)
+{
+    static const int side_x[] = { -1, 1, 0, 0 };
+    static const int side_y[] = { 0, 0, -1, 1 };
+    static const uint16_t angles[] = { 0U, 180U, 270U, 90U };
+    size_t door_index;
+
+    if (level == NULL)
+    {
+        return 0;
+    }
+    for (door_index = 0U; door_index < level->door_count; ++door_index)
+    {
+        const wg_door_t *door = &level->doors[door_index];
+        size_t first_side = door->vertical != 0U ? 0U : 2U;
+        size_t last_side = first_side + 2U;
+        size_t side;
+
+        if (door->lock != WG_DOOR_NORMAL)
+        {
+            continue;
+        }
+        for (side = first_side; side < last_side; ++side)
+        {
+            int near_x = (int)door->tile_x + side_x[side];
+            int near_y = (int)door->tile_y + side_y[side];
+            int view_x = (int)door->tile_x + side_x[side] * 2;
+            int view_y = (int)door->tile_y + side_y[side] * 2;
+
+            if (near_x <= 0 || near_x + 1 >= WG_LEVEL_SIZE
+                || near_y <= 0 || near_y + 1 >= WG_LEVEL_SIZE
+                || view_x <= 0 || view_x + 1 >= WG_LEVEL_SIZE
+                || view_y <= 0 || view_y + 1 >= WG_LEVEL_SIZE
+                || level->tiles[(size_t)near_y * WG_LEVEL_SIZE
+                                + (size_t)near_x] != 0U
+                || level->tiles[(size_t)view_y * WG_LEVEL_SIZE
+                                + (size_t)view_x] != 0U)
+            {
+                continue;
+            }
+            level->player_tile_x = (uint8_t)near_x;
+            level->player_tile_y = (uint8_t)near_y;
+            level->player_x = near_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+            level->player_y = near_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+            level->player_angle = angles[side];
+            if (!WL_CmdUse(level) || !WL_MoveDoors(level, 32U))
+            {
+                return 0;
+            }
+            level->player_tile_x = (uint8_t)view_x;
+            level->player_tile_y = (uint8_t)view_y;
+            level->player_x = view_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+            level->player_y = view_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static int WG_LoadTitleScreen(const char *data_path)
 {
     wg_graphics_t graphics;
@@ -417,6 +476,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int boss_death_view,
                                   int player_fire_view,
                                   int pickup_view,
+                                  int door_use_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -453,6 +513,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         for (door = 0; door < level.door_count; ++door)
         {
             level.doors[door].position = 0xffffU;
+            level.doors[door].action = WG_DOOR_OPEN;
         }
     }
     if (!chase_view && !fire_view && !bite_view && !boss_fire_view
@@ -681,6 +742,10 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    if (door_use_view && !WG_SetDoorUseView(&level))
+    {
+        goto cleanup;
+    }
     if (death_view)
     {
         wg_actor_t *actor = WG_FindGuardViewActor(&level);
@@ -836,7 +901,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--death-view"),
             WG_HasArgument(argc, argv, "--boss-death-view"),
             WG_HasArgument(argc, argv, "--player-fire-view"),
-            WG_HasArgument(argc, argv, "--pickup-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--pickup-view"),
+            WG_HasArgument(argc, argv, "--door-use-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
