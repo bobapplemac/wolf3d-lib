@@ -832,6 +832,20 @@ int WL_StartAttack(struct wg_level *level)
     return 1;
 }
 
+int WL_SelectWeapon(struct wg_level *level, unsigned weapon)
+{
+    if (level == NULL || weapon > WG_WEAPON_CHAINGUN
+        || weapon > level->player_best_weapon || level->player_ammo == 0U
+        || level->attack_active || level->player_dead || level->victory_flag)
+    {
+        return 0;
+    }
+    level->player_weapon = (uint8_t)weapon;
+    level->player_chosen_weapon = (uint8_t)weapon;
+    level->weapon_frame = 0U;
+    return 1;
+}
+
 int WL_TickPlayerAttack(struct wg_level *level, unsigned tics,
                         int attack_held)
 {

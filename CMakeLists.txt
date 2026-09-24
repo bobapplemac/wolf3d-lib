@@ -29,6 +29,7 @@ set(WG_CORE_SOURCES
     src/WL_AGENT.c
     src/WL_ACT1.c
     src/WL_ACT2.c
+    src/WL_PLAY.c
     src/WL_STATE.c
     src/WL_DRAW.c
     src/WG_RENDERER.c
@@ -178,6 +179,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(door-use-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "d5720a5ad520646d")
+        add_test(NAME play-loop-forward-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --forward-tics 35
+            --frame-hash)
+        set_tests_properties(play-loop-forward-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "41b5819e00a95446")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -261,5 +267,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(door-use-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "d5720a5ad520646d")
+        add_test(NAME play-loop-forward-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --forward-tics 35
+            --frame-hash)
+        set_tests_properties(play-loop-forward-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "41b5819e00a95446")
     endif()
 endif()

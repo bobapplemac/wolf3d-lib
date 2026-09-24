@@ -496,3 +496,31 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --door-use-view --frame-hash --dump-frame out\door-use.ppm
 ```
+
+## 2026-09-24: Persistent 70 Hz interactive play loop
+
+- Added `WL_PLAY.c` under its historical source owner. One deterministic tic
+  preserves the original high-level order: advance doors, advance pushwalls,
+  process the player, then process the remaining actors.
+- Split host key sampling from the fixed simulation step. The Win32 host uses
+  an integer accumulator that averages exactly 70 game tics per second without
+  assuming a 14 ms tic or coupling gameplay to rendering.
+- Restored the original keyboard defaults: arrows, Alt-strafe, Shift-run,
+  Control-fire, Space-use, and weapon keys 1-4. Escape cleanly leaves the host.
+- Added persistent map, page, wall, graphics, projection, and input ownership
+  to the generic runtime, replacing the former one-frame interactive display.
+- Kept the headless diagnostic path byte-for-byte stable and added a complete
+  play-loop capture that holds forward for 35 tics.
+- Focused tests cover base-speed motion, angle changes, weapon selection,
+  held-fire timing, use-edge behavior, and door-before-player ordering.
+- A live Win32 smoke test opened the shareware session and remained responsive.
+- 320x200 indexed-frame FNV-1a: `41b5819e00a95446`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 after 35 forward play-loop tics](../out/play-loop-forward.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --forward-tics 35 --frame-hash --dump-frame out\play-loop-forward.ppm
+```

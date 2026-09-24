@@ -22,6 +22,7 @@
 #include "WL_STATE.h"
 #include "ID_VL.h"
 #include "WL_MAIN.h"
+#include "WL_PLAY.h"
 
 static int failures;
 
@@ -1664,6 +1665,65 @@ static void TestPlayerMovementAndUse(void)
     CHECK(level.secret_level == 1U);
 }
 
+static void TestPlayLoop(void)
+{
+    wg_level_t level;
+    wg_view_tables_t tables;
+    wl_play_state_t play;
+    wl_input_t input;
+    int32_t start_x;
+
+    memset(&tables, 0, sizeof(tables));
+    memset(&input, 0, sizeof(input));
+    WG_ViewBuildTrigTables(&tables);
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
+
+    start_x = level.player_x;
+    input.up = 1U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.player_x > start_x);
+    CHECK(level.player_thrust_speed == 35 * 150);
+
+    input.up = 0U;
+    input.left = 1U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.player_angle == 1U);
+
+    input.left = 0U;
+    input.weapon = 3U;
+    level.player_best_weapon = WG_WEAPON_MACHINEGUN;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.player_weapon == WG_WEAPON_MACHINEGUN);
+    CHECK(level.player_chosen_weapon == WG_WEAPON_MACHINEGUN);
+
+    input.weapon = 0U;
+    input.attack = 1U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.attack_active == 1U);
+    CHECK(level.attack_count == 6);
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.attack_count == 5);
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
+    level.door_count = 1U;
+    level.doors[0].tile_x = 11U;
+    level.doors[0].tile_y = 10U;
+    level.doors[0].vertical = 1U;
+    level.doors[0].action = WG_DOOR_CLOSED;
+    level.tiles[10U * WG_LEVEL_SIZE + 11U] = 0x80U;
+    level.areas[10U * WG_LEVEL_SIZE + 10U] = 0U;
+    level.areas[10U * WG_LEVEL_SIZE + 12U] = 1U;
+    memset(&input, 0, sizeof(input));
+    input.use = 1U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.doors[0].action == WG_DOOR_OPENING);
+    CHECK(level.doors[0].position == 0U);
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.doors[0].position == 1024U);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -2572,6 +2632,7 @@ int main(int argc, char **argv)
     TestPlayerWeapons();
     TestBonusPickups();
     TestPlayerMovementAndUse();
+    TestPlayLoop();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

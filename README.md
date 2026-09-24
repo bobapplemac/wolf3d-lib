@@ -27,11 +27,21 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The initial vertical slice validates both v1.4 data editions and displays the
-original title screen. It is not yet a playable engine. To exercise it:
+The current vertical slice validates both v1.4 data editions and displays the
+original title screen. To exercise it:
 
 ```text
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
+```
+
+Add `--play-view` to enter the current interactive game session. The original
+keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
+Shift runs, Control attacks, Space uses, 1-4 select weapons, and Escape quits.
+The game simulation advances at the original 70 Hz while the host remains free
+to present frames independently:
+
+```text
+wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data" --play-view
 ```
 
 The headless host can export its current indexed frame for inspection without a
@@ -63,6 +73,10 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame 
 Pass a zero-based `--map` number to capture another original map. The headless
 host can also print the indexed framebuffer's deterministic FNV-1a value with
 `--frame-hash`.
+
+The deterministic `--forward-tics N` diagnostic holds the original forward
+control for exactly `N` complete play-loop tics, including doors, pushwalls,
+player movement, weapon state, and actors.
 
 For a renderer diagnostic that exposes the scenery beyond the initial closed
 door, add `--open-doors`. This only selects a fully-open door state for the

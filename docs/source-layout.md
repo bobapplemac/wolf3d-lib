@@ -20,6 +20,7 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | `WL_ACT2.c` | `WL_ACT2.C` | Actor construction and initial state metadata |
 | `WL_STATE.c` | `WL_STATE.C`, `WL_ACT2.C` | Actor timing, path/chase/combat states, sight, and awareness |
 | `WL_GAME.c` | `WL_GAME.C` | Runtime level, area, player, door, and static-object construction |
+| `WL_PLAY.c` | `WL_PLAY.C`, `WL_AGENT.C` | Fixed 70 Hz play-loop ordering, input state, and control dispatch |
 | `WL_MAIN.c` | `WL_MAIN.C` | Trigonometric tables and projection setup |
 | `WL_DRAW.c` | `WL_DRAW.C`, `WL_DR_A.ASM` | Fixed-point ray traversal, wall/door hits, and projected scenery ordering |
 | `WL_SCALE.c` | `WL_SCALE.C`, `WL_DRAW.C` | Portable wall-post and occluded sprite scaling |

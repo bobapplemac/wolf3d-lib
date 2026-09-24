@@ -18,6 +18,7 @@
 #include "WG_RENDERER.h"
 #include "WL_DRAW.h"
 #include "WL_MAIN.h"
+#include "WL_PLAY.h"
 #include "WL_STATE.h"
 
 uint8_t *WG_ScreenBuffer;
@@ -26,6 +27,22 @@ uint8_t WG_Palette[WG_PALETTE_COLORS * 3];
 static int wg_initialized;
 static int wg_data_loaded;
 static wg_data_set_t wg_data_set;
+
+typedef struct wg_game_session
+{
+    int active;
+    wg_level_t level;
+    wg_pages_t pages;
+    wg_wall_cache_t walls;
+    wg_view_tables_t view;
+    wg_graphics_t graphics;
+    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint8_t keys[128];
+    wl_play_state_t play;
+} wg_game_session_t;
+
+static wg_game_session_t wg_game;
 
 static const char *WG_FindDataPath(int argc, char **argv)
 {
@@ -463,6 +480,127 @@ static int WG_LoadTitleScreen(const char *data_path)
     return 1;
 }
 
+static void WG_GameSessionClose(void)
+{
+    WG_GraphicsClose(&wg_game.graphics);
+    WG_WallCacheFree(&wg_game.walls);
+    WG_PagesClose(&wg_game.pages);
+    memset(&wg_game, 0, sizeof(wg_game));
+}
+
+static int WG_GameSessionRender(void)
+{
+    wl_status_t status;
+
+    if (!wg_game.active
+        || !WG_RenderStaticView(WG_ScreenBuffer, &wg_game.level,
+                                &wg_game.view, &wg_game.walls, 0, 0,
+                                wg_game.level.player_x,
+                                wg_game.level.player_y,
+                                wg_game.level.player_angle, wg_game.hits,
+                                wg_game.visible_tiles)
+        || !WL_DrawScaleds(WG_ScreenBuffer, &wg_game.pages, &wg_game.level,
+                           &wg_game.view, wg_game.hits,
+                           wg_game.visible_tiles, wg_game.level.player_x,
+                           wg_game.level.player_y,
+                           wg_game.level.player_angle)
+        || !WL_DrawPlayerWeapon(WG_ScreenBuffer, &wg_game.pages,
+                                wg_game.level.player_weapon,
+                                wg_game.level.weapon_frame))
+    {
+        return 0;
+    }
+    WL_StatusDefaults(&status);
+    status.score = wg_game.level.score;
+    status.health = wg_game.level.player_health;
+    status.ammo = wg_game.level.player_ammo;
+    status.weapon = wg_game.level.player_weapon;
+    status.lives = wg_game.level.player_lives;
+    status.keys = wg_game.level.player_keys;
+    return WL_DrawStatusBar(WG_ScreenBuffer, &wg_game.graphics, &status);
+}
+
+static int WG_GameSessionOpen(unsigned map_number)
+{
+    wg_maps_t maps;
+    wg_map_t map;
+    int success = 0;
+
+    memset(&maps, 0, sizeof(maps));
+    memset(&map, 0, sizeof(map));
+    memset(&wg_game, 0, sizeof(wg_game));
+    if (!WG_MapsOpen(&maps, &wg_data_set)
+        || !WG_MapsLoad(&maps, map_number, &map)
+        || !WG_LevelBuild(&map, &wg_game.level)
+        || !WG_PagesOpen(&wg_game.pages, &wg_data_set)
+        || !WG_WallCacheLoad(&wg_game.walls, &wg_game.pages)
+        || !WG_GraphicsOpen(&wg_game.graphics, &wg_data_set))
+    {
+        goto cleanup;
+    }
+    WG_ViewBuildTrigTables(&wg_game.view);
+    if (!WG_ViewCalculateProjection(&wg_game.view, WG_MAX_VIEW_WIDTH,
+                                    WG_FOCAL_LENGTH))
+    {
+        goto cleanup;
+    }
+    WL_PlayStateReset(&wg_game.play);
+    wg_game.active = 1;
+    if (!WG_GameSessionRender())
+    {
+        goto cleanup;
+    }
+    success = 1;
+
+cleanup:
+    WG_MapFree(&map);
+    WG_MapsClose(&maps);
+    if (!success)
+    {
+        WG_GameSessionClose();
+        WG_ReportError("Unable to start the Wolf3D game session.");
+    }
+    return success;
+}
+
+static void WG_GameSessionInput(wl_input_t *input)
+{
+    memset(input, 0, sizeof(*input));
+    input->up = wg_game.keys[WG_KEY_UP];
+    input->down = wg_game.keys[WG_KEY_DOWN];
+    input->left = wg_game.keys[WG_KEY_LEFT];
+    input->right = wg_game.keys[WG_KEY_RIGHT];
+    input->attack = wg_game.keys[WG_KEY_CONTROL];
+    input->use = wg_game.keys[WG_KEY_SPACE];
+    input->strafe = wg_game.keys[WG_KEY_ALT];
+    input->run = (uint8_t)(wg_game.keys[WG_KEY_LEFT_SHIFT]
+                           || wg_game.keys[WG_KEY_RIGHT_SHIFT]);
+    if (wg_game.keys[WG_KEY_1])
+    {
+        input->weapon = 1U;
+    }
+    else if (wg_game.keys[WG_KEY_2])
+    {
+        input->weapon = 2U;
+    }
+    else if (wg_game.keys[WG_KEY_3])
+    {
+        input->weapon = 3U;
+    }
+    else if (wg_game.keys[WG_KEY_4])
+    {
+        input->weapon = 4U;
+    }
+}
+
+static int WG_GameSessionTick(void)
+{
+    wl_input_t input;
+
+    WG_GameSessionInput(&input);
+    return WL_PlayTick(&wg_game.level, &wg_game.view, &wg_game.play, &input);
+}
+
 static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int guard_view, int boss_view,
                                   int patrol_view, int alert_view,
@@ -477,7 +615,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int player_fire_view,
                                   int pickup_view,
                                   int door_use_view,
-                                  unsigned actor_tics)
+                                  unsigned actor_tics,
+                                  unsigned forward_tics)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -801,6 +940,24 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
+    if (forward_tics != 0U)
+    {
+        wl_play_state_t play;
+        wl_input_t input;
+        unsigned tic;
+
+        memset(&input, 0, sizeof(input));
+        input.up = 1U;
+        WL_PlayStateReset(&play);
+        WG_ViewBuildTrigTables(&view);
+        for (tic = 0U; tic < forward_tics; ++tic)
+        {
+            if (!WL_PlayTick(&level, &view, &play, &input))
+            {
+                goto cleanup;
+            }
+        }
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
@@ -848,12 +1005,15 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     const char *data_path;
     unsigned map_number;
     unsigned actor_tics;
+    unsigned forward_tics;
 
     if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL)
         || !WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
                                     &map_number)
         || !WG_FindUnsignedArgument(argc, argv, "--actor-tics", 0U,
-                                    10000U, &actor_tics))
+                                    10000U, &actor_tics)
+        || !WG_FindUnsignedArgument(argc, argv, "--forward-tics", 0U,
+                                    10000U, &forward_tics))
     {
         return WG_RESULT_INVALID_ARGUMENT;
     }
@@ -883,6 +1043,15 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         return WG_RESULT_PLATFORM_ERROR;
     }
     if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
+        && WG_IsInteractive())
+    {
+        if (!WG_GameSessionOpen(map_number))
+        {
+            wolf3dgeneric_Shutdown();
+            return WG_RESULT_PLATFORM_ERROR;
+        }
+    }
+    else if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
         && !WG_LoadInitialPlayView(
             map_number,
             WG_HasArgument(argc, argv, "--open-doors"),
@@ -902,7 +1071,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--boss-death-view"),
             WG_HasArgument(argc, argv, "--player-fire-view"),
             WG_HasArgument(argc, argv, "--pickup-view"),
-            WG_HasArgument(argc, argv, "--door-use-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--door-use-view"), actor_tics,
+            forward_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
@@ -913,6 +1083,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
 wg_result_t wolf3dgeneric_Run(void)
 {
     wg_event_t event;
+    uint32_t last_ticks;
+    uint32_t accumulator = 0U;
 
     if (!wg_initialized)
     {
@@ -925,6 +1097,7 @@ wg_result_t wolf3dgeneric_Run(void)
         return WG_RESULT_NOT_IMPLEMENTED;
     }
 
+    last_ticks = WG_GetTicksMs();
     for (;;)
     {
         while (WG_PollEvent(&event))
@@ -933,9 +1106,48 @@ wg_result_t wolf3dgeneric_Run(void)
             {
                 return WG_RESULT_QUIT;
             }
+            if (event.type == WG_EVENT_KEY)
+            {
+                if (event.key == WG_KEY_ESCAPE && event.pressed)
+                {
+                    return WG_RESULT_QUIT;
+                }
+                if (event.key < sizeof(wg_game.keys))
+                {
+                    wg_game.keys[event.key] = event.pressed != 0;
+                }
+            }
+        }
+        if (wg_game.active)
+        {
+            uint32_t now = WG_GetTicksMs();
+            uint32_t elapsed = now - last_ticks;
+            unsigned ticks_run = 0U;
+
+            last_ticks = now;
+            if (elapsed > 250U)
+            {
+                elapsed = 250U;
+            }
+            accumulator += elapsed * 70U;
+            while (accumulator >= 1000U && ticks_run < 18U)
+            {
+                if (!WG_GameSessionTick())
+                {
+                    WG_ReportError("The Wolf3D game simulation failed.");
+                    return WG_RESULT_PLATFORM_ERROR;
+                }
+                accumulator -= 1000U;
+                ++ticks_run;
+            }
+            if (ticks_run != 0U && !WG_GameSessionRender())
+            {
+                WG_ReportError("The Wolf3D game renderer failed.");
+                return WG_RESULT_PLATFORM_ERROR;
+            }
         }
         WG_Present(WG_ScreenBuffer, WG_Palette);
-        WG_SleepMs(10);
+        WG_SleepMs(wg_game.active ? 1U : 10U);
     }
 }
 
@@ -946,6 +1158,7 @@ void wolf3dgeneric_Shutdown(void)
         return;
     }
 
+    WG_GameSessionClose();
     WG_Shutdown();
     WG_DataClose(&wg_data_set);
     free(WG_ScreenBuffer);
