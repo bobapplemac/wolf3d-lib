@@ -40,5 +40,10 @@ The portable wall-post scaler follows the original `ScalePost` sampling contract
 in `WL_DRAW.C`. Wolf4SDL's C replacement was consulted to translate the compiled
 scaler and VGA plane-mask behavior into direct indexed-framebuffer writes.
 
+Static ray traversal and wall-hit calculations follow original `AsmRefresh`,
+`HitVertWall`, `HitHorizWall`, and `CalcHeight` in `WL_DR_A.ASM`/`WL_DRAW.C`.
+Wolf4SDL's structured `AsmRefresh` translation was used to make the assembly
+control flow explicit while retaining the original fixed-point stepping order.
+
 Wolfenstein 3D data and executables are external test inputs. No game assets are
 part of this repository or covered by its license.

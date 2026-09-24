@@ -14,6 +14,7 @@
 #include "wg_pages.h"
 #include "wg_palette.h"
 #include "wg_random.h"
+#include "wg_raycast.h"
 #include "wg_scale.h"
 #include "wg_video.h"
 #include "wg_view.h"
@@ -217,6 +218,62 @@ static void TestWallScaler(void)
     CHECK(framebuffer[112 * WG_VIDEO_WIDTH + 10] == 3);
     CHECK(!WG_ScaleWallPost(framebuffer, 0, 0, 320, 160, 319, 2,
                             texture, 0, 256));
+}
+
+static void TestStaticRaycaster(void)
+{
+    wg_level_t level;
+    wg_view_tables_t tables;
+    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
+    int x;
+    int y;
+
+    memset(&level, 0, sizeof(level));
+    memset(&tables, 0, sizeof(tables));
+    for (x = 0; x < WG_LEVEL_SIZE; ++x)
+    {
+        level.tiles[x] = 1;
+        level.tiles[(WG_LEVEL_SIZE - 1) * WG_LEVEL_SIZE + x] = 1;
+    }
+    for (y = 0; y < WG_LEVEL_SIZE; ++y)
+    {
+        level.tiles[y * WG_LEVEL_SIZE] = 1;
+        level.tiles[y * WG_LEVEL_SIZE + WG_LEVEL_SIZE - 1] = 1;
+    }
+    WG_ViewBuildTrigTables(&tables);
+    CHECK(WG_ViewCalculateProjection(&tables, WG_MAX_VIEW_WIDTH,
+                                     WG_FOCAL_LENGTH));
+    CHECK(WG_RaycastStaticWalls(&level, &tables,
+                                32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                                32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                                0, hits));
+    CHECK(hits[159].side == WG_WALL_VERTICAL);
+    CHECK(hits[159].map_x == WG_LEVEL_SIZE - 1);
+    CHECK(hits[159].map_y == 32);
+    CHECK(hits[159].tile == 1);
+    CHECK(hits[159].wall_page == 1);
+    CHECK(hits[159].texture_column == 30);
+    CHECK(hits[159].height == 28);
+    CHECK(hits[160].x == hits[159].x);
+    CHECK(hits[160].y == hits[159].y);
+    CHECK(WG_RaycastStaticWalls(&level, &tables,
+                                32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                                32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                                90, hits));
+    CHECK(hits[159].side == WG_WALL_HORIZONTAL);
+    CHECK(hits[159].map_y == 0);
+    CHECK(WG_RaycastStaticWalls(&level, &tables,
+                                32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                                32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                                180, hits));
+    CHECK(hits[159].side == WG_WALL_VERTICAL);
+    CHECK(hits[159].map_x == 0);
+    CHECK(WG_RaycastStaticWalls(&level, &tables,
+                                32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                                32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                                270, hits));
+    CHECK(hits[159].side == WG_WALL_HORIZONTAL);
+    CHECK(hits[159].map_y == WG_LEVEL_SIZE - 1);
 }
 
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
@@ -475,6 +532,7 @@ int main(int argc, char **argv)
     TestRandom();
     TestViewMath();
     TestWallScaler();
+    TestStaticRaycaster();
 
     if (argc == 4 && strcmp(argv[1], "--data") == 0)
     {

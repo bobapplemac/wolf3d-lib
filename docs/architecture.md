@@ -78,6 +78,13 @@ source sampling order and the original three-bit fractional wall-height unit are
 retained from `ScalePost`; a single call may reproduce the original adjacent-post
 coalescing optimization without VGA plane masks or generated machine code.
 
+The first ray-traversal layer is a direct, fixed-point translation of the static
+wall path through original `AsmRefresh`, including its quadrant-specific tangent
+steps, vertical/horizontal entry switching, focal-point offset, texture mirroring,
+and perpendicular height calculation. It currently rejects doors and pushwalls
+instead of approximating them as fixed walls; their moving-plane hit paths will
+be added explicitly before this traversal is connected to gameplay rendering.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a
