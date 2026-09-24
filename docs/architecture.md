@@ -265,6 +265,12 @@ decrements a life, and restarts with pistol, eight rounds, and full health.
 The eventual UI layer still needs to replace that fixed pause with the original
 death rotation/red fizzle and to insert the intermission screens.
 
+Win32 supplies relative mouse packets through the generic event contract rather
+than exposing window coordinates to the engine. `WL_PLAY.c` applies the original
+default `PollMouseMove` scale (`x * 10 / 8`, `y * 20 / 8`) before the same
+per-tic ±100 control clamp used by keyboard/demo input. The original default
+button mapping is retained: left attacks, right strafes, and middle uses.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a

@@ -18,6 +18,8 @@ typedef struct wl_input
     uint8_t strafe;
     uint8_t run;
     uint8_t weapon;
+    int16_t mouse_x;
+    int16_t mouse_y;
 } wl_input_t;
 
 typedef struct wl_play_state

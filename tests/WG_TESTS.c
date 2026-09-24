@@ -1921,6 +1921,17 @@ static void TestPlayLoop(void)
 
     WL_PlayStateReset(&play);
     SetPlayerMovementLevel(&level);
+    memset(&input, 0, sizeof(input));
+    input.mouse_x = 16;
+    input.mouse_y = -4;
+    start_x = level.player_x;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.player_angle == 359U);
+    CHECK(level.player_x > start_x);
+    CHECK(level.player_thrust_speed == 10 * 150);
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
     level.door_count = 1U;
     level.doors[0].tile_x = 11U;
     level.doors[0].tile_y = 10U;

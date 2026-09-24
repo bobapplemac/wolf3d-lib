@@ -40,6 +40,8 @@ Press Enter on the title screen to start the selected map (map 0 by default).
 Add `--play-view` to enter the current interactive game session. The original
 keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
 Shift runs, Control attacks, Space uses, 1-4 select weapons, and Escape quits.
+Raw mouse motion turns and moves with the original default sensitivity; left
+button attacks, right button strafes, and middle button uses.
 The game simulation advances at the original 70 Hz while the host remains free
 to present frames independently. The Win32 host streams each map's original IMF
 music through the official Nuked-OPL3 implementation at 48 kHz:

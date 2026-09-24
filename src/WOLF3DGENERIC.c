@@ -1,5 +1,6 @@
 #include "WOLF3DGENERIC.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,6 +47,9 @@ typedef struct wg_game_session
     wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
     uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     uint8_t keys[128];
+    uint8_t mouse_buttons;
+    int mouse_x;
+    int mouse_y;
     wl_play_state_t play;
     uint8_t audio_active;
     uint8_t sound_positioned;
@@ -641,9 +645,12 @@ static void WG_GameSessionInput(wl_input_t *input)
     input->down = wg_game.keys[WG_KEY_DOWN];
     input->left = wg_game.keys[WG_KEY_LEFT];
     input->right = wg_game.keys[WG_KEY_RIGHT];
-    input->attack = wg_game.keys[WG_KEY_CONTROL];
-    input->use = wg_game.keys[WG_KEY_SPACE];
-    input->strafe = wg_game.keys[WG_KEY_ALT];
+    input->attack = (uint8_t)(wg_game.keys[WG_KEY_CONTROL]
+                              || (wg_game.mouse_buttons & 1U) != 0U);
+    input->use = (uint8_t)(wg_game.keys[WG_KEY_SPACE]
+                           || (wg_game.mouse_buttons & 4U) != 0U);
+    input->strafe = (uint8_t)(wg_game.keys[WG_KEY_ALT]
+                              || (wg_game.mouse_buttons & 2U) != 0U);
     input->run = (uint8_t)(wg_game.keys[WG_KEY_LEFT_SHIFT]
                            || wg_game.keys[WG_KEY_RIGHT_SHIFT]);
     if (wg_game.keys[WG_KEY_1])
@@ -662,6 +669,16 @@ static void WG_GameSessionInput(wl_input_t *input)
     {
         input->weapon = 4U;
     }
+    input->mouse_x = (int16_t)(wg_game.mouse_x > INT16_MAX
+                                   ? INT16_MAX
+                               : wg_game.mouse_x < INT16_MIN
+                                   ? INT16_MIN : wg_game.mouse_x);
+    input->mouse_y = (int16_t)(wg_game.mouse_y > INT16_MAX
+                                   ? INT16_MAX
+                               : wg_game.mouse_y < INT16_MIN
+                                   ? INT16_MIN : wg_game.mouse_y);
+    wg_game.mouse_x = 0;
+    wg_game.mouse_y = 0;
 }
 
 static unsigned WG_GameSessionNextMap(void)
@@ -1331,6 +1348,28 @@ wg_result_t wolf3dgeneric_Run(void)
                 if (event.key < sizeof(wg_game.keys))
                 {
                     wg_game.keys[event.key] = event.pressed != 0;
+                }
+            }
+            else if (event.type == WG_EVENT_MOUSE_MOTION
+                     && wg_game.active)
+            {
+                wg_game.mouse_x += event.x;
+                wg_game.mouse_y += event.y;
+            }
+            else if (event.type == WG_EVENT_MOUSE_BUTTON
+                     && wg_game.active && event.button >= 1U
+                     && event.button <= 3U)
+            {
+                uint8_t mask = (uint8_t)(1U << (event.button - 1U));
+
+                if (event.pressed)
+                {
+                    wg_game.mouse_buttons |= mask;
+                }
+                else
+                {
+                    wg_game.mouse_buttons =
+                        (uint8_t)(wg_game.mouse_buttons & ~mask);
                 }
             }
         }

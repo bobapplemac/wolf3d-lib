@@ -10,6 +10,7 @@
 
 #define WL_BASE_MOVE 35
 #define WL_RUN_MOVE 70
+#define WL_MOUSE_ADJUSTMENT 5
 
 size_t WL_MusicChunkForMap(unsigned map_number)
 {
@@ -80,8 +81,26 @@ int WL_PlayTick(struct wg_level *level,
         }
 
         speed = input->run ? WL_RUN_MOVE : WL_BASE_MOVE;
-        control_x = ((input->right != 0U) - (input->left != 0U)) * speed;
-        control_y = ((input->down != 0U) - (input->up != 0U)) * speed;
+    control_x = ((input->right != 0U) - (input->left != 0U)) * speed;
+    control_y = ((input->down != 0U) - (input->up != 0U)) * speed;
+    control_x += input->mouse_x * 10 / (13 - WL_MOUSE_ADJUSTMENT);
+    control_y += input->mouse_y * 20 / (13 - WL_MOUSE_ADJUSTMENT);
+    if (control_x > 100)
+    {
+        control_x = 100;
+    }
+    else if (control_x < -100)
+    {
+        control_x = -100;
+    }
+    if (control_y > 100)
+    {
+        control_y = 100;
+    }
+    else if (control_y < -100)
+    {
+        control_y = -100;
+    }
         if (!WL_ControlMovement(level, tables, control_x, control_y,
                                 input->strafe != 0U)
             || (!attack_started

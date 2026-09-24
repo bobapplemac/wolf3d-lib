@@ -39,6 +39,19 @@ static void wg_queue_event(const wg_event_t *event)
     }
 }
 
+static void wg_queue_mouse_button(uint8_t button, int pressed)
+{
+    wg_event_t event;
+
+    event.type = WG_EVENT_MOUSE_BUTTON;
+    event.pressed = pressed;
+    event.key = 0;
+    event.x = 0;
+    event.y = 0;
+    event.button = button;
+    wg_queue_event(&event);
+}
+
 static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
                                        WPARAM wparam, LPARAM lparam)
 {
@@ -63,6 +76,61 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
             return 0;
         }
 
+        case WM_INPUT:
+        {
+            RAWINPUT input;
+            UINT size = sizeof(input);
+
+            if (GetRawInputData((HRAWINPUT)lparam, RID_INPUT, &input, &size,
+                                sizeof(RAWINPUTHEADER)) == sizeof(input)
+                && input.header.dwType == RIM_TYPEMOUSE)
+            {
+                LONG x = input.data.mouse.lLastX;
+                LONG y = input.data.mouse.lLastY;
+                USHORT buttons = input.data.mouse.usButtonFlags;
+
+                if (x != 0 || y != 0)
+                {
+                    wg_event_t event;
+
+                    event.type = WG_EVENT_MOUSE_MOTION;
+                    event.pressed = 0;
+                    event.key = 0;
+                    event.x = (int16_t)(x > INT16_MAX ? INT16_MAX
+                                         : x < INT16_MIN ? INT16_MIN : x);
+                    event.y = (int16_t)(y > INT16_MAX ? INT16_MAX
+                                         : y < INT16_MIN ? INT16_MIN : y);
+                    event.button = 0;
+                    wg_queue_event(&event);
+                }
+                if ((buttons & RI_MOUSE_LEFT_BUTTON_DOWN) != 0U)
+                {
+                    wg_queue_mouse_button(1U, 1);
+                }
+                if ((buttons & RI_MOUSE_LEFT_BUTTON_UP) != 0U)
+                {
+                    wg_queue_mouse_button(1U, 0);
+                }
+                if ((buttons & RI_MOUSE_RIGHT_BUTTON_DOWN) != 0U)
+                {
+                    wg_queue_mouse_button(2U, 1);
+                }
+                if ((buttons & RI_MOUSE_RIGHT_BUTTON_UP) != 0U)
+                {
+                    wg_queue_mouse_button(2U, 0);
+                }
+                if ((buttons & RI_MOUSE_MIDDLE_BUTTON_DOWN) != 0U)
+                {
+                    wg_queue_mouse_button(3U, 1);
+                }
+                if ((buttons & RI_MOUSE_MIDDLE_BUTTON_UP) != 0U)
+                {
+                    wg_queue_mouse_button(3U, 0);
+                }
+            }
+            return 0;
+        }
+
         case WM_CLOSE:
             wg_quit_pending = 1;
             DestroyWindow(window);
@@ -81,6 +149,7 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
 
 int WG_Init(void)
 {
+    RAWINPUTDEVICE mouse;
     WNDCLASSW window_class;
     RECT rectangle;
     HINSTANCE instance;
@@ -110,6 +179,17 @@ int WG_Init(void)
                                 instance, NULL);
     if (wg_window == NULL)
     {
+        return 0;
+    }
+
+    mouse.usUsagePage = 0x01U;
+    mouse.usUsage = 0x02U;
+    mouse.dwFlags = 0U;
+    mouse.hwndTarget = wg_window;
+    if (!RegisterRawInputDevices(&mouse, 1U, sizeof(mouse)))
+    {
+        DestroyWindow(wg_window);
+        wg_window = NULL;
         return 0;
     }
 

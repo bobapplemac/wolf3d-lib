@@ -666,3 +666,15 @@ Regenerate the destination frame with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 1 --play-view --frame-hash --dump-frame out\e1f2-start.ppm
 ```
+
+## 2026-09-24: Relative mouse input
+
+- Added Win32 raw-mouse packets to the existing platform event boundary, so
+  gameplay receives device deltas without cursor-edge clipping or desktop
+  coordinate assumptions.
+- Ported the original default `PollMouseMove` sensitivity and per-tic control
+  clamp into `WL_PLAY.c`.
+- Restored the DOS default mouse buttons: left attack, right strafe, middle use.
+  Keyboard and mouse states combine through the same attack/use edge handling.
+- Added focused deterministic tests for simultaneous mouse turn and forward
+  movement; the complete 37-test WL1/WL6 suite remains stable on x86 and x64.
