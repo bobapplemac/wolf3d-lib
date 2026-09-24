@@ -12,7 +12,8 @@ Wolfenstein 3D assets.
 
 Development is currently in the bootstrap phase. See
 [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) for the staged implementation and
-acceptance gates.
+acceptance gates. [`docs/source-layout.md`](docs/source-layout.md) maps each
+portable translation unit to its original Wolfenstein 3D source owner.
 
 ## Bootstrap build on Windows
 

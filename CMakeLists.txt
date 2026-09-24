@@ -12,27 +12,29 @@ if(NOT WIN32)
     set(WG_BUILD_WIN32 OFF CACHE BOOL "Win32 is only available on Windows" FORCE)
 endif()
 
-add_library(wolf3dgeneric STATIC
-    src/wg_assets.c
-    src/wg_audio.c
-    src/wg_compression.c
-    src/wg_data.c
-    src/wg_file.c
-    src/wg_fixed.c
-    src/wg_font.c
-    src/wg_graphics.c
-    src/wg_level.c
-    src/wg_maps.c
-    src/wg_pages.c
-    src/wg_palette.c
-    src/wg_random.c
-    src/wg_raycast.c
-    src/wg_renderer.c
-    src/wg_scale.c
-    src/wg_video.c
-    src/wg_view.c
-    src/wolf3dgeneric.c
+set(WG_CORE_SOURCES
+    src/WG_ASSETS.c
+    src/WG_AUDIO.c
+    src/ID_CA.c
+    src/WG_DATA.c
+    src/WG_FILE.c
+    src/WG_FIXED.c
+    src/ID_VH.c
+    src/WG_GRAPHICS.c
+    src/WL_GAME.c
+    src/WG_MAPS.c
+    src/ID_PM.c
+    src/WG_PALETTE.c
+    src/ID_US_1.c
+    src/WL_DRAW.c
+    src/WG_RENDERER.c
+    src/WL_SCALE.c
+    src/ID_VL.c
+    src/WL_MAIN.c
+    src/WOLF3DGENERIC.c
 )
+
+add_library(wolf3dgeneric STATIC ${WG_CORE_SOURCES})
 
 target_include_directories(wolf3dgeneric
     PUBLIC include
@@ -77,15 +79,15 @@ endfunction()
 
 if(WG_BUILD_HEADLESS)
     add_executable(wolf3dgeneric-headless
-        platforms/headless/main.c
-        platforms/headless/wg_headless.c
+        platforms/headless/MAIN.c
+        platforms/headless/WG_HEADLESS.c
     )
     wg_configure_host(wolf3dgeneric-headless)
 endif()
 
 if(WG_BUILD_WIN32)
     add_executable(wolf3dgeneric-win32 WIN32
-        platforms/win32/wg_win32.c
+        platforms/win32/WG_WIN32.c
     )
     wg_configure_host(wolf3dgeneric-win32)
     target_compile_definitions(wolf3dgeneric-win32 PRIVATE
@@ -99,7 +101,7 @@ endif()
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     add_test(NAME bootstrap-headless COMMAND wolf3dgeneric-headless --bootstrap-test)
 
-    add_executable(wg-tests tests/wg_tests.c)
+    add_executable(wg-tests tests/WG_TESTS.c)
     wg_configure_host(wg-tests)
     add_test(NAME unit-tests COMMAND wg-tests)
 

@@ -3,7 +3,13 @@
 wolf3dgeneric keeps the original game's indexed 320x200 presentation and game
 rules while replacing assumptions that only hold in 16-bit DOS. The portable
 core is C99 and communicates with a host through the deliberately small
-`wg_platform.h` contract.
+`WG_PLATFORM.h` contract.
+
+Translated files retain their original uppercase `ID_*` and `WL_*` basenames
+when they have a clear historical owner. New generic boundaries use uppercase
+`WG_*`; extensions remain lowercase for modern toolchain portability.
+The complete mapping and naming policy is recorded in
+[`source-layout.md`](source-layout.md).
 
 ## Resource boundary
 

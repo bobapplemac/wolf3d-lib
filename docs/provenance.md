@@ -13,7 +13,7 @@ third-party component when audio implementation begins. Its source and license
 will accompany distributed builds. The MAME and DOSBox OPL implementations are
 not used.
 
-`src/wolfpal.inc` is the original Wolfenstein 3D 256-color VGA palette in the
+`src/WOLFPAL.inc` is the original Wolfenstein 3D 256-color VGA palette in the
 portable initializer format used by Chocolate Wolfenstein 3D. Its 6-bit channel
 values are converted to 8-bit values at compile time.
 
