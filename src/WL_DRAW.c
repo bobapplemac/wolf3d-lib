@@ -666,6 +666,11 @@ static uint16_t WG_ActorShape(const wg_actor_t *actor, int projected_x,
     {
         angle += WG_ANGLES;
     }
+    if (actor->rotate == 2U)
+    {
+        return (uint16_t)(actor->shape
+                          + 4 * (angle / (WG_ANGLES / 2)));
+    }
     return (uint16_t)(actor->shape + angle / (WG_ANGLES / 8));
 }
 

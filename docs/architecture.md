@@ -224,7 +224,10 @@ original E1M1 dog's leap and bite. `--boss-fire-view` renders Hans's seeded
 hitscan attack on E1M9. `--needle-view` renders Schabbs's syringe in flight on
 E2M9, and `--rocket-view` renders Giftmacher's rotating rocket and smoke trail
 on E4M9. `--pushwall-view` activates the first E1M1 secret and renders it at a
-half-tile offset without altering normal captures.
+half-tile offset without altering normal captures. Ordinary guards, officers,
+mutants, SS, and dogs now carry the original difficulty-indexed hit points and
+run through their pain, death, scoring, and item-drop paths. `--death-view`
+captures an E1M1 guard in the third collapse frame with his dropped clip.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

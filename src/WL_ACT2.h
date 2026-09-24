@@ -10,6 +10,7 @@
 #define WG_ACTOR_FLAG_ATTACK_MODE 0x0010U
 #define WG_ACTOR_FLAG_FIRST_ATTACK 0x0020U
 #define WG_ACTOR_FLAG_AMBUSH 0x0040U
+#define WG_ACTOR_FLAG_NONMARK 0x0080U
 #define WG_ACTOR_FLAG_ATTACK_PENDING 0x0100U
 #define WG_ACTOR_FLAG_REMOVED 0x0200U
 
@@ -76,6 +77,13 @@ typedef enum wg_actor_state
     WG_STATE_DOG_JUMP3,
     WG_STATE_DOG_JUMP4,
     WG_STATE_DOG_JUMP5,
+    WG_STATE_PAIN1,
+    WG_STATE_PAIN2,
+    WG_STATE_DIE1,
+    WG_STATE_DIE2,
+    WG_STATE_DIE3,
+    WG_STATE_DIE4,
+    WG_STATE_DEAD,
     WG_STATE_NEEDLE1,
     WG_STATE_NEEDLE2,
     WG_STATE_NEEDLE3,
@@ -111,6 +119,7 @@ typedef struct wg_actor
     int32_t reaction_time;
     int32_t speed;
     int32_t distance;
+    int32_t hit_points;
     wg_actor_state_t state;
     wg_actor_class_t actor_class;
 } wg_actor_t;

@@ -115,6 +115,14 @@ plane halfway across the first tile:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pushwall-view --frame-hash --dump-frame moving-pushwall.ppm
 ```
 
+The ordinary-enemy death diagnostic applies the original surprise-hit damage
+rule to an E1M1 guard, advances his collapse by 30 tics, and renders the ammo
+clip dropped at his tile:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --death-view --frame-hash --dump-frame guard-death.ppm
+```
+
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz
 tics and frame the first patrol, use:
 

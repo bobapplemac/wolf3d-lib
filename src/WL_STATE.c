@@ -18,8 +18,15 @@
 #define WG_SPR_SMOKE1 378U
 #define WG_SPR_BOOM1 382U
 #define WG_TWO_PI 6.283185314
+#define WG_SPR_STAT_CLIP2 28U
+#define WG_SPR_STAT_MACHINEGUN 29U
 
 static int WL_BeginAttack(wg_actor_t *actor);
+static void WL_FirstSighting(wg_actor_t *actor);
+static int32_t WL_ChaseStateDuration(const wg_actor_t *actor,
+                                     wg_actor_state_t state);
+static wg_actor_state_t WL_NextChaseState(wg_actor_state_t state);
+static void WL_SetChaseShape(wg_actor_t *actor);
 
 static int WL_IsPathState(wg_actor_state_t state)
 {
@@ -51,6 +58,202 @@ static int WL_IsShootState(wg_actor_state_t state)
 static int WL_IsDogJumpState(wg_actor_state_t state)
 {
     return state >= WG_STATE_DOG_JUMP1 && state <= WG_STATE_DOG_JUMP5;
+}
+
+static int WL_IsPainState(wg_actor_state_t state)
+{
+    return state == WG_STATE_PAIN1 || state == WG_STATE_PAIN2;
+}
+
+static int WL_IsDeathState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_DIE1 && state <= WG_STATE_DIE4;
+}
+
+static uint16_t WL_PainShape(wg_actor_class_t actor_class, int second)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        return (uint16_t)(second ? 94U : 90U);
+    case WG_ACTOR_OFFICER:
+        return (uint16_t)(second ? 282U : 278U);
+    case WG_ACTOR_MUTANT:
+        return (uint16_t)(second ? 231U : 227U);
+    case WG_ACTOR_SS:
+        return (uint16_t)(second ? 182U : 178U);
+    default:
+        return 0U;
+    }
+}
+
+static unsigned WL_DeathTimedFrames(wg_actor_class_t actor_class)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_OFFICER:
+    case WG_ACTOR_MUTANT:
+        return 4U;
+    case WG_ACTOR_GUARD:
+    case WG_ACTOR_SS:
+    case WG_ACTOR_DOG:
+        return 3U;
+    default:
+        return 0U;
+    }
+}
+
+static int32_t WL_DeathFrameDuration(wg_actor_class_t actor_class)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_OFFICER:
+        return 11;
+    case WG_ACTOR_MUTANT:
+        return 7;
+    default:
+        return 15;
+    }
+}
+
+static uint16_t WL_DeathShape(wg_actor_class_t actor_class, unsigned frame)
+{
+    static const uint16_t guard[] = {91U, 92U, 93U, 95U};
+    static const uint16_t officer[] = {279U, 280U, 281U, 283U, 284U};
+    static const uint16_t mutant[] = {228U, 229U, 230U, 232U, 233U};
+    static const uint16_t ss[] = {179U, 180U, 181U, 183U};
+    static const uint16_t dog[] = {131U, 132U, 133U, 134U};
+
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        return guard[frame];
+    case WG_ACTOR_OFFICER:
+        return officer[frame];
+    case WG_ACTOR_MUTANT:
+        return mutant[frame];
+    case WG_ACTOR_SS:
+        return ss[frame];
+    case WG_ACTOR_DOG:
+        return dog[frame];
+    default:
+        return 0U;
+    }
+}
+
+static int WL_DropItem(wg_level_t *level, uint8_t tile_x, uint8_t tile_y,
+                       uint16_t shape)
+{
+    wg_static_object_t *object;
+
+    if (level->static_count >= WG_MAX_STATICS)
+    {
+        return 0;
+    }
+    object = &level->statics[level->static_count++];
+    object->tile_x = tile_x;
+    object->tile_y = tile_y;
+    object->blocking = 0U;
+    object->shape = shape;
+    return 1;
+}
+
+int WL_KillActor(wg_level_t *level, size_t actor_index)
+{
+    wg_actor_t *actor;
+    uint32_t points;
+    int drop = 0;
+
+    if (level == NULL || actor_index >= level->actor_count)
+    {
+        return 0;
+    }
+    actor = &level->actors[actor_index];
+    if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U
+        || WL_DeathTimedFrames(actor->actor_class) == 0U)
+    {
+        return 0;
+    }
+    switch (actor->actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        points = 100U;
+        drop = WG_SPR_STAT_CLIP2;
+        break;
+    case WG_ACTOR_OFFICER:
+        points = 400U;
+        drop = WG_SPR_STAT_CLIP2;
+        break;
+    case WG_ACTOR_MUTANT:
+        points = 700U;
+        drop = WG_SPR_STAT_CLIP2;
+        break;
+    case WG_ACTOR_SS:
+        points = 500U;
+        drop = level->player_best_weapon < 2U
+                   ? WG_SPR_STAT_MACHINEGUN : WG_SPR_STAT_CLIP2;
+        break;
+    case WG_ACTOR_DOG:
+        points = 200U;
+        break;
+    default:
+        return 0;
+    }
+    actor->tile_x = (uint8_t)(actor->x / WG_FIXED_ONE);
+    actor->tile_y = (uint8_t)(actor->y / WG_FIXED_ONE);
+    if (drop != 0)
+    {
+        (void)WL_DropItem(level, actor->tile_x, actor->tile_y,
+                          (uint16_t)drop);
+    }
+    actor->hit_points = 0;
+    actor->state = WG_STATE_DIE1;
+    actor->tic_count = WL_DeathFrameDuration(actor->actor_class);
+    actor->shape = WL_DeathShape(actor->actor_class, 0U);
+    actor->rotate = 0U;
+    actor->flags = (uint16_t)(actor->flags & ~WG_ACTOR_FLAG_SHOOTABLE);
+    actor->flags |= WG_ACTOR_FLAG_NONMARK;
+    level->score += points;
+    ++level->kill_count;
+    return 1;
+}
+
+static void WL_TickPainOrDeath(wg_actor_t *actor, unsigned tics)
+{
+    actor->tic_count -= (int32_t)tics;
+    if (WL_IsPainState(actor->state))
+    {
+        if (actor->tic_count <= 0)
+        {
+            actor->state = WG_STATE_CHASE1;
+            actor->tic_count += WL_ChaseStateDuration(actor,
+                                                       actor->state);
+            while (actor->tic_count <= 0)
+            {
+                actor->state = WL_NextChaseState(actor->state);
+                actor->tic_count += WL_ChaseStateDuration(actor,
+                                                           actor->state);
+            }
+            WL_SetChaseShape(actor);
+            actor->rotate = 1U;
+        }
+        return;
+    }
+    while (actor->tic_count <= 0 && WL_IsDeathState(actor->state))
+    {
+        unsigned frame = (unsigned)(actor->state - WG_STATE_DIE1) + 1U;
+
+        if (frame >= WL_DeathTimedFrames(actor->actor_class))
+        {
+            actor->state = WG_STATE_DEAD;
+            actor->shape = WL_DeathShape(actor->actor_class, frame);
+            actor->tic_count = actor->actor_class == WG_ACTOR_DOG ? 15 : 0;
+            return;
+        }
+        actor->state = (wg_actor_state_t)(actor->state + 1);
+        actor->shape = WL_DeathShape(actor->actor_class, frame);
+        actor->tic_count += WL_DeathFrameDuration(actor->actor_class);
+    }
 }
 
 static int WL_IsNeedleState(wg_actor_state_t state)
@@ -1449,6 +1652,23 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
         {
             continue;
         }
+        if (WL_IsPainState(actor->state) || WL_IsDeathState(actor->state))
+        {
+            WL_TickPainOrDeath(actor, tics);
+            continue;
+        }
+        if (actor->state == WG_STATE_DEAD)
+        {
+            if (actor->actor_class == WG_ACTOR_DOG)
+            {
+                actor->tic_count -= (int32_t)tics;
+                while (actor->tic_count <= 0)
+                {
+                    actor->tic_count += 15;
+                }
+            }
+            continue;
+        }
         if (WL_IsNeedleState(actor->state))
         {
             actor->tic_count -= (int32_t)tics;
@@ -2061,6 +2281,49 @@ static void WL_FirstSighting(wg_actor_t *actor)
         actor->distance = 0;
     }
     actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE | WG_ACTOR_FLAG_FIRST_ATTACK;
+}
+
+int WL_DamageActor(wg_level_t *level, size_t actor_index, unsigned damage)
+{
+    wg_actor_t *actor;
+    uint16_t pain_shape;
+
+    if (level == NULL || actor_index >= level->actor_count
+        || damage > (unsigned)(INT32_MAX / 2))
+    {
+        return 0;
+    }
+    actor = &level->actors[actor_index];
+    if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U
+        || WL_DeathTimedFrames(actor->actor_class) == 0U)
+    {
+        return 0;
+    }
+    level->made_noise = 1U;
+    if ((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) == 0U)
+    {
+        damage <<= 1;
+    }
+    actor->hit_points -= (int32_t)damage;
+    if (actor->hit_points <= 0)
+    {
+        return WL_KillActor(level, actor_index);
+    }
+    if ((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) == 0U)
+    {
+        WL_FirstSighting(actor);
+    }
+    pain_shape = WL_PainShape(actor->actor_class,
+                              (actor->hit_points & 1) == 0);
+    if (pain_shape != 0U)
+    {
+        actor->state = (actor->hit_points & 1) != 0
+                           ? WG_STATE_PAIN1 : WG_STATE_PAIN2;
+        actor->shape = pain_shape;
+        actor->rotate = 2U;
+        actor->tic_count = 10;
+    }
+    return 1;
 }
 
 static int32_t WL_ReactionTime(wg_level_t *level,

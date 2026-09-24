@@ -41,6 +41,55 @@
 #define WG_SPEED_PATROL 512
 #define WG_SPEED_DOG 1500
 
+static int32_t WL_StartHitPoints(wg_difficulty_t difficulty,
+                                 wg_actor_class_t actor_class)
+{
+    static const int32_t boss_hit_points[4][7] =
+    {
+        {850, 850, 200, 800, 850, 850, 850},
+        {950, 950, 300, 950, 950, 950, 950},
+        {1050, 1550, 400, 1050, 1050, 1050, 1050},
+        {1200, 2400, 500, 1200, 1200, 1200, 1200}
+    };
+
+    if (difficulty > WG_DIFFICULTY_HARD)
+    {
+        return 0;
+    }
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        return 25;
+    case WG_ACTOR_OFFICER:
+        return 50;
+    case WG_ACTOR_SS:
+        return 100;
+    case WG_ACTOR_DOG:
+        return 1;
+    case WG_ACTOR_MUTANT:
+        return difficulty == WG_DIFFICULTY_BABY ? 45
+               : difficulty == WG_DIFFICULTY_HARD ? 65 : 55;
+    case WG_ACTOR_GHOST:
+        return 25;
+    case WG_ACTOR_BOSS:
+        return boss_hit_points[difficulty][0];
+    case WG_ACTOR_SCHABBS:
+        return boss_hit_points[difficulty][1];
+    case WG_ACTOR_FAKE:
+        return boss_hit_points[difficulty][2];
+    case WG_ACTOR_MECHA_HITLER:
+        return boss_hit_points[difficulty][3];
+    case WG_ACTOR_GRETEL:
+        return boss_hit_points[difficulty][4];
+    case WG_ACTOR_GIFT:
+        return boss_hit_points[difficulty][5];
+    case WG_ACTOR_FAT:
+        return boss_hit_points[difficulty][6];
+    default:
+        return 0;
+    }
+}
+
 static uint16_t WL_StandingShape(wg_actor_class_t actor_class)
 {
     switch (actor_class)
@@ -184,6 +233,7 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
     actor->speed = actor_class == WG_ACTOR_DOG
                        ? WG_SPEED_DOG : WG_SPEED_PATROL;
     actor->distance = patrol ? WG_FIXED_ONE : 0;
+    actor->hit_points = WL_StartHitPoints(level->difficulty, actor_class);
     actor->state = patrol ? WG_STATE_PATH1 : WG_STATE_STAND;
     actor->actor_class = actor_class;
     return 1;
@@ -243,6 +293,7 @@ int WL_SpawnDeadGuard(struct wg_level *level, uint8_t tile_x, uint8_t tile_y)
     actor->reaction_time = 0;
     actor->speed = 0;
     actor->distance = 0;
+    actor->hit_points = 0;
     actor->state = WG_STATE_NONE;
     actor->actor_class = WG_ACTOR_INERT;
     return 1;
@@ -310,6 +361,7 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
     actor->reaction_time = 0;
     actor->speed = WG_SPEED_PATROL;
     actor->distance = 0;
+    actor->hit_points = WL_StartHitPoints(level->difficulty, actor_class);
     actor->state = WG_STATE_STAND;
     actor->actor_class = actor_class;
     return 1;
@@ -350,6 +402,7 @@ int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
     actor->reaction_time = 0;
     actor->speed = WG_SPEED_DOG;
     actor->distance = 0;
+    actor->hit_points = WL_StartHitPoints(level->difficulty, WG_ACTOR_GHOST);
     actor->state = WG_STATE_GHOST1;
     actor->actor_class = WG_ACTOR_GHOST;
     return 1;

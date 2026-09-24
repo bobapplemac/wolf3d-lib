@@ -347,6 +347,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int rocket_view,
                                   int flame_view,
                                   int pushwall_view,
+                                  int death_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -390,11 +391,12 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         && !rocket_view
         && !flame_view
         && !pushwall_view
+        && !death_view
         && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
     }
-    if (guard_view || alert_view || chase_view || fire_view)
+    if (guard_view || alert_view || chase_view || fire_view || death_view)
     {
         wg_actor_t *actor = WG_FindGuardViewActor(&level);
         size_t player_tile;
@@ -603,6 +605,23 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    if (death_view)
+    {
+        wg_actor_t *actor = WG_FindGuardViewActor(&level);
+        size_t actor_index;
+
+        if (actor == NULL)
+        {
+            goto cleanup;
+        }
+        actor_index = (size_t)(actor - level.actors);
+        if (!WL_DamageActor(&level, actor_index,
+                            (unsigned)actor->hit_points)
+            || !WL_TickActors(&level, 30U))
+        {
+            goto cleanup;
+        }
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
@@ -693,7 +712,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--needle-view"),
             WG_HasArgument(argc, argv, "--rocket-view"),
             WG_HasArgument(argc, argv, "--flame-view"),
-            WG_HasArgument(argc, argv, "--pushwall-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--pushwall-view"),
+            WG_HasArgument(argc, argv, "--death-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

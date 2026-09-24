@@ -352,3 +352,28 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pushwall-view --frame-hash --dump-frame out\moving-pushwall.ppm
 ```
+
+## 2026-09-24: Ordinary enemy damage and death
+
+- Added the original difficulty-indexed hit points to the portable actor
+  structure for guards, officers, SS, dogs, mutants, ghosts, and Wolf3D bosses.
+- Ported `DamageActor`'s noise flag, double damage against an unaware enemy,
+  first-sighting transition, and parity-selected pain frames.
+- Ported ordinary-enemy scoring, kill counting, non-marking corpses, ammo and
+  machine-gun drops, and the class-specific death animation timing and sprites.
+- Restored the original special two-way pain-frame rotation calculation while
+  retaining the ordinary eight-way actor rotation path.
+- Focused tests cover hit points, surprise damage, combat activation, pain
+  recovery, corpse sequencing, scoring, drops, and the dog's looping dead state.
+- The E1M1 diagnostic advances a guard 30 tics into his collapse and shows the
+  dropped ammo clip behind him.
+- 320x200 indexed-frame FNV-1a: `5401da4a605ed4c0`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 guard in the third death frame](../out/guard-death.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --death-view --frame-hash --dump-frame out\guard-death.ppm
+```

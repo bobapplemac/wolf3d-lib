@@ -1015,6 +1015,100 @@ static void TestFakeHitlerFlames(void)
     CHECK(fake->shape == 325U);
 }
 
+static void TestActorDamageAndDeath(void)
+{
+    wg_level_t level;
+    wg_actor_t *actor;
+
+    memset(&level, 0, sizeof(level));
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.player_best_weapon = 1U;
+
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 10U, 10U, 0U));
+    actor = &level.actors[0];
+    CHECK(actor->hit_points == 25);
+    CHECK(WL_DamageActor(&level, 0U, 4U));
+    CHECK(level.made_noise == 1U);
+    CHECK(actor->hit_points == 17);
+    CHECK((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) != 0U);
+    CHECK(actor->state == WG_STATE_PAIN1);
+    CHECK(actor->shape == 90U);
+    CHECK(actor->rotate == 2U);
+    CHECK(WL_TickActors(&level, 10U));
+    CHECK(actor->state == WG_STATE_CHASE1);
+    CHECK(actor->shape == actor->base_shape);
+    CHECK(actor->rotate == 1U);
+
+    CHECK(WL_DamageActor(&level, 0U, 17U));
+    CHECK(actor->hit_points == 0);
+    CHECK(actor->state == WG_STATE_DIE1);
+    CHECK(actor->shape == 91U);
+    CHECK((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U);
+    CHECK((actor->flags & WG_ACTOR_FLAG_NONMARK) != 0U);
+    CHECK(level.score == 100U);
+    CHECK(level.kill_count == 1U);
+    CHECK(level.static_count == 1U);
+    CHECK(level.statics[0].shape == 28U);
+    CHECK(level.statics[0].blocking == 0U);
+    CHECK(!WL_DamageActor(&level, 0U, 1U));
+    CHECK(WL_TickActors(&level, 15U));
+    CHECK(actor->state == WG_STATE_DIE2 && actor->shape == 92U);
+    CHECK(WL_TickActors(&level, 15U));
+    CHECK(actor->state == WG_STATE_DIE3 && actor->shape == 93U);
+    CHECK(WL_TickActors(&level, 15U));
+    CHECK(actor->state == WG_STATE_DEAD && actor->shape == 95U);
+
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_DOG, 11U, 10U, 0U));
+    actor = &level.actors[1];
+    CHECK(actor->hit_points == 1);
+    CHECK(WL_DamageActor(&level, 1U, 1U));
+    CHECK(level.score == 300U);
+    CHECK(level.kill_count == 2U);
+    CHECK(level.static_count == 1U);
+    CHECK(WL_TickActors(&level, 45U));
+    CHECK(actor->state == WG_STATE_DEAD && actor->shape == 134U);
+    CHECK(actor->tic_count == 15);
+
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_SS, 12U, 10U, 0U));
+    actor = &level.actors[2];
+    CHECK(actor->hit_points == 100);
+    CHECK(WL_DamageActor(&level, 2U, 50U));
+    CHECK(level.statics[1].shape == 29U);
+    CHECK(level.score == 800U);
+    CHECK(WL_TickActors(&level, 45U));
+    CHECK(actor->state == WG_STATE_DEAD && actor->shape == 183U);
+
+    level.difficulty = WG_DIFFICULTY_HARD;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_MUTANT, 13U, 10U, 0U));
+    CHECK(level.actors[3].hit_points == 65);
+    CHECK(WL_DamageActor(&level, 3U, 5U));
+    CHECK(level.actors[3].hit_points == 55);
+    CHECK(level.actors[3].state == WG_STATE_PAIN1);
+    CHECK(level.actors[3].shape == 227U);
+    CHECK(WL_DamageActor(&level, 3U, 55U));
+    CHECK(WL_TickActors(&level, 28U));
+    CHECK(level.actors[3].state == WG_STATE_DEAD);
+    CHECK(level.actors[3].shape == 233U);
+    CHECK(level.score == 1500U);
+
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_OFFICER, 14U, 10U, 0U));
+    CHECK(level.actors[4].hit_points == 50);
+    CHECK(WL_DamageActor(&level, 4U, 25U));
+    CHECK(WL_TickActors(&level, 44U));
+    CHECK(level.actors[4].state == WG_STATE_DEAD);
+    CHECK(level.actors[4].shape == 284U);
+    CHECK(level.score == 1900U);
+    CHECK(level.kill_count == 5U);
+    CHECK(level.static_count == 4U);
+    CHECK(level.statics[3].shape == 28U);
+
+    level.player_best_weapon = 2U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_SS, 15U, 10U, 0U));
+    CHECK(WL_DamageActor(&level, 5U, 50U));
+    CHECK(level.statics[4].shape == 28U);
+    CHECK(level.score == 2400U);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -1891,6 +1985,7 @@ int main(int argc, char **argv)
     TestSchabbsNeedle();
     TestRocketBossAttacks();
     TestFakeHitlerFlames();
+    TestActorDamageAndDeath();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();
