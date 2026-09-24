@@ -26,6 +26,7 @@ add_library(wolf3dgeneric STATIC
     src/wg_pages.c
     src/wg_palette.c
     src/wg_random.c
+    src/wg_scale.c
     src/wg_video.c
     src/wg_view.c
     src/wolf3dgeneric.c

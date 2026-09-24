@@ -36,5 +36,9 @@ corresponding routines were used to identify the safe cardinal-angle assignments
 and the conversion from the DOS assembly routine's sign-magnitude fraction to
 ordinary signed fixed-point values.
 
+The portable wall-post scaler follows the original `ScalePost` sampling contract
+in `WL_DRAW.C`. Wolf4SDL's C replacement was consulted to translate the compiled
+scaler and VGA plane-mask behavior into direct indexed-framebuffer writes.
+
 Wolfenstein 3D data and executables are external test inputs. No game assets are
 part of this repository or covered by its license.

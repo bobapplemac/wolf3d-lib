@@ -73,6 +73,11 @@ it reaches 90 degrees. The portable loop stops before that iteration and assigns
 the two exact cardinal values explicitly, matching the modern ports without the
 out-of-bounds write.
 
+Wall columns are scaled by ordinary bounded C into the indexed framebuffer. The
+source sampling order and the original three-bit fractional wall-height unit are
+retained from `ScalePost`; a single call may reproduce the original adjacent-post
+coalescing optimization without VGA plane masks or generated machine code.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a

@@ -14,6 +14,7 @@
 #include "wg_pages.h"
 #include "wg_palette.h"
 #include "wg_random.h"
+#include "wg_scale.h"
 #include "wg_video.h"
 #include "wg_view.h"
 
@@ -190,6 +191,32 @@ static void TestViewMath(void)
     CHECK(tables.min_height_divisor == 7);
     CHECK(tables.max_slope > 0);
     CHECK(!WG_ViewCalculateProjection(&tables, 319, WG_FOCAL_LENGTH));
+}
+
+static void TestWallScaler(void)
+{
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT];
+    uint8_t texture[WG_TEXTURE_SIZE * WG_TEXTURE_SIZE];
+    int x;
+    int y;
+
+    memset(framebuffer, 3, sizeof(framebuffer));
+    for (y = 0; y < WG_TEXTURE_SIZE; ++y)
+    {
+        for (x = 0; x < WG_TEXTURE_SIZE; ++x)
+        {
+            texture[y * WG_TEXTURE_SIZE + x] = (uint8_t)y;
+        }
+    }
+    CHECK(WG_ScaleWallPost(framebuffer, 0, 0, 320, 160, 10, 2,
+                           texture, 7, 256));
+    CHECK(framebuffer[47 * WG_VIDEO_WIDTH + 10] == 3);
+    CHECK(framebuffer[48 * WG_VIDEO_WIDTH + 10] == 0);
+    CHECK(framebuffer[48 * WG_VIDEO_WIDTH + 11] == 0);
+    CHECK(framebuffer[111 * WG_VIDEO_WIDTH + 10] == 63);
+    CHECK(framebuffer[112 * WG_VIDEO_WIDTH + 10] == 3);
+    CHECK(!WG_ScaleWallPost(framebuffer, 0, 0, 320, 160, 319, 2,
+                            texture, 0, 256));
 }
 
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
@@ -447,6 +474,7 @@ int main(int argc, char **argv)
     TestVideo();
     TestRandom();
     TestViewMath();
+    TestWallScaler();
 
     if (argc == 4 && strcmp(argv[1], "--data") == 0)
     {
