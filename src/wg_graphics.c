@@ -7,6 +7,20 @@
 #include "wg_endian.h"
 
 #define WG_SPARSE_OFFSET 0x00ffffffU
+#define WG_START_PICTURES 3U
+
+static size_t WG_GraphicsPictureCount(wg_game_variant_t variant)
+{
+    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        return 132U;
+    }
+    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    {
+        return 144U;
+    }
+    return 0;
+}
 
 static int WG_GraphicsPath(char *destination, size_t destination_size,
                            const wg_data_set_t *data_set, const char *base)
@@ -78,6 +92,33 @@ int WG_GraphicsOpen(wg_graphics_t *graphics, const wg_data_set_t *data_set)
         }
     }
 
+    graphics->picture_count = WG_GraphicsPictureCount(data_set->variant);
+    if (graphics->picture_count != 0)
+    {
+        uint8_t *table;
+        size_t table_size;
+
+        if (!WG_GraphicsDecodeChunk(graphics, 0, &table, &table_size)
+            || table_size != graphics->picture_count * 4U)
+        {
+            free(table);
+            goto failure;
+        }
+        graphics->pictures = (wg_picture_dimensions_t *)malloc(
+            graphics->picture_count * sizeof(*graphics->pictures));
+        if (graphics->pictures == NULL)
+        {
+            free(table);
+            goto failure;
+        }
+        for (index = 0; index < graphics->picture_count; ++index)
+        {
+            graphics->pictures[index].width = WG_ReadLE16(table + index * 4U);
+            graphics->pictures[index].height = WG_ReadLE16(table + index * 4U + 2U);
+        }
+        free(table);
+    }
+
     WG_FreeFile(&dictionary);
     WG_FreeFile(&header);
     return 1;
@@ -96,6 +137,7 @@ void WG_GraphicsClose(wg_graphics_t *graphics)
         return;
     }
     free(graphics->offsets);
+    free(graphics->pictures);
     WG_FreeFile(&graphics->graph);
     memset(graphics, 0, sizeof(*graphics));
 }
@@ -162,15 +204,75 @@ int WG_GraphicsDecodeChunk(const wg_graphics_t *graphics, size_t chunk,
     return 1;
 }
 
+int WG_GraphicsDecodePicture(const wg_graphics_t *graphics, size_t chunk,
+                             uint8_t **pixels, uint16_t *width,
+                             uint16_t *height)
+{
+    size_t picture;
+    size_t pixel_count;
+    uint8_t *planar;
+    size_t planar_size;
+    uint8_t *chunky;
+    size_t y;
+    size_t x;
+
+    if (graphics == NULL || pixels == NULL || width == NULL || height == NULL
+        || chunk < WG_START_PICTURES)
+    {
+        return 0;
+    }
+    *pixels = NULL;
+    *width = 0;
+    *height = 0;
+    picture = chunk - WG_START_PICTURES;
+    if (picture >= graphics->picture_count
+        || graphics->pictures[picture].width == 0
+        || graphics->pictures[picture].width % 4U != 0
+        || graphics->pictures[picture].height == 0)
+    {
+        return 0;
+    }
+    pixel_count = (size_t)graphics->pictures[picture].width
+                * graphics->pictures[picture].height;
+    if (!WG_GraphicsDecodeChunk(graphics, chunk, &planar, &planar_size)
+        || planar_size != pixel_count)
+    {
+        free(planar);
+        return 0;
+    }
+    chunky = (uint8_t *)malloc(pixel_count);
+    if (chunky == NULL)
+    {
+        free(planar);
+        return 0;
+    }
+    for (y = 0; y < graphics->pictures[picture].height; ++y)
+    {
+        for (x = 0; x < graphics->pictures[picture].width; ++x)
+        {
+            size_t plane_width = graphics->pictures[picture].width / 4U;
+            size_t planar_index = y * plane_width + (x >> 2)
+                                + (x & 3U) * plane_width
+                                * graphics->pictures[picture].height;
+            chunky[y * graphics->pictures[picture].width + x] =
+                planar[planar_index];
+        }
+    }
+    free(planar);
+    *pixels = chunky;
+    *width = graphics->pictures[picture].width;
+    *height = graphics->pictures[picture].height;
+    return 1;
+}
+
 int WG_GraphicsDecodeTitle(const wg_graphics_t *graphics,
                            wg_game_variant_t variant,
                            uint8_t framebuffer[320 * 200])
 {
     size_t title_chunk;
-    uint8_t *planar;
-    size_t planar_size;
-    size_t y;
-    size_t x;
+    uint8_t *pixels;
+    uint16_t width;
+    uint16_t height;
 
     if (framebuffer == NULL)
     {
@@ -189,23 +291,14 @@ int WG_GraphicsDecodeTitle(const wg_graphics_t *graphics,
         return 0;
     }
 
-    if (!WG_GraphicsDecodeChunk(graphics, title_chunk, &planar, &planar_size)
-        || planar_size != 320U * 200U)
+    if (!WG_GraphicsDecodePicture(graphics, title_chunk, &pixels,
+                                  &width, &height)
+        || width != 320U || height != 200U)
     {
-        free(planar);
+        free(pixels);
         return 0;
     }
-
-    for (y = 0; y < 200U; ++y)
-    {
-        for (x = 0; x < 320U; ++x)
-        {
-            size_t planar_index = y * 80U + (x >> 2)
-                                + (x & 3U) * 80U * 200U;
-            framebuffer[y * 320U + x] = planar[planar_index];
-        }
-    }
-    free(planar);
+    memcpy(framebuffer, pixels, 320U * 200U);
+    free(pixels);
     return 1;
 }
-

@@ -13,10 +13,13 @@ if(NOT WIN32)
 endif()
 
 add_library(wolf3dgeneric STATIC
+    src/wg_audio.c
     src/wg_compression.c
     src/wg_data.c
     src/wg_file.c
     src/wg_graphics.c
+    src/wg_maps.c
+    src/wg_pages.c
     src/wg_palette.c
     src/wolf3dgeneric.c
 )

@@ -2,9 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "wg_audio.h"
 #include "wg_compression.h"
 #include "wg_data.h"
 #include "wg_graphics.h"
+#include "wg_maps.h"
+#include "wg_pages.h"
 #include "wg_palette.h"
 
 static int failures;
@@ -91,8 +94,18 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
 {
     wg_data_set_t data_set;
     wg_graphics_t graphics;
+    wg_audio_t audio;
+    wg_pages_t pages;
+    wg_maps_t maps;
+    wg_map_t map;
+    const uint8_t *page_data;
+    size_t page_size;
     uint8_t framebuffer[320 * 200];
+    uint8_t *picture_pixels;
+    uint16_t picture_width;
+    uint16_t picture_height;
     uint64_t frame_hash = 1469598103934665603ULL;
+    uint64_t map_hash = 1469598103934665603ULL;
     size_t index;
 
     CHECK(WG_DataOpen(&data_set, path));
@@ -114,6 +127,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     CHECK(WG_GraphicsOpen(&graphics, &data_set));
     if (graphics.offsets != NULL)
     {
+        CHECK(graphics.picture_count == (expected_variant
+              == WG_GAME_WOLF3D_SHAREWARE_14 ? 144U : 132U));
         CHECK(WG_GraphicsDecodeTitle(&graphics, data_set.variant, framebuffer));
         for (index = 0; index < sizeof(framebuffer); ++index)
         {
@@ -128,7 +143,65 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(WG_WolfPalette[1] == 0);
         CHECK(WG_WolfPalette[2] == 0);
         CHECK(WG_WolfPalette[5] == 170);
+        CHECK(WG_GraphicsDecodePicture(&graphics,
+              expected_variant == WG_GAME_WOLF3D_SHAREWARE_14 ? 98U : 86U,
+              &picture_pixels, &picture_width, &picture_height));
+        if (picture_pixels != NULL)
+        {
+            CHECK(picture_width == 320U);
+            CHECK(picture_height == 40U);
+            free(picture_pixels);
+        }
         WG_GraphicsClose(&graphics);
+    }
+
+    CHECK(WG_PagesOpen(&pages, &data_set));
+    if (pages.file.data != NULL)
+    {
+        CHECK(WG_PagesGet(&pages, 0, &page_data, &page_size));
+        CHECK(page_size == 4096U);
+        CHECK(WG_PagesGet(&pages, data_set.sprite_start,
+                          &page_data, &page_size));
+        CHECK(page_size != 0U);
+        CHECK(!WG_PagesGet(&pages, data_set.page_count,
+                           &page_data, &page_size));
+        WG_PagesClose(&pages);
+    }
+
+    CHECK(WG_MapsOpen(&maps, &data_set));
+    if (maps.header_offsets != NULL)
+    {
+        CHECK(maps.rlew_tag == data_set.rlew_tag);
+        CHECK(WG_MapsLoad(&maps, 0, &map));
+        if (map.planes[0] != NULL)
+        {
+            CHECK(map.width == 64U);
+            CHECK(map.height == 64U);
+            for (index = 0; index < (size_t)map.width * map.height; ++index)
+            {
+                uint16_t value = map.planes[0][index];
+                map_hash ^= value & 0xffU;
+                map_hash *= 1099511628211ULL;
+                map_hash ^= value >> 8;
+                map_hash *= 1099511628211ULL;
+            }
+            printf("%s map 0 plane 0 FNV-1a: %016llx (%s)\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)map_hash, map.name);
+            CHECK(map_hash == 0x2f163ae2e768c7e8ULL);
+            WG_MapFree(&map);
+        }
+        WG_MapsClose(&maps);
+    }
+
+    CHECK(WG_AudioOpen(&audio, &data_set));
+    if (audio.offsets != NULL)
+    {
+        CHECK(audio.offset_count == 289U);
+        CHECK(WG_AudioGetChunk(&audio, 261U, &page_data, &page_size));
+        CHECK(page_size > 2U);
+        CHECK(!WG_AudioGetChunk(&audio, 288U, &page_data, &page_size));
+        WG_AudioClose(&audio);
     }
     WG_DataClose(&data_set);
 }

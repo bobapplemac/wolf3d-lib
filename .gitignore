@@ -1,4 +1,5 @@
 /build/
+/build-*/
 /out/
 /.vs/
 /CMakeSettings.json
@@ -14,4 +15,3 @@
 *.SDM
 CONFIG.*
 SAVEGAM?.*
-

@@ -17,5 +17,11 @@ not used.
 portable initializer format used by Chocolate Wolfenstein 3D. Its 6-bit channel
 values are converted to 8-bit values at compile time.
 
+The resource readers follow the original `ID_CA.C`, `ID_PM.C`, and generated
+graphics/audio headers. Wolf4SDL's `id_ca.cpp` and `id_pm.cpp` were used to
+cross-check intended behavior after removing segmented-memory and stdio
+assumptions. The implementations here are new, bounds-checked C99 code rather
+than copied port code.
+
 Wolfenstein 3D data and executables are external test inputs. No game assets are
 part of this repository or covered by its license.
