@@ -10,6 +10,7 @@
 #include "ID_VH.h"
 #include "WG_GRAPHICS.h"
 #include "WL_GAME.h"
+#include "WL_AGENT.h"
 #include "WG_MAPS.h"
 #include "ID_PM.h"
 #include "WG_PALETTE.h"
@@ -357,6 +358,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t frame_hash = 1469598103934665603ULL;
     uint64_t map_hash = 1469598103934665603ULL;
     uint64_t view_hash = 1469598103934665603ULL;
+    uint64_t hud_hash = 1469598103934665603ULL;
     size_t index;
     size_t decoded_graphics = 0;
     size_t loaded_maps = 0;
@@ -532,6 +534,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             {
                 wg_view_tables_t view_tables;
                 wg_wall_cache_t wall_cache;
+                wl_status_t status;
 
                 memset(&view_tables, 0, sizeof(view_tables));
                 memset(&wall_cache, 0, sizeof(wall_cache));
@@ -555,6 +558,20 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)view_hash);
                 CHECK(view_hash == 0x52a9cf2dd9dcab66ULL);
+                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
+                CHECK(WG_GraphicsOpen(&graphics, &data_set));
+                WL_StatusDefaults(&status);
+                CHECK(WL_DrawStatusBar(framebuffer, &graphics, &status));
+                for (index = 0; index < sizeof(framebuffer); ++index)
+                {
+                    hud_hash ^= framebuffer[index];
+                    hud_hash *= 1099511628211ULL;
+                }
+                printf("%s initial HUD view FNV-1a: %016llx\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned long long)hud_hash);
+                CHECK(hud_hash == 0xab0c1a3f48fece62ULL);
+                WG_GraphicsClose(&graphics);
                 WG_WallCacheFree(&wall_cache);
                 WG_PagesClose(&pages);
             }

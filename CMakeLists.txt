@@ -26,6 +26,7 @@ set(WG_CORE_SOURCES
     src/ID_PM.c
     src/WG_PALETTE.c
     src/ID_US_1.c
+    src/WL_AGENT.c
     src/WL_DRAW.c
     src/WG_RENDERER.c
     src/WL_SCALE.c

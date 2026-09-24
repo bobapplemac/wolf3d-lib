@@ -102,8 +102,11 @@ An owned wall cache decodes every present pre-sprite VSWAP page once into conven
 row-major 64x64 pixels. The initial renderer composes the static traversal and
 wall scaler into the original 320x160 play view, using the per-level VGA ceiling
 colors and color 0x19 floor from `VGAClearScreen`. A headless `--play-view`
-capture makes the real E1M1 result directly inspectable while actors, weapons,
-the status bar, and moving pushwalls are still being added.
+capture makes the real E1M1 result directly inspectable. The static HUD is
+composed from the original status-bar, digit, face, key, and weapon pictures by
+the translated `WL_AGENT.c` routines. The ready pistol uses a bounded translation
+of `SimpleScaleShape` over the original compiled sprite format. Actors and moving
+pushwalls are still being added.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

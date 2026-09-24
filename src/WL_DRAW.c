@@ -4,6 +4,8 @@
 #include <stddef.h>
 
 #include "WG_FIXED.h"
+#include "WG_ASSETS.h"
+#include "WL_SCALE.h"
 
 static int WG_FixedTile(int32_t value)
 {
@@ -406,4 +408,29 @@ int WG_RaycastStaticWalls(const wg_level_t *level,
 {
     return WG_RaycastWalls(level, tables, player_x, player_y, player_angle,
                            0, hits);
+}
+
+int WL_DrawPlayerWeapon(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_pages_t *pages, unsigned weapon, unsigned weapon_frame)
+{
+    wg_sprite_image_t sprite;
+    size_t sprite_count;
+    size_t shape;
+
+    if (framebuffer == NULL || pages == NULL || pages->data_set == NULL
+        || weapon > 3U || weapon_frame > 4U)
+    {
+        return 0;
+    }
+    sprite_count = (size_t)(pages->data_set->sound_start
+                            - pages->data_set->sprite_start);
+    if (sprite_count < 20U)
+    {
+        return 0;
+    }
+    shape = sprite_count - 20U + weapon * 5U + weapon_frame;
+    return WG_DecodeSprite(pages, shape, &sprite)
+           && WG_ScaleSprite(framebuffer, 0, 0, WG_VIDEO_WIDTH, 160,
+                             WG_VIDEO_WIDTH / 2, &sprite, 161U);
 }

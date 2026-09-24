@@ -5,6 +5,8 @@
 
 #include "WL_GAME.h"
 #include "WL_MAIN.h"
+#include "ID_PM.h"
+#include "ID_VL.h"
 
 typedef enum wg_wall_side
 {
@@ -37,5 +39,9 @@ int WG_RaycastWalls(const wg_level_t *level,
                     int32_t player_x, int32_t player_y,
                     uint16_t player_angle, uint16_t door_wall_base,
                     wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH]);
+
+int WL_DrawPlayerWeapon(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_pages_t *pages, unsigned weapon, unsigned weapon_frame);
 
 #endif

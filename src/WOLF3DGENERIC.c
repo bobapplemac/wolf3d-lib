@@ -6,12 +6,14 @@
 
 #include "WG_DATA.h"
 #include "WG_GRAPHICS.h"
+#include "WL_AGENT.h"
 #include "WL_GAME.h"
 #include "WG_MAPS.h"
 #include "WG_PALETTE.h"
 #include "ID_PM.h"
 #include "WG_PLATFORM.h"
 #include "WG_RENDERER.h"
+#include "WL_DRAW.h"
 #include "WL_MAIN.h"
 
 uint8_t *WG_ScreenBuffer;
@@ -94,6 +96,8 @@ static int WG_LoadInitialPlayView(void)
     wg_pages_t pages;
     wg_wall_cache_t walls;
     wg_view_tables_t view;
+    wg_graphics_t graphics;
+    wl_status_t status;
     int success = 0;
 
     memset(&maps, 0, sizeof(maps));
@@ -101,11 +105,13 @@ static int WG_LoadInitialPlayView(void)
     memset(&pages, 0, sizeof(pages));
     memset(&walls, 0, sizeof(walls));
     memset(&view, 0, sizeof(view));
+    memset(&graphics, 0, sizeof(graphics));
     if (!WG_MapsOpen(&maps, &wg_data_set)
         || !WG_MapsLoad(&maps, 0, &map)
         || !WG_LevelBuild(&map, &level)
         || !WG_PagesOpen(&pages, &wg_data_set)
-        || !WG_WallCacheLoad(&walls, &pages))
+        || !WG_WallCacheLoad(&walls, &pages)
+        || !WG_GraphicsOpen(&graphics, &wg_data_set))
     {
         goto cleanup;
     }
@@ -114,13 +120,20 @@ static int WG_LoadInitialPlayView(void)
                                     WG_FOCAL_LENGTH)
         || !WG_RenderStaticView(WG_ScreenBuffer, &level, &view, &walls,
                                 0, 0, level.player_x, level.player_y,
-                                level.player_angle))
+                                level.player_angle)
+        || !WL_DrawPlayerWeapon(WG_ScreenBuffer, &pages, 1, 0))
+    {
+        goto cleanup;
+    }
+    WL_StatusDefaults(&status);
+    if (!WL_DrawStatusBar(WG_ScreenBuffer, &graphics, &status))
     {
         goto cleanup;
     }
     success = 1;
 
 cleanup:
+    WG_GraphicsClose(&graphics);
     WG_WallCacheFree(&walls);
     WG_PagesClose(&pages);
     WG_MapFree(&map);

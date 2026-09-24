@@ -48,6 +48,12 @@ Wolf4SDL's structured `AsmRefresh` translation was used to make the assembly
 control flow explicit while retaining the original fixed-point stepping order.
 The play-view clear colors and 160-line layout follow original
 `vgaCeiling`/`VGAClearScreen` in `WL_DRAW.C`.
+Static HUD placement and number formatting follow `DrawStatusBar`,
+`StatusDrawPic`, `LatchNumber`, and the individual draw routines in original
+`WL_GAME.C`/`WL_AGENT.C`.
+First-person weapon selection and scaling follow `DrawPlayerWeapon` and
+`SimpleScaleShape` in original `WL_DRAW.C`; the portable scaler consumes the
+already validated compiled-sprite representation from `WG_ASSETS.c`.
 
 Wolfenstein 3D data and executables are external test inputs. No game assets are
 part of this repository or covered by its license.

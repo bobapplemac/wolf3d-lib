@@ -13,7 +13,9 @@ Wolfenstein 3D assets.
 Development is currently in the bootstrap phase. See
 [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) for the staged implementation and
 acceptance gates. [`docs/source-layout.md`](docs/source-layout.md) maps each
-portable translation unit to its original Wolfenstein 3D source owner.
+portable translation unit to its original Wolfenstein 3D source owner, and the
+[`development log`](docs/development-log.md) records deterministic visual
+milestones.
 
 ## Bootstrap build on Windows
 
@@ -39,8 +41,8 @@ window:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
 ```
 
-The current renderer checkpoint can export the initial Episode 1, Floor 1
-wall view (actors, weapon, status bar, and pushwall motion are not yet drawn):
+The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
+view, ready pistol, and status bar. Actors and pushwall motion are not yet drawn:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm

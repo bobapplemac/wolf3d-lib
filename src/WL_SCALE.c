@@ -85,3 +85,80 @@ int WG_ScaleWallPost(
     }
     return 1;
 }
+
+int WG_ScaleSprite(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    int view_x, int view_y, int view_width, int view_height, int x_center,
+    const wg_sprite_image_t *sprite, unsigned height)
+{
+    unsigned scale;
+    unsigned pixel_height;
+    int actual_x;
+    int upper_edge;
+    unsigned source_x;
+
+    if (framebuffer == NULL || sprite == NULL
+        || view_x < 0 || view_y < 0 || view_width <= 0 || view_height <= 0
+        || view_x + view_width > WG_VIDEO_WIDTH
+        || view_y + view_height > WG_VIDEO_HEIGHT || height < 2U)
+    {
+        return 0;
+    }
+    scale = height >> 1;
+    pixel_height = scale * 2U;
+    actual_x = x_center - (int)scale;
+    upper_edge = view_height / 2 - (int)scale;
+
+    for (source_x = sprite->left; source_x <= sprite->right; ++source_x)
+    {
+        int left = (int)((source_x * pixel_height) >> 6) + actual_x;
+        int right = (int)(((source_x + 1U) * pixel_height) >> 6) + actual_x;
+        unsigned source_y;
+
+        if (left < 0)
+        {
+            left = 0;
+        }
+        if (right > view_width)
+        {
+            right = view_width;
+        }
+        if (left >= right)
+        {
+            continue;
+        }
+        for (source_y = 0; source_y < WG_TEXTURE_SIZE; ++source_y)
+        {
+            int top;
+            int bottom;
+            int x;
+            int y;
+            uint8_t color;
+
+            if (sprite->mask[source_y * WG_TEXTURE_SIZE + source_x] == 0U)
+            {
+                continue;
+            }
+            top = (int)((source_y * pixel_height) >> 6) + upper_edge;
+            bottom = (int)(((source_y + 1U) * pixel_height) >> 6) + upper_edge;
+            if (top < 0)
+            {
+                top = 0;
+            }
+            if (bottom > view_height)
+            {
+                bottom = view_height;
+            }
+            color = sprite->pixels[source_y * WG_TEXTURE_SIZE + source_x];
+            for (y = top; y < bottom; ++y)
+            {
+                for (x = left; x < right; ++x)
+                {
+                    framebuffer[(view_y + y) * WG_VIDEO_WIDTH
+                                + view_x + x] = color;
+                }
+            }
+        }
+    }
+    return 1;
+}
