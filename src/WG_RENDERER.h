@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "WL_GAME.h"
+#include "WL_DRAW.h"
 #include "ID_PM.h"
 #include "ID_VL.h"
 #include "WL_MAIN.h"
@@ -24,6 +25,8 @@ int WG_RenderStaticView(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     const wg_level_t *level, const wg_view_tables_t *tables,
     const wg_wall_cache_t *walls, unsigned episode, unsigned map,
-    int32_t player_x, int32_t player_y, uint16_t player_angle);
+    int32_t player_x, int32_t player_y, uint16_t player_angle,
+    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE]);
 
 #endif

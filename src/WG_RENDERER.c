@@ -73,19 +73,22 @@ int WG_RenderStaticView(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     const wg_level_t *level, const wg_view_tables_t *tables,
     const wg_wall_cache_t *walls, unsigned episode, unsigned map,
-    int32_t player_x, int32_t player_y, uint16_t player_angle)
+    int32_t player_x, int32_t player_y, uint16_t player_angle,
+    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE])
 {
-    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
     size_t color_index = (size_t)episode * 10U + map;
     int pixel;
 
     if (framebuffer == NULL || level == NULL || tables == NULL
-        || walls == NULL || walls->pixels == NULL
+        || walls == NULL || walls->pixels == NULL || hits == NULL
+        || visible_tiles == NULL
         || tables->view_width != WG_VIDEO_WIDTH
         || color_index >= sizeof(wg_ceiling_colors)
         || walls->count < 8U
-        || !WG_RaycastWalls(level, tables, player_x, player_y,
-                            player_angle, (uint16_t)(walls->count - 8U), hits))
+        || !WG_RaycastWallsVisible(
+            level, tables, player_x, player_y, player_angle,
+            (uint16_t)(walls->count - 8U), hits, visible_tiles))
     {
         return 0;
     }

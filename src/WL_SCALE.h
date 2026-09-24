@@ -5,6 +5,7 @@
 
 #include "WG_ASSETS.h"
 #include "ID_VL.h"
+#include "WL_MAIN.h"
 
 int WG_ScaleWallPost(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
@@ -17,5 +18,11 @@ int WG_ScaleSprite(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     int view_x, int view_y, int view_width, int view_height, int x_center,
     const wg_sprite_image_t *sprite, unsigned height);
+
+int WG_ScaleSpriteClipped(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    int view_x, int view_y, int view_width, int view_height, int x_center,
+    const wg_sprite_image_t *sprite, unsigned height,
+    const int32_t wall_height[WG_MAX_VIEW_WIDTH]);
 
 #endif

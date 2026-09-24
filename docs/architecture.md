@@ -60,6 +60,12 @@ remain zero in that byte map. Plane 1 is retained verbatim for actor and object
 spawning. The initial player position and direction use the original tile codes
 19 through 22 and 16.16 tile-center coordinates.
 
+Static-object codes 23 through 71 are scanned in original map order into the
+original 400-object capacity. Their shape numbers preserve the `SPR_DEMO`,
+`SPR_DEATHCAM`, `SPR_STAT_0` enumeration relationship rather than using a new
+asset-name table. Code 71 retains the original final `SPR_STAT_26` duplicate
+ammo-clip entry from `statinfo`.
+
 Door codes 90 through 101 are converted in the original scan order into at most
 64 runtime door records. Doors begin fully closed, retain orientation and lock
 type, occupy the original `0x80 | index` tile value, and mark the adjacent wall
@@ -105,8 +111,13 @@ colors and color 0x19 floor from `VGAClearScreen`. A headless `--play-view`
 capture makes the real E1M1 result directly inspectable. The static HUD is
 composed from the original status-bar, digit, face, key, and weapon pictures by
 the translated `WL_AGENT.c` routines. The ready pistol uses a bounded translation
-of `SimpleScaleShape` over the original compiled sprite format. Actors and moving
-pushwalls are still being added.
+of `SimpleScaleShape` over the original compiled sprite format. Static scenery
+uses the original `TransformTile` projection, 50-entry visible-object limit,
+ray-traversal `spotvis` admission, far-to-near `DrawScaleds` ordering, and
+wall-height tests for per-column occlusion. The headless `--open-doors`
+diagnostic exposes the scenery beyond E1M1's initially closed door without
+changing normal level state. Active actors and moving pushwalls are still being
+added.
 
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,

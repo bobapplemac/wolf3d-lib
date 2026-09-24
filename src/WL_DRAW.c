@@ -2,6 +2,7 @@
 #include "WL_DRAW.h"
 
 #include <stddef.h>
+#include <string.h>
 
 #include "WG_FIXED.h"
 #include "WG_ASSETS.h"
@@ -127,11 +128,11 @@ static void WG_RecordHit(const wg_view_tables_t *tables,
     hit->side = side;
 }
 
-int WG_RaycastWalls(const wg_level_t *level,
-                    const wg_view_tables_t *tables,
-                    int32_t player_x, int32_t player_y,
-                    uint16_t player_angle, uint16_t door_wall_base,
-                    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH])
+static int WG_RaycastWallsInternal(
+    const wg_level_t *level, const wg_view_tables_t *tables,
+    int32_t player_x, int32_t player_y, uint16_t player_angle,
+    uint16_t door_wall_base, wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE])
 {
     const int32_t *cosine;
     int32_t view_sine;
@@ -152,6 +153,19 @@ int WG_RaycastWalls(const wg_level_t *level,
         || player_angle >= WG_ANGLES)
     {
         return 0;
+    }
+    if (visible_tiles != NULL)
+    {
+        int player_tile_x = WG_FixedTile(player_x);
+        int player_tile_y = WG_FixedTile(player_y);
+
+        memset(visible_tiles, 0, WG_LEVEL_SIZE * WG_LEVEL_SIZE);
+        if (player_tile_x >= 0 && player_tile_x < WG_LEVEL_SIZE
+            && player_tile_y >= 0 && player_tile_y < WG_LEVEL_SIZE)
+        {
+            visible_tiles[(size_t)player_tile_y * WG_LEVEL_SIZE
+                          + (size_t)player_tile_x] = 1U;
+        }
     }
     cosine = WG_ViewCosineTable(tables);
     view_sine = tables->sine[player_angle];
@@ -279,6 +293,11 @@ int WG_RaycastWalls(const wg_level_t *level,
                             != WG_FixedTile(y_intercept)
                             || (uint16_t)adjusted < door->position)
                         {
+                            if (visible_tiles != NULL)
+                            {
+                                visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                              + (size_t)map_x] = 1U;
+                            }
                             x_tile += x_tile_step;
                             y_intercept += y_step;
                             continue;
@@ -313,6 +332,11 @@ int WG_RaycastWalls(const wg_level_t *level,
                         hits[pixel].wall_page = (uint16_t)(door_wall_base + 3U);
                     }
                     break;
+                }
+                if (visible_tiles != NULL)
+                {
+                    visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                  + (size_t)map_x] = 1U;
                 }
                 x_tile += x_tile_step;
                 y_intercept += y_step;
@@ -353,6 +377,11 @@ int WG_RaycastWalls(const wg_level_t *level,
                             != WG_FixedTile(x_intercept)
                             || (uint16_t)adjusted < door->position)
                         {
+                            if (visible_tiles != NULL)
+                            {
+                                visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                              + (size_t)map_x] = 1U;
+                            }
                             y_tile += y_tile_step;
                             x_intercept += x_step;
                             continue;
@@ -388,6 +417,11 @@ int WG_RaycastWalls(const wg_level_t *level,
                     }
                     break;
                 }
+                if (visible_tiles != NULL)
+                {
+                    visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                  + (size_t)map_x] = 1U;
+                }
                 y_tile += y_tile_step;
                 x_intercept += x_step;
             }
@@ -400,6 +434,31 @@ int WG_RaycastWalls(const wg_level_t *level,
     return 1;
 }
 
+int WG_RaycastWalls(const wg_level_t *level,
+                    const wg_view_tables_t *tables,
+                    int32_t player_x, int32_t player_y,
+                    uint16_t player_angle, uint16_t door_wall_base,
+                    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH])
+{
+    return WG_RaycastWallsInternal(level, tables, player_x, player_y,
+                                   player_angle, door_wall_base, hits, NULL);
+}
+
+int WG_RaycastWallsVisible(
+    const wg_level_t *level, const wg_view_tables_t *tables,
+    int32_t player_x, int32_t player_y, uint16_t player_angle,
+    uint16_t door_wall_base, wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE])
+{
+    if (visible_tiles == NULL)
+    {
+        return 0;
+    }
+    return WG_RaycastWallsInternal(level, tables, player_x, player_y,
+                                   player_angle, door_wall_base, hits,
+                                   visible_tiles);
+}
+
 int WG_RaycastStaticWalls(const wg_level_t *level,
                           const wg_view_tables_t *tables,
                           int32_t player_x, int32_t player_y,
@@ -408,6 +467,127 @@ int WG_RaycastStaticWalls(const wg_level_t *level,
 {
     return WG_RaycastWalls(level, tables, player_x, player_y, player_angle,
                            0, hits);
+}
+
+typedef struct wg_visible_static
+{
+    int view_x;
+    int32_t view_height;
+    uint16_t shape;
+} wg_visible_static_t;
+
+static int WG_TransformTile(const wg_view_tables_t *tables,
+                            uint8_t tile_x, uint8_t tile_y,
+                            int32_t view_x, int32_t view_y,
+                            int32_t view_cosine, int32_t view_sine,
+                            wg_visible_static_t *visible)
+{
+    int32_t gx = (int32_t)tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_x;
+    int32_t gy = (int32_t)tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_y;
+    int32_t gxt = WG_FixedMul(gx, view_cosine);
+    int32_t gyt = WG_FixedMul(gy, view_sine);
+    int32_t nx = gxt - gyt - 0x2000;
+    int32_t ny;
+
+    if (nx < WG_MIN_DISTANCE)
+    {
+        return 0;
+    }
+    gxt = WG_FixedMul(gx, view_sine);
+    gyt = WG_FixedMul(gy, view_cosine);
+    ny = gyt + gxt;
+    visible->view_x = tables->view_width / 2
+                      + (int)((int64_t)ny * tables->scale / nx);
+    visible->view_height = tables->height_numerator / (nx / 256);
+    return visible->view_height > 0;
+}
+
+int WL_DrawScaleds(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_pages_t *pages, const wg_level_t *level,
+    const wg_view_tables_t *tables,
+    const wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
+    const uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE],
+    int32_t player_x, int32_t player_y, uint16_t player_angle)
+{
+    wg_visible_static_t visible[50];
+    int32_t wall_height[WG_MAX_VIEW_WIDTH];
+    const int32_t *cosine;
+    int32_t view_cosine;
+    int32_t view_sine;
+    int32_t view_x;
+    int32_t view_y;
+    size_t visible_count = 0;
+    size_t index;
+
+    if (framebuffer == NULL || pages == NULL || level == NULL
+        || tables == NULL || hits == NULL || visible_tiles == NULL
+        || tables->view_width != WG_VIDEO_WIDTH
+        || player_angle >= WG_ANGLES)
+    {
+        return 0;
+    }
+    cosine = WG_ViewCosineTable(tables);
+    view_cosine = cosine[player_angle];
+    view_sine = tables->sine[player_angle];
+    view_x = player_x - WG_FixedMul(tables->focal_length, view_cosine);
+    view_y = player_y + WG_FixedMul(tables->focal_length, view_sine);
+    for (index = 0; index < tables->view_width; ++index)
+    {
+        wall_height[index] = hits[index].height;
+    }
+    for (index = 0; index < level->static_count; ++index)
+    {
+        wg_visible_static_t candidate;
+
+        size_t tile_index =
+            (size_t)level->statics[index].tile_y * WG_LEVEL_SIZE
+            + level->statics[index].tile_x;
+
+        if (visible_tiles[tile_index] != 0U
+            && WG_TransformTile(tables, level->statics[index].tile_x,
+                                level->statics[index].tile_y, view_x, view_y,
+                                view_cosine, view_sine, &candidate))
+        {
+            candidate.shape = level->statics[index].shape;
+            if (visible_count < sizeof(visible) / sizeof(visible[0]))
+            {
+                visible[visible_count++] = candidate;
+            }
+        }
+    }
+
+    for (index = 0; index < visible_count; ++index)
+    {
+        size_t search;
+        size_t farthest = index;
+        wg_sprite_image_t sprite;
+
+        for (search = index + 1; search < visible_count; ++search)
+        {
+            if (visible[search].view_height
+                < visible[farthest].view_height)
+            {
+                farthest = search;
+            }
+        }
+        if (farthest != index)
+        {
+            wg_visible_static_t temporary = visible[index];
+
+            visible[index] = visible[farthest];
+            visible[farthest] = temporary;
+        }
+        if (!WG_DecodeSprite(pages, visible[index].shape, &sprite)
+            || !WG_ScaleSpriteClipped(
+                framebuffer, 0, 0, WG_VIDEO_WIDTH, 160,
+                visible[index].view_x, &sprite,
+                (unsigned)visible[index].view_height, wall_height))
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
 
 int WL_DrawPlayerWeapon(

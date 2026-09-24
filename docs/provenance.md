@@ -54,6 +54,11 @@ Static HUD placement and number formatting follow `DrawStatusBar`,
 First-person weapon selection and scaling follow `DrawPlayerWeapon` and
 `SimpleScaleShape` in original `WL_DRAW.C`; the portable scaler consumes the
 already validated compiled-sprite representation from `WG_ASSETS.c`.
+Static-object scanning and shape assignment follow `ScanInfoPlane`,
+`InitStaticList`, `SpawnStatic`, and the `statinfo` table in original
+`WL_GAME.C`/`WL_ACT1.C`. Projection, far-to-near ordering, and wall-column
+occlusion follow `TransformTile`, `DrawScaleds`, `spotvis`, and `ScaleShape` in
+original `WL_DRAW.C`/`WL_SCALE.C`.
 
 Wolfenstein 3D data and executables are external test inputs. No game assets are
 part of this repository or covered by its license.

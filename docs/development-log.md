@@ -41,3 +41,23 @@ created locally for visual inspection.
 - Identical result with the supplied WL1 and WL6 data sets.
 
 ![Initial E1M1 view with pistol and status bar](../out/initial-weapon-view.png)
+
+## 2026-09-23: Static objects and wall occlusion
+
+- Scope: original plane-1 static-object scan, `TransformTile` projection,
+  ray-traversal `spotvis`, far-to-near ordering, and per-column `ScaleShape`
+  wall occlusion.
+- The normal initial frame remains `ab0c1a3f48fece62`: its closed door correctly
+  hides the corridor scenery.
+- The diagnostic below uses the same E1M1 starting pose with all doors in their
+  original fully-open state so ceiling lights and floor objects are visible.
+- 320x200 indexed-frame FNV-1a, including weapon and HUD: `9e72f0e803766954`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![E1M1 open-door static-object rendering](../out/open-door-static-objects.png)
+
+Regenerate the diagnostic capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors --dump-frame out\open-door-static-objects.ppm
+```

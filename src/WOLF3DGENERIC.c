@@ -88,7 +88,7 @@ static int WG_LoadTitleScreen(const char *data_path)
     return 1;
 }
 
-static int WG_LoadInitialPlayView(void)
+static int WG_LoadInitialPlayView(int open_doors)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -98,6 +98,8 @@ static int WG_LoadInitialPlayView(void)
     wg_view_tables_t view;
     wg_graphics_t graphics;
     wl_status_t status;
+    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     int success = 0;
 
     memset(&maps, 0, sizeof(maps));
@@ -115,12 +117,25 @@ static int WG_LoadInitialPlayView(void)
     {
         goto cleanup;
     }
+    if (open_doors)
+    {
+        uint8_t door;
+
+        for (door = 0; door < level.door_count; ++door)
+        {
+            level.doors[door].position = 0xffffU;
+        }
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
         || !WG_RenderStaticView(WG_ScreenBuffer, &level, &view, &walls,
                                 0, 0, level.player_x, level.player_y,
-                                level.player_angle)
+                                level.player_angle, hits, visible_tiles)
+        || !WL_DrawScaleds(WG_ScreenBuffer, &pages, &level, &view, hits,
+                           visible_tiles,
+                           level.player_x, level.player_y,
+                           level.player_angle)
         || !WL_DrawPlayerWeapon(WG_ScreenBuffer, &pages, 1, 0))
     {
         goto cleanup;
@@ -180,7 +195,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         return WG_RESULT_PLATFORM_ERROR;
     }
     if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
-        && !WG_LoadInitialPlayView())
+        && !WG_LoadInitialPlayView(WG_HasArgument(argc, argv,
+                                                  "--open-doors")))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

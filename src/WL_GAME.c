@@ -1,4 +1,4 @@
-/* Portable SetupGameLevel and SpawnDoor state construction from WL_GAME.C. */
+/* Portable SetupGameLevel, ScanInfoPlane, SpawnDoor, and SpawnStatic state. */
 #include "WL_GAME.h"
 
 #include <string.h>
@@ -38,6 +38,24 @@ int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
             level->player_y = (int32_t)(y * 65536U + 32768U);
             level->player_angle = (uint16_t)angle;
             player_found = 1;
+        }
+        else if (info >= 23U && info <= 71U)
+        {
+            wg_static_object_t *object;
+
+            if (level->static_count >= WG_MAX_STATICS)
+            {
+                return 0;
+            }
+            object = &level->statics[level->static_count++];
+            object->tile_x = (uint8_t)(index % WG_LEVEL_SIZE);
+            object->tile_y = (uint8_t)(index / WG_LEVEL_SIZE);
+            /*
+             * SPR_DEMO and SPR_DEATHCAM precede SPR_STAT_0. The final
+             * non-Spear statinfo entry is the duplicate ammo clip.
+             */
+            object->shape = info == 71U ? 28U
+                                        : (uint16_t)(info - 23U + 2U);
         }
     }
 

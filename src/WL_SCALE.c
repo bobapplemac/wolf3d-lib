@@ -1,4 +1,4 @@
-/* Portable replacement for the generated wall-post scalers used by WL_DRAW.C. */
+/* Portable wall-post, ScaleShape, and SimpleScaleShape replacements. */
 #include "WL_SCALE.h"
 
 #include <stddef.h>
@@ -86,10 +86,11 @@ int WG_ScaleWallPost(
     return 1;
 }
 
-int WG_ScaleSprite(
+static int WG_ScaleSpriteInternal(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     int view_x, int view_y, int view_width, int view_height, int x_center,
-    const wg_sprite_image_t *sprite, unsigned height)
+    const wg_sprite_image_t *sprite, unsigned height,
+    const int32_t wall_height[WG_MAX_VIEW_WIDTH])
 {
     unsigned scale;
     unsigned pixel_height;
@@ -127,6 +128,17 @@ int WG_ScaleSprite(
         {
             continue;
         }
+        if (wall_height != NULL)
+        {
+            while (left < right && wall_height[left] >= (int32_t)height)
+            {
+                ++left;
+            }
+            while (right > left && wall_height[right - 1] >= (int32_t)height)
+            {
+                --right;
+            }
+        }
         for (source_y = 0; source_y < WG_TEXTURE_SIZE; ++source_y)
         {
             int top;
@@ -154,11 +166,39 @@ int WG_ScaleSprite(
             {
                 for (x = left; x < right; ++x)
                 {
-                    framebuffer[(view_y + y) * WG_VIDEO_WIDTH
-                                + view_x + x] = color;
+                    if (wall_height == NULL
+                        || wall_height[x] < (int32_t)height)
+                    {
+                        framebuffer[(view_y + y) * WG_VIDEO_WIDTH
+                                    + view_x + x] = color;
+                    }
                 }
             }
         }
     }
     return 1;
+}
+
+int WG_ScaleSprite(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    int view_x, int view_y, int view_width, int view_height, int x_center,
+    const wg_sprite_image_t *sprite, unsigned height)
+{
+    return WG_ScaleSpriteInternal(framebuffer, view_x, view_y, view_width,
+                                  view_height, x_center, sprite, height, NULL);
+}
+
+int WG_ScaleSpriteClipped(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    int view_x, int view_y, int view_width, int view_height, int x_center,
+    const wg_sprite_image_t *sprite, unsigned height,
+    const int32_t wall_height[WG_MAX_VIEW_WIDTH])
+{
+    if (wall_height == NULL)
+    {
+        return 0;
+    }
+    return WG_ScaleSpriteInternal(framebuffer, view_x, view_y, view_width,
+                                  view_height, x_center, sprite, height,
+                                  wall_height);
 }

@@ -306,6 +306,8 @@ static void TestStaticRenderer(void)
     wg_wall_cache_t walls;
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT];
     uint8_t wall_pixels[8 * WG_TEXTURE_SIZE * WG_TEXTURE_SIZE];
+    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     int x;
     int y;
 
@@ -332,10 +334,13 @@ static void TestStaticRenderer(void)
                                      WG_FOCAL_LENGTH));
     CHECK(WG_RenderStaticView(framebuffer, &level, &tables, &walls, 0, 0,
                               32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
-                              32 * WG_FIXED_ONE + WG_FIXED_ONE / 2, 0));
+                              32 * WG_FIXED_ONE + WG_FIXED_ONE / 2, 0, hits,
+                              visible_tiles));
     CHECK(framebuffer[0] == 0x1d);
     CHECK(framebuffer[159 * WG_VIDEO_WIDTH] == 0x19);
     CHECK(framebuffer[80 * WG_VIDEO_WIDTH + 159] == 77);
+    CHECK(visible_tiles[32 * WG_LEVEL_SIZE + 32] == 1U);
+    CHECK(visible_tiles[32 * WG_LEVEL_SIZE + 40] == 1U);
 }
 
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
@@ -358,7 +363,9 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t frame_hash = 1469598103934665603ULL;
     uint64_t map_hash = 1469598103934665603ULL;
     uint64_t view_hash = 1469598103934665603ULL;
+    uint64_t scenery_hash = 1469598103934665603ULL;
     uint64_t hud_hash = 1469598103934665603ULL;
+    uint64_t open_view_hash = 1469598103934665603ULL;
     size_t index;
     size_t decoded_graphics = 0;
     size_t loaded_maps = 0;
@@ -531,10 +538,16 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(level.player_y == 0x00398000L);
             CHECK(level.player_angle == 0U);
             CHECK(level.door_count > 0U);
+            CHECK(level.static_count == 121U);
+            printf("%s map 0 static objects: %u\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned)level.static_count);
             {
                 wg_view_tables_t view_tables;
                 wg_wall_cache_t wall_cache;
                 wl_status_t status;
+                wg_wall_hit_t render_hits[WG_MAX_VIEW_WIDTH];
+                uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
 
                 memset(&view_tables, 0, sizeof(view_tables));
                 memset(&wall_cache, 0, sizeof(wall_cache));
@@ -548,7 +561,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 CHECK(WG_RenderStaticView(framebuffer, &level, &view_tables,
                                           &wall_cache, 0, 0,
                                           level.player_x, level.player_y,
-                                          level.player_angle));
+                                          level.player_angle, render_hits,
+                                          visible_tiles));
                 for (index = 0; index < sizeof(framebuffer); ++index)
                 {
                     view_hash ^= framebuffer[index];
@@ -558,6 +572,19 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)view_hash);
                 CHECK(view_hash == 0x52a9cf2dd9dcab66ULL);
+                CHECK(WL_DrawScaleds(framebuffer, &pages, &level,
+                                     &view_tables, render_hits, visible_tiles,
+                                     level.player_x, level.player_y,
+                                     level.player_angle));
+                for (index = 0; index < sizeof(framebuffer); ++index)
+                {
+                    scenery_hash ^= framebuffer[index];
+                    scenery_hash *= 1099511628211ULL;
+                }
+                printf("%s initial scenery view FNV-1a: %016llx\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned long long)scenery_hash);
+                CHECK(scenery_hash == 0x52a9cf2dd9dcab66ULL);
                 CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
                 CHECK(WG_GraphicsOpen(&graphics, &data_set));
                 WL_StatusDefaults(&status);
@@ -571,6 +598,30 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)hud_hash);
                 CHECK(hud_hash == 0xab0c1a3f48fece62ULL);
+                for (index = 0; index < level.door_count; ++index)
+                {
+                    level.doors[index].position = 0xffffU;
+                }
+                CHECK(WG_RenderStaticView(framebuffer, &level, &view_tables,
+                                          &wall_cache, 0, 0,
+                                          level.player_x, level.player_y,
+                                          level.player_angle, render_hits,
+                                          visible_tiles));
+                CHECK(WL_DrawScaleds(framebuffer, &pages, &level,
+                                     &view_tables, render_hits, visible_tiles,
+                                     level.player_x, level.player_y,
+                                     level.player_angle));
+                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
+                CHECK(WL_DrawStatusBar(framebuffer, &graphics, &status));
+                for (index = 0; index < sizeof(framebuffer); ++index)
+                {
+                    open_view_hash ^= framebuffer[index];
+                    open_view_hash *= 1099511628211ULL;
+                }
+                printf("%s open-door scenery FNV-1a: %016llx\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned long long)open_view_hash);
+                CHECK(open_view_hash == 0x9e72f0e803766954ULL);
                 WG_GraphicsClose(&graphics);
                 WG_WallCacheFree(&wall_cache);
                 WG_PagesClose(&pages);
