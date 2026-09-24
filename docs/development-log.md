@@ -367,7 +367,8 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pushwall-vi
   recovery, corpse sequencing, scoring, drops, and the dog's looping dead state.
 - The E1M1 diagnostic advances a guard 30 tics into his collapse and shows the
   dropped ammo clip behind him.
-- 320x200 indexed-frame FNV-1a: `5401da4a605ed4c0`
+- 320x200 indexed-frame FNV-1a: `1a6b2675d0e3e31b` (updated when the
+  runtime score was connected to the HUD)
 - Identical result with the supplied WL1 and WL6 data sets.
 
 ![E1M1 guard in the third death frame](../out/guard-death.png)
@@ -393,7 +394,8 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --death-view 
 - Focused tests exercise every boss chain, scores, keys, terminal timing,
   victory transitions, both Mecha/Hitler health bars, and morph behavior.
 - The E1M9 diagnostic captures Hans after 30 tics in his third collapse frame.
-- 320x200 indexed-frame FNV-1a: `f33b87939760dc0c`
+- 320x200 indexed-frame FNV-1a: `2a5b6e8514c2298b` (updated when the
+  runtime score was connected to the HUD)
 - Identical result with the supplied WL1 and WL6 data sets.
 
 ![Hans Grosse in the third death frame](../out/hans-death.png)
@@ -402,4 +404,30 @@ Regenerate the capture with:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-death-view --frame-hash --dump-frame out\hans-death.ppm
+```
+
+## 2026-09-24: Player weapon attacks
+
+- Ported the four original `attackinfo` tables and their six-tic knife, pistol,
+  machine-gun, and chaingun frame/action cadence into `WL_AGENT.c`.
+- `DrawScaleds` now retains each actor's original-style projected `viewx` and
+  `transx` targeting values alongside `FL_VISABLE`.
+- Ported `KnifeAttack` and `GunAttack`: center-screen and nearest-target tests,
+  knife reach, gun line tracing, tile-distance accuracy, random consumption,
+  damage divisors, noise, ammo use, held automatic fire, and empty-gun fallback.
+- Connected live score, ammo, weapon selection, and weapon frame state to the
+  status bar and first-person weapon renderer.
+- Focused tests cover close shots, blocked shots, long-range misses, knife
+  range/damage, pistol exhaustion, and machine-gun/chaingun repeat loops.
+- The E1M1 diagnostic fires a seeded pistol shot through the complete target,
+  damage, death, ammo, score, HUD, and recoil-frame path.
+- 320x200 indexed-frame FNV-1a: `6fb9a7201588ef0c`
+- Identical result with the supplied WL1 and WL6 data sets.
+
+![BJ firing the pistol at an E1M1 guard](../out/player-pistol.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-fire-view --frame-hash --dump-frame out\player-pistol.ppm
 ```

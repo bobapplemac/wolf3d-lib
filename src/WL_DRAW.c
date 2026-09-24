@@ -552,6 +552,7 @@ typedef struct wg_visible_object
 {
     int view_x;
     int32_t view_height;
+    int32_t trans_x;
     uint16_t shape;
 } wg_visible_object_t;
 
@@ -578,6 +579,7 @@ static int WG_TransformTile(const wg_view_tables_t *tables,
     visible->view_x = tables->view_width / 2
                       + (int)((int64_t)ny * tables->scale / nx);
     visible->view_height = tables->height_numerator / (nx / 256);
+    visible->trans_x = nx;
     return visible->view_height > 0;
 }
 
@@ -604,6 +606,7 @@ static int WG_TransformActor(const wg_view_tables_t *tables,
     visible->view_x = tables->view_width / 2
                       + (int)((int64_t)ny * tables->scale / nx);
     visible->view_height = tables->height_numerator / (nx / 256);
+    visible->trans_x = nx;
     return visible->view_height > 0;
 }
 
@@ -744,6 +747,8 @@ int WL_DrawScaleds(
                                  view_cosine, view_sine, &candidate))
         {
             actor->flags |= WG_ACTOR_FLAG_VISIBLE;
+            actor->view_x = candidate.view_x;
+            actor->trans_x = candidate.trans_x;
             candidate.shape = WG_ActorShape(
                 actor, candidate.view_x, player_angle,
                 tables->view_width / 2);

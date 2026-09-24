@@ -20,8 +20,21 @@ typedef struct wl_status
 
 struct wg_level;
 
+typedef enum wg_weapon
+{
+    WG_WEAPON_KNIFE = 0,
+    WG_WEAPON_PISTOL,
+    WG_WEAPON_MACHINEGUN,
+    WG_WEAPON_CHAINGUN
+} wg_weapon_t;
+
 void WL_StatusDefaults(wl_status_t *status);
 void WL_TakeDamage(struct wg_level *level, unsigned points);
+int WL_GunAttack(struct wg_level *level);
+int WL_KnifeAttack(struct wg_level *level);
+int WL_StartAttack(struct wg_level *level);
+int WL_TickPlayerAttack(struct wg_level *level, unsigned tics,
+                        int attack_held);
 int WL_DrawStatusBar(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     const wg_graphics_t *graphics, const wl_status_t *status);

@@ -107,9 +107,8 @@ movement portion of `T_Chase` for guards, officers, mutants, SS, Hans, Gretel,
 Mecha Hitler, and Hitler. It retains first-attack turnaround permission, random
 dodge ordering, cardinal/diagonal collision rules, closed-door waiting,
 tile-center correction, and `MINACTORDIST` player separation. The ranged-attack
-probability consumes the original random value. Unsupported special attacks
-remain in an explicit pending state until their class-specific thinkers are
-ported.
+probability consumes the original random value; class-specific thinkers replace
+the earlier explicit pending states.
 
 Ordinary ranged combat retains the guard, officer, mutant, and SS attack state
 tables from `WL_ACT2.C`, including their distinct durations, sprite sequences,
@@ -125,7 +124,17 @@ Dog combat follows its separate original branch: `T_DogChase` always uses
 next movement step reaches `MINACTORDIST` on both axes. The `10/10/10/10/10`
 jump sequence invokes `T_Bite` from its second state, retaining the two-tile
 axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sounds and the
-complete death/restart flow remain subsequent slices.
+complete restart flow remain subsequent slices.
+
+Player combat in `WL_AGENT.c` retains the four original `attackinfo` tables and
+their six-tic frame cadence. `DrawScaleds` stores the projected `viewx` and
+`transx` values used by `KnifeAttack` and `GunAttack`; targeting keeps the
+original center-screen window, nearest-target choice, wall trace, knife range,
+tile-distance hit roll, and random damage divisors. Machine-gun and chaingun
+hold behavior loops the same attack-table entries, and empty guns fall back to
+the knife. Runtime weapon, ammo, health, and score now feed both the first-person
+sprite and status bar. `--player-fire-view` captures the pistol recoil frame
+after a deterministic E1M1 shot.
 
 The four hitscan bosses reuse `T_Shoot` with their original state tables. Hans
 and Gretel use eight firing states with six shot actions; Mecha-Hitler and

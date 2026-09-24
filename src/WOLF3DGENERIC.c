@@ -349,6 +349,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int pushwall_view,
                                   int death_view,
                                   int boss_death_view,
+                                  int player_fire_view,
                                   unsigned actor_tics)
 {
     wg_maps_t maps;
@@ -394,11 +395,13 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         && !pushwall_view
         && !death_view
         && !boss_death_view
+        && !player_fire_view
         && !WL_TickActors(&level, actor_tics))
     {
         goto cleanup;
     }
-    if (guard_view || alert_view || chase_view || fire_view || death_view)
+    if (guard_view || alert_view || chase_view || fire_view || death_view
+        || player_fire_view)
     {
         wg_actor_t *actor = WG_FindGuardViewActor(&level);
         size_t player_tile;
@@ -641,6 +644,27 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
+    if (player_fire_view)
+    {
+        WG_ViewBuildTrigTables(&view);
+        if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
+                                        WG_FOCAL_LENGTH)
+            || !WG_RenderStaticView(WG_ScreenBuffer, &level, &view, &walls,
+                                    0, 0, level.player_x, level.player_y,
+                                    level.player_angle, hits, visible_tiles)
+            || !WL_DrawScaleds(WG_ScreenBuffer, &pages, &level, &view, hits,
+                               visible_tiles, level.player_x, level.player_y,
+                               level.player_angle))
+        {
+            goto cleanup;
+        }
+        WG_RandomSeed(&level.random, 1U);
+        if (!WL_StartAttack(&level)
+            || !WL_TickPlayerAttack(&level, 12U, 0))
+        {
+            goto cleanup;
+        }
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
@@ -651,12 +675,16 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                            visible_tiles,
                            level.player_x, level.player_y,
                            level.player_angle)
-        || !WL_DrawPlayerWeapon(WG_ScreenBuffer, &pages, 1, 0))
+        || !WL_DrawPlayerWeapon(WG_ScreenBuffer, &pages,
+                                level.player_weapon, level.weapon_frame))
     {
         goto cleanup;
     }
     WL_StatusDefaults(&status);
+    status.score = level.score;
     status.health = level.player_health;
+    status.ammo = level.player_ammo;
+    status.weapon = level.player_weapon;
     if (!WL_DrawStatusBar(WG_ScreenBuffer, &graphics, &status))
     {
         goto cleanup;
@@ -733,7 +761,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--flame-view"),
             WG_HasArgument(argc, argv, "--pushwall-view"),
             WG_HasArgument(argc, argv, "--death-view"),
-            WG_HasArgument(argc, argv, "--boss-death-view"), actor_tics))
+            WG_HasArgument(argc, argv, "--boss-death-view"),
+            WG_HasArgument(argc, argv, "--player-fire-view"), actor_tics))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;

@@ -1216,6 +1216,134 @@ static void TestBossDamageAndDeath(void)
     }
 }
 
+static void TestPlayerWeapons(void)
+{
+    wg_level_t level;
+    wg_actor_t *actor;
+
+    memset(&level, 0, sizeof(level));
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.player_x = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 10U;
+    level.player_tile_y = 10U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
+    actor = &level.actors[0];
+    actor->flags |= WG_ACTOR_FLAG_VISIBLE;
+    actor->view_x = WG_VIDEO_WIDTH / 2 - 1;
+    actor->trans_x = WG_FIXED_ONE;
+    WG_RandomSeed(&level.random, 1U);
+    CHECK(WL_GunAttack(&level));
+    CHECK(level.made_noise == 1U);
+    CHECK(actor->state == WG_STATE_DIE1);
+    CHECK(level.score == 100U);
+
+    memset(&level, 0, sizeof(level));
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.player_x = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 10U;
+    level.player_tile_y = 10U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_OFFICER, 12U, 10U, 0U));
+    level.actors[0].flags |= WG_ACTOR_FLAG_VISIBLE;
+    level.actors[0].view_x = WG_VIDEO_WIDTH / 2 - 1;
+    level.actors[0].trans_x = 2 * WG_FIXED_ONE;
+    level.actors[1].flags |= WG_ACTOR_FLAG_VISIBLE;
+    level.actors[1].view_x = WG_VIDEO_WIDTH / 2 - 1;
+    level.actors[1].trans_x = WG_FIXED_ONE;
+    WG_RandomSeed(&level.random, 1U);
+    CHECK(WL_GunAttack(&level));
+    CHECK(level.actors[0].hit_points == 25);
+    CHECK(level.actors[1].hit_points == 14);
+
+    memset(&level, 0, sizeof(level));
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.player_x = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 10U;
+    level.player_tile_y = 10U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 13U, 10U, 0U));
+    actor = &level.actors[0];
+    actor->flags |= WG_ACTOR_FLAG_VISIBLE;
+    actor->view_x = WG_VIDEO_WIDTH / 2 - 1;
+    actor->trans_x = 3 * WG_FIXED_ONE;
+    level.tiles[10U * WG_LEVEL_SIZE + 12U] = 1U;
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_GunAttack(&level));
+    CHECK(actor->hit_points == 25);
+    CHECK(level.random.index == 0U);
+
+    level.tiles[10U * WG_LEVEL_SIZE + 12U] = 0U;
+    actor->tile_x = 15U;
+    actor->x = 15 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->trans_x = 5 * WG_FIXED_ONE;
+    WG_RandomSeed(&level.random, 14U);
+    CHECK(WL_GunAttack(&level));
+    CHECK(actor->hit_points == 25);
+    CHECK(level.random.index == 15U);
+
+    actor->tile_x = 11U;
+    actor->x = 11 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->trans_x = WG_FIXED_ONE;
+    WG_RandomSeed(&level.random, 1U);
+    CHECK(WL_KnifeAttack(&level));
+    CHECK(actor->hit_points == 13);
+    CHECK(actor->state == WG_STATE_PAIN1);
+    actor->hit_points = 25;
+    actor->flags |= WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_VISIBLE;
+    actor->trans_x = INT32_C(0x18001);
+    WG_RandomSeed(&level.random, 0U);
+    CHECK(WL_KnifeAttack(&level));
+    CHECK(actor->hit_points == 25);
+    CHECK(level.random.index == 0U);
+
+    memset(&level, 0, sizeof(level));
+    level.player_health = 100U;
+    level.player_ammo = 1U;
+    level.player_weapon = WG_WEAPON_PISTOL;
+    level.player_chosen_weapon = WG_WEAPON_PISTOL;
+    CHECK(WL_StartAttack(&level));
+    CHECK(level.attack_active == 1U);
+    CHECK(level.attack_count == 6);
+    CHECK(level.weapon_frame == 1U);
+    CHECK(WL_TickPlayerAttack(&level, 6U, 0));
+    CHECK(level.attack_frame == 1U);
+    CHECK(level.weapon_frame == 2U);
+    CHECK(level.player_ammo == 1U);
+    CHECK(WL_TickPlayerAttack(&level, 6U, 0));
+    CHECK(level.player_ammo == 0U);
+    CHECK(level.attack_frame == 2U);
+    CHECK(level.weapon_frame == 3U);
+    CHECK(WL_TickPlayerAttack(&level, 12U, 0));
+    CHECK(level.attack_active == 0U);
+    CHECK(level.player_weapon == WG_WEAPON_KNIFE);
+    CHECK(level.weapon_frame == 0U);
+
+    memset(&level, 0, sizeof(level));
+    level.player_health = 100U;
+    level.player_ammo = 3U;
+    level.player_weapon = WG_WEAPON_MACHINEGUN;
+    level.player_chosen_weapon = WG_WEAPON_MACHINEGUN;
+    CHECK(WL_StartAttack(&level));
+    CHECK(WL_TickPlayerAttack(&level, 12U, 1));
+    CHECK(level.player_ammo == 2U);
+    CHECK(WL_TickPlayerAttack(&level, 6U, 1));
+    CHECK(level.attack_frame == 1U);
+    CHECK(WL_TickPlayerAttack(&level, 6U, 1));
+    CHECK(level.player_ammo == 1U);
+
+    memset(&level, 0, sizeof(level));
+    level.player_health = 100U;
+    level.player_ammo = 3U;
+    level.player_weapon = WG_WEAPON_CHAINGUN;
+    level.player_chosen_weapon = WG_WEAPON_CHAINGUN;
+    CHECK(WL_StartAttack(&level));
+    CHECK(WL_TickPlayerAttack(&level, 18U, 1));
+    CHECK(level.player_ammo == 1U);
+    CHECK(level.attack_frame == 1U);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -2094,6 +2222,7 @@ int main(int argc, char **argv)
     TestFakeHitlerFlames();
     TestActorDamageAndDeath();
     TestBossDamageAndDeath();
+    TestPlayerWeapons();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

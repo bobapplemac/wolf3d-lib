@@ -115,6 +115,9 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
     memset(level->areas, WG_NO_AREA, sizeof(level->areas));
     level->difficulty = difficulty;
     level->player_health = 100U;
+    level->player_ammo = 8U;
+    level->player_weapon = 1U;
+    level->player_chosen_weapon = 1U;
     level->player_best_weapon = 1U;
     WG_RandomSeed(&level->random, 0U);
     for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)

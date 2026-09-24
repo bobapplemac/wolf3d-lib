@@ -157,12 +157,17 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --death-view
             --frame-hash)
         set_tests_properties(death-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "5401da4a605ed4c0")
+            PASS_REGULAR_EXPRESSION "1a6b2675d0e3e31b")
         add_test(NAME boss-death-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --map 8
             --boss-death-view --frame-hash)
         set_tests_properties(boss-death-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "f33b87939760dc0c")
+            PASS_REGULAR_EXPRESSION "2a5b6e8514c2298b")
+        add_test(NAME player-fire-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --player-fire-view
+            --frame-hash)
+        set_tests_properties(player-fire-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "6fb9a7201588ef0c")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -225,11 +230,16 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --death-view
             --frame-hash)
         set_tests_properties(death-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "5401da4a605ed4c0")
+            PASS_REGULAR_EXPRESSION "1a6b2675d0e3e31b")
         add_test(NAME boss-death-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --map 8
             --boss-death-view --frame-hash)
         set_tests_properties(boss-death-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "f33b87939760dc0c")
+            PASS_REGULAR_EXPRESSION "2a5b6e8514c2298b")
+        add_test(NAME player-fire-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --player-fire-view
+            --frame-hash)
+        set_tests_properties(player-fire-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "6fb9a7201588ef0c")
     endif()
 endif()

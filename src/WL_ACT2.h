@@ -125,6 +125,8 @@ typedef struct wg_actor
     int32_t speed;
     int32_t distance;
     int32_t hit_points;
+    int32_t view_x;
+    int32_t trans_x;
     wg_actor_state_t state;
     wg_actor_class_t actor_class;
 } wg_actor_t;

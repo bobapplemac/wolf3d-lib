@@ -65,9 +65,16 @@ typedef struct wg_level
     wg_difficulty_t difficulty;
     int32_t player_thrust_speed;
     uint16_t player_health;
+    uint16_t player_ammo;
     uint16_t damage_count;
     uint8_t player_dead;
+    uint8_t player_weapon;
+    uint8_t player_chosen_weapon;
     uint8_t player_best_weapon;
+    uint8_t weapon_frame;
+    uint8_t attack_frame;
+    uint8_t attack_active;
+    int32_t attack_count;
     uint8_t made_noise;
     uint8_t victory_flag;
     uint8_t level_completed;

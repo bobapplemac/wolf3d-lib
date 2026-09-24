@@ -1,11 +1,13 @@
-/* Portable status-bar drawing from the original WL_AGENT.C/WL_GAME.C. */
+/* Portable player combat and status bar from the original WL_AGENT.C. */
 #include "WL_AGENT.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "WL_GAME.h"
+#include "WL_STATE.h"
 
 enum
 {
@@ -163,6 +165,208 @@ void WL_TakeDamage(struct wg_level *level, unsigned points)
     {
         level->damage_count = (uint16_t)(level->damage_count + damage);
     }
+}
+
+static int WL_PlayerAttackTarget(const wg_level_t *level, size_t *target_index,
+                                 int knife)
+{
+    int32_t closest_distance = INT32_MAX;
+    size_t closest = 0U;
+    size_t index;
+    int found = 0;
+
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        const wg_actor_t *actor = &level->actors[index];
+        int32_t screen_delta = actor->view_x - (WG_VIDEO_WIDTH / 2 - 1);
+
+        if ((actor->flags & (WG_ACTOR_FLAG_SHOOTABLE
+                             | WG_ACTOR_FLAG_VISIBLE))
+                != (WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_VISIBLE)
+            || screen_delta <= -(WG_VIDEO_WIDTH / 10)
+            || screen_delta >= WG_VIDEO_WIDTH / 10
+            || actor->trans_x >= closest_distance)
+        {
+            continue;
+        }
+        closest_distance = actor->trans_x;
+        closest = index;
+        found = 1;
+    }
+    if (!found || (knife && closest_distance > INT32_C(0x18000)))
+    {
+        return 0;
+    }
+    *target_index = closest;
+    return 1;
+}
+
+int WL_KnifeAttack(struct wg_level *level)
+{
+    size_t target_index;
+
+    if (level == NULL)
+    {
+        return 0;
+    }
+    if (WL_PlayerAttackTarget(level, &target_index, 1))
+    {
+        (void)WL_DamageActor(level, target_index,
+                             WG_RandomNext(&level->random) >> 4);
+    }
+    return 1;
+}
+
+int WL_GunAttack(struct wg_level *level)
+{
+    size_t target_index;
+    wg_actor_t *target;
+    unsigned distance_x;
+    unsigned distance_y;
+    unsigned distance;
+    unsigned damage;
+
+    if (level == NULL)
+    {
+        return 0;
+    }
+    level->made_noise = 1U;
+    if (!WL_PlayerAttackTarget(level, &target_index, 0))
+    {
+        return 1;
+    }
+    target = &level->actors[target_index];
+    if (!WL_CheckLine(level, target))
+    {
+        return 1;
+    }
+    distance_x = target->tile_x > level->player_tile_x
+                     ? target->tile_x - level->player_tile_x
+                     : level->player_tile_x - target->tile_x;
+    distance_y = target->tile_y > level->player_tile_y
+                     ? target->tile_y - level->player_tile_y
+                     : level->player_tile_y - target->tile_y;
+    distance = distance_x > distance_y ? distance_x : distance_y;
+    if (distance < 2U)
+    {
+        damage = WG_RandomNext(&level->random) / 4U;
+    }
+    else if (distance < 4U)
+    {
+        damage = WG_RandomNext(&level->random) / 6U;
+    }
+    else
+    {
+        if (WG_RandomNext(&level->random) / 12U < distance)
+        {
+            return 1;
+        }
+        damage = WG_RandomNext(&level->random) / 6U;
+    }
+    (void)WL_DamageActor(level, target_index, damage);
+    return 1;
+}
+
+typedef struct wl_attack_info
+{
+    int8_t tics;
+    int8_t attack;
+    int8_t frame;
+} wl_attack_info_t;
+
+static const wl_attack_info_t wl_attack_info[4][4] =
+{
+    {{6, 0, 1}, {6, 2, 2}, {6, 0, 3}, {6, -1, 4}},
+    {{6, 0, 1}, {6, 1, 2}, {6, 0, 3}, {6, -1, 4}},
+    {{6, 0, 1}, {6, 1, 2}, {6, 3, 3}, {6, -1, 4}},
+    {{6, 0, 1}, {6, 1, 2}, {6, 4, 3}, {6, -1, 4}}
+};
+
+int WL_StartAttack(struct wg_level *level)
+{
+    if (level == NULL || level->player_dead || level->victory_flag
+        || level->attack_active || level->player_weapon > WG_WEAPON_CHAINGUN
+        || level->player_chosen_weapon > WG_WEAPON_CHAINGUN)
+    {
+        return 0;
+    }
+    level->attack_active = 1U;
+    level->attack_frame = 0U;
+    level->attack_count = wl_attack_info[level->player_weapon][0].tics;
+    level->weapon_frame = (uint8_t)wl_attack_info[level->player_weapon][0].frame;
+    return 1;
+}
+
+int WL_TickPlayerAttack(struct wg_level *level, unsigned tics,
+                        int attack_held)
+{
+    if (level == NULL || tics > (unsigned)INT32_MAX)
+    {
+        return 0;
+    }
+    if (!level->attack_active)
+    {
+        return 1;
+    }
+    level->attack_count -= (int32_t)tics;
+    while (level->attack_count <= 0)
+    {
+        const wl_attack_info_t *current =
+            &wl_attack_info[level->player_weapon][level->attack_frame];
+
+        switch (current->attack)
+        {
+        case -1:
+            level->attack_active = 0U;
+            level->player_weapon = level->player_ammo == 0U
+                                       ? WG_WEAPON_KNIFE
+                                       : level->player_chosen_weapon;
+            level->attack_frame = 0U;
+            level->weapon_frame = 0U;
+            return 1;
+        case 4:
+            if (level->player_ammo == 0U)
+            {
+                break;
+            }
+            if (attack_held)
+            {
+                level->attack_frame = (uint8_t)(level->attack_frame - 2U);
+            }
+            /* fall through */
+        case 1:
+            if (level->player_ammo == 0U)
+            {
+                ++level->attack_frame;
+                break;
+            }
+            if (!WL_GunAttack(level))
+            {
+                return 0;
+            }
+            --level->player_ammo;
+            break;
+        case 2:
+            if (!WL_KnifeAttack(level))
+            {
+                return 0;
+            }
+            break;
+        case 3:
+            if (level->player_ammo != 0U && attack_held)
+            {
+                level->attack_frame = (uint8_t)(level->attack_frame - 2U);
+            }
+            break;
+        default:
+            break;
+        }
+        level->attack_count += current->tics;
+        ++level->attack_frame;
+        level->weapon_frame = (uint8_t)
+            wl_attack_info[level->player_weapon][level->attack_frame].frame;
+    }
+    return 1;
 }
 
 int WL_DrawStatusBar(

@@ -50,7 +50,9 @@ states, and Dr. Schabbs throws moving, colliding syringe projectiles. The other
 two rocket bosses—Giftmacher and Fatface—now retain their throws, smoke trails,
 explosions, and projectile damage. Fake Hitler also retains his original
 eight-flame burst. Pushwall activation, movement, blocking, and moving-plane
-rendering are active. Boss death transitions are not yet active:
+rendering are active. Ordinary and boss damage/death paths are active, and the
+player pistol, machine gun, chaingun, and knife now use their original attack
+cadence and targeting rules:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -128,6 +130,14 @@ advances his original collapse sequence by 30 tics:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --boss-death-view --frame-hash --dump-frame hans-death.ppm
+```
+
+The player-fire diagnostic projects the E1M1 actors, runs the original pistol
+attack states through the shot action, and captures the recoil frame, spent
+ammo, earned score, and struck guard:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-fire-view --frame-hash --dump-frame player-pistol.ppm
 ```
 
 To advance E1M1's patrol actors by a deterministic number of original 70 Hz
