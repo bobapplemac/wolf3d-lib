@@ -48,6 +48,10 @@ typedef struct wg_game_session
     wl_play_state_t play;
     uint8_t audio_active;
     uint8_t sound_positioned;
+    uint8_t game_over;
+    uint16_t death_tics;
+    unsigned map_number;
+    uint32_t level_start_score;
     int32_t sound_x;
     int32_t sound_y;
 } wg_game_session_t;
@@ -582,6 +586,8 @@ static int WG_GameSessionOpen(unsigned map_number)
     wg_game.level.shareware =
         wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14;
     wg_game.level.map_number = (uint8_t)map_number;
+    wg_game.map_number = map_number;
+    wg_game.level_start_score = wg_game.level.score;
     WG_ViewBuildTrigTables(&wg_game.view);
     if (!WG_ViewCalculateProjection(&wg_game.view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH))
@@ -657,10 +663,55 @@ static void WG_GameSessionInput(wl_input_t *input)
     }
 }
 
+static unsigned WG_GameSessionNextMap(void)
+{
+    return WG_NextMapNumber(wg_game.map_number,
+                            wg_game.level.secret_level != 0U);
+}
+
+static int WG_GameSessionReload(unsigned map_number, int died)
+{
+    wg_campaign_state_t state;
+    uint32_t start_score = died ? wg_game.level_start_score
+                                : wg_game.level.score;
+
+    WG_CampaignCapture(&state, &wg_game.level);
+    if (died && state.lives == 0U)
+    {
+        wg_game.game_over = 1U;
+        return 1;
+    }
+    WG_GameSessionClose();
+    if (!WG_GameSessionOpen(map_number))
+    {
+        return 0;
+    }
+    if (!WG_CampaignApply(&wg_game.level, &state,
+                          start_score, died))
+    {
+        return 0;
+    }
+    wg_game.level_start_score = start_score;
+    return WG_GameSessionRender();
+}
+
 static int WG_GameSessionTick(void)
 {
     wl_input_t input;
     size_t sound;
+
+    if (wg_game.game_over)
+    {
+        return 1;
+    }
+    if (wg_game.level.player_dead)
+    {
+        if (++wg_game.death_tics >= 70U)
+        {
+            return WG_GameSessionReload(wg_game.map_number, 1);
+        }
+        return 1;
+    }
 
     WG_GameSessionInput(&input);
     if (!WL_PlayTick(&wg_game.level, &wg_game.view, &wg_game.play, &input))
@@ -735,6 +786,19 @@ static int WG_GameSessionTick(void)
         }
     }
     WG_ClearSoundEvents(&wg_game.level);
+    if (wg_game.level.level_completed)
+    {
+        if (wg_game.level.victory_flag)
+        {
+            wg_game.game_over = 1U;
+            return 1;
+        }
+        return WG_GameSessionReload(WG_GameSessionNextMap(), 0);
+    }
+    if (wg_game.level.player_dead)
+    {
+        wg_game.death_tics = 1U;
+    }
     return 1;
 }
 

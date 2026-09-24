@@ -85,7 +85,11 @@ rendering are active. Ordinary and boss damage/death paths are active, and the
 player pistol, machine gun, chaingun, and knife now use their original attack
 cadence and targeting rules. Player turning, thrust, collision, item collection,
 cardinal use actions, locked doors, sliding-door timing, elevators, and exit
-tiles now follow their original gameplay rules:
+tiles now follow their original gameplay rules. Normal and secret elevators
+load the correct next floor, including the episode-specific return from floor
+10. Death restarts the current floor with the original score/inventory reset
+and life accounting; the full death camera/fade and level intermission screens
+remain to be ported:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm

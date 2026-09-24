@@ -255,6 +255,16 @@ movement only when fully open, wait 300 tics before closing, and reverse when
 the player or an actor obstructs the moving plane. `--door-use-view` renders a
 real E1M1 door halfway through its use-triggered opening cycle.
 
+The interactive session now owns the campaign state that the original
+`GameLoop` kept outside `SetupGameLevel`. Completing a floor rebuilds the next
+map while carrying health, ammo, weapons, lives, score, and the next-extra-life
+threshold, then clears keys. Secret exits select floor 10 and the original
+`ElevatorBackTo` table returns each episode to its authored destination. A
+death freezes simulation for 70 tics, discards score earned on that floor,
+decrements a life, and restarts with pistol, eight rounds, and full health.
+The eventual UI layer still needs to replace that fixed pause with the original
+death rotation/red fizzle and to insert the intermission screens.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a

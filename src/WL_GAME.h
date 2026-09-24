@@ -22,6 +22,7 @@ typedef enum wg_sound
 {
     WG_SOUND_NOWAY = 6,
     WG_SOUND_SCHABBS_THROW = 8,
+    WG_SOUND_PLAYER_DEATH = 9,
     WG_SOUND_DOG_DEATH = 10,
     WG_SOUND_ATTACK_GATLING = 11,
     WG_SOUND_GET_KEY = 12,
@@ -89,6 +90,18 @@ typedef struct wg_sound_event
     uint8_t sound;
     uint8_t positioned;
 } wg_sound_event_t;
+
+typedef struct wg_campaign_state
+{
+    uint32_t score;
+    uint32_t next_extra;
+    uint16_t health;
+    uint16_t ammo;
+    uint8_t lives;
+    uint8_t weapon;
+    uint8_t chosen_weapon;
+    uint8_t best_weapon;
+} wg_campaign_state_t;
 
 typedef enum wg_difficulty
 {
@@ -219,6 +232,12 @@ int WG_LevelBuild(const wg_map_t *map, wg_level_t *level);
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level);
 int WG_QueueSound(wg_level_t *level, wg_sound_t sound);
+unsigned WG_NextMapNumber(unsigned map_number, int secret_level);
+void WG_CampaignCapture(wg_campaign_state_t *state,
+                        const wg_level_t *level);
+int WG_CampaignApply(wg_level_t *level,
+                     const wg_campaign_state_t *state,
+                     uint32_t level_start_score, int died);
 int WG_QueueSoundAt(wg_level_t *level, wg_sound_t sound,
                     int32_t x, int32_t y);
 int WG_SoundPosition(const wg_level_t *level,

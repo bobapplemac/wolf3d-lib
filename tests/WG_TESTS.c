@@ -1698,11 +1698,45 @@ static void SetPlayerMovementLevel(wg_level_t *level)
 static void TestPlayerMovementAndUse(void)
 {
     wg_level_t level;
+    wg_level_t next_level;
+    wg_campaign_state_t campaign;
     wg_view_tables_t tables;
     int32_t start_x;
     int32_t start_y;
     uint8_t left;
     uint8_t right;
+
+    CHECK(WG_NextMapNumber(0U, 0) == 1U);
+    CHECK(WG_NextMapNumber(0U, 1) == 9U);
+    CHECK(WG_NextMapNumber(9U, 0) == 1U);
+    CHECK(WG_NextMapNumber(19U, 0) == 11U);
+    CHECK(WG_NextMapNumber(29U, 0) == 27U);
+    CHECK(WG_NextMapNumber(59U, 0) == 53U);
+
+    SetPlayerMovementLevel(&level);
+    level.score = 12345U;
+    level.next_extra = 80000U;
+    level.player_health = 47U;
+    level.player_ammo = 63U;
+    level.player_lives = 2U;
+    level.player_weapon = WG_WEAPON_CHAINGUN;
+    level.player_chosen_weapon = WG_WEAPON_CHAINGUN;
+    level.player_best_weapon = WG_WEAPON_CHAINGUN;
+    WG_CampaignCapture(&campaign, &level);
+    memset(&next_level, 0, sizeof(next_level));
+    next_level.player_keys = 3U;
+    CHECK(WG_CampaignApply(&next_level, &campaign, 10000U, 0));
+    CHECK(next_level.score == 12345U && next_level.player_health == 47U);
+    CHECK(next_level.player_ammo == 63U && next_level.player_lives == 2U);
+    CHECK(next_level.player_best_weapon == WG_WEAPON_CHAINGUN);
+    CHECK(next_level.player_keys == 0U);
+    memset(&next_level, 0, sizeof(next_level));
+    CHECK(WG_CampaignApply(&next_level, &campaign, 10000U, 1));
+    CHECK(next_level.score == 10000U && next_level.player_health == 100U);
+    CHECK(next_level.player_ammo == 8U && next_level.player_lives == 1U);
+    CHECK(next_level.player_best_weapon == WG_WEAPON_PISTOL);
+    campaign.lives = 0U;
+    CHECK(!WG_CampaignApply(&next_level, &campaign, 10000U, 1));
 
     memset(&tables, 0, sizeof(tables));
     WG_ViewBuildTrigTables(&tables);

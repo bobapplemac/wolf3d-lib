@@ -161,6 +161,7 @@ void WL_TakeDamage(struct wg_level *level, unsigned points)
     {
         level->player_health = 0U;
         level->player_dead = 1U;
+        (void)WG_QueueSound(level, WG_SOUND_PLAYER_DEATH);
     }
     else
     {

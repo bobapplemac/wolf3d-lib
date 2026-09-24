@@ -641,3 +641,28 @@ Regenerate it with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digitized --left-position 12 --right-position 0 --dump-music out\e1m1-pistol-panned.wav
 ```
+
+## 2026-09-24: Floor progression and death restart state
+
+- Added the campaign state boundary that the original `GameLoop` maintained
+  outside each `SetupGameLevel`: score, extra-life threshold, health, ammo,
+  lives, and selected/owned weapons now survive normal floor loads.
+- Normal exits advance one floor, secret exits select floor 10, and completing
+  floor 10 uses the original six-entry `ElevatorBackTo` table.
+- Keys clear between floors. Death restores the score at floor entry, full
+  health, the pistol and eight rounds, decrements one life, and retains the
+  already advanced extra-life threshold exactly as the DOS game state did.
+- Dead-player simulation is frozen for a deterministic 70-tic pause before the
+  restart; enemies no longer continue acting while the death sound completes.
+  The death camera/red fizzle and intermission UI remain explicit follow-up
+  work rather than being approximated here.
+- Added identical WL1/WL6 and x86/x64 regression coverage for Episode 1,
+  Floor 2. Its initial 320x200 indexed-frame FNV-1a is `dd20149a5592b546`.
+
+![Episode 1 Floor 2 after campaign transition](../out/e1f2-start.png)
+
+Regenerate the destination frame with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 1 --play-view --frame-hash --dump-frame out\e1f2-start.ppm
+```

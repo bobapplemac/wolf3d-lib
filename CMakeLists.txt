@@ -193,6 +193,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(play-loop-forward-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "41b5819e00a95446")
+        add_test(NAME next-floor-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --map 1
+            --frame-hash)
+        set_tests_properties(next-floor-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "dd20149a5592b546")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -281,5 +286,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(play-loop-forward-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "41b5819e00a95446")
+        add_test(NAME next-floor-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --map 1
+            --frame-hash)
+        set_tests_properties(next-floor-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "dd20149a5592b546")
     endif()
 endif()

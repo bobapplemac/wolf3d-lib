@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "WG_FIXED.h"
+#include "WL_AGENT.h"
 #include "WL_MAIN.h"
 
 static int WG_DifficultyDirection(uint16_t info, uint16_t easy_base,
@@ -453,6 +454,63 @@ int WG_QueueSound(wg_level_t *level, wg_sound_t sound)
     event = &level->sound_events[level->sound_event_count++];
     memset(event, 0, sizeof(*event));
     event->sound = (uint8_t)sound;
+    return 1;
+}
+
+unsigned WG_NextMapNumber(unsigned map_number, int secret_level)
+{
+    static const uint8_t elevator_back_to[6] = {1U, 1U, 7U, 3U, 5U, 3U};
+    unsigned episode = map_number / 10U;
+    unsigned floor = map_number % 10U;
+
+    if (floor == 9U)
+    {
+        return episode * 10U
+               + elevator_back_to[episode < 6U ? episode : 0U];
+    }
+    if (secret_level)
+    {
+        return episode * 10U + 9U;
+    }
+    return map_number + 1U;
+}
+
+void WG_CampaignCapture(wg_campaign_state_t *state,
+                        const wg_level_t *level)
+{
+    if (state == NULL || level == NULL)
+    {
+        return;
+    }
+    state->score = level->score;
+    state->next_extra = level->next_extra;
+    state->health = level->player_health;
+    state->ammo = level->player_ammo;
+    state->lives = level->player_lives;
+    state->weapon = level->player_weapon;
+    state->chosen_weapon = level->player_chosen_weapon;
+    state->best_weapon = level->player_best_weapon;
+}
+
+int WG_CampaignApply(wg_level_t *level,
+                     const wg_campaign_state_t *state,
+                     uint32_t level_start_score, int died)
+{
+    if (level == NULL || state == NULL || (died && state->lives == 0U))
+    {
+        return 0;
+    }
+    level->score = died ? level_start_score : state->score;
+    level->next_extra = state->next_extra;
+    level->player_lives = (uint8_t)(state->lives - (died ? 1U : 0U));
+    level->player_health = died ? 100U : state->health;
+    level->player_ammo = died ? 8U : state->ammo;
+    level->player_weapon = died ? WG_WEAPON_PISTOL : state->weapon;
+    level->player_chosen_weapon = died ? WG_WEAPON_PISTOL
+                                       : state->chosen_weapon;
+    level->player_best_weapon = died ? WG_WEAPON_PISTOL
+                                     : state->best_weapon;
+    level->player_keys = 0U;
     return 1;
 }
 
