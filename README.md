@@ -114,10 +114,18 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-deat
 
 Defeating an episode boss now preserves the first eight floor ratios, switches
 to `URAHERO_MUS`, and displays the original total-time and average-ratio victory
-screen. Its deterministic diagnostic uses eight 1:15 perfect floors:
+screen. Acknowledging it opens the episode's original two-page EndText article;
+arrow keys move between pages and Escape continues to the high-score table. Its
+deterministic victory diagnostic uses eight 1:15 perfect floors:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --victory-view --frame-hash --dump-frame victory.ppm
+```
+
+The first EndText page can be captured directly with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --end-text-view --frame-hash --dump-frame end-text.ppm
 ```
 
 Running out of lives now ranks the final score with the original seven-entry

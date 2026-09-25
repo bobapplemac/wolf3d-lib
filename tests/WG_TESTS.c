@@ -19,6 +19,7 @@
 #include "ID_US_1.h"
 #include "WL_DRAW.h"
 #include "WL_INTER.h"
+#include "WL_TEXT.h"
 #include "WG_RENDERER.h"
 #include "WL_SCALE.h"
 #include "WL_STATE.h"
@@ -2537,6 +2538,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t open_view_hash = 1469598103934665603ULL;
     uint64_t guard_view_hash = 1469598103934665603ULL;
     uint64_t pause_hash = 1469598103934665603ULL;
+    uint64_t article_hash = 1469598103934665603ULL;
     size_t index;
     size_t actor_index;
     size_t decoded_graphics = 0;
@@ -2624,6 +2626,39 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                WG_DataVariantName(data_set.variant),
                (unsigned long long)pause_hash);
         CHECK(pause_hash == 0xee855388f16e0af7ULL);
+        {
+            wl_article_t article;
+            unsigned episode;
+            size_t page;
+
+            for (episode = 0U;
+                 episode < (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                            ? 1U : 6U);
+                 ++episode)
+            {
+                memset(&article, 0, sizeof(article));
+                CHECK(WL_ArticleOpen(&article, &graphics, episode));
+                CHECK(article.page_count == 2U);
+                for (page = 0U; page < article.page_count; ++page)
+                {
+                    memset(framebuffer, 0, sizeof(framebuffer));
+                    CHECK(WL_ArticleRender(&article, &graphics, page,
+                                           framebuffer));
+                    for (index = 0U; index < sizeof(framebuffer); ++index)
+                    {
+                        article_hash ^= framebuffer[index];
+                        article_hash *= 1099511628211ULL;
+                    }
+                }
+                WL_ArticleClose(&article);
+            }
+            printf("%s ending article FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)article_hash);
+            CHECK(article_hash == (expected_variant
+                  == WG_GAME_WOLF3D_SHAREWARE_14
+                  ? 0x45e98f3542ac98baULL : 0x7aeca6c61a08514bULL));
+        }
         for (index = 0; index + 1U < graphics.offset_count; ++index)
         {
             uint8_t *chunk_data = NULL;

@@ -831,3 +831,29 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --high-score-entry-view --frame-hash --dump-frame out\high-score-entry.ppm
 ```
+
+## 2026-09-25: Episode EndText articles
+
+- Restored historical `WL_TEXT.c` as a bounded translation of the original
+  article formatter. It recognizes all documented commands, proportional wrapping,
+  picture-driven row margins, tabs, the four-piece window frame, and the
+  `pg n of n` footer.
+- The renderer reads the original embedded `T_ENDART1` through `T_ENDART6`
+  chunks directly from `VGAGRAPH`. The supplied shareware archive exposes its
+  single ending at shifted chunk 155; the full archive exposes all six at
+  chunks 143-148.
+- Acknowledging the victory totals now opens the correct episode article.
+  Left/up and right/down/Enter navigate its pages; Escape leaves the article
+  for score ranking and editable name entry.
+- Data-backed tests render every page of every available ending. Their combined
+  indexed hashes are `45e98f3542ac98ba` for WL1's two pages and
+  `7aeca6c61a08514b` for WL6's twelve pages. First-page headless
+  fixtures hash to `25e04a9e482eccea` and `9751906604fce502` respectively.
+
+![Original Episode 1 ending article](../out/end-text.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --end-text-view --frame-hash --dump-frame out\end-text.ppm
+```

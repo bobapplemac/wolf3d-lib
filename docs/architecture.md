@@ -276,8 +276,13 @@ Each completed ordinary floor also persists its time and three ratios across
 map rebuilds. A terminal boss victory averages the first eight floor records,
 caps total time at 99:00, derives the original medium-or-harder verification
 code, draws `Victory()`'s `YOU WIN!` screen and BJ portrait, and switches to
-`URAHERO_MUS`. The later end-text, high-score, and control-panel chain remains
-part of the front-end milestone.
+`URAHERO_MUS`. Acknowledgement then decodes the episode's `T_ENDART` chunk and
+hands it to the portable `WL_TEXT.c` translation. That renderer retains the
+original 320x200 window pieces, proportional word wrapping, per-row margins,
+page counter, and recognizes `^B`, `^;`, `^P`, `^E`, `^C`, `^>`, `^L`, `^T`,
+and `^G` commands. Arrow/Enter navigation matches `ShowArticle`; Escape continues into
+the high-score table. The later control-panel return remains part of the
+front-end milestone.
 
 The original seven-entry high-score defaults and `CheckHighScore` ordering
 rule—score first, completed floor as the tie-break—also live in `WL_INTER.c`.

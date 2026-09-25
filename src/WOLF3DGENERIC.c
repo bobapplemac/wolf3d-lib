@@ -23,6 +23,7 @@
 #include "WG_RENDERER.h"
 #include "WL_DRAW.h"
 #include "WL_INTER.h"
+#include "WL_TEXT.h"
 #include "WL_MAIN.h"
 #include "WL_PLAY.h"
 #include "WL_STATE.h"
@@ -69,6 +70,9 @@ typedef struct wg_game_session
     uint8_t paused;
     uint8_t intermission;
     uint8_t victory;
+    uint8_t end_text;
+    size_t end_text_page;
+    wl_article_t article;
     uint8_t high_scores;
     int8_t high_score_entry;
     uint8_t high_score_cursor;
@@ -530,6 +534,7 @@ static int WG_LoadTitleScreen(const char *data_path)
 
 static void WG_GameSessionClose(void)
 {
+    WL_ArticleClose(&wg_game.article);
     WG_PCMShutdown();
     ID_SD_MusicDestroy(wg_game.music);
     WG_AudioClose(&wg_game.audio);
@@ -679,11 +684,30 @@ static int WG_GameSessionBeginVictory(void)
     return 1;
 }
 
+static int WG_GameSessionBeginEndText(void)
+{
+    if (!WL_ArticleOpen(&wg_game.article, &wg_game.graphics,
+                        wg_game.map_number / 10U)
+        || !WL_ArticleRender(&wg_game.article, &wg_game.graphics, 0U,
+                             WG_ScreenBuffer))
+    {
+        WL_ArticleClose(&wg_game.article);
+        return 0;
+    }
+    wg_game.end_text = 1U;
+    wg_game.end_text_page = 0U;
+    memset(wg_game.keys, 0, sizeof(wg_game.keys));
+    return 1;
+}
+
 static int WG_GameSessionBeginHighScores(void)
 {
     const uint8_t *music_data;
     size_t music_size;
 
+    WL_ArticleClose(&wg_game.article);
+    wg_game.victory = 0U;
+    wg_game.end_text = 0U;
     wg_game.high_score_entry = (int8_t)WL_HighScoreInsert(
         wg_high_scores, wg_game.level.score,
         (uint16_t)(wg_game.map_number % 10U + 1U),
@@ -1137,6 +1161,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int bonus_flash_view,
                                   int player_death_view,
                                   int victory_view,
+                                  int end_text_view,
                                   int high_score_view,
                                   int high_score_entry_view,
                                   unsigned actor_tics,
@@ -1558,6 +1583,20 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
+    if (end_text_view)
+    {
+        wl_article_t article;
+
+        memset(&article, 0, sizeof(article));
+        if (!WL_ArticleOpen(&article, &graphics, map_number / 10U)
+            || !WL_ArticleRender(&article, &graphics, 0U,
+                                 WG_ScreenBuffer))
+        {
+            WL_ArticleClose(&article);
+            goto cleanup;
+        }
+        WL_ArticleClose(&article);
+    }
     if (high_score_view)
     {
         wl_high_score_t scores[WL_MAX_HIGH_SCORES];
@@ -1721,6 +1760,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--bonus-flash-view"),
             WG_HasArgument(argc, argv, "--player-death-view"),
             WG_HasArgument(argc, argv, "--victory-view"),
+            WG_HasArgument(argc, argv, "--end-text-view"),
             WG_HasArgument(argc, argv, "--high-score-view"),
             WG_HasArgument(argc, argv, "--high-score-entry-view"), actor_tics,
             forward_tics))
@@ -1770,9 +1810,56 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.active && wg_game.victory)
                 {
-                    if (event.key == WG_KEY_ESCAPE && event.pressed)
+                    if (!event.pressed)
                     {
-                        return WG_RESULT_QUIT;
+                        continue;
+                    }
+                    if (!wg_game.end_text)
+                    {
+                        if (!WG_GameSessionBeginEndText())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.key == WG_KEY_ESCAPE)
+                    {
+                        if (!WG_GameSessionBeginHighScores())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.key == WG_KEY_LEFT
+                             || event.key == WG_KEY_UP
+                             || event.key == WG_KEY_HOME)
+                    {
+                        if (wg_game.end_text_page != 0U)
+                        {
+                            --wg_game.end_text_page;
+                            if (!WL_ArticleRender(
+                                    &wg_game.article, &wg_game.graphics,
+                                    wg_game.end_text_page, WG_ScreenBuffer))
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                        }
+                    }
+                    else if (event.key == WG_KEY_RIGHT
+                             || event.key == WG_KEY_DOWN
+                             || event.key == WG_KEY_END
+                             || event.key == WG_KEY_ENTER
+                             || event.key == WG_KEY_SPACE)
+                    {
+                        if (wg_game.end_text_page + 1U
+                            < wg_game.article.page_count)
+                        {
+                            ++wg_game.end_text_page;
+                            if (!WL_ArticleRender(
+                                    &wg_game.article, &wg_game.graphics,
+                                    wg_game.end_text_page, WG_ScreenBuffer))
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                        }
                     }
                     continue;
                 }
@@ -1864,6 +1951,32 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.victory)
                 {
+                    if (event.pressed && !wg_game.end_text)
+                    {
+                        if (!WG_GameSessionBeginEndText())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.pressed && event.button == 2U)
+                    {
+                        if (!WG_GameSessionBeginHighScores())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.pressed && event.button == 1U
+                             && wg_game.end_text_page + 1U
+                                < wg_game.article.page_count)
+                    {
+                        ++wg_game.end_text_page;
+                        if (!WL_ArticleRender(
+                                &wg_game.article, &wg_game.graphics,
+                                wg_game.end_text_page, WG_ScreenBuffer))
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
                     continue;
                 }
                 if (wg_game.high_scores)

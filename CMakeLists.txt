@@ -40,6 +40,7 @@ set(WG_CORE_SOURCES
     src/WL_STATE.c
     src/WL_DRAW.c
     src/WL_INTER.c
+    src/WL_TEXT.c
     src/WG_RENDERER.c
     src/WL_SCALE.c
     src/ID_VL.c
@@ -229,6 +230,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(victory-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "8e828f1563f3c064")
+        add_test(NAME end-text-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --end-text-view
+            --frame-hash)
+        set_tests_properties(end-text-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "25e04a9e482eccea")
         add_test(NAME high-score-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --high-score-view
             --frame-hash)
@@ -362,6 +368,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(victory-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "8e828f1563f3c064")
+        add_test(NAME end-text-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --end-text-view
+            --frame-hash)
+        set_tests_properties(end-text-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "9751906604fce502")
         add_test(NAME high-score-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --high-score-view
             --frame-hash)
