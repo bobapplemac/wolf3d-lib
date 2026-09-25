@@ -842,13 +842,17 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --high-score-
   chunks directly from `VGAGRAPH`. The supplied shareware archive exposes its
   single ending at shifted chunk 155; the full archive exposes all six at
   chunks 143-148.
+- Window-piece lookup follows each edition's generated header rather than a
+  uniform chunk shift: `H_TOPWINDOWPIC` is 17 in WL1 and 6 in WL6. This keeps
+  the four border pictures aligned and prevents an unrelated chunk from being
+  drawn across the footer.
 - Acknowledging the victory totals now opens the correct episode article.
   Left/up and right/down/Enter navigate its pages; Escape leaves the article
   for score ranking and editable name entry.
 - Data-backed tests render every page of every available ending. Their combined
-  indexed hashes are `45e98f3542ac98ba` for WL1's two pages and
+  indexed hashes are `42a18636c4286987` for WL1's two pages and
   `7aeca6c61a08514b` for WL6's twelve pages. First-page headless
-  fixtures hash to `25e04a9e482eccea` and `9751906604fce502` respectively.
+  fixtures both hash to `9751906604fce502`.
 
 ![Original Episode 1 ending article](../out/end-text.png)
 

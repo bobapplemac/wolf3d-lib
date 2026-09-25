@@ -2657,7 +2657,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                    (unsigned long long)article_hash);
             CHECK(article_hash == (expected_variant
                   == WG_GAME_WOLF3D_SHAREWARE_14
-                  ? 0x45e98f3542ac98baULL : 0x7aeca6c61a08514bULL));
+                  ? 0x42a18636c4286987ULL : 0x7aeca6c61a08514bULL));
         }
         for (index = 0; index + 1U < graphics.offset_count; ++index)
         {

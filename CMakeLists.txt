@@ -234,7 +234,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --end-text-view
             --frame-hash)
         set_tests_properties(end-text-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "25e04a9e482eccea")
+            PASS_REGULAR_EXPRESSION "9751906604fce502")
         add_test(NAME high-score-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --high-score-view
             --frame-hash)

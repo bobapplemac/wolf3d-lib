@@ -49,7 +49,7 @@ static int WL_ArticleChunks(wg_game_variant_t variant, size_t *top,
     }
     if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
     {
-        *top = 18U;
+        *top = 17U;
         *end_text = 155U;
         return 1;
     }
