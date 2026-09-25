@@ -32,6 +32,8 @@ typedef enum wg_weapon
 
 void WL_StatusDefaults(wl_status_t *status);
 void WL_TakeDamage(struct wg_level *level, unsigned points);
+void WL_TakeDamageFrom(struct wg_level *level, unsigned points,
+                       int32_t attacker_x, int32_t attacker_y);
 void WL_GivePoints(struct wg_level *level, uint32_t points);
 int WL_GetBonus(struct wg_level *level, size_t static_index);
 unsigned WL_CollectPlayerTileBonuses(struct wg_level *level);

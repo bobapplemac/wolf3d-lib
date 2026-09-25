@@ -1,11 +1,73 @@
 /* Portable SetupGameLevel, ScanInfoPlane, SpawnDoor, and SpawnStatic state. */
 #include "WL_GAME.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "WG_FIXED.h"
 #include "WL_AGENT.h"
 #include "WL_MAIN.h"
+
+#define WL_PI 3.14159265358979323846
+
+uint16_t WL_DeathTargetAngle(const wg_level_t *level)
+{
+    double angle;
+
+    if (level == NULL)
+    {
+        return 0U;
+    }
+    angle = atan2((double)level->player_y - (double)level->killer_y,
+                  (double)level->killer_x - (double)level->player_x);
+    if (angle < 0.0)
+    {
+        angle += WL_PI * 2.0;
+    }
+    return (uint16_t)(angle * 360.0 / (WL_PI * 2.0));
+}
+
+int WL_DeathRotateStep(wg_level_t *level, uint16_t target_angle,
+                       unsigned degrees)
+{
+    unsigned current;
+    unsigned clockwise;
+    unsigned counterclockwise;
+
+    if (level == NULL || target_angle >= 360U || degrees == 0U)
+    {
+        return 0;
+    }
+    current = level->player_angle;
+    if (current == target_angle)
+    {
+        return 1;
+    }
+    clockwise = (target_angle + 360U - current) % 360U;
+    counterclockwise = (current + 360U - target_angle) % 360U;
+    if (clockwise < counterclockwise)
+    {
+        if (degrees >= clockwise)
+        {
+            current = target_angle;
+        }
+        else
+        {
+            current = (current + degrees) % 360U;
+        }
+    }
+    else if (degrees >= counterclockwise)
+    {
+        current = target_angle;
+    }
+    else
+    {
+        current = (current + 360U - degrees) % 360U;
+    }
+    level->player_angle = (uint16_t)current;
+    level->player_angle_fraction = (int32_t)current << 16;
+    return current == target_angle;
+}
 
 static int WG_DifficultyDirection(uint16_t info, uint16_t easy_base,
                                   uint16_t tier_spacing,

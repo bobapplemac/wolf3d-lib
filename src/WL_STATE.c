@@ -1180,7 +1180,8 @@ static void WL_T_Bite(wg_level_t *level, const wg_actor_t *actor)
     delta_y = (delta_y < 0 ? -delta_y : delta_y) - WG_FIXED_ONE;
     if (delta_y <= WG_FIXED_ONE && WG_RandomNext(&level->random) < 180U)
     {
-        WL_TakeDamage(level, WG_RandomNext(&level->random) >> 4);
+        WL_TakeDamageFrom(level, WG_RandomNext(&level->random) >> 4,
+                          actor->x, actor->y);
     }
 }
 
@@ -1383,8 +1384,9 @@ static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
             base_damage = 20U;
         }
 
-        WL_TakeDamage(level, (WG_RandomNext(&level->random) >> 3)
-                             + base_damage);
+        WL_TakeDamageFrom(level, (WG_RandomNext(&level->random) >> 3)
+                                 + base_damage,
+                          actor->x, actor->y);
         WL_RemoveProjectile(actor);
         return;
     }
@@ -1806,7 +1808,7 @@ static void WL_T_Shoot(wg_level_t *level, wg_actor_t *actor)
         damage = distance < 2 ? random_damage >> 2
                  : (distance < 4 ? random_damage >> 3
                                   : random_damage >> 4);
-        WL_TakeDamage(level, damage);
+        WL_TakeDamageFrom(level, damage, actor->x, actor->y);
     }
     if (actor->actor_class == WG_ACTOR_SS)
     {

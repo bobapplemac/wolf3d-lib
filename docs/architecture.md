@@ -265,10 +265,12 @@ difficulty-filtered kills, authored treasure and pushwall secrets; `WL_PLAY.c`
 advances floor `TimeCount`; and the completed-floor state calculates the
 original par/perfect bonuses, renders the original big-glyph screen, plays
 `ENDLEVEL_MUS`, and waits for input before rebuilding the destination map. A
-death freezes simulation for 70 tics, discards score earned on that floor,
-decrements a life, and restarts with pistol, eight rounds, and full health. The
-eventual UI layer still needs to replace that fixed pause with the original
-death rotation and red fizzle.
+fatal hit retains its attacker's world position. The death state removes the
+weapon, turns toward that position along the shortest arc at the original two
+degrees per 70 Hz tic, clears palette shifts, and advances the original LFSR
+fizzle toward VGA color 4 in 70 frame-sized batches. After input timeout and
+the death sound both finish, it discards score earned on that floor, decrements
+a life, and restarts with pistol, eight rounds, and full health.
 
 Win32 supplies relative mouse packets through the generic event contract rather
 than exposing window coordinates to the engine. `WL_PLAY.c` applies the original

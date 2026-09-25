@@ -192,6 +192,8 @@ typedef struct wg_level
     uint16_t damage_count;
     uint16_t bonus_count;
     uint8_t player_dead;
+    int32_t killer_x;
+    int32_t killer_y;
     uint8_t player_weapon;
     uint8_t player_chosen_weapon;
     uint8_t player_best_weapon;
@@ -249,5 +251,8 @@ int WG_SoundPosition(const wg_level_t *level,
                      int32_t x, int32_t y,
                      uint8_t *left, uint8_t *right);
 void WG_ClearSoundEvents(wg_level_t *level);
+uint16_t WL_DeathTargetAngle(const wg_level_t *level);
+int WL_DeathRotateStep(wg_level_t *level, uint16_t target_angle,
+                       unsigned degrees);
 
 #endif

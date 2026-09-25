@@ -2015,6 +2015,46 @@ static void TestPaletteShifts(void)
     CHECK(memcmp(palette, WG_WolfPalette, sizeof(palette)) == 0);
 }
 
+static void TestPlayerDeathCamera(void)
+{
+    wg_level_t level;
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 100;
+    level.player_y = 100;
+
+    level.killer_x = 200;
+    level.killer_y = 100;
+    CHECK(WL_DeathTargetAngle(&level) == 0U);
+    level.killer_x = 100;
+    level.killer_y = 0;
+    CHECK(WL_DeathTargetAngle(&level) == 90U);
+    level.killer_x = 0;
+    level.killer_y = 100;
+    CHECK(WL_DeathTargetAngle(&level) == 180U);
+    level.killer_x = 100;
+    level.killer_y = 200;
+    CHECK(WL_DeathTargetAngle(&level) == 270U);
+
+    level.player_angle = 350U;
+    CHECK(!WL_DeathRotateStep(&level, 10U, 2U));
+    CHECK(level.player_angle == 352U);
+    CHECK(level.player_angle_fraction == (352 << 16));
+    CHECK(WL_DeathRotateStep(&level, 10U, 30U));
+    CHECK(level.player_angle == 10U);
+
+    level.player_angle = 0U;
+    CHECK(!WL_DeathRotateStep(&level, 180U, 2U));
+    CHECK(level.player_angle == 358U);
+
+    level.player_health = 1U;
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    WL_TakeDamageFrom(&level, 1U, 1234, 5678);
+    CHECK(level.player_dead != 0U);
+    CHECK(level.killer_x == 1234);
+    CHECK(level.killer_y == 5678);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -3081,6 +3121,7 @@ int main(int argc, char **argv)
     TestPlayLoop();
     TestIntermission();
     TestPaletteShifts();
+    TestPlayerDeathCamera();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

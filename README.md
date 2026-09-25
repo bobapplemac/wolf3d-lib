@@ -96,11 +96,20 @@ load the correct next floor, including the episode-specific return from floor
 10. Completed normal and secret floors stop at the original intermission
 screen, calculate bonuses from live statistics, play the original results
 music, and wait for acknowledgement before loading the destination floor.
-Death restarts the current floor with the original score/inventory reset and
-life accounting; the full death camera/fade remains to be ported:
+Death turns toward the fatal attacker at the original two degrees per tic,
+removes the weapon, runs the original 70-frame red fizzle, waits for the death
+sound and input timeout, then restarts the current floor with the original
+score/inventory reset and life accounting:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
+```
+
+The player-death diagnostic captures the transition halfway through its red
+fizzle. It is identical for the supplied WL1 and WL6 data:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-death-view --frame-hash --dump-frame player-death.ppm
 ```
 
 Pass a zero-based `--map` number to capture another original map. The headless

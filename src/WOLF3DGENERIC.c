@@ -18,6 +18,7 @@
 #include "WG_PALETTE.h"
 #include "ID_PM.h"
 #include "ID_SD.h"
+#include "ID_VL.h"
 #include "WG_PLATFORM.h"
 #include "WG_RENDERER.h"
 #include "WL_DRAW.h"
@@ -33,6 +34,15 @@ static int wg_initialized;
 static int wg_data_loaded;
 static unsigned wg_start_map;
 static wg_data_set_t wg_data_set;
+
+typedef enum wg_death_phase
+{
+    WG_DEATH_NONE = 0,
+    WG_DEATH_ROTATE,
+    WG_DEATH_FIZZLE_PENDING,
+    WG_DEATH_FIZZLE,
+    WG_DEATH_HOLD
+} wg_death_phase_t;
 
 typedef struct wg_game_session
 {
@@ -57,7 +67,12 @@ typedef struct wg_game_session
     uint8_t game_over;
     uint8_t paused;
     uint8_t intermission;
-    uint16_t death_tics;
+    wg_death_phase_t death_phase;
+    uint16_t death_target_angle;
+    uint16_t death_hold_tics;
+    uint8_t death_acknowledged;
+    wg_fizzle_t death_fizzle;
+    uint8_t death_source[WG_SCREEN_WIDTH * WG_PLAY_VIEW_HEIGHT];
     unsigned map_number;
     unsigned next_map_number;
     uint32_t level_start_score;
@@ -556,8 +571,12 @@ static int WG_GameSessionRender(void)
                            &wg_game.view, wg_game.hits,
                            wg_game.visible_tiles, wg_game.level.player_x,
                            wg_game.level.player_y,
-                           wg_game.level.player_angle)
-        || !WL_DrawPlayerWeapon(WG_ScreenBuffer, &wg_game.pages,
+                           wg_game.level.player_angle))
+    {
+        return 0;
+    }
+    if (wg_game.death_phase == WG_DEATH_NONE
+        && !WL_DrawPlayerWeapon(WG_ScreenBuffer, &wg_game.pages,
                                 wg_game.level.player_weapon,
                                 wg_game.level.weapon_frame))
     {
@@ -780,9 +799,52 @@ static int WG_GameSessionTick(void)
     }
     if (wg_game.level.player_dead)
     {
-        if (++wg_game.death_tics >= 70U)
+        if (wg_game.death_phase == WG_DEATH_ROTATE)
         {
-            return WG_GameSessionReload(wg_game.map_number, 1);
+            if (WL_DeathRotateStep(&wg_game.level,
+                                   wg_game.death_target_angle, 2U))
+            {
+                wg_game.death_phase = WG_DEATH_FIZZLE_PENDING;
+            }
+        }
+        else if (wg_game.death_phase == WG_DEATH_FIZZLE_PENDING)
+        {
+            if (!WG_GameSessionRender())
+            {
+                return 0;
+            }
+            memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+            memset(wg_game.death_source, 4, sizeof(wg_game.death_source));
+            WG_FizzleStart(&wg_game.death_fizzle);
+            wg_game.death_phase = WG_DEATH_FIZZLE;
+        }
+        else if (wg_game.death_phase == WG_DEATH_FIZZLE)
+        {
+            if (WG_FizzleStep(&wg_game.death_fizzle,
+                              wg_game.death_source, WG_ScreenBuffer,
+                              WG_SCREEN_WIDTH, WG_PLAY_VIEW_HEIGHT,
+                              (WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT) / 70U))
+            {
+                wg_game.death_phase = WG_DEATH_HOLD;
+                wg_game.death_hold_tics = 0U;
+            }
+        }
+        else if (wg_game.death_phase == WG_DEATH_HOLD)
+        {
+            int sound_playing = wg_game.audio_active
+                && (ID_SD_EffectPlaying(wg_game.music)
+                    || ID_SD_DigitalPlaying(wg_game.music));
+
+            if (wg_game.death_hold_tics < 100U)
+            {
+                ++wg_game.death_hold_tics;
+            }
+            if ((wg_game.death_acknowledged
+                 || wg_game.death_hold_tics >= 100U)
+                && !sound_playing)
+            {
+                return WG_GameSessionReload(wg_game.map_number, 1);
+            }
         }
         return 1;
     }
@@ -872,7 +934,12 @@ static int WG_GameSessionTick(void)
     }
     if (wg_game.level.player_dead)
     {
-        wg_game.death_tics = 1U;
+        wg_game.death_target_angle = WL_DeathTargetAngle(&wg_game.level);
+        wg_game.death_phase = WG_DEATH_ROTATE;
+        memset(wg_game.keys, 0, sizeof(wg_game.keys));
+        wg_game.mouse_buttons = 0U;
+        wg_game.mouse_x = 0;
+        wg_game.mouse_y = 0;
     }
     return 1;
 }
@@ -895,6 +962,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int intermission_view,
                                   int damage_flash_view,
                                   int bonus_flash_view,
+                                  int player_death_view,
                                   unsigned actor_tics,
                                   unsigned forward_tics)
 {
@@ -950,7 +1018,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         goto cleanup;
     }
     if (guard_view || alert_view || chase_view || fire_view || death_view
-        || player_fire_view)
+        || player_fire_view || player_death_view)
     {
         wg_actor_t *actor = WG_FindGuardViewActor(&level);
         size_t player_tile;
@@ -1297,6 +1365,40 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         WL_UpdatePaletteShifts(&level, WG_Palette);
     }
+    if (player_death_view)
+    {
+        const wg_actor_t *actor = WG_FindGuardViewActor(&level);
+        wg_fizzle_t fizzle;
+        uint8_t red[WG_SCREEN_WIDTH * WG_PLAY_VIEW_HEIGHT];
+        unsigned frame;
+
+        if (actor == NULL)
+        {
+            goto cleanup;
+        }
+        level.killer_x = actor->x;
+        level.killer_y = actor->y;
+        while (!WL_DeathRotateStep(&level, WL_DeathTargetAngle(&level), 2U))
+        {
+        }
+        if (!WG_RenderStaticView(WG_ScreenBuffer, &level, &view, &walls,
+                                 0, 0, level.player_x, level.player_y,
+                                 level.player_angle, hits, visible_tiles)
+            || !WL_DrawScaleds(WG_ScreenBuffer, &pages, &level, &view, hits,
+                               visible_tiles, level.player_x, level.player_y,
+                               level.player_angle))
+        {
+            goto cleanup;
+        }
+        memset(red, 4, sizeof(red));
+        WG_FizzleStart(&fizzle);
+        for (frame = 0U; frame < 35U; ++frame)
+        {
+            (void)WG_FizzleStep(&fizzle, red, WG_ScreenBuffer,
+                                WG_SCREEN_WIDTH, WG_PLAY_VIEW_HEIGHT,
+                                (WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT) / 70U);
+        }
+    }
     success = 1;
 
 cleanup:
@@ -1389,7 +1491,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--pause-view"),
             WG_HasArgument(argc, argv, "--intermission-view"),
             WG_HasArgument(argc, argv, "--damage-flash-view"),
-            WG_HasArgument(argc, argv, "--bonus-flash-view"), actor_tics,
+            WG_HasArgument(argc, argv, "--bonus-flash-view"),
+            WG_HasArgument(argc, argv, "--player-death-view"), actor_tics,
             forward_tics))
     {
         wolf3dgeneric_Shutdown();
@@ -1426,6 +1529,15 @@ wg_result_t wolf3dgeneric_Run(void)
             }
             if (event.type == WG_EVENT_KEY)
             {
+                if (wg_game.active && wg_game.level.player_dead)
+                {
+                    if (wg_game.death_phase == WG_DEATH_HOLD
+                        && event.pressed)
+                    {
+                        wg_game.death_acknowledged = 1U;
+                    }
+                    continue;
+                }
                 if (wg_game.active && wg_game.intermission && event.pressed)
                 {
                     if (!WG_GameSessionReload(wg_game.next_map_number, 0))
@@ -1490,6 +1602,15 @@ wg_result_t wolf3dgeneric_Run(void)
             {
                 uint8_t mask = (uint8_t)(1U << (event.button - 1U));
 
+                if (wg_game.level.player_dead)
+                {
+                    if (wg_game.death_phase == WG_DEATH_HOLD
+                        && event.pressed)
+                    {
+                        wg_game.death_acknowledged = 1U;
+                    }
+                    continue;
+                }
                 if (wg_game.paused && event.pressed)
                 {
                     if (!WG_GameSessionSetPaused(0))
@@ -1550,6 +1671,7 @@ wg_result_t wolf3dgeneric_Run(void)
                 ++ticks_run;
             }
             if (ticks_run != 0U && !wg_game.intermission
+                && wg_game.death_phase < WG_DEATH_FIZZLE
                 && !WG_GameSessionRender())
             {
                 WG_ReportError("The Wolf3D game renderer failed.");

@@ -742,3 +742,27 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --intermissio
 ![Original 40-point damage palette shift](../out/damage-flash.png)
 
 ![Original pickup bonus palette shift](../out/bonus-flash.png)
+
+## 2026-09-24: Original player-death presentation
+
+- Fatal dog bites, hitscan shots, and projectiles now retain the attacker's
+  exact world position, matching the original `killerobj` boundary.
+- Replaced the temporary fixed restart delay with the original `Died` flow:
+  hide the weapon, rotate toward the attacker along the shortest arc at two
+  degrees per 70 Hz tic, clear palette shifts, and fizzle the 320x160 play view
+  to VGA color 4 over 70 frame batches.
+- The post-fizzle hold accepts a key or mouse button after the fade, while the
+  restart continues waiting for the player-death sound just as
+  `SD_WaitSoundDone` did. The existing campaign restart then applies the life,
+  score, inventory, health, and ammo rules.
+- Added cardinal-angle, wraparound, equal-arc, and fatal-attacker tests plus a
+  WL1/WL6 visual oracle. The half-fizzle indexed framebuffer is identical in
+  both editions, with FNV-1a `110c844dbc2a3366`.
+
+![Player death halfway through the original red fizzle](../out/player-death.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-death-view --frame-hash --dump-frame out\player-death.ppm
+```

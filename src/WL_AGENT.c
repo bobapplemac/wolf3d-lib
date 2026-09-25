@@ -150,6 +150,15 @@ void WL_StatusDefaults(wl_status_t *status)
 
 void WL_TakeDamage(struct wg_level *level, unsigned points)
 {
+    if (level != NULL)
+    {
+        WL_TakeDamageFrom(level, points, level->player_x, level->player_y);
+    }
+}
+
+void WL_TakeDamageFrom(struct wg_level *level, unsigned points,
+                       int32_t attacker_x, int32_t attacker_y)
+{
     unsigned damage;
 
     if (level == NULL || level->player_dead)
@@ -161,6 +170,8 @@ void WL_TakeDamage(struct wg_level *level, unsigned points)
     {
         level->player_health = 0U;
         level->player_dead = 1U;
+        level->killer_x = attacker_x;
+        level->killer_y = attacker_y;
         (void)WG_QueueSound(level, WG_SOUND_PLAYER_DEATH);
     }
     else
