@@ -7,11 +7,16 @@
 
 #define WL_MAIN_MENU_ITEMS 10U
 #define WL_MAIN_MENU_DEFAULT_ITEM 6U
+#define WL_SOUND_MENU_ITEMS 12U
 
 int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                     const wg_graphics_t *graphics, unsigned selected,
                     int in_game);
 unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game);
+int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
+                     const wg_graphics_t *graphics, unsigned selected,
+                     int adlib_effects, int digitized, int music);
+unsigned WL_SoundMenuMove(unsigned selected, int direction);
 int WL_DrawEpisodeMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned episode,
                        int shareware);

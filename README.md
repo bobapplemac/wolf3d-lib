@@ -96,6 +96,12 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --main-menu-v
 Use `--episode-menu-view` or `--difficulty-menu-view` in place of
 `--main-menu-view` to capture the two New Game panels.
 
+The Sound row opens the original three-section device panel. `None` and the
+currently implemented AdLib, Sound Blaster, and music choices take effect
+immediately; changing an enabled mode plays the original pistol check sound.
+PC Speaker and Disney Sound Source remain visibly disabled until those device
+emulations exist. Capture the panel with `--sound-menu-view`.
+
 The main menu's `Read This!` entry decodes the original 41-page help article
 directly from the selected edition's `VGAGRAPH`. Arrow keys, Enter, and Space
 navigate pages; Escape returns to the control panel. Its first page can be

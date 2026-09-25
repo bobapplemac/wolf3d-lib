@@ -40,12 +40,17 @@ static wl_high_score_t wg_high_scores[WL_MAX_HIGH_SCORES];
 static uint8_t wg_menu_active;
 static uint8_t wg_front_scores;
 static uint8_t wg_new_game_screen;
+static uint8_t wg_sound_screen;
 static uint8_t wg_help_active;
 static size_t wg_help_page;
 static wl_article_t wg_help_article;
 static unsigned wg_menu_selection = WL_MAIN_MENU_DEFAULT_ITEM;
 static unsigned wg_episode_selection;
 static wg_difficulty_t wg_difficulty_selection = WG_DIFFICULTY_MEDIUM;
+static unsigned wg_sound_selection;
+static uint8_t wg_adlib_effects = 1U;
+static uint8_t wg_digitized_effects = 1U;
+static uint8_t wg_music_enabled = 1U;
 static unsigned wg_next_demo;
 
 typedef enum wg_attract_phase
@@ -161,15 +166,17 @@ static void WG_FrontMusicStart(unsigned song)
         return;
     }
     WG_FrontMusicClose();
-    if (!WG_AudioOpen(&wg_front_audio, &wg_data_set)
-        || !WG_AudioGetChunk(&wg_front_audio, 261U + song, &data, &size))
+    if (!WG_AudioOpen(&wg_front_audio, &wg_data_set))
     {
         WG_FrontMusicClose();
         return;
     }
     wg_front_music = ID_SD_MusicCreate(48000U);
     if (wg_front_music == NULL || !WG_PCMInit(48000U, 2U)
-        || !ID_SD_MusicStart(wg_front_music, data, size))
+        || (wg_music_enabled
+            && (!WG_AudioGetChunk(&wg_front_audio, 261U + song,
+                                  &data, &size)
+                || !ID_SD_MusicStart(wg_front_music, data, size))))
     {
         WG_FrontMusicClose();
         return;
@@ -200,6 +207,49 @@ static int WG_FrontMusicPump(void)
         }
     }
     return 1;
+}
+
+static void WG_FrontSoundPreview(void)
+{
+    const uint8_t *effect_data;
+    size_t effect_size;
+
+    if (!wg_front_audio_active || wg_front_music == NULL
+        || !WG_AudioGetChunk(&wg_front_audio, 87U + WG_SOUND_ATTACK_PISTOL,
+                             &effect_data, &effect_size))
+    {
+        return;
+    }
+    if (wg_digitized_effects)
+    {
+        wg_pages_t pages;
+        id_sd_digi_bank_t bank;
+        uint8_t *sample = NULL;
+        size_t sample_size = 0U;
+        int played = 0;
+
+        memset(&pages, 0, sizeof(pages));
+        memset(&bank, 0, sizeof(bank));
+        if (WG_PagesOpen(&pages, &wg_data_set)
+            && ID_SD_DigiBankOpen(&bank, &pages)
+            && ID_SD_DigiBankLoad(&bank, 5U, &sample, &sample_size)
+            && effect_size >= 6U)
+        {
+            played = ID_SD_DigitalStart(
+                wg_front_music, sample, sample_size,
+                WG_ReadLE16(effect_data + 4U), 0U, 0U);
+        }
+        free(sample);
+        WG_PagesClose(&pages);
+        if (played)
+        {
+            return;
+        }
+    }
+    if (wg_adlib_effects)
+    {
+        (void)ID_SD_EffectStart(wg_front_music, effect_data, effect_size);
+    }
 }
 
 static const char *WG_FindDataPath(int argc, char **argv)
@@ -621,6 +671,7 @@ static int WG_DrawTitleScreen(void)
     wg_menu_active = 0U;
     wg_front_scores = 0U;
     wg_new_game_screen = 0U;
+    wg_sound_screen = 0U;
     WG_CloseFrontHelp();
     WG_AttractSet(WG_ATTRACT_TITLE, 15000U);
     WG_FrontMusicStart(7U);
@@ -650,6 +701,7 @@ static int WG_DrawCreditsScreen(void)
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
+        wg_sound_screen = 0U;
         WG_AttractSet(WG_ATTRACT_CREDITS, 10000U);
         result = 1;
     }
@@ -704,6 +756,35 @@ static int WG_DrawMainMenuScreen(void)
         wg_menu_active = 1U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
+        wg_sound_screen = 0U;
+        wg_attract_phase = WG_ATTRACT_NONE;
+        WG_FrontMusicStart(14U);
+    }
+    return result;
+}
+
+static int WG_DrawSoundMenuScreen(void)
+{
+    wg_graphics_t graphics;
+    int result;
+
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    result = WL_DrawSoundMenu(WG_ScreenBuffer, &graphics,
+                              wg_sound_selection, wg_adlib_effects,
+                              wg_digitized_effects, wg_music_enabled);
+    WG_GraphicsClose(&graphics);
+    if (result)
+    {
+        WG_CloseFrontHelp();
+        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        wg_menu_active = 0U;
+        wg_front_scores = 0U;
+        wg_new_game_screen = 0U;
+        wg_sound_screen = 1U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
     }
@@ -769,6 +850,7 @@ static int WG_DrawEpisodeMenuScreen(void)
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 1U;
+        wg_sound_screen = 0U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
     }
@@ -795,6 +877,7 @@ static int WG_DrawDifficultyMenuScreen(void)
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 2U;
+        wg_sound_screen = 0U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
     }
@@ -829,6 +912,7 @@ static int WG_DrawHelpScreen(void)
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
+        wg_sound_screen = 0U;
         wg_help_active = 1U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(0U);
@@ -1189,29 +1273,33 @@ static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty)
     {
         goto cleanup;
     }
-    if (WG_AudioGetChunk(&wg_game.audio, WL_MusicChunkForMap(map_number),
-                         &music_data, &music_size))
+    wg_game.music = ID_SD_MusicCreate(48000U);
+    if (wg_game.music != NULL && WG_PCMInit(48000U, 2U))
     {
-        wg_game.music = ID_SD_MusicCreate(48000U);
-        if (wg_game.music != NULL && WG_PCMInit(48000U, 2U)
-            && ID_SD_MusicStart(wg_game.music, music_data, music_size))
+        wg_game.audio_active = 1U;
+        if (wg_music_enabled
+            && WG_AudioGetChunk(&wg_game.audio,
+                                WL_MusicChunkForMap(map_number),
+                                &music_data, &music_size)
+            && !ID_SD_MusicStart(wg_game.music, music_data, music_size))
         {
-            wg_game.audio_active = 1U;
-            if (!WG_GameSessionPumpAudio())
-            {
-                goto cleanup;
-            }
+            goto cleanup;
         }
-        else
+        if (!WG_GameSessionPumpAudio())
         {
-            WG_PCMShutdown();
-            ID_SD_MusicDestroy(wg_game.music);
-            wg_game.music = NULL;
+            goto cleanup;
         }
+    }
+    else
+    {
+        WG_PCMShutdown();
+        ID_SD_MusicDestroy(wg_game.music);
+        wg_game.music = NULL;
     }
     wg_menu_active = 0U;
     wg_front_scores = 0U;
     wg_new_game_screen = 0U;
+    wg_sound_screen = 0U;
     wg_attract_phase = WG_ATTRACT_NONE;
     success = 1;
 
@@ -1472,7 +1560,7 @@ static int WG_GameSessionTick(void)
             {
                 int played = 0;
 
-                if (digital_number >= 0 && size >= 6U)
+                if (wg_digitized_effects && digital_number >= 0 && size >= 6U)
                 {
                     uint8_t *digital_data;
                     size_t digital_length;
@@ -1503,7 +1591,7 @@ static int WG_GameSessionTick(void)
                         }
                     }
                 }
-                if (!played)
+                if (!played && wg_adlib_effects)
                 {
                     (void)ID_SD_EffectStart(wg_game.music, data, size);
                 }
@@ -1562,6 +1650,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int victory_view,
                                   int end_text_view,
                                   int main_menu_view,
+                                  int sound_menu_view,
                                   int credits_view,
                                   int help_view,
                                   int demo_view,
@@ -2050,6 +2139,11 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    if (sound_menu_view
+        && !WL_DrawSoundMenu(WG_ScreenBuffer, &graphics, 0U, 1, 1, 1))
+    {
+        goto cleanup;
+    }
     if (credits_view)
     {
         uint8_t *pixels = NULL;
@@ -2266,6 +2360,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--victory-view"),
             WG_HasArgument(argc, argv, "--end-text-view"),
             WG_HasArgument(argc, argv, "--main-menu-view"),
+            WG_HasArgument(argc, argv, "--sound-menu-view"),
             WG_HasArgument(argc, argv, "--credits-view"),
             WG_HasArgument(argc, argv, "--help-view"),
             WG_HasArgument(argc, argv, "--demo-view"), demo_commands,
@@ -2293,6 +2388,10 @@ static wg_result_t WG_MainMenuActivate(void)
             }
             return WG_DrawEpisodeMenuScreen()
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case 1U:
+            wg_sound_selection = 0U;
+            return WG_DrawSoundMenuScreen()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         case 7U:
             return WG_DrawFrontHighScores(0)
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
@@ -2308,6 +2407,50 @@ static wg_result_t WG_MainMenuActivate(void)
         default:
             return WG_RESULT_OK;
     }
+}
+
+static int WG_SoundMenuActivate(void)
+{
+    int preview = 0;
+
+    switch (wg_sound_selection)
+    {
+        case 0U:
+            wg_adlib_effects = 0U;
+            break;
+        case 2U:
+            wg_adlib_effects = 1U;
+            preview = 1;
+            break;
+        case 5U:
+            wg_digitized_effects = 0U;
+            break;
+        case 7U:
+            wg_digitized_effects = 1U;
+            preview = 2;
+            break;
+        case 10U:
+            wg_music_enabled = 0U;
+            WG_FrontMusicClose();
+            preview = 1;
+            break;
+        case 11U:
+            wg_music_enabled = 1U;
+            WG_FrontMusicClose();
+            preview = 1;
+            break;
+        default:
+            return 0;
+    }
+    if (!WG_DrawSoundMenuScreen())
+    {
+        return 0;
+    }
+    if (preview != 0)
+    {
+        WG_FrontSoundPreview();
+    }
+    return 1;
 }
 
 static int WG_AttractAdvance(void)
@@ -2540,6 +2683,42 @@ wg_result_t wolf3dgeneric_Run(void)
                             }
                         }
                     }
+                    else if (wg_sound_screen)
+                    {
+                        if (event.key == WG_KEY_UP)
+                        {
+                            wg_sound_selection = WL_SoundMenuMove(
+                                wg_sound_selection, -1);
+                            if (!WG_DrawSoundMenuScreen())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                        }
+                        else if (event.key == WG_KEY_DOWN)
+                        {
+                            wg_sound_selection = WL_SoundMenuMove(
+                                wg_sound_selection, 1);
+                            if (!WG_DrawSoundMenuScreen())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                        }
+                        else if (event.key == WG_KEY_ESCAPE)
+                        {
+                            if (!WG_DrawMainMenuScreen())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                        }
+                        else if (event.key == WG_KEY_ENTER
+                                 || event.key == WG_KEY_SPACE)
+                        {
+                            if (!WG_SoundMenuActivate())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                        }
+                    }
                     else if (wg_new_game_screen == 1U)
                     {
                         if (event.key == WG_KEY_UP)
@@ -2704,6 +2883,21 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }
+                    }
+                }
+                else if (wg_sound_screen)
+                {
+                    if (event.button == 2U)
+                    {
+                        if (!WG_DrawMainMenuScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.button == 1U
+                             && !WG_SoundMenuActivate())
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
                     }
                 }
                 else if (wg_new_game_screen == 1U)

@@ -22,6 +22,12 @@
 #define WL_MENU_HEIGHT (13 * 10 + 6)
 #define WL_MENU_INDENT 24
 
+#define WL_SOUND_X 48
+#define WL_SOUND_Y1 20
+#define WL_SOUND_Y2 (WL_SOUND_Y1 + 5 * 13)
+#define WL_SOUND_Y3 (WL_SOUND_Y2 + 5 * 13)
+#define WL_SOUND_WIDTH 250
+
 typedef struct wl_menu_chunks
 {
     size_t options;
@@ -29,6 +35,11 @@ typedef struct wl_menu_chunks
     size_t mouse_back;
     size_t baby_mode;
     size_t episode_one;
+    size_t not_selected;
+    size_t selected;
+    size_t effects_title;
+    size_t digitized_title;
+    size_t music_title;
 } wl_menu_chunks_t;
 
 typedef struct wl_menu_item
@@ -50,6 +61,11 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->mouse_back = 18U;
         chunks->baby_mode = 19U;
         chunks->episode_one = 30U;
+        chunks->not_selected = 13U;
+        chunks->selected = 14U;
+        chunks->effects_title = 15U;
+        chunks->digitized_title = 16U;
+        chunks->music_title = 17U;
         return 1;
     }
     if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
@@ -60,6 +76,11 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->mouse_back = 30U;
         chunks->baby_mode = 31U;
         chunks->episode_one = 42U;
+        chunks->not_selected = 24U;
+        chunks->selected = 25U;
+        chunks->effects_title = 26U;
+        chunks->digitized_title = 27U;
+        chunks->music_title = 28U;
         return 1;
     }
     return 0;
@@ -199,6 +220,125 @@ unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game)
         }
     } while (items[candidate].active == 0U);
     return candidate;
+}
+
+static int WL_SoundMenuActive(unsigned item)
+{
+    return item == 0U || item == 2U || item == 5U || item == 7U
+        || item == 10U || item == 11U;
+}
+
+unsigned WL_SoundMenuMove(unsigned selected, int direction)
+{
+    unsigned candidate;
+
+    if (selected >= WL_SOUND_MENU_ITEMS || direction == 0)
+    {
+        return selected;
+    }
+    candidate = selected;
+    do
+    {
+        if (direction < 0)
+        {
+            candidate = candidate == 0U ? WL_SOUND_MENU_ITEMS - 1U
+                                        : candidate - 1U;
+        }
+        else
+        {
+            candidate = candidate + 1U == WL_SOUND_MENU_ITEMS
+                            ? 0U : candidate + 1U;
+        }
+    } while (!WL_SoundMenuActive(candidate));
+    return candidate;
+}
+
+int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
+                     const wg_graphics_t *graphics, unsigned selected,
+                     int adlib_effects, int digitized, int music)
+{
+    static const char *const labels[WL_SOUND_MENU_ITEMS] =
+    {
+        "None", "PC Speaker", "AdLib/Sound Blaster", "", "",
+        "None", "Disney Sound Source", "Sound Blaster", "", "",
+        "None", "AdLib/Sound Blaster"
+    };
+    wl_menu_chunks_t chunks;
+    wg_font_t font;
+    unsigned index;
+
+    if (framebuffer == NULL || graphics == NULL
+        || selected >= WL_SOUND_MENU_ITEMS
+        || !WL_SoundMenuActive(selected)
+        || !WL_MenuChunks(graphics->variant, &chunks)
+        || !WG_FontOpen(&font, graphics, 1U))
+    {
+        return 0;
+    }
+    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
+                             112, 184))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    WL_MenuBar(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y1 - 3,
+               WL_SOUND_WIDTH, 4 * 13 - 7, WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y1 - 3,
+                   WL_SOUND_WIDTH, 4 * 13 - 7);
+    WL_MenuBar(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y2 - 3,
+               WL_SOUND_WIDTH, 4 * 13 - 7, WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y2 - 3,
+                   WL_SOUND_WIDTH, 4 * 13 - 7);
+    WL_MenuBar(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y3 - 3,
+               WL_SOUND_WIDTH, 3 * 13 - 7, WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y3 - 3,
+                   WL_SOUND_WIDTH, 3 * 13 - 7);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.effects_title,
+                             100, WL_SOUND_Y1 - 20)
+        || !WG_VideoDrawPicture(framebuffer, graphics,
+                                chunks.digitized_title,
+                                100, WL_SOUND_Y2 - 20)
+        || !WG_VideoDrawPicture(framebuffer, graphics, chunks.music_title,
+                                100, WL_SOUND_Y3 - 20))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    for (index = 0U; index < WL_SOUND_MENU_ITEMS; ++index)
+    {
+        int on;
+        uint8_t color;
+
+        if (labels[index][0] == '\0')
+        {
+            continue;
+        }
+        color = WL_SoundMenuActive(index)
+                    ? (index == selected ? WL_MENU_HIGHLIGHT_COLOR
+                                         : WL_MENU_TEXT_COLOR)
+                    : WL_MENU_DEACTIVE_COLOR;
+        WG_FontDraw(&font, framebuffer, WL_SOUND_X + 52,
+                    WL_SOUND_Y1 + (int)index * 13, labels[index], color);
+        on = (index == 0U && !adlib_effects)
+             || (index == 2U && adlib_effects)
+             || (index == 5U && !digitized)
+             || (index == 7U && digitized)
+             || (index == 10U && !music)
+             || (index == 11U && music);
+        if (!WG_VideoDrawPicture(framebuffer, graphics,
+                                 on ? chunks.selected : chunks.not_selected,
+                                 WL_SOUND_X + 24,
+                                 WL_SOUND_Y1 + (int)index * 13 + 2))
+        {
+            WG_FontClose(&font);
+            return 0;
+        }
+    }
+    WG_FontClose(&font);
+    return WG_VideoDrawPicture(framebuffer, graphics, chunks.cursor,
+                               WL_SOUND_X & ~7,
+                               WL_SOUND_Y1 - 2 + (int)selected * 13);
 }
 
 unsigned WL_EpisodeMenuMove(unsigned episode, int direction)

@@ -984,3 +984,26 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --credits-view --frame-hash --dump-frame out\credits.ppm
 ```
+
+## 2026-09-25: Sound control panel
+
+- Ported the original `SndMenu` presentation from `WL_MENU.C`: three outlined
+  groups, authored title plaques, radio-button pictures, disabled-device color,
+  mouse legend, and the wrapping gun cursor.
+- Wired the implemented modes into live playback. AdLib effects use the
+  Nuked-OPL3 voice, digitized effects use the original Sound Blaster sample
+  bank, and music uses the IMF sequencer; every group also retains `None`.
+  PC Speaker and Disney Sound Source remain disabled until implemented.
+- Restored `ShootSnd` feedback when enabling a device or changing music mode.
+  Music can be disabled without losing the front-end PCM owner needed for that
+  preview, and gameplay still creates an effect-capable mixer with music off.
+- Added edition-specific renderer fixtures: WL1 hashes to `ccbead18acb8b045`
+  and WL6 hashes to `f311bc2002d7a216`.
+
+![Original Wolfenstein 3D sound menu](../out/sound-menu.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --sound-menu-view --frame-hash --dump-frame out\sound-menu.ppm
+```

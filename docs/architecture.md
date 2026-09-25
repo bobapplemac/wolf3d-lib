@@ -68,6 +68,13 @@ difficulty is passed into level construction, enemy filtering, hit points, and
 baby-mode damage. The remaining option screens are kept as subsequent menu
 slices.
 
+The Sound slice preserves `SndMenu`'s twelve-row layout and three device
+groups. It exposes only real engine capabilities: Nuked-OPL3 effects,
+Sound Blaster digitized samples, and Nuked-OPL3 music, alongside each original
+`None` choice. PC Speaker and Disney Sound Source are rendered in the original
+disabled color. The selected modes gate live playback; music-off retains a
+silent front-end mixer so the original pistol preview can still be heard.
+
 `WL_PLAY.c` also owns the original demo stream boundary. The four-byte header
 retains its map byte, 16-bit total length, and skipped fourth byte; every
 following record is the original button bitmap plus signed X/Y controls. Demo
