@@ -1957,6 +1957,7 @@ static void TestIntermission(void)
     wl_intermission_t ratios[8];
     wl_victory_t victory;
     unsigned floor;
+    wl_high_score_t scores[WL_MAX_HIGH_SCORES];
 
     memset(&level, 0, sizeof(level));
     level.time_count = 75U * 70U;
@@ -1993,6 +1994,19 @@ static void TestIntermission(void)
     CHECK(victory.kill_ratio == 83U);
     CHECK(victory.secret_ratio == 67U);
     CHECK(victory.treasure_ratio == 100U);
+
+    WL_HighScoresDefault(scores);
+    CHECK(WL_HighScoreInsert(scores, 9999U, 10U, 2U) == -1);
+    CHECK(WL_HighScoreInsert(scores, 10000U, 1U, 2U) == -1);
+    CHECK(WL_HighScoreInsert(scores, 10000U, 2U, 2U) == 0);
+    CHECK(scores[0].score == 10000U);
+    CHECK(scores[0].completed == 2U);
+    CHECK(scores[0].episode == 2U);
+    CHECK(scores[0].name[0] == '\0');
+    CHECK(strcmp(scores[1].name, "id software-'92") == 0);
+    CHECK(WL_HighScoreInsert(scores, 20000U, 1U, 0U) == 0);
+    CHECK(scores[0].score == 20000U);
+    CHECK(scores[1].completed == 2U);
 }
 
 static void TestPaletteShifts(void)

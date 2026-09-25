@@ -25,6 +25,17 @@ typedef struct wl_victory
     uint8_t treasure_ratio;
 } wl_victory_t;
 
+#define WL_MAX_HIGH_SCORES 7
+#define WL_MAX_HIGH_NAME 57
+
+typedef struct wl_high_score
+{
+    char name[WL_MAX_HIGH_NAME + 1];
+    uint32_t score;
+    uint16_t completed;
+    uint16_t episode;
+} wl_high_score_t;
+
 int WL_IntermissionCalculate(const wg_level_t *level,
                              unsigned map_number,
                              wl_intermission_t *intermission);
@@ -39,5 +50,12 @@ int WL_DrawVictory(uint8_t *framebuffer,
                    const wg_graphics_t *graphics,
                    const wg_level_t *level,
                    const wl_victory_t *victory);
+void WL_HighScoresDefault(wl_high_score_t scores[WL_MAX_HIGH_SCORES]);
+int WL_HighScoreInsert(wl_high_score_t scores[WL_MAX_HIGH_SCORES],
+                       uint32_t score, uint16_t completed,
+                       uint16_t episode);
+int WL_DrawHighScores(uint8_t *framebuffer,
+                      const wg_graphics_t *graphics,
+                      const wl_high_score_t scores[WL_MAX_HIGH_SCORES]);
 
 #endif

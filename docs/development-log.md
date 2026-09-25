@@ -788,3 +788,25 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --victory-view --frame-hash --dump-frame out\victory.ppm
 ```
+
+## 2026-09-24: Original high-score table
+
+- Ported the seven `ID_US_1.C` default entries and `CheckHighScore` insertion
+  rule, including completed-floor tie-breaking and the empty name reserved for
+  a qualifying player score.
+- Ported the Wolf3D `DrawHighScores` branch: color-0x29 menu background,
+  original stripe, picture headings, font-0 names, episode/floor notation, and
+  characters 129-138 for fixed-width level and score digits.
+- Exhausting the final life now enters this display and starts `ROSTER_MUS`.
+  Editable name entry and persistent configuration storage remain later
+  front-end work.
+- The supplied WL1 and WL6 archives again resolve to identical pixels despite
+  shifted chunk indices: default-table FNV-1a `7b063c0fb260132e`.
+
+![Original Wolf3D high-score table](../out/high-scores.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --high-score-view --frame-hash --dump-frame out\high-scores.ppm
+```

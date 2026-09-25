@@ -24,6 +24,26 @@ typedef struct wl_intermission_chunks
     size_t bj_win;
 } wl_intermission_chunks_t;
 
+typedef struct wl_high_score_chunks
+{
+    size_t time_code;
+    size_t level;
+    size_t name;
+    size_t score;
+    size_t title;
+} wl_high_score_chunks_t;
+
+static const wl_high_score_t wl_default_high_scores[WL_MAX_HIGH_SCORES] =
+{
+    { "id software-'92", 10000U, 1U, 0U },
+    { "Adrian Carmack",   10000U, 1U, 0U },
+    { "John Carmack",     10000U, 1U, 0U },
+    { "Kevin Cloud",      10000U, 1U, 0U },
+    { "Tom Hall",         10000U, 1U, 0U },
+    { "John Romero",      10000U, 1U, 0U },
+    { "Jay Wilbur",       10000U, 1U, 0U }
+};
+
 static const uint16_t wl_par_seconds[60] =
 {
      90U, 120U, 120U, 210U, 180U, 180U, 150U, 150U,   0U,   0U,
@@ -61,6 +81,33 @@ static int WL_IntermissionChunks(wg_game_variant_t variant,
     chunks->exclamation = chunks->letter_a + 26U;
     chunks->time_code = chunks->guy - 6U;
     chunks->bj_win = chunks->guy + 42U;
+    return 1;
+}
+
+static int WL_HighScoreChunks(wg_game_variant_t variant,
+                              wl_high_score_chunks_t *chunks)
+{
+    if (chunks == NULL)
+    {
+        return 0;
+    }
+    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        chunks->time_code = 37U;
+        chunks->title = 90U;
+    }
+    else if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    {
+        chunks->time_code = 49U;
+        chunks->title = 102U;
+    }
+    else
+    {
+        return 0;
+    }
+    chunks->level = chunks->time_code + 1U;
+    chunks->name = chunks->time_code + 2U;
+    chunks->score = chunks->time_code + 3U;
     return 1;
 }
 
@@ -437,6 +484,133 @@ int WL_DrawVictory(uint8_t *framebuffer,
         WG_FontDraw(&font, framebuffer, 241, 72, code, 0x47U);
         result = 1;
     }
+    WG_FontClose(&font);
+    return result;
+}
+
+void WL_HighScoresDefault(wl_high_score_t scores[WL_MAX_HIGH_SCORES])
+{
+    if (scores != NULL)
+    {
+        memcpy(scores, wl_default_high_scores,
+               sizeof(wl_default_high_scores));
+    }
+}
+
+int WL_HighScoreInsert(wl_high_score_t scores[WL_MAX_HIGH_SCORES],
+                       uint32_t score, uint16_t completed,
+                       uint16_t episode)
+{
+    unsigned index;
+
+    if (scores == NULL)
+    {
+        return -1;
+    }
+    for (index = 0U; index < WL_MAX_HIGH_SCORES; ++index)
+    {
+        if (score > scores[index].score
+            || (score == scores[index].score
+                && completed > scores[index].completed))
+        {
+            unsigned move;
+
+            for (move = WL_MAX_HIGH_SCORES - 1U; move > index; --move)
+            {
+                scores[move] = scores[move - 1U];
+            }
+            memset(&scores[index], 0, sizeof(scores[index]));
+            scores[index].score = score;
+            scores[index].completed = completed;
+            scores[index].episode = episode;
+            return (int)index;
+        }
+    }
+    return -1;
+}
+
+static int WL_HighScoreDrawText(const wg_font_t *font,
+                                uint8_t *framebuffer, int x, int y,
+                                const char *text)
+{
+    if (font == NULL || framebuffer == NULL || text == NULL)
+    {
+        return x;
+    }
+    WG_FontDraw(font, framebuffer, x, y, text, 15U);
+    return x + (int)WG_FontMeasure(font, text);
+}
+
+int WL_DrawHighScores(uint8_t *framebuffer,
+                      const wg_graphics_t *graphics,
+                      const wl_high_score_t scores[WL_MAX_HIGH_SCORES])
+{
+    wl_high_score_chunks_t chunks;
+    wg_font_t font;
+    unsigned index;
+    int result = 0;
+
+    memset(&font, 0, sizeof(font));
+    if (framebuffer == NULL || graphics == NULL || scores == NULL
+        || !WL_HighScoreChunks(graphics->variant, &chunks)
+        || !WG_FontOpen(&font, graphics, 0U))
+    {
+        return 0;
+    }
+    WG_VideoBar(framebuffer, 0, 0, 320, 200, 0x29U);
+    WG_VideoBar(framebuffer, 0, 10, 320, 24, 0U);
+    WG_VideoBar(framebuffer, 0, 32, 320, 1, 0x2cU);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.title, 48, 0)
+        || !WG_VideoDrawPicture(framebuffer, graphics, chunks.name, 32, 68)
+        || !WG_VideoDrawPicture(framebuffer, graphics, chunks.level, 160, 68)
+        || !WG_VideoDrawPicture(framebuffer, graphics, chunks.score, 224, 68))
+    {
+        goto cleanup;
+    }
+    for (index = 0U; index < WL_MAX_HIGH_SCORES; ++index)
+    {
+        char number[16];
+        char fixed[16];
+        char episode[8];
+        size_t digit;
+        size_t width;
+        int x;
+        int y = 76 + (int)index * 16;
+
+        (void)WL_HighScoreDrawText(&font, framebuffer, 32, y,
+                                   scores[index].name);
+        (void)snprintf(number, sizeof(number), "%u",
+                       (unsigned)scores[index].completed);
+        for (digit = 0U; number[digit] != '\0'; ++digit)
+        {
+            fixed[digit] = (char)((unsigned char)number[digit]
+                                  + (129U - (unsigned)'0'));
+        }
+        fixed[digit] = '\0';
+        width = WG_FontMeasure(&font, fixed);
+        x = 176 - (int)width - 6;
+        x = WL_HighScoreDrawText(&font, framebuffer, x, y, "E");
+        (void)snprintf(episode, sizeof(episode), "%u",
+                       (unsigned)scores[index].episode + 1U);
+        x = WL_HighScoreDrawText(&font, framebuffer, x, y, episode);
+        x = WL_HighScoreDrawText(&font, framebuffer, x, y, "/L");
+        (void)WL_HighScoreDrawText(&font, framebuffer, x, y, fixed);
+
+        (void)snprintf(number, sizeof(number), "%lu",
+                       (unsigned long)scores[index].score);
+        for (digit = 0U; number[digit] != '\0'; ++digit)
+        {
+            fixed[digit] = (char)((unsigned char)number[digit]
+                                  + (129U - (unsigned)'0'));
+        }
+        fixed[digit] = '\0';
+        width = WG_FontMeasure(&font, fixed);
+        (void)WL_HighScoreDrawText(&font, framebuffer,
+                                   264 - (int)width, y, fixed);
+    }
+    result = 1;
+
+cleanup:
     WG_FontClose(&font);
     return result;
 }

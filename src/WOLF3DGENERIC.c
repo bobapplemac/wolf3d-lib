@@ -34,6 +34,7 @@ static int wg_initialized;
 static int wg_data_loaded;
 static unsigned wg_start_map;
 static wg_data_set_t wg_data_set;
+static wl_high_score_t wg_high_scores[WL_MAX_HIGH_SCORES];
 
 typedef enum wg_death_phase
 {
@@ -68,6 +69,7 @@ typedef struct wg_game_session
     uint8_t paused;
     uint8_t intermission;
     uint8_t victory;
+    uint8_t high_scores;
     wg_death_phase_t death_phase;
     uint16_t death_target_angle;
     uint16_t death_hold_tics;
@@ -674,6 +676,31 @@ static int WG_GameSessionBeginVictory(void)
     return 1;
 }
 
+static int WG_GameSessionBeginHighScores(void)
+{
+    const uint8_t *music_data;
+    size_t music_size;
+
+    (void)WL_HighScoreInsert(wg_high_scores, wg_game.level.score,
+                             (uint16_t)(wg_game.map_number % 10U + 1U),
+                             (uint16_t)(wg_game.map_number / 10U));
+    if (!WL_DrawHighScores(WG_ScreenBuffer, &wg_game.graphics,
+                           wg_high_scores))
+    {
+        return 0;
+    }
+    wg_game.game_over = 1U;
+    wg_game.high_scores = 1U;
+    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+    if (wg_game.audio_active
+        && WG_AudioGetChunk(&wg_game.audio, 261U + 23U,
+                            &music_data, &music_size))
+    {
+        (void)ID_SD_MusicStart(wg_game.music, music_data, music_size);
+    }
+    return 1;
+}
+
 static int WG_GameSessionOpen(unsigned map_number)
 {
     wg_maps_t maps;
@@ -807,8 +834,7 @@ static int WG_GameSessionReload(unsigned map_number, int died)
     memcpy(level_ratios, wg_game.level_ratios, sizeof(level_ratios));
     if (died && state.lives == 0U)
     {
-        wg_game.game_over = 1U;
-        return 1;
+        return WG_GameSessionBeginHighScores();
     }
     WG_GameSessionClose();
     if (!WG_GameSessionOpen(map_number))
@@ -1000,6 +1026,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int bonus_flash_view,
                                   int player_death_view,
                                   int victory_view,
+                                  int high_score_view,
                                   unsigned actor_tics,
                                   unsigned forward_tics)
 {
@@ -1419,6 +1446,16 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
+    if (high_score_view)
+    {
+        wl_high_score_t scores[WL_MAX_HIGH_SCORES];
+
+        WL_HighScoresDefault(scores);
+        if (!WL_DrawHighScores(WG_ScreenBuffer, &graphics, scores))
+        {
+            goto cleanup;
+        }
+    }
     if (damage_flash_view || bonus_flash_view)
     {
         WL_UpdatePaletteShifts(&level, WG_Palette);
@@ -1516,6 +1553,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         return WG_RESULT_PLATFORM_ERROR;
     }
     wg_start_map = map_number;
+    WL_HighScoresDefault(wg_high_scores);
     if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
         && WG_IsInteractive())
     {
@@ -1551,7 +1589,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--damage-flash-view"),
             WG_HasArgument(argc, argv, "--bonus-flash-view"),
             WG_HasArgument(argc, argv, "--player-death-view"),
-            WG_HasArgument(argc, argv, "--victory-view"), actor_tics,
+            WG_HasArgument(argc, argv, "--victory-view"),
+            WG_HasArgument(argc, argv, "--high-score-view"), actor_tics,
             forward_tics))
     {
         wolf3dgeneric_Shutdown();
@@ -1598,6 +1637,14 @@ wg_result_t wolf3dgeneric_Run(void)
                     continue;
                 }
                 if (wg_game.active && wg_game.victory)
+                {
+                    if (event.key == WG_KEY_ESCAPE && event.pressed)
+                    {
+                        return WG_RESULT_QUIT;
+                    }
+                    continue;
+                }
+                if (wg_game.active && wg_game.high_scores)
                 {
                     if (event.key == WG_KEY_ESCAPE && event.pressed)
                     {
@@ -1682,6 +1729,10 @@ wg_result_t wolf3dgeneric_Run(void)
                 {
                     continue;
                 }
+                if (wg_game.high_scores)
+                {
+                    continue;
+                }
                 if (wg_game.paused && event.pressed)
                 {
                     if (!WG_GameSessionSetPaused(0))
@@ -1742,6 +1793,7 @@ wg_result_t wolf3dgeneric_Run(void)
                 ++ticks_run;
             }
             if (ticks_run != 0U && !wg_game.intermission && !wg_game.victory
+                && !wg_game.high_scores
                 && wg_game.death_phase < WG_DEATH_FIZZLE
                 && !WG_GameSessionRender())
             {

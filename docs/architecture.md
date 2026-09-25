@@ -279,6 +279,14 @@ code, draws `Victory()`'s `YOU WIN!` screen and BJ portrait, and switches to
 `URAHERO_MUS`. The later end-text, high-score, and control-panel chain remains
 part of the front-end milestone.
 
+The original seven-entry high-score defaults and `CheckHighScore` ordering
+rule—score first, completed floor as the tie-break—also live in `WL_INTER.c`.
+`DrawHighScores` retains the dark-red menu field, stripe, picture headings,
+proportional names, and font characters 129-138 used for fixed-width numbers.
+Exhausting the last life inserts the score, switches to `ROSTER_MUS`, and shows
+that table. Editable player-name entry and configuration persistence remain UI
+and storage follow-ups.
+
 Win32 supplies relative mouse packets through the generic event contract rather
 than exposing window coordinates to the engine. `WL_PLAY.c` applies the original
 default `PollMouseMove` scale (`x * 10 / 8`, `y * 20 / 8`) before the same

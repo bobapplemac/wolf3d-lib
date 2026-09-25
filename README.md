@@ -120,6 +120,15 @@ screen. Its deterministic diagnostic uses eight 1:15 perfect floors:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --victory-view --frame-hash --dump-frame victory.ppm
 ```
 
+Running out of lives now ranks the final score with the original seven-entry
+table, displays `DrawHighScores`, and switches to `ROSTER_MUS`. The initial
+table can be captured independently (editable high-score name entry remains a
+front-end follow-up):
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --high-score-view --frame-hash --dump-frame high-scores.ppm
+```
+
 Pass a zero-based `--map` number to capture another original map. The headless
 host can also print the indexed framebuffer's deterministic FNV-1a value with
 `--frame-hash`.
