@@ -39,6 +39,7 @@ set(WG_CORE_SOURCES
     src/WL_PLAY.c
     src/WL_STATE.c
     src/WL_DRAW.c
+    src/WL_INTER.c
     src/WG_RENDERER.c
     src/WL_SCALE.c
     src/ID_VL.c
@@ -203,6 +204,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(pause-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "fb088c39d6f75570")
+        add_test(NAME intermission-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --intermission-view
+            --frame-hash)
+        set_tests_properties(intermission-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "85b3dfdb33f1fb4d")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -301,5 +307,10 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(pause-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "fb088c39d6f75570")
+        add_test(NAME intermission-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --intermission-view
+            --frame-hash)
+        set_tests_properties(intermission-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "85b3dfdb33f1fb4d")
     endif()
 endif()

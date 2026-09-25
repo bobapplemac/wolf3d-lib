@@ -21,6 +21,7 @@
 #include "WG_PLATFORM.h"
 #include "WG_RENDERER.h"
 #include "WL_DRAW.h"
+#include "WL_INTER.h"
 #include "WL_MAIN.h"
 #include "WL_PLAY.h"
 #include "WL_STATE.h"
@@ -55,14 +56,19 @@ typedef struct wg_game_session
     uint8_t sound_positioned;
     uint8_t game_over;
     uint8_t paused;
+    uint8_t intermission;
     uint16_t death_tics;
     unsigned map_number;
+    unsigned next_map_number;
     uint32_t level_start_score;
+    wl_intermission_t intermission_state;
     int32_t sound_x;
     int32_t sound_y;
 } wg_game_session_t;
 
 static wg_game_session_t wg_game;
+
+static unsigned WG_GameSessionNextMap(void);
 
 static const char *WG_FindDataPath(int argc, char **argv)
 {
@@ -582,6 +588,38 @@ static int WG_GameSessionSetPaused(int paused)
     return WG_GameSessionRender();
 }
 
+static int WG_GameSessionBeginIntermission(void)
+{
+    const uint8_t *music_data;
+    size_t music_size;
+
+    if (!WL_IntermissionCalculate(&wg_game.level, wg_game.map_number,
+                                  &wg_game.intermission_state))
+    {
+        return 0;
+    }
+    wg_game.next_map_number = WG_GameSessionNextMap();
+    wg_game.intermission = 1U;
+    memset(wg_game.keys, 0, sizeof(wg_game.keys));
+    wg_game.mouse_buttons = 0U;
+    wg_game.mouse_x = 0;
+    wg_game.mouse_y = 0;
+    if (wg_game.audio_active
+        && WG_AudioGetChunk(&wg_game.audio, 261U + 16U,
+                            &music_data, &music_size))
+    {
+        (void)ID_SD_MusicStart(wg_game.music, music_data, music_size);
+    }
+    if (!WL_DrawLevelCompleted(WG_ScreenBuffer, &wg_game.graphics,
+                               &wg_game.level, wg_game.map_number,
+                               &wg_game.intermission_state))
+    {
+        return 0;
+    }
+    wg_game.level.score += wg_game.intermission_state.bonus;
+    return 1;
+}
+
 static int WG_GameSessionOpen(unsigned map_number)
 {
     wg_maps_t maps;
@@ -827,7 +865,7 @@ static int WG_GameSessionTick(void)
             wg_game.game_over = 1U;
             return 1;
         }
-        return WG_GameSessionReload(WG_GameSessionNextMap(), 0);
+        return WG_GameSessionBeginIntermission();
     }
     if (wg_game.level.player_dead)
     {
@@ -851,6 +889,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int pickup_view,
                                   int door_use_view,
                                   int pause_view,
+                                  int intermission_view,
                                   unsigned actor_tics,
                                   unsigned forward_tics)
 {
@@ -1226,6 +1265,21 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    if (intermission_view)
+    {
+        wl_intermission_t intermission;
+
+        level.time_count = 75U * 70U;
+        level.kill_count = level.kill_total;
+        level.secret_count = level.secret_total;
+        level.treasure_count = level.treasure_total;
+        if (!WL_IntermissionCalculate(&level, map_number, &intermission)
+            || !WL_DrawLevelCompleted(WG_ScreenBuffer, &graphics, &level,
+                                      map_number, &intermission))
+        {
+            goto cleanup;
+        }
+    }
     success = 1;
 
 cleanup:
@@ -1315,7 +1369,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--player-fire-view"),
             WG_HasArgument(argc, argv, "--pickup-view"),
             WG_HasArgument(argc, argv, "--door-use-view"),
-            WG_HasArgument(argc, argv, "--pause-view"), actor_tics,
+            WG_HasArgument(argc, argv, "--pause-view"),
+            WG_HasArgument(argc, argv, "--intermission-view"), actor_tics,
             forward_tics))
     {
         wolf3dgeneric_Shutdown();
@@ -1352,6 +1407,16 @@ wg_result_t wolf3dgeneric_Run(void)
             }
             if (event.type == WG_EVENT_KEY)
             {
+                if (wg_game.active && wg_game.intermission && event.pressed)
+                {
+                    if (!WG_GameSessionReload(wg_game.next_map_number, 0))
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                    last_ticks = WG_GetTicksMs();
+                    accumulator = 0U;
+                    continue;
+                }
                 if (wg_game.active && wg_game.paused && event.pressed)
                 {
                     if (!WG_GameSessionSetPaused(0))
@@ -1394,7 +1459,8 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
             }
             else if (event.type == WG_EVENT_MOUSE_MOTION
-                     && wg_game.active && !wg_game.paused)
+                     && wg_game.active && !wg_game.paused
+                     && !wg_game.intermission)
             {
                 wg_game.mouse_x += event.x;
                 wg_game.mouse_y += event.y;
@@ -1408,6 +1474,16 @@ wg_result_t wolf3dgeneric_Run(void)
                 if (wg_game.paused && event.pressed)
                 {
                     if (!WG_GameSessionSetPaused(0))
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                    last_ticks = WG_GetTicksMs();
+                    accumulator = 0U;
+                    continue;
+                }
+                if (wg_game.intermission && event.pressed)
+                {
+                    if (!WG_GameSessionReload(wg_game.next_map_number, 0))
                     {
                         return WG_RESULT_PLATFORM_ERROR;
                     }
@@ -1433,7 +1509,7 @@ wg_result_t wolf3dgeneric_Run(void)
             unsigned ticks_run = 0U;
 
             last_ticks = now;
-            if (wg_game.paused)
+            if (wg_game.paused || wg_game.intermission)
             {
                 accumulator = 0U;
                 elapsed = 0U;
@@ -1443,7 +1519,8 @@ wg_result_t wolf3dgeneric_Run(void)
                 elapsed = 250U;
             }
             accumulator += elapsed * 70U;
-            while (accumulator >= 1000U && ticks_run < 18U)
+            while (accumulator >= 1000U && ticks_run < 18U
+                   && !wg_game.intermission)
             {
                 if (!WG_GameSessionTick())
                 {
@@ -1453,7 +1530,8 @@ wg_result_t wolf3dgeneric_Run(void)
                 accumulator -= 1000U;
                 ++ticks_run;
             }
-            if (ticks_run != 0U && !WG_GameSessionRender())
+            if (ticks_run != 0U && !wg_game.intermission
+                && !WG_GameSessionRender())
             {
                 WG_ReportError("The Wolf3D game renderer failed.");
                 return WG_RESULT_PLATFORM_ERROR;

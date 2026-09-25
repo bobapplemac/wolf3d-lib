@@ -213,6 +213,14 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
             object->shape = info == 71U ? 28U : (uint16_t)(type + 2U);
             object->item = info == 71U ? WG_ITEM_CLIP2
                                        : WG_StaticItem(type);
+            if (object->item == WG_ITEM_CROSS
+                || object->item == WG_ITEM_CHALICE
+                || object->item == WG_ITEM_BIBLE
+                || object->item == WG_ITEM_CROWN
+                || object->item == WG_ITEM_FULLHEAL)
+            {
+                ++level->treasure_total;
+            }
         }
         else
         {
@@ -384,6 +392,18 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
             {
                 return 0;
             }
+        }
+        if (info == 98U)
+        {
+            ++level->secret_total;
+        }
+    }
+
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        if ((level->actors[index].flags & WG_ACTOR_FLAG_SHOOTABLE) != 0U)
+        {
+            ++level->kill_total;
         }
     }
 

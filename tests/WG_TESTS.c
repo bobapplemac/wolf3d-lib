@@ -18,6 +18,7 @@
 #include "WG_PALETTE.h"
 #include "ID_US_1.h"
 #include "WL_DRAW.h"
+#include "WL_INTER.h"
 #include "WG_RENDERER.h"
 #include "WL_SCALE.h"
 #include "WL_STATE.h"
@@ -1949,6 +1950,34 @@ static void TestPlayLoop(void)
     CHECK(level.doors[0].position == 1024U);
 }
 
+static void TestIntermission(void)
+{
+    wg_level_t level;
+    wl_intermission_t intermission;
+
+    memset(&level, 0, sizeof(level));
+    level.time_count = 75U * 70U;
+    level.kill_count = level.kill_total = 20U;
+    level.secret_count = level.secret_total = 2U;
+    level.treasure_count = level.treasure_total = 4U;
+    CHECK(WL_IntermissionCalculate(&level, 0U, &intermission));
+    CHECK(intermission.seconds == 75U);
+    CHECK(intermission.par_seconds == 90U);
+    CHECK(intermission.kill_ratio == 100U);
+    CHECK(intermission.secret_ratio == 100U);
+    CHECK(intermission.treasure_ratio == 100U);
+    CHECK(intermission.bonus == 37500U);
+    CHECK(intermission.special_floor == 0U);
+
+    level.time_count = 100U * 60U * 70U;
+    CHECK(WL_IntermissionCalculate(&level, 8U, &intermission));
+    CHECK(intermission.seconds == 99U * 60U);
+    CHECK(intermission.par_seconds == 0U);
+    CHECK(intermission.bonus == 15000U);
+    CHECK(intermission.special_floor == 1U);
+    CHECK(!WL_IntermissionCalculate(&level, 60U, &intermission));
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -2589,6 +2618,14 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(level.door_count > 0U);
             CHECK(level.static_count == 121U);
             CHECK(level.actor_count == 21U);
+            printf("%s map 0 totals: %u kills, %u secrets, %u treasures\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned)level.kill_total,
+                   (unsigned)level.secret_total,
+                   (unsigned)level.treasure_total);
+            CHECK(level.kill_total == 20U);
+            CHECK(level.secret_total == 5U);
+            CHECK(level.treasure_total == 23U);
             CHECK(ActorClassCount(&level, WG_ACTOR_GUARD) == 17U);
             CHECK(ActorClassCount(&level, WG_ACTOR_DOG) == 3U);
             CHECK(ActorClassCount(&level, WG_ACTOR_OFFICER) == 0U);
@@ -3005,6 +3042,7 @@ int main(int argc, char **argv)
     TestBonusPickups();
     TestPlayerMovementAndUse();
     TestPlayLoop();
+    TestIntermission();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

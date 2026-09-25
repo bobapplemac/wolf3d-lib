@@ -207,11 +207,15 @@ typedef struct wg_level
     uint8_t map_number;
     uint32_t score;
     uint32_t next_extra;
+    uint32_t time_count;
     uint16_t kill_count;
+    uint16_t kill_total;
     uint16_t treasure_count;
+    uint16_t treasure_total;
     int32_t kill_x;
     int32_t kill_y;
     uint16_t secret_count;
+    uint16_t secret_total;
     wg_sound_event_t sound_events[WG_MAX_SOUND_EVENTS];
     uint8_t sound_event_count;
     uint16_t pushwall_state;

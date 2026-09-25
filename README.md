@@ -93,9 +93,11 @@ cadence and targeting rules. Player turning, thrust, collision, item collection,
 cardinal use actions, locked doors, sliding-door timing, elevators, and exit
 tiles now follow their original gameplay rules. Normal and secret elevators
 load the correct next floor, including the episode-specific return from floor
-10. Death restarts the current floor with the original score/inventory reset
-and life accounting; the full death camera/fade and level intermission screens
-remain to be ported:
+10. Completed normal and secret floors stop at the original intermission
+screen, calculate bonuses from live statistics, play the original results
+music, and wait for acknowledgement before loading the destination floor.
+Death restarts the current floor with the original score/inventory reset and
+life accounting; the full death camera/fade remains to be ported:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame view.ppm
@@ -109,6 +111,13 @@ To render the original pause plaque over the initial play view, use:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pause-view --frame-hash --dump-frame paused.ppm
+```
+
+The completed-floor diagnostic renders a 1:15 perfect E1M1 result using the
+actual authored totals discovered while building the map:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --intermission-view --frame-hash --dump-frame intermission.ppm
 ```
 
 The deterministic `--forward-tics N` diagnostic holds the original forward

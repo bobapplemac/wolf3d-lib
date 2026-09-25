@@ -24,6 +24,7 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | `WL_PLAY.c` | `WL_PLAY.C`, `WL_AGENT.C` | Fixed 70 Hz play-loop ordering, input state, and control dispatch |
 | `WL_MAIN.c` | `WL_MAIN.C` | Trigonometric tables and projection setup |
 | `WL_DRAW.c` | `WL_DRAW.C`, `WL_DR_A.ASM` | Fixed-point ray traversal, wall/door hits, and projected scenery ordering |
+| `WL_INTER.c` | `WL_INTER.C` | Floor statistics, bonuses, and level-complete presentation |
 | `WL_SCALE.c` | `WL_SCALE.C`, `WL_DRAW.C` | Portable wall-post and occluded sprite scaling |
 
 Files beginning with `WG_` have no single equivalent original translation unit.

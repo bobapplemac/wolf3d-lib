@@ -701,3 +701,28 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pause-view --frame-hash --dump-frame out\paused.ppm
 ```
+
+## 2026-09-24: Level-complete statistics and intermission
+
+- Added `WL_INTER.c` as the portable owner of the original `LevelCompleted`
+  calculation and presentation, retaining the six-episode par table, 500-point
+  per-second par bonus, three 10,000-point perfect bonuses, and 15,000-point
+  secret-floor award.
+- Map setup now records the original difficulty-filtered kill total, treasure
+  total, and pushwall-secret total. The 70 Hz play loop owns floor `TimeCount`.
+- Normal and secret exits stop simulation, switch to `ENDLEVEL_MUS`, display
+  the live results and updated score, and wait for a key or mouse-button
+  acknowledgement before loading the destination map.
+- The supplied E1M1 contains 20 medium-difficulty kills, 5 secrets, and 23
+  treasures. A deterministic 1:15 perfect result awards 37,500 points.
+- The late Apogee WL1 archive places `L_GUYPIC` at chunk 55; the canonical WL6
+  archive uses chunk 43. Both decode to the same completed screen, with indexed
+  framebuffer FNV-1a `85b3dfdb33f1fb4d`.
+
+![Perfect E1M1 level-complete result](../out/e1m1-intermission.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --intermission-view --frame-hash --dump-frame out\e1m1-intermission.ppm
+```

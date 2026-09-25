@@ -69,6 +69,8 @@ int WL_PlayTick(struct wg_level *level,
         return 0;
     }
 
+    ++level->time_count;
+
     attack_pressed = input->attack && !state->attack_held;
     use_pressed = input->use && !state->use_held;
     state->attack_held = input->attack != 0U;

@@ -259,11 +259,16 @@ The interactive session now owns the campaign state that the original
 `GameLoop` kept outside `SetupGameLevel`. Completing a floor rebuilds the next
 map while carrying health, ammo, weapons, lives, score, and the next-extra-life
 threshold, then clears keys. Secret exits select floor 10 and the original
-`ElevatorBackTo` table returns each episode to its authored destination. A
+`ElevatorBackTo` table returns each episode to its authored destination.
+`WL_INTER.c` owns the corresponding original boundary: map construction counts
+difficulty-filtered kills, authored treasure and pushwall secrets; `WL_PLAY.c`
+advances floor `TimeCount`; and the completed-floor state calculates the
+original par/perfect bonuses, renders the original big-glyph screen, plays
+`ENDLEVEL_MUS`, and waits for input before rebuilding the destination map. A
 death freezes simulation for 70 tics, discards score earned on that floor,
-decrements a life, and restarts with pistol, eight rounds, and full health.
-The eventual UI layer still needs to replace that fixed pause with the original
-death rotation/red fizzle and to insert the intermission screens.
+decrements a life, and restarts with pistol, eight rounds, and full health. The
+eventual UI layer still needs to replace that fixed pause with the original
+death rotation and red fizzle.
 
 Win32 supplies relative mouse packets through the generic event contract rather
 than exposing window coordinates to the engine. `WL_PLAY.c` applies the original
