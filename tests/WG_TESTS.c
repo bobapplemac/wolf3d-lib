@@ -3213,6 +3213,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         opl_write_log_t log;
         int16_t *music_pcm;
         uint64_t music_hash = 1469598103934665603ULL;
+        uint64_t front_music_hash = 1469598103934665603ULL;
         uint64_t mixed_hash = 1469598103934665603ULL;
         uint64_t digital_hash = 1469598103934665603ULL;
         const uint8_t *music_data;
@@ -3243,6 +3244,23 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)music_hash);
             CHECK(music_hash == 0x201858e57f147650ULL);
+            ID_SD_MusicDestroy(music_player);
+            music_player = ID_SD_MusicCreate(48000U);
+            CHECK(music_player != NULL);
+            CHECK(WG_AudioGetChunk(&audio, 261U + 7U,
+                                   &page_data, &page_size));
+            CHECK(ID_SD_MusicStart(music_player, page_data, page_size));
+            CHECK(ID_SD_MusicRender(music_player, music_pcm, 48000U));
+            for (index = 0U;
+                 index < 48000U * 2U * sizeof(*music_pcm); ++index)
+            {
+                front_music_hash ^= pcm_bytes[index];
+                front_music_hash *= 1099511628211ULL;
+            }
+            printf("%s one-second attract music FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)front_music_hash);
+            CHECK(front_music_hash == 0xcd1e371be8679285ULL);
             ID_SD_MusicDestroy(music_player);
             music_player = ID_SD_MusicCreate(48000U);
             CHECK(music_player != NULL);

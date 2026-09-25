@@ -45,6 +45,9 @@ With no input, the front end follows the original attract sequence: 15 seconds
 of the title, 10 seconds of credits, 10 seconds of high scores, then one of the
 four embedded demos. Completed demos return to the title and rotate to the next
 stream. Any key or mouse-button press enters the control panel.
+The title sequence retains `NAZI_NOR_MUS`; the control panel uses
+`WONDERIN_MUS`, Read This uses `CORNER_MUS`, and View Scores uses
+`ROSTER_MUS`, all through the same Nuked-OPL3 PCM boundary as gameplay.
 
 Add `--play-view` to enter the current interactive game session. The original
 keyboard defaults are active: arrows move and turn, Alt+left/right strafes,

@@ -969,6 +969,11 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --demo-view -
   per four 70 Hz tics. Palette counters now consume the same four-tic span.
 - Any key or mouse-button press during the title, credits, scores, or demo opens
   the control panel. `Back to Demo` re-enters the attract sequence at the title.
+- Added a separately owned front-end sequencer. The attract screens continuously
+  play `NAZI_NOR_MUS`; the menu, help article, and score table select their
+  original `WONDERIN_MUS`, `CORNER_MUS`, and `ROSTER_MUS` tracks. Map startup
+  closes this owner before opening gameplay audio. One second of the shared
+  WL1/WL6 attract track hashes to `cd1e371be8679285`.
 - Added an edition-independent credits fixture with indexed framebuffer hash
   `877dd0b7c8d5bf6d`.
 

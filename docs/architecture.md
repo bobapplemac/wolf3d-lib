@@ -80,6 +80,11 @@ The runtime attract state follows `DemoLoop`'s original ordering and durations:
 embedded demo. It returns completed or interrupted demos through the same owned
 session cleanup used by normal games; input during any attract phase opens the
 control panel rather than leaking into player controls.
+Front-end music has separate lifetime ownership from a map session. The title,
+credits, and attract scores keep one continuous `NAZI_NOR_MUS` sequence;
+entering the control panel selects `WONDERIN_MUS`, Read This selects
+`CORNER_MUS`, and View Scores selects `ROSTER_MUS`. Starting a game or demo
+closes that owner before the map session opens the same generic PCM sink.
 
 ## Gameplay state boundary
 
