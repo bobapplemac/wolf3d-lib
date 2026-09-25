@@ -911,3 +911,23 @@ Regenerate the captures with:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --episode-menu-view --frame-hash --dump-frame out\episode-menu.ppm
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --difficulty-menu-view --frame-hash --dump-frame out\difficulty-menu.ppm
 ```
+
+## 2026-09-25: Read This help article
+
+- Connected the main menu's `Read This!` row to the portable `WL_TEXT.c`
+  article renderer. Left/up and right/down/Enter/Space navigate, Escape and
+  right mouse return to the control panel, and left mouse advances.
+- The renderer now selects the original embedded `T_HELPART` chunk by exact
+  edition: chunk 150 for Apogee shareware and chunk 138 for the full release.
+- Data-backed tests decode and render all 41 pages in both archives. Their
+  aggregate indexed hashes are `0555652391108503` for WL1 and
+  `0c09b4fdb0b59e80` for WL6; the common first page hashes to
+  `afa188f7e955ec42` in both editions.
+
+![Original Wolf3D Read This help article](../out/help.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --help-view --frame-hash --dump-frame out\help.ppm
+```

@@ -35,21 +35,23 @@ typedef struct wl_article_layout
 } wl_article_layout_t;
 
 static int WL_ArticleChunks(wg_game_variant_t variant, size_t *top,
-                            size_t *end_text)
+                            size_t *help_text, size_t *end_text)
 {
-    if (top == NULL || end_text == NULL)
+    if (top == NULL || help_text == NULL || end_text == NULL)
     {
         return 0;
     }
     if (variant == WG_GAME_WOLF3D_FULL_GT_14)
     {
         *top = 6U;
+        *help_text = 138U;
         *end_text = 143U;
         return 1;
     }
     if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
     {
         *top = 17U;
+        *help_text = 150U;
         *end_text = 155U;
         return 1;
     }
@@ -280,22 +282,17 @@ static int WL_ArticleCommand(wl_article_layout_t *layout,
     return 0;
 }
 
-int WL_ArticleOpen(wl_article_t *article, const wg_graphics_t *graphics,
-                   unsigned episode)
+static int WL_ArticleOpenChunk(wl_article_t *article,
+                               const wg_graphics_t *graphics, size_t chunk)
 {
-    size_t unused_top;
-    size_t end_text;
     size_t index;
 
-    if (article == NULL || graphics == NULL
-        || !WL_ArticleChunks(graphics->variant, &unused_top, &end_text)
-        || episode >= (graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14
-                       ? 1U : 6U))
+    if (article == NULL || graphics == NULL)
     {
         return 0;
     }
     memset(article, 0, sizeof(*article));
-    if (!WG_GraphicsDecodeChunk(graphics, end_text + episode,
+    if (!WG_GraphicsDecodeChunk(graphics, chunk,
                                 &article->text, &article->text_size))
     {
         return 0;
@@ -326,6 +323,40 @@ int WL_ArticleOpen(wl_article_t *article, const wg_graphics_t *graphics,
     return 1;
 }
 
+int WL_ArticleOpen(wl_article_t *article, const wg_graphics_t *graphics,
+                   unsigned episode)
+{
+    size_t unused_top;
+    size_t unused_help_text;
+    size_t end_text;
+
+    if (graphics == NULL
+        || !WL_ArticleChunks(graphics->variant, &unused_top,
+                             &unused_help_text, &end_text)
+        || episode >= (graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14
+                       ? 1U : 6U))
+    {
+        return 0;
+    }
+    return WL_ArticleOpenChunk(article, graphics, end_text + episode);
+}
+
+int WL_ArticleOpenHelp(wl_article_t *article,
+                       const wg_graphics_t *graphics)
+{
+    size_t unused_top;
+    size_t help_text;
+    size_t unused_end_text;
+
+    if (graphics == NULL
+        || !WL_ArticleChunks(graphics->variant, &unused_top, &help_text,
+                             &unused_end_text))
+    {
+        return 0;
+    }
+    return WL_ArticleOpenChunk(article, graphics, help_text);
+}
+
 void WL_ArticleClose(wl_article_t *article)
 {
     if (article != NULL)
@@ -342,13 +373,15 @@ int WL_ArticleRender(const wl_article_t *article,
     wl_article_layout_t layout;
     wg_font_t font;
     size_t top;
+    size_t unused_help_text;
     size_t unused_end_text;
     unsigned row;
     char page_number[32];
 
     if (article == NULL || graphics == NULL || framebuffer == NULL
         || article->text == NULL || page >= article->page_count
-        || !WL_ArticleChunks(graphics->variant, &top, &unused_end_text)
+        || !WL_ArticleChunks(graphics->variant, &top, &unused_help_text,
+                             &unused_end_text)
         || !WG_FontOpen(&font, graphics, 0U))
     {
         return 0;

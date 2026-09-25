@@ -72,6 +72,15 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --main-menu-v
 Use `--episode-menu-view` or `--difficulty-menu-view` in place of
 `--main-menu-view` to capture the two New Game panels.
 
+The main menu's `Read This!` entry decodes the original 41-page help article
+directly from the selected edition's `VGAGRAPH`. Arrow keys, Enter, and Space
+navigate pages; Escape returns to the control panel. Its first page can be
+captured with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --help-view --frame-hash --dump-frame help.ppm
+```
+
 It can also render ten deterministic seconds of the selected map's music to a
 standard 16-bit stereo WAV without opening an audio device:
 

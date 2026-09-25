@@ -40,6 +40,9 @@ static wl_high_score_t wg_high_scores[WL_MAX_HIGH_SCORES];
 static uint8_t wg_menu_active;
 static uint8_t wg_front_scores;
 static uint8_t wg_new_game_screen;
+static uint8_t wg_help_active;
+static size_t wg_help_page;
+static wl_article_t wg_help_article;
 static unsigned wg_menu_selection = WL_MAIN_MENU_DEFAULT_ITEM;
 static unsigned wg_episode_selection;
 static wg_difficulty_t wg_difficulty_selection = WG_DIFFICULTY_MEDIUM;
@@ -102,6 +105,13 @@ typedef struct wg_game_session
 static wg_game_session_t wg_game;
 
 static unsigned WG_GameSessionNextMap(void);
+
+static void WG_CloseFrontHelp(void)
+{
+    WL_ArticleClose(&wg_help_article);
+    wg_help_active = 0U;
+    wg_help_page = 0U;
+}
 
 static const char *WG_FindDataPath(int argc, char **argv)
 {
@@ -522,6 +532,7 @@ static int WG_DrawTitleScreen(void)
     wg_menu_active = 0U;
     wg_front_scores = 0U;
     wg_new_game_screen = 0U;
+    WG_CloseFrontHelp();
     return 1;
 }
 
@@ -566,6 +577,7 @@ static int WG_DrawMainMenuScreen(void)
     WG_GraphicsClose(&graphics);
     if (result)
     {
+        WG_CloseFrontHelp();
         memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
         wg_menu_active = 1U;
         wg_front_scores = 0U;
@@ -588,6 +600,7 @@ static int WG_DrawFrontHighScores(void)
     WG_GraphicsClose(&graphics);
     if (result)
     {
+        WG_CloseFrontHelp();
         memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
         wg_menu_active = 0U;
         wg_front_scores = 1U;
@@ -612,6 +625,7 @@ static int WG_DrawEpisodeMenuScreen(void)
     WG_GraphicsClose(&graphics);
     if (result)
     {
+        WG_CloseFrontHelp();
         memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
         wg_menu_active = 0U;
         wg_front_scores = 0U;
@@ -635,10 +649,44 @@ static int WG_DrawDifficultyMenuScreen(void)
     WG_GraphicsClose(&graphics);
     if (result)
     {
+        WG_CloseFrontHelp();
         memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 2U;
+    }
+    return result;
+}
+
+static int WG_DrawHelpScreen(void)
+{
+    wg_graphics_t graphics;
+    int result;
+
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    if (wg_help_article.text == NULL)
+    {
+        WG_CloseFrontHelp();
+        if (!WL_ArticleOpenHelp(&wg_help_article, &graphics))
+        {
+            WG_GraphicsClose(&graphics);
+            return 0;
+        }
+    }
+    result = WL_ArticleRender(&wg_help_article, &graphics, wg_help_page,
+                              WG_ScreenBuffer);
+    WG_GraphicsClose(&graphics);
+    if (result)
+    {
+        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        wg_menu_active = 0U;
+        wg_front_scores = 0U;
+        wg_new_game_screen = 0U;
+        wg_help_active = 1U;
     }
     return result;
 }
@@ -1285,6 +1333,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int victory_view,
                                   int end_text_view,
                                   int main_menu_view,
+                                  int help_view,
                                   int episode_menu_view,
                                   int difficulty_menu_view,
                                   int high_score_view,
@@ -1728,6 +1777,20 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
+    if (help_view)
+    {
+        wl_article_t article;
+
+        memset(&article, 0, sizeof(article));
+        if (!WL_ArticleOpenHelp(&article, &graphics)
+            || !WL_ArticleRender(&article, &graphics, 0U,
+                                 WG_ScreenBuffer))
+        {
+            WL_ArticleClose(&article);
+            goto cleanup;
+        }
+        WL_ArticleClose(&article);
+    }
     if (episode_menu_view
         && !WL_DrawEpisodeMenu(
             WG_ScreenBuffer, &graphics, map_number / 10U,
@@ -1906,6 +1969,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--victory-view"),
             WG_HasArgument(argc, argv, "--end-text-view"),
             WG_HasArgument(argc, argv, "--main-menu-view"),
+            WG_HasArgument(argc, argv, "--help-view"),
             WG_HasArgument(argc, argv, "--episode-menu-view"),
             WG_HasArgument(argc, argv, "--difficulty-menu-view"),
             WG_HasArgument(argc, argv, "--high-score-view"),
@@ -1932,6 +1996,10 @@ static wg_result_t WG_MainMenuActivate(void)
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         case 7U:
             return WG_DrawFrontHighScores()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case 6U:
+            wg_help_page = 0U;
+            return WG_DrawHelpScreen()
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         case 8U:
             return WG_DrawTitleScreen()
@@ -2101,7 +2169,46 @@ wg_result_t wolf3dgeneric_Run(void)
                     {
                         continue;
                     }
-                    if (wg_new_game_screen == 1U)
+                    if (wg_help_active)
+                    {
+                        if (event.key == WG_KEY_ESCAPE)
+                        {
+                            if (!WG_DrawMainMenuScreen())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                        }
+                        else if (event.key == WG_KEY_LEFT
+                                 || event.key == WG_KEY_UP
+                                 || event.key == WG_KEY_HOME)
+                        {
+                            if (wg_help_page != 0U)
+                            {
+                                --wg_help_page;
+                                if (!WG_DrawHelpScreen())
+                                {
+                                    return WG_RESULT_PLATFORM_ERROR;
+                                }
+                            }
+                        }
+                        else if (event.key == WG_KEY_RIGHT
+                                 || event.key == WG_KEY_DOWN
+                                 || event.key == WG_KEY_END
+                                 || event.key == WG_KEY_ENTER
+                                 || event.key == WG_KEY_SPACE)
+                        {
+                            if (wg_help_page + 1U
+                                < wg_help_article.page_count)
+                            {
+                                ++wg_help_page;
+                                if (!WG_DrawHelpScreen())
+                                {
+                                    return WG_RESULT_PLATFORM_ERROR;
+                                }
+                            }
+                        }
+                    }
+                    else if (wg_new_game_screen == 1U)
                     {
                         if (event.key == WG_KEY_UP)
                         {
@@ -2247,7 +2354,27 @@ wg_result_t wolf3dgeneric_Run(void)
             else if (event.type == WG_EVENT_MOUSE_BUTTON
                      && !wg_game.active && event.pressed)
             {
-                if (wg_new_game_screen == 1U)
+                if (wg_help_active)
+                {
+                    if (event.button == 2U)
+                    {
+                        if (!WG_DrawMainMenuScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.button == 1U
+                             && wg_help_page + 1U
+                                < wg_help_article.page_count)
+                    {
+                        ++wg_help_page;
+                        if (!WG_DrawHelpScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                }
+                else if (wg_new_game_screen == 1U)
                 {
                     if (event.button == 2U)
                     {
@@ -2445,6 +2572,7 @@ void wolf3dgeneric_Shutdown(void)
         return;
     }
 
+    WG_CloseFrontHelp();
     WG_GameSessionClose();
     WG_Shutdown();
     WG_DataClose(&wg_data_set);

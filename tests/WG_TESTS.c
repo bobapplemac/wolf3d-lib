@@ -2554,6 +2554,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t guard_view_hash = 1469598103934665603ULL;
     uint64_t pause_hash = 1469598103934665603ULL;
     uint64_t article_hash = 1469598103934665603ULL;
+    uint64_t help_hash = 1469598103934665603ULL;
     uint64_t menu_hash = 1469598103934665603ULL;
     uint64_t episode_menu_hash = 1469598103934665603ULL;
     uint64_t difficulty_menu_hash = 1469598103934665603ULL;
@@ -2676,6 +2677,35 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(article_hash == (expected_variant
                   == WG_GAME_WOLF3D_SHAREWARE_14
                   ? 0x42a18636c4286987ULL : 0x7aeca6c61a08514bULL));
+        }
+        {
+            wl_article_t article;
+            size_t page;
+
+            memset(&article, 0, sizeof(article));
+            CHECK(WL_ArticleOpenHelp(&article, &graphics));
+            CHECK(article.page_count == 41U);
+            printf("%s help article pages: %u\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned)article.page_count);
+            for (page = 0U; page < article.page_count; ++page)
+            {
+                memset(framebuffer, 0, sizeof(framebuffer));
+                CHECK(WL_ArticleRender(&article, &graphics, page,
+                                       framebuffer));
+                for (index = 0U; index < sizeof(framebuffer); ++index)
+                {
+                    help_hash ^= framebuffer[index];
+                    help_hash *= 1099511628211ULL;
+                }
+            }
+            printf("%s help article FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)help_hash);
+            CHECK(help_hash == (expected_variant
+                  == WG_GAME_WOLF3D_SHAREWARE_14
+                  ? 0x0555652391108503ULL : 0x0c09b4fdb0b59e80ULL));
+            WL_ArticleClose(&article);
         }
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawMainMenu(framebuffer, &graphics,

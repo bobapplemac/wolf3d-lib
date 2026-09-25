@@ -18,6 +18,8 @@ typedef struct wl_article
 
 int WL_ArticleOpen(wl_article_t *article, const wg_graphics_t *graphics,
                    unsigned episode);
+int WL_ArticleOpenHelp(wl_article_t *article,
+                       const wg_graphics_t *graphics);
 void WL_ArticleClose(wl_article_t *article);
 int WL_ArticleRender(const wl_article_t *article,
                      const wg_graphics_t *graphics, size_t page,
