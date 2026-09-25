@@ -65,8 +65,7 @@ then four difficulty rows with selection-specific BJ portraits. Apogee
 shareware exposes the unavailable episodes in their locked color but only
 accepts Episode 1. The selected episode becomes its first map and the selected
 difficulty is passed into level construction, enemy filtering, hit points, and
-baby-mode damage. The remaining option screens are kept as subsequent menu
-slices.
+baby-mode damage. Load/save persistence remains a subsequent menu slice.
 
 The Sound slice preserves `SndMenu`'s twelve-row layout and three device
 groups. It exposes only real engine capabilities: Nuked-OPL3 effects,
@@ -88,6 +87,13 @@ remain IBM set-1 scan codes, so no platform key namespace enters engine code.
 The live input adapter resolves the selected keyboard and mouse bindings into
 `wl_input_t`; mouse-button reassignment preserves the original one-action-per-
 button rule. Joystick values remain visible but disabled.
+
+Change View retains the original size-4-through-19 selection boundary and
+size-15 default. `WL_GAME.c` owns the authored gray surround and asymmetric
+black/gray bevel; the portable wall, sprite, weapon, and targeting paths derive
+their centered viewport from the same width. The full-width size-20 path is
+also retained for deterministic historical renderer fixtures and explicit
+headless captures.
 
 `WL_PLAY.c` also owns the original demo stream boundary. The four-byte header
 retains its map byte, 16-bit total length, and skipped fourth byte; every

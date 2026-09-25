@@ -737,17 +737,19 @@ static int WL_PlayerAttackTarget(const wg_level_t *level, size_t *target_index,
     size_t closest = 0U;
     size_t index;
     int found = 0;
+    int view_width = level->view_width != 0U
+                         ? level->view_width : WG_VIDEO_WIDTH;
 
     for (index = 0U; index < level->actor_count; ++index)
     {
         const wg_actor_t *actor = &level->actors[index];
-        int32_t screen_delta = actor->view_x - (WG_VIDEO_WIDTH / 2 - 1);
+        int32_t screen_delta = actor->view_x - (view_width / 2 - 1);
 
         if ((actor->flags & (WG_ACTOR_FLAG_SHOOTABLE
                              | WG_ACTOR_FLAG_VISIBLE))
                 != (WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_VISIBLE)
-            || screen_delta <= -(WG_VIDEO_WIDTH / 10)
-            || screen_delta >= WG_VIDEO_WIDTH / 10
+            || screen_delta <= -(view_width / 10)
+            || screen_delta >= view_width / 10
             || actor->trans_x >= closest_distance)
         {
             continue;

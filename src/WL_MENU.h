@@ -11,6 +11,9 @@
 #define WL_CONTROL_MENU_ITEMS 6U
 #define WL_CUSTOM_MENU_ITEMS 9U
 #define WL_CUSTOM_BINDINGS 4U
+#define WL_VIEW_SIZE_MIN 4U
+#define WL_VIEW_SIZE_MAX 19U
+#define WL_VIEW_SIZE_DEFAULT 15U
 
 int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                     const wg_graphics_t *graphics, unsigned selected,
@@ -37,6 +40,8 @@ int WL_DrawCustomizeMenu(
     int edit_column, int capture);
 unsigned WL_CustomMenuMove(unsigned selected, int direction,
                            int mouse_enabled);
+int WL_DrawChangeView(uint8_t framebuffer[320 * 200],
+                      const wg_graphics_t *graphics, unsigned view_size);
 int WL_DrawEpisodeMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned episode,
                        int shareware);

@@ -2244,6 +2244,16 @@ static void TestVideo(void)
     CHECK(destination[WG_VIDEO_WIDTH * 2U] == 5);
     CHECK(destination[WG_VIDEO_WIDTH * 2U + 1U] == 6);
 
+    CHECK(WL_DrawPlayBorder(destination, 240U));
+    CHECK(destination[0] == 127U);
+    CHECK(destination[20U * WG_VIDEO_WIDTH + 40U] == 0U);
+    CHECK(destination[19U * WG_VIDEO_WIDTH + 39U] == 0U);
+    CHECK(destination[140U * WG_VIDEO_WIDTH + 39U] == 124U);
+    CHECK(destination[140U * WG_VIDEO_WIDTH + 40U] == 125U);
+    CHECK(destination[20U * WG_VIDEO_WIDTH + 280U] == 125U);
+    CHECK(destination[159U * WG_VIDEO_WIDTH] == 127U);
+    CHECK(!WL_DrawPlayBorder(destination, 63U));
+
     memset(black, 0, sizeof(black));
     WG_PaletteFade(black, WG_WolfPaletteVGA, 15, 30, faded);
     CHECK(faded[5] == 21U);
@@ -3118,7 +3128,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)scenery_hash);
                 CHECK(scenery_hash == 0x723ccdefbb003ac1ULL);
-                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
+                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0,
+                                          WG_VIDEO_WIDTH));
                 CHECK(WG_GraphicsOpen(&graphics, &data_set));
                 WL_StatusDefaults(&status);
                 CHECK(WL_DrawStatusBar(framebuffer, &graphics, &status));
@@ -3144,7 +3155,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                                      &view_tables, render_hits, visible_tiles,
                                      level.player_x, level.player_y,
                                      level.player_angle));
-                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
+                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0,
+                                          WG_VIDEO_WIDTH));
                 CHECK(WL_DrawStatusBar(framebuffer, &graphics, &status));
                 for (index = 0; index < sizeof(framebuffer); ++index)
                 {
@@ -3175,7 +3187,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                             guard->x - 3 * WG_FIXED_ONE, guard->y, 0));
                     }
                 }
-                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0));
+                CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0,
+                                          WG_VIDEO_WIDTH));
                 CHECK(WL_DrawStatusBar(framebuffer, &graphics, &status));
                 for (index = 0; index < sizeof(framebuffer); ++index)
                 {

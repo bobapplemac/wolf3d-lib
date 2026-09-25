@@ -116,6 +116,13 @@ button becomes its binding. The original defaults remain Control/Alt/Shift/
 Space, arrow keys, and the three mouse buttons. Capture it with
 `--customize-controls-view`.
 
+`Change View` restores the original 4–19 step viewport-size panel. Arrow keys
+resize its live border preview, Enter accepts, and Escape restores the previous
+size. Interactive play starts at the original default size 15; walls, actors,
+the weapon, targeting window, and beveled play border all use the selected
+viewport. Use `--change-view` to capture the panel, or `--view-size N` with a
+headless play capture to inspect any size from 4 through 20.
+
 The main menu's `Read This!` entry decodes the original 41-page help article
 directly from the selected edition's `VGAGRAPH`. Arrow keys, Enter, and Space
 navigate pages; Escape returns to the control panel. Its first page can be

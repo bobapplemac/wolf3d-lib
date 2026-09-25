@@ -6,6 +6,7 @@
 #include "ID_VH.h"
 #include "ID_US_1.h"
 #include "ID_VL.h"
+#include "WL_GAME.h"
 
 #define WL_MENU_BORDER_COLOR 0x29U
 #define WL_MENU_BORDER_2_COLOR 0x23U
@@ -531,6 +532,40 @@ unsigned WL_CustomMenuMove(unsigned selected, int direction,
         }
     } while (!WL_CustomMenuActive(candidate, mouse_enabled));
     return candidate;
+}
+
+int WL_DrawChangeView(uint8_t framebuffer[320 * 200],
+                      const wg_graphics_t *graphics, unsigned view_size)
+{
+    static const char *const lines[3] =
+    {
+        "Use arrows to size", "ENTER to accept", "ESC to cancel"
+    };
+    wg_font_t font;
+    unsigned line;
+
+    if (framebuffer == NULL || graphics == NULL
+        || view_size < WL_VIEW_SIZE_MIN || view_size > WL_VIEW_SIZE_MAX
+        || !WG_FontOpen(&font, graphics, 1U))
+    {
+        return 0;
+    }
+    if (!WL_DrawPlayBorder(framebuffer, view_size * 16U))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    WL_MenuBar(framebuffer, 0, 160, 320, 40, 0x7fU);
+    for (line = 0U; line < 3U; ++line)
+    {
+        int width = (int)WG_FontMeasure(&font, lines[line]);
+
+        WG_FontDraw(&font, framebuffer, (320 - width) / 2,
+                    161 + (int)line * font.height,
+                    lines[line], WL_MENU_HIGHLIGHT_COLOR);
+    }
+    WG_FontClose(&font);
+    return 1;
 }
 
 static void WL_CustomLabels(const wg_font_t *font, uint8_t *framebuffer,

@@ -1058,3 +1058,29 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --customize-controls-view --frame-hash --dump-frame out\customize-controls.ppm
 ```
+
+## 2026-09-25: Change View and original play border
+
+- Restored `CP_ChangeView`, `DrawChangeView`, and `DrawPlayBorder` behavior:
+  arrows select sizes 4–19, Enter accepts, Escape restores the old value, and
+  the panel shows the live beveled viewport preview above the three original
+  instruction lines.
+- Interactive games now begin at the original default size 15. Wall posts,
+  static objects, actors, the player weapon, and the firing target window all
+  use the chosen width instead of assuming a 320x160 view.
+- Kept size 20 available to the headless fixture path so earlier full-width
+  renderer checkpoints remain byte-for-byte stable. `--view-size N` selects a
+  4–20 viewport for new captures.
+- Added shared WL1/WL6 hashes `fe964b945ec6d203` for the Change View panel and
+  `063d5289c4c1414e` for the authored default-size gameplay presentation.
+
+![Original Change View panel at size 15](../out/change-view.png)
+
+![E1M1 using the original default size-15 viewport](../out/default-view.png)
+
+Regenerate the captures with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --change-view --frame-hash --dump-frame out\change-view.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --view-size 15 --frame-hash --dump-frame out\default-view.ppm
+```

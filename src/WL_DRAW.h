@@ -48,7 +48,8 @@ int WG_RaycastWallsVisible(
 
 int WL_DrawPlayerWeapon(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
-    const wg_pages_t *pages, unsigned weapon, unsigned weapon_frame);
+    const wg_pages_t *pages, unsigned weapon, unsigned weapon_frame,
+    unsigned view_width);
 
 int WL_DrawScaleds(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],

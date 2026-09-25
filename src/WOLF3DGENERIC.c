@@ -44,6 +44,7 @@ static uint8_t wg_sound_screen;
 static uint8_t wg_control_screen;
 static uint8_t wg_mouse_sensitivity_screen;
 static uint8_t wg_customize_screen;
+static uint8_t wg_change_view_screen;
 static uint8_t wg_help_active;
 static size_t wg_help_page;
 static wl_article_t wg_help_article;
@@ -64,6 +65,9 @@ static uint16_t wg_action_keys[WL_CUSTOM_BINDINGS] =
     { WG_KEY_RIGHT_SHIFT, WG_KEY_SPACE, WG_KEY_CONTROL, WG_KEY_ALT };
 static uint16_t wg_movement_keys[WL_CUSTOM_BINDINGS] =
     { WG_KEY_LEFT, WG_KEY_RIGHT, WG_KEY_UP, WG_KEY_DOWN };
+static unsigned wg_view_size = WL_VIEW_SIZE_DEFAULT;
+static unsigned wg_change_view_size = WL_VIEW_SIZE_DEFAULT;
+static unsigned wg_saved_view_size = WL_VIEW_SIZE_DEFAULT;
 static uint8_t wg_adlib_effects = 1U;
 static uint8_t wg_digitized_effects = 1U;
 static uint8_t wg_music_enabled = 1U;
@@ -770,6 +774,7 @@ static int WG_DrawMainMenuScreen(void)
     wg_graphics_t graphics;
     int result;
 
+    wg_change_view_screen = 0U;
     memset(&graphics, 0, sizeof(graphics));
     if (!WG_GraphicsOpen(&graphics, &wg_data_set))
     {
@@ -913,6 +918,37 @@ static int WG_DrawCustomizeScreen(void)
         wg_control_screen = 0U;
         wg_mouse_sensitivity_screen = 0U;
         wg_customize_screen = 1U;
+        wg_attract_phase = WG_ATTRACT_NONE;
+        WG_FrontMusicStart(14U);
+    }
+    return result;
+}
+
+static int WG_DrawChangeViewScreen(void)
+{
+    wg_graphics_t graphics;
+    int result;
+
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    result = WL_DrawChangeView(WG_ScreenBuffer, &graphics,
+                               wg_change_view_size);
+    WG_GraphicsClose(&graphics);
+    if (result)
+    {
+        WG_CloseFrontHelp();
+        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        wg_menu_active = 0U;
+        wg_front_scores = 0U;
+        wg_new_game_screen = 0U;
+        wg_sound_screen = 0U;
+        wg_control_screen = 0U;
+        wg_mouse_sensitivity_screen = 0U;
+        wg_customize_screen = 0U;
+        wg_change_view_screen = 1U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
     }
@@ -1120,7 +1156,8 @@ static int WG_GameSessionRender(void)
     if (wg_game.death_phase == WG_DEATH_NONE
         && !WL_DrawPlayerWeapon(WG_ScreenBuffer, &wg_game.pages,
                                 wg_game.level.player_weapon,
-                                wg_game.level.weapon_frame))
+                                wg_game.level.weapon_frame,
+                                wg_game.view.view_width))
     {
         return 0;
     }
@@ -1396,7 +1433,8 @@ static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty)
     wg_game.level_start_score = wg_game.level.score;
     memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
     WG_ViewBuildTrigTables(&wg_game.view);
-    if (!WG_ViewCalculateProjection(&wg_game.view, WG_MAX_VIEW_WIDTH,
+    if (!WG_ViewCalculateProjection(&wg_game.view,
+                                    (uint16_t)(wg_view_size * 16U),
                                     WG_FOCAL_LENGTH))
     {
         goto cleanup;
@@ -1806,6 +1844,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int control_menu_view,
                                   int mouse_sensitivity_view,
                                   int customize_controls_view,
+                                  int change_view,
                                   int credits_view,
                                   int help_view,
                                   int demo_view,
@@ -1815,7 +1854,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int high_score_view,
                                   int high_score_entry_view,
                                   unsigned actor_tics,
-                                  unsigned forward_tics)
+                                  unsigned forward_tics,
+                                  unsigned view_size)
 {
     wg_maps_t maps;
     wg_map_t map;
@@ -2146,7 +2186,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     if (player_fire_view)
     {
         WG_ViewBuildTrigTables(&view);
-        if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
+        if (!WG_ViewCalculateProjection(&view,
+                                        (uint16_t)(view_size * 16U),
                                         WG_FOCAL_LENGTH)
             || !WG_RenderStaticView(WG_ScreenBuffer, &level, &view, &walls,
                                     0, 0, level.player_x, level.player_y,
@@ -2209,7 +2250,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         level.bonus_count = 18U;
     }
     WG_ViewBuildTrigTables(&view);
-    if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
+    if (!WG_ViewCalculateProjection(&view, (uint16_t)(view_size * 16U),
                                     WG_FOCAL_LENGTH)
         || !WG_RenderStaticView(WG_ScreenBuffer, &level, &view, &walls,
                                 0, 0, level.player_x, level.player_y,
@@ -2219,7 +2260,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                            level.player_x, level.player_y,
                            level.player_angle)
         || !WL_DrawPlayerWeapon(WG_ScreenBuffer, &pages,
-                                level.player_weapon, level.weapon_frame))
+                                level.player_weapon, level.weapon_frame,
+                                view.view_width))
     {
         goto cleanup;
     }
@@ -2313,6 +2355,12 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         && !WL_DrawCustomizeMenu(
             WG_ScreenBuffer, &graphics, 0U, 1,
             wg_mouse_bindings, wg_action_keys, wg_movement_keys, -1, 0))
+    {
+        goto cleanup;
+    }
+    if (change_view
+        && !WL_DrawChangeView(WG_ScreenBuffer, &graphics,
+                              WL_VIEW_SIZE_DEFAULT))
     {
         goto cleanup;
     }
@@ -2453,6 +2501,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     unsigned actor_tics;
     unsigned forward_tics;
     unsigned demo_commands;
+    unsigned view_size;
 
     if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL)
         || !WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
@@ -2462,7 +2511,10 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         || !WG_FindUnsignedArgument(argc, argv, "--forward-tics", 0U,
                                     10000U, &forward_tics)
         || !WG_FindUnsignedArgument(argc, argv, "--demo-commands", 70U,
-                                    100000U, &demo_commands))
+                                    100000U, &demo_commands)
+        || !WG_FindUnsignedArgument(argc, argv, "--view-size", 20U,
+                                    20U, &view_size)
+        || view_size < WL_VIEW_SIZE_MIN)
     {
         return WG_RESULT_INVALID_ARGUMENT;
     }
@@ -2493,6 +2545,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         return WG_RESULT_PLATFORM_ERROR;
     }
     wg_start_map = map_number;
+    wg_view_size = WG_HasArgument(argc, argv, "--view-size")
+                       ? view_size : WL_VIEW_SIZE_DEFAULT;
     WL_HighScoresDefault(wg_high_scores);
     if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
         && WG_IsInteractive())
@@ -2536,6 +2590,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--control-menu-view"),
             WG_HasArgument(argc, argv, "--mouse-sensitivity-view"),
             WG_HasArgument(argc, argv, "--customize-controls-view"),
+            WG_HasArgument(argc, argv, "--change-view"),
             WG_HasArgument(argc, argv, "--credits-view"),
             WG_HasArgument(argc, argv, "--help-view"),
             WG_HasArgument(argc, argv, "--demo-view"), demo_commands,
@@ -2543,7 +2598,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--difficulty-menu-view"),
             WG_HasArgument(argc, argv, "--high-score-view"),
             WG_HasArgument(argc, argv, "--high-score-entry-view"), actor_tics,
-            forward_tics))
+            forward_tics, view_size))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
@@ -2570,6 +2625,12 @@ static wg_result_t WG_MainMenuActivate(void)
         case 2U:
             wg_control_selection = 0U;
             return WG_DrawControlMenuScreen()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case 5U:
+            wg_saved_view_size = wg_view_size;
+            wg_change_view_size = wg_view_size > WL_VIEW_SIZE_MAX
+                                      ? WL_VIEW_SIZE_MAX : wg_view_size;
+            return WG_DrawChangeViewScreen()
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         case 7U:
             return WG_DrawFrontHighScores(0)
@@ -2933,6 +2994,53 @@ wg_result_t wolf3dgeneric_Run(void)
                                     return WG_RESULT_PLATFORM_ERROR;
                                 }
                             }
+                        }
+                    }
+                    else if (wg_change_view_screen)
+                    {
+                        if (event.key == WG_KEY_LEFT
+                            || event.key == WG_KEY_DOWN)
+                        {
+                            if (wg_change_view_size > WL_VIEW_SIZE_MIN)
+                            {
+                                --wg_change_view_size;
+                            }
+                            if (!WG_DrawChangeViewScreen())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                            WG_FrontSoundPreviewNumber(0U);
+                        }
+                        else if (event.key == WG_KEY_RIGHT
+                                 || event.key == WG_KEY_UP)
+                        {
+                            if (wg_change_view_size < WL_VIEW_SIZE_MAX)
+                            {
+                                ++wg_change_view_size;
+                            }
+                            if (!WG_DrawChangeViewScreen())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                            WG_FrontSoundPreviewNumber(0U);
+                        }
+                        else if (event.key == WG_KEY_ESCAPE)
+                        {
+                            wg_view_size = wg_saved_view_size;
+                            if (!WG_DrawMainMenuScreen())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                        }
+                        else if (event.key == WG_KEY_ENTER
+                                 || event.key == WG_KEY_SPACE)
+                        {
+                            wg_view_size = wg_change_view_size;
+                            if (!WG_DrawMainMenuScreen())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                            WG_FrontSoundPreview();
                         }
                     }
                     else if (wg_customize_screen)
@@ -3321,6 +3429,26 @@ wg_result_t wolf3dgeneric_Run(void)
                         }
                     }
                 }
+                else if (wg_change_view_screen)
+                {
+                    if (event.button == 2U)
+                    {
+                        wg_view_size = wg_saved_view_size;
+                        if (!WG_DrawMainMenuScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.button == 1U)
+                    {
+                        wg_view_size = wg_change_view_size;
+                        if (!WG_DrawMainMenuScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                        WG_FrontSoundPreview();
+                    }
+                }
                 else if (wg_customize_screen)
                 {
                     if (wg_customize_capture
@@ -3677,6 +3805,10 @@ void wolf3dgeneric_Shutdown(void)
     wg_data_loaded = 0;
     wg_start_map = 0U;
     wg_next_demo = 0U;
+    wg_change_view_screen = 0U;
+    wg_view_size = WL_VIEW_SIZE_DEFAULT;
+    wg_change_view_size = WL_VIEW_SIZE_DEFAULT;
+    wg_saved_view_size = WL_VIEW_SIZE_DEFAULT;
     wg_attract_phase = WG_ATTRACT_NONE;
     wg_attract_deadline = 0U;
     wg_initialized = 0;

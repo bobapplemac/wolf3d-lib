@@ -4,11 +4,44 @@
 #include <math.h>
 #include <string.h>
 
+#include "ID_VL.h"
 #include "WG_FIXED.h"
 #include "WL_AGENT.h"
 #include "WL_MAIN.h"
 
 #define WL_PI 3.14159265358979323846
+
+int WL_DrawPlayBorder(uint8_t framebuffer[320 * 200],
+                      unsigned view_width)
+{
+    int view_height;
+    int x;
+    int y;
+
+    if (framebuffer == NULL || view_width < 64U || view_width > 320U
+        || (view_width & 15U) != 0U)
+    {
+        return 0;
+    }
+    view_height = (int)view_width / 2;
+    x = (320 - (int)view_width) / 2;
+    y = (160 - view_height) / 2;
+    if (view_width == 320U)
+    {
+        WG_VideoBar(framebuffer, 0, 0, 320, 160, 0U);
+        return 1;
+    }
+    WG_VideoBar(framebuffer, 0, 0, 320, 160, 127U);
+    WG_VideoBar(framebuffer, x, y, (int)view_width, view_height, 0U);
+    WG_VideoBar(framebuffer, x - 1, y - 1, (int)view_width + 2, 1, 0U);
+    WG_VideoBar(framebuffer, x - 1, y - 1, 1, view_height + 2, 0U);
+    WG_VideoBar(framebuffer, x - 1, y + view_height,
+                (int)view_width + 2, 1, 125U);
+    WG_VideoBar(framebuffer, x + (int)view_width, y - 1,
+                1, view_height + 2, 125U);
+    WG_VideoPlot(framebuffer, x - 1, y + view_height, 124U);
+    return 1;
+}
 
 uint16_t WL_DeathTargetAngle(const wg_level_t *level)
 {

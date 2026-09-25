@@ -692,12 +692,17 @@ int WL_DrawScaleds(
     int32_t view_sine;
     int32_t view_x;
     int32_t view_y;
+    int screen_x;
+    int screen_y;
+    int view_height;
     size_t visible_count = 0;
     size_t index;
 
     if (framebuffer == NULL || pages == NULL || level == NULL
         || tables == NULL || hits == NULL || visible_tiles == NULL
-        || tables->view_width != WG_VIDEO_WIDTH
+        || tables->view_width < 64U
+        || tables->view_width > WG_VIDEO_WIDTH
+        || (tables->view_width & 15U) != 0U
         || player_angle >= WG_ANGLES)
     {
         return 0;
@@ -707,6 +712,10 @@ int WL_DrawScaleds(
     view_sine = tables->sine[player_angle];
     view_x = player_x - WG_FixedMul(tables->focal_length, view_cosine);
     view_y = player_y + WG_FixedMul(tables->focal_length, view_sine);
+    view_height = tables->view_width / 2;
+    screen_x = (WG_VIDEO_WIDTH - tables->view_width) / 2;
+    screen_y = (160 - view_height) / 2;
+    level->view_width = tables->view_width;
     for (index = 0; index < tables->view_width; ++index)
     {
         wall_height[index] = hits[index].height;
@@ -786,7 +795,8 @@ int WL_DrawScaleds(
         }
         if (!WG_DecodeSprite(pages, visible[index].shape, &sprite)
             || !WG_ScaleSpriteClipped(
-                framebuffer, 0, 0, WG_VIDEO_WIDTH, 160,
+                framebuffer, screen_x, screen_y, tables->view_width,
+                view_height,
                 visible[index].view_x, &sprite,
                 (unsigned)visible[index].view_height, wall_height))
         {
@@ -798,14 +808,17 @@ int WL_DrawScaleds(
 
 int WL_DrawPlayerWeapon(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
-    const wg_pages_t *pages, unsigned weapon, unsigned weapon_frame)
+    const wg_pages_t *pages, unsigned weapon, unsigned weapon_frame,
+    unsigned view_width)
 {
     wg_sprite_image_t sprite;
     size_t sprite_count;
     size_t shape;
 
     if (framebuffer == NULL || pages == NULL || pages->data_set == NULL
-        || weapon > 3U || weapon_frame > 4U)
+        || weapon > 3U || weapon_frame > 4U
+        || view_width < 64U || view_width > WG_VIDEO_WIDTH
+        || (view_width & 15U) != 0U)
     {
         return 0;
     }
@@ -817,6 +830,10 @@ int WL_DrawPlayerWeapon(
     }
     shape = sprite_count - 20U + weapon * 5U + weapon_frame;
     return WG_DecodeSprite(pages, shape, &sprite)
-           && WG_ScaleSprite(framebuffer, 0, 0, WG_VIDEO_WIDTH, 160,
-                             WG_VIDEO_WIDTH / 2, &sprite, 161U);
+           && WG_ScaleSprite(framebuffer,
+                             (WG_VIDEO_WIDTH - (int)view_width) / 2,
+                             (160 - (int)view_width / 2) / 2,
+                             (int)view_width, (int)view_width / 2,
+                             (int)view_width / 2, &sprite,
+                             view_width / 2U + 1U);
 }

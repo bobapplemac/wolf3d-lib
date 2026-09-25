@@ -203,6 +203,7 @@ typedef struct wg_level
     uint8_t attack_active;
     int32_t attack_count;
     uint8_t made_noise;
+    uint16_t view_width;
     uint8_t victory_flag;
     uint8_t level_completed;
     uint8_t secret_level;
@@ -252,6 +253,8 @@ int WG_SoundPosition(const wg_level_t *level,
                      int32_t x, int32_t y,
                      uint8_t *left, uint8_t *right);
 void WG_ClearSoundEvents(wg_level_t *level);
+int WL_DrawPlayBorder(uint8_t framebuffer[320 * 200],
+                      unsigned view_width);
 uint16_t WL_DeathTargetAngle(const wg_level_t *level);
 int WL_DeathRotateStep(wg_level_t *level, uint16_t target_angle,
                        unsigned degrees);

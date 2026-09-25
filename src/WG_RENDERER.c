@@ -78,12 +78,17 @@ int WG_RenderStaticView(
     uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE])
 {
     size_t color_index = (size_t)episode * 10U + map;
+    int view_height;
+    int view_x;
+    int view_y;
     int pixel;
 
     if (framebuffer == NULL || level == NULL || tables == NULL
         || walls == NULL || walls->pixels == NULL || hits == NULL
         || visible_tiles == NULL
-        || tables->view_width != WG_VIDEO_WIDTH
+        || tables->view_width < 64U
+        || tables->view_width > WG_VIDEO_WIDTH
+        || (tables->view_width & 15U) != 0U
         || color_index >= sizeof(wg_ceiling_colors)
         || walls->count < 8U
         || !WG_RaycastWallsVisible(
@@ -92,15 +97,23 @@ int WG_RenderStaticView(
     {
         return 0;
     }
+    view_height = tables->view_width / 2;
+    view_x = (WG_VIDEO_WIDTH - tables->view_width) / 2;
+    view_y = (WG_PLAY_VIEW_HEIGHT - view_height) / 2;
     memset(framebuffer, 0, WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT);
-    for (pixel = 0; pixel < WG_PLAY_VIEW_HEIGHT / 2; ++pixel)
+    if (!WL_DrawPlayBorder(framebuffer, tables->view_width))
     {
-        memset(framebuffer + pixel * WG_VIDEO_WIDTH,
-               wg_ceiling_colors[color_index], WG_VIDEO_WIDTH);
+        return 0;
     }
-    for (; pixel < WG_PLAY_VIEW_HEIGHT; ++pixel)
+    for (pixel = 0; pixel < view_height / 2; ++pixel)
     {
-        memset(framebuffer + pixel * WG_VIDEO_WIDTH, 0x19, WG_VIDEO_WIDTH);
+        memset(framebuffer + (view_y + pixel) * WG_VIDEO_WIDTH + view_x,
+               wg_ceiling_colors[color_index], tables->view_width);
+    }
+    for (; pixel < view_height; ++pixel)
+    {
+        memset(framebuffer + (view_y + pixel) * WG_VIDEO_WIDTH + view_x,
+               0x19, tables->view_width);
     }
 
     for (pixel = 0; pixel < tables->view_width; ++pixel)
@@ -114,8 +127,9 @@ int WG_RenderStaticView(
         texture = walls->pixels
                   + hits[pixel].wall_page
                     * WG_TEXTURE_SIZE * WG_TEXTURE_SIZE;
-        if (!WG_ScaleWallPost(framebuffer, 0, 0, WG_VIDEO_WIDTH,
-                              WG_PLAY_VIEW_HEIGHT, pixel, 1, texture,
+        if (!WG_ScaleWallPost(framebuffer, view_x, view_y,
+                              tables->view_width, view_height,
+                              pixel, 1, texture,
                               hits[pixel].texture_column,
                               hits[pixel].height))
         {
