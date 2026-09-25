@@ -57,6 +57,9 @@ size_t WL_MusicChunkForMap(unsigned map_number);
 int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics);
 void WL_UpdatePaletteShifts(struct wg_level *level,
                             uint8_t palette[256 * 3]);
+void WL_UpdatePaletteShiftsForTics(struct wg_level *level,
+                                   uint8_t palette[256 * 3],
+                                   unsigned tics);
 int WL_PlayTick(struct wg_level *level,
                 const struct wg_view_tables *tables,
                 wl_play_state_t *state, const wl_input_t *input);

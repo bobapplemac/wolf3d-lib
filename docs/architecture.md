@@ -75,6 +75,12 @@ records advance as one four-tic frame, while ordinary host input continues to
 use independent 70 Hz tics. This distinction preserves the authored movement
 rounding without slowing or coarsening live input.
 
+The runtime attract state follows `DemoLoop`'s original ordering and durations:
+15-second title, 10-second credits, 10-second high scores, then one rotating
+embedded demo. It returns completed or interrupted demos through the same owned
+session cleanup used by normal games; input during any attract phase opens the
+control panel rather than leaking into player controls.
+
 ## Gameplay state boundary
 
 Map planes are converted into an explicitly sized 64x64 runtime level. Plane 0

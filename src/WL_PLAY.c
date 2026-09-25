@@ -39,12 +39,19 @@ int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics)
 void WL_UpdatePaletteShifts(struct wg_level *level,
                             uint8_t palette[256 * 3])
 {
+    WL_UpdatePaletteShiftsForTics(level, palette, 1U);
+}
+
+void WL_UpdatePaletteShiftsForTics(struct wg_level *level,
+                                   uint8_t palette[256 * 3],
+                                   unsigned tics)
+{
     uint8_t shifted[256 * 3];
     unsigned red = 0U;
     unsigned white = 0U;
     size_t color;
 
-    if (level == NULL || palette == NULL)
+    if (level == NULL || palette == NULL || tics == 0U)
     {
         return;
     }
@@ -55,7 +62,8 @@ void WL_UpdatePaletteShifts(struct wg_level *level,
         {
             white = WL_NUM_WHITE_SHIFTS;
         }
-        --level->bonus_count;
+        level->bonus_count = (uint16_t)(level->bonus_count > tics
+                                    ? level->bonus_count - tics : 0U);
     }
     if (level->damage_count != 0U)
     {
@@ -64,7 +72,8 @@ void WL_UpdatePaletteShifts(struct wg_level *level,
         {
             red = WL_NUM_RED_SHIFTS;
         }
-        --level->damage_count;
+        level->damage_count = (uint16_t)(level->damage_count > tics
+                                     ? level->damage_count - tics : 0U);
     }
     if (red == 0U && white == 0U)
     {

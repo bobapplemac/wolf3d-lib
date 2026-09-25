@@ -41,6 +41,11 @@ the title. `New Game` opens the original episode and difficulty panels, then
 starts Floor 1 of the chosen episode with that difficulty. The shareware data
 retains its original locked presentation for Episodes 2 through 6.
 
+With no input, the front end follows the original attract sequence: 15 seconds
+of the title, 10 seconds of credits, 10 seconds of high scores, then one of the
+four embedded demos. Completed demos return to the title and rotate to the next
+stream. Any key or mouse-button press enters the control panel.
+
 Add `--play-view` to enter the current interactive game session. The original
 keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
 Shift runs, Control attacks, Space uses, 1-4 select weapons, and Escape quits.
@@ -64,7 +69,13 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --demo-view -
 ```
 
 Each recorded command advances one original four-tic demo frame. Automatic
-title-screen attract sequencing remains a later front-end step.
+title-screen attract sequencing uses the same playback path.
+
+The credits screen can also be captured directly:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --credits-view --frame-hash --dump-frame credits.ppm
+```
 
 The headless host can export its current indexed frame for inspection without a
 window:

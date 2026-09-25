@@ -2073,6 +2073,12 @@ static void TestPaletteShifts(void)
     }
     CHECK(hash == 0xd6969024db3bdb40ULL);
 
+    level.damage_count = 40U;
+    level.bonus_count = 18U;
+    WL_UpdatePaletteShiftsForTics(&level, palette, WL_DEMO_TICS);
+    CHECK(level.damage_count == 36U);
+    CHECK(level.bonus_count == 14U);
+
     level.damage_count = 0U;
     level.bonus_count = 18U;
     WL_UpdatePaletteShifts(&level, palette);

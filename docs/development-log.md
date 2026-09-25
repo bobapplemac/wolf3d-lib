@@ -958,3 +958,24 @@ Regenerate the captures with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --demo-view --demo-commands 70 --frame-hash --dump-frame out\demo.ppm
 ```
+
+## 2026-09-25: Live attract loop
+
+- Restored `DemoLoop`'s original idle sequence: title for 15 seconds, credits
+  for 10 seconds, high scores for 10 seconds, then one embedded demo. Completed
+  demos return to the title and rotate through all four streams.
+- Interactive demo sessions use hard difficulty and their authored map number,
+  pump the original map music and sound events, and schedule one recorded frame
+  per four 70 Hz tics. Palette counters now consume the same four-tic span.
+- Any key or mouse-button press during the title, credits, scores, or demo opens
+  the control panel. `Back to Demo` re-enters the attract sequence at the title.
+- Added an edition-independent credits fixture with indexed framebuffer hash
+  `877dd0b7c8d5bf6d`.
+
+![Original Wolfenstein 3D credits screen](../out/credits.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --credits-view --frame-hash --dump-frame out\credits.ppm
+```
