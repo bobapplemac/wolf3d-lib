@@ -1978,6 +1978,43 @@ static void TestIntermission(void)
     CHECK(!WL_IntermissionCalculate(&level, 60U, &intermission));
 }
 
+static void TestPaletteShifts(void)
+{
+    wg_level_t level;
+    uint8_t palette[256U * 3U];
+    uint64_t hash;
+    size_t index;
+
+    memset(&level, 0, sizeof(level));
+    level.damage_count = 40U;
+    level.bonus_count = 18U;
+    WL_UpdatePaletteShifts(&level, palette);
+    CHECK(level.damage_count == 39U);
+    CHECK(level.bonus_count == 17U);
+    hash = 1469598103934665603ULL;
+    for (index = 0U; index < sizeof(palette); ++index)
+    {
+        hash ^= palette[index];
+        hash *= 1099511628211ULL;
+    }
+    CHECK(hash == 0xd6969024db3bdb40ULL);
+
+    level.damage_count = 0U;
+    level.bonus_count = 18U;
+    WL_UpdatePaletteShifts(&level, palette);
+    hash = 1469598103934665603ULL;
+    for (index = 0U; index < sizeof(palette); ++index)
+    {
+        hash ^= palette[index];
+        hash *= 1099511628211ULL;
+    }
+    CHECK(hash == 0x8b16358ec3225130ULL);
+
+    level.bonus_count = 0U;
+    WL_UpdatePaletteShifts(&level, palette);
+    CHECK(memcmp(palette, WG_WolfPalette, sizeof(palette)) == 0);
+}
+
 static void TestHuffman(void)
 {
     wg_huffman_node_t nodes[255];
@@ -3043,6 +3080,7 @@ int main(int argc, char **argv)
     TestPlayerMovementAndUse();
     TestPlayLoop();
     TestIntermission();
+    TestPaletteShifts();
     TestViewMath();
     TestWallScaler();
     TestStaticRaycaster();

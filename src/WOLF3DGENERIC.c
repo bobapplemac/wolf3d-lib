@@ -604,6 +604,7 @@ static int WG_GameSessionBeginIntermission(void)
     wg_game.mouse_buttons = 0U;
     wg_game.mouse_x = 0;
     wg_game.mouse_y = 0;
+    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
     if (wg_game.audio_active
         && WG_AudioGetChunk(&wg_game.audio, 261U + 16U,
                             &music_data, &music_size))
@@ -647,6 +648,7 @@ static int WG_GameSessionOpen(unsigned map_number)
     wg_game.level.map_number = (uint8_t)map_number;
     wg_game.map_number = map_number;
     wg_game.level_start_score = wg_game.level.score;
+    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
     WG_ViewBuildTrigTables(&wg_game.view);
     if (!WG_ViewCalculateProjection(&wg_game.view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH))
@@ -790,6 +792,7 @@ static int WG_GameSessionTick(void)
     {
         return 0;
     }
+    WL_UpdatePaletteShifts(&wg_game.level, WG_Palette);
     if (wg_game.audio_active)
     {
         if (wg_game.sound_positioned
@@ -890,6 +893,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int door_use_view,
                                   int pause_view,
                                   int intermission_view,
+                                  int damage_flash_view,
+                                  int bonus_flash_view,
                                   unsigned actor_tics,
                                   unsigned forward_tics)
 {
@@ -1235,6 +1240,14 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             }
         }
     }
+    if (damage_flash_view)
+    {
+        WL_TakeDamage(&level, 40U);
+    }
+    if (bonus_flash_view)
+    {
+        level.bonus_count = 18U;
+    }
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, WG_MAX_VIEW_WIDTH,
                                     WG_FOCAL_LENGTH)
@@ -1279,6 +1292,10 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         {
             goto cleanup;
         }
+    }
+    if (damage_flash_view || bonus_flash_view)
+    {
+        WL_UpdatePaletteShifts(&level, WG_Palette);
     }
     success = 1;
 
@@ -1370,7 +1387,9 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--pickup-view"),
             WG_HasArgument(argc, argv, "--door-use-view"),
             WG_HasArgument(argc, argv, "--pause-view"),
-            WG_HasArgument(argc, argv, "--intermission-view"), actor_tics,
+            WG_HasArgument(argc, argv, "--intermission-view"),
+            WG_HasArgument(argc, argv, "--damage-flash-view"),
+            WG_HasArgument(argc, argv, "--bonus-flash-view"), actor_tics,
             forward_tics))
     {
         wolf3dgeneric_Shutdown();

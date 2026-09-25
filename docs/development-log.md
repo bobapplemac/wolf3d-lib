@@ -726,3 +726,19 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --intermission-view --frame-hash --dump-frame out\e1m1-intermission.ppm
 ```
+
+## 2026-09-24: Damage and bonus palette feedback
+
+- Ported `InitRedShifts` and `UpdatePaletteShifts` behavior into `WL_PLAY.c`:
+  six red damage stages, three yellow-white bonus stages, damage precedence,
+  and original per-tic counter decay.
+- Shift tables are calculated from the original 6-bit VGA palette before the
+  generic boundary converts them to host RGB. Indexed framebuffer pixels do
+  not change.
+- Added `--palette-hash` to the headless host so palette-only behavior has an
+  independent deterministic oracle. The 40-point damage fixture hashes to
+  `d6969024db3bdb40`; the initial bonus fixture hashes to `8b16358ec3225130`.
+
+![Original 40-point damage palette shift](../out/damage-flash.png)
+
+![Original pickup bonus palette shift](../out/bonus-flash.png)

@@ -8,10 +8,16 @@
 #include "WL_GAME.h"
 #include "WL_STATE.h"
 #include "ID_VL.h"
+#include "WG_PALETTE.h"
 
 #define WL_BASE_MOVE 35
 #define WL_RUN_MOVE 70
 #define WL_MOUSE_ADJUSTMENT 5
+#define WL_NUM_RED_SHIFTS 6U
+#define WL_RED_STEPS 8U
+#define WL_NUM_WHITE_SHIFTS 3U
+#define WL_WHITE_STEPS 20U
+#define WL_WHITE_TICS 6U
 
 int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics)
 {
@@ -28,6 +34,70 @@ int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics)
     /* Original LatchDrawPic(20-4, 80-2*8, PAUSEDPIC): its x unit was
        eight pixels, hence the centered 128,64 destination below. */
     return WG_VideoDrawPicture(framebuffer, graphics, chunk, 128, 64);
+}
+
+void WL_UpdatePaletteShifts(struct wg_level *level,
+                            uint8_t palette[256 * 3])
+{
+    uint8_t shifted[256 * 3];
+    unsigned red = 0U;
+    unsigned white = 0U;
+    size_t color;
+
+    if (level == NULL || palette == NULL)
+    {
+        return;
+    }
+    if (level->bonus_count != 0U)
+    {
+        white = level->bonus_count / WL_WHITE_TICS + 1U;
+        if (white > WL_NUM_WHITE_SHIFTS)
+        {
+            white = WL_NUM_WHITE_SHIFTS;
+        }
+        --level->bonus_count;
+    }
+    if (level->damage_count != 0U)
+    {
+        red = level->damage_count / 10U + 1U;
+        if (red > WL_NUM_RED_SHIFTS)
+        {
+            red = WL_NUM_RED_SHIFTS;
+        }
+        --level->damage_count;
+    }
+    if (red == 0U && white == 0U)
+    {
+        memcpy(palette, WG_WolfPalette, 256U * 3U);
+        return;
+    }
+    for (color = 0U; color < 256U; ++color)
+    {
+        size_t component = color * 3U;
+        int base_red = WG_WolfPaletteVGA[component];
+        int base_green = WG_WolfPaletteVGA[component + 1U];
+        int base_blue = WG_WolfPaletteVGA[component + 2U];
+
+        if (red != 0U)
+        {
+            shifted[component] = (uint8_t)(base_red
+                + (64 - base_red) * (int)red / (int)WL_RED_STEPS);
+            shifted[component + 1U] = (uint8_t)(base_green
+                - base_green * (int)red / (int)WL_RED_STEPS);
+            shifted[component + 2U] = (uint8_t)(base_blue
+                - base_blue * (int)red / (int)WL_RED_STEPS);
+        }
+        else
+        {
+            shifted[component] = (uint8_t)(base_red
+                + (64 - base_red) * (int)white / (int)WL_WHITE_STEPS);
+            shifted[component + 1U] = (uint8_t)(base_green
+                + (62 - base_green) * (int)white / (int)WL_WHITE_STEPS);
+            shifted[component + 2U] = (uint8_t)(base_blue
+                - base_blue * (int)white / (int)WL_WHITE_STEPS);
+        }
+    }
+    WG_PaletteFromVGA(shifted, palette);
 }
 
 size_t WL_MusicChunkForMap(unsigned map_number)

@@ -209,6 +209,16 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(intermission-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "85b3dfdb33f1fb4d")
+        add_test(NAME damage-flash-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --damage-flash-view
+            --palette-hash)
+        set_tests_properties(damage-flash-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "d6969024db3bdb40")
+        add_test(NAME bonus-flash-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --bonus-flash-view
+            --palette-hash)
+        set_tests_properties(bonus-flash-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "8b16358ec3225130")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -312,5 +322,15 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(intermission-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "85b3dfdb33f1fb4d")
+        add_test(NAME damage-flash-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --damage-flash-view
+            --palette-hash)
+        set_tests_properties(damage-flash-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "d6969024db3bdb40")
+        add_test(NAME bonus-flash-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --bonus-flash-view
+            --palette-hash)
+        set_tests_properties(bonus-flash-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "8b16358ec3225130")
     endif()
 endif()

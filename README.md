@@ -120,6 +120,15 @@ actual authored totals discovered while building the map:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --intermission-view --frame-hash --dump-frame intermission.ppm
 ```
 
+Palette-only feedback can be inspected independently of indexed pixels. These
+diagnostics render the original damage-red and bonus-white shifts and print the
+palette hash when requested:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --damage-flash-view --palette-hash --dump-frame damage.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --bonus-flash-view --palette-hash --dump-frame bonus.ppm
+```
+
 The deterministic `--forward-tics N` diagnostic holds the original forward
 control for exactly `N` complete play-loop tics, including doors, pushwalls,
 player movement, weapon state, and actors.

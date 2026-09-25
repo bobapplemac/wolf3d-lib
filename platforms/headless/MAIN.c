@@ -226,6 +226,19 @@ static unsigned long long WG_FrameHash(void)
     return hash;
 }
 
+static unsigned long long WG_PaletteHash(void)
+{
+    unsigned long long hash = 1469598103934665603ULL;
+    size_t index;
+
+    for (index = 0U; index < WG_PALETTE_COLORS * 3U; ++index)
+    {
+        hash ^= WG_Palette[index];
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
 static int WG_WriteFrame(const char *path)
 {
     FILE *stream;
@@ -321,6 +334,10 @@ int main(int argc, char **argv)
     if (WG_HasArgument(argc, argv, "--frame-hash"))
     {
         printf("%016llx\n", WG_FrameHash());
+    }
+    if (WG_HasArgument(argc, argv, "--palette-hash"))
+    {
+        printf("%016llx\n", WG_PaletteHash());
     }
     if (dump_path != NULL && !WG_WriteFrame(dump_path))
     {

@@ -283,6 +283,13 @@ time stop. `ID_SD_MusicSetPaused` applies the original `SD_MusicOff` channel
 key-offs without discarding the sequencer position; the next key or mouse-button
 press restores play and redraws the unobscured game frame.
 
+Player feedback retains the VGA palette mechanism rather than tinting rendered
+pixels. `WL_PLAY.c` generates the original six red damage tables and three
+yellow-white bonus tables from the 6-bit base palette, gives damage precedence,
+and decays both counters at the 70 Hz game rate. Only the host-facing 8-bit RGB
+palette changes; the indexed framebuffer therefore remains untouched. The
+headless host exposes a separate palette hash for this distinction.
+
 Audio will follow the same model: the core will produce PCM through the host
 contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
 with its LGPL terms and source separation preserved. The fast fork remains a
