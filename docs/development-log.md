@@ -766,3 +766,25 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-death-view --frame-hash --dump-frame out\player-death.ppm
 ```
+
+## 2026-09-24: Episode victory totals
+
+- Campaign map rebuilds now preserve the first eight ordinary-floor
+  time/kill/secret/treasure records used by the original `LevelRatios` array.
+- Ported the Wolf3D branch of `Victory()` into historical `WL_INTER.c`: total
+  time, averaged ratios, the 99-minute cap, BJ victory portrait, and the
+  medium-or-harder three-letter time verification code.
+- A terminal boss victory now stops the live play renderer, draws the results,
+  and switches music to `URAHERO_MUS`. End text and the later high-score/menu
+  return remain in the front-end milestone.
+- A deterministic eight-floor fixture uses 1:15 and perfect ratios on every
+  floor. Both supplied WL1 and WL6 archives produce indexed framebuffer FNV-1a
+  `8e828f1563f3c064` despite their different graphics chunk numbering.
+
+![Original episode victory totals screen](../out/victory.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --victory-view --frame-hash --dump-frame out\victory.ppm
+```

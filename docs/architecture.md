@@ -272,6 +272,13 @@ fizzle toward VGA color 4 in 70 frame-sized batches. After input timeout and
 the death sound both finish, it discards score earned on that floor, decrements
 a life, and restarts with pistol, eight rounds, and full health.
 
+Each completed ordinary floor also persists its time and three ratios across
+map rebuilds. A terminal boss victory averages the first eight floor records,
+caps total time at 99:00, derives the original medium-or-harder verification
+code, draws `Victory()`'s `YOU WIN!` screen and BJ portrait, and switches to
+`URAHERO_MUS`. The later end-text, high-score, and control-panel chain remains
+part of the front-end milestone.
+
 Win32 supplies relative mouse packets through the generic event contract rather
 than exposing window coordinates to the engine. `WL_PLAY.c` applies the original
 default `PollMouseMove` scale (`x * 10 / 8`, `y * 20 / 8`) before the same

@@ -112,6 +112,14 @@ fizzle. It is identical for the supplied WL1 and WL6 data:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-death-view --frame-hash --dump-frame player-death.ppm
 ```
 
+Defeating an episode boss now preserves the first eight floor ratios, switches
+to `URAHERO_MUS`, and displays the original total-time and average-ratio victory
+screen. Its deterministic diagnostic uses eight 1:15 perfect floors:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --victory-view --frame-hash --dump-frame victory.ppm
+```
+
 Pass a zero-based `--map` number to capture another original map. The headless
 host can also print the indexed framebuffer's deterministic FNV-1a value with
 `--frame-hash`.

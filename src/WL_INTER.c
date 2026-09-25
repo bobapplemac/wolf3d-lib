@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "ID_VL.h"
+#include "ID_VH.h"
 #include "WL_AGENT.h"
 
 #define WL_INTERMISSION_BACKGROUND 127U
@@ -19,6 +20,8 @@ typedef struct wl_intermission_chunks
     size_t percent;
     size_t letter_a;
     size_t exclamation;
+    size_t time_code;
+    size_t bj_win;
 } wl_intermission_chunks_t;
 
 static const uint16_t wl_par_seconds[60] =
@@ -56,17 +59,19 @@ static int WL_IntermissionChunks(wg_game_variant_t variant,
     chunks->percent = chunks->zero + 10U;
     chunks->letter_a = chunks->percent + 1U;
     chunks->exclamation = chunks->letter_a + 26U;
+    chunks->time_code = chunks->guy - 6U;
+    chunks->bj_win = chunks->guy + 42U;
     return 1;
 }
 
-static int WL_IntermissionWrite(uint8_t *framebuffer,
-                                const wg_graphics_t *graphics,
-                                const wl_intermission_chunks_t *chunks,
-                                int x, int y, const char *text)
+static int WL_IntermissionWritePixels(uint8_t *framebuffer,
+                                     const wg_graphics_t *graphics,
+                                     const wl_intermission_chunks_t *chunks,
+                                     int x, int y, const char *text)
 {
-    int origin_x = x * 8;
+    int origin_x = x;
     int draw_x = origin_x;
-    int draw_y = y * 8;
+    int draw_y = y;
 
     while (*text != '\0')
     {
@@ -120,6 +125,15 @@ static int WL_IntermissionWrite(uint8_t *framebuffer,
         draw_x += character == ':' || character == '!' ? 8 : 16;
     }
     return 1;
+}
+
+static int WL_IntermissionWrite(uint8_t *framebuffer,
+                                const wg_graphics_t *graphics,
+                                const wl_intermission_chunks_t *chunks,
+                                int x, int y, const char *text)
+{
+    return WL_IntermissionWritePixels(framebuffer, graphics, chunks,
+                                      x * 8, y * 8, text);
 }
 
 static uint8_t WL_Ratio(uint16_t count, uint16_t total)
@@ -297,4 +311,132 @@ int WL_DrawLevelCompleted(uint8_t *framebuffer,
     length = strlen(text);
     return WL_IntermissionWrite(framebuffer, graphics, &chunks,
                                 36 - (int)length * 2, 7, text);
+}
+
+int WL_VictoryCalculate(const wl_intermission_t ratios[8],
+                        wl_victory_t *victory)
+{
+    unsigned index;
+    unsigned kills = 0U;
+    unsigned secrets = 0U;
+    unsigned treasures = 0U;
+
+    if (ratios == NULL || victory == NULL)
+    {
+        return 0;
+    }
+    memset(victory, 0, sizeof(*victory));
+    for (index = 0U; index < 8U; ++index)
+    {
+        victory->seconds += ratios[index].seconds;
+        kills += ratios[index].kill_ratio;
+        secrets += ratios[index].secret_ratio;
+        treasures += ratios[index].treasure_ratio;
+    }
+    if (victory->seconds > 99U * 60U)
+    {
+        victory->seconds = 99U * 60U;
+    }
+    victory->kill_ratio = (uint8_t)(kills / 8U);
+    victory->secret_ratio = (uint8_t)(secrets / 8U);
+    victory->treasure_ratio = (uint8_t)(treasures / 8U);
+    return 1;
+}
+
+int WL_DrawVictory(uint8_t *framebuffer,
+                   const wg_graphics_t *graphics,
+                   const wg_level_t *level,
+                   const wl_victory_t *victory)
+{
+    wl_intermission_chunks_t chunks;
+    wl_status_t status;
+    wg_font_t font;
+    char text[16];
+    char code[4];
+    unsigned minutes;
+    unsigned seconds;
+    size_t length;
+    int result = 0;
+
+    memset(&font, 0, sizeof(font));
+    if (framebuffer == NULL || graphics == NULL || level == NULL
+        || victory == NULL
+        || !WL_IntermissionChunks(graphics->variant, &chunks))
+    {
+        return 0;
+    }
+    WL_StatusDefaults(&status);
+    status.score = level->score;
+    status.health = level->player_health;
+    status.ammo = level->player_ammo;
+    status.weapon = level->player_weapon;
+    status.lives = level->player_lives;
+    status.keys = level->player_keys;
+    if (!WL_DrawStatusBar(framebuffer, graphics, &status))
+    {
+        return 0;
+    }
+    WG_VideoBar(framebuffer, 0, 0, 320, 160,
+                WL_INTERMISSION_BACKGROUND);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.bj_win, 8, 4)
+        || !WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                 18, 2, "you win!")
+        || !WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                 14, 6, "total time")
+        || !WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                 12, 12, "averages")
+        || !WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                 14, 14, "kill ratio    %")
+        || !WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                 10, 16, "secret ratio    %")
+        || !WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                 6, 18, "treasure ratio    %"))
+    {
+        return 0;
+    }
+    minutes = (unsigned)(victory->seconds / 60U);
+    seconds = (unsigned)(victory->seconds % 60U);
+    (void)snprintf(text, sizeof(text), "%02u:%02u", minutes, seconds);
+    if (!WL_IntermissionWritePixels(framebuffer, graphics, &chunks,
+                                    113, 64, text))
+    {
+        return 0;
+    }
+    (void)snprintf(text, sizeof(text), "%u", victory->kill_ratio);
+    length = strlen(text);
+    if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                              30 - (int)length * 2, 14, text))
+    {
+        return 0;
+    }
+    (void)snprintf(text, sizeof(text), "%u", victory->secret_ratio);
+    length = strlen(text);
+    if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                              30 - (int)length * 2, 16, text))
+    {
+        return 0;
+    }
+    (void)snprintf(text, sizeof(text), "%u", victory->treasure_ratio);
+    length = strlen(text);
+    if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                              30 - (int)length * 2, 18, text))
+    {
+        return 0;
+    }
+    if (level->difficulty < WG_DIFFICULTY_MEDIUM)
+    {
+        return 1;
+    }
+    code[0] = (char)((((minutes / 10U) ^ (minutes % 10U)) ^ 0x0aU) + 'A');
+    code[1] = (char)((((seconds / 10U) ^ (seconds % 10U)) ^ 0x0aU) + 'A');
+    code[2] = (char)((code[0] ^ code[1]) + 'A');
+    code[3] = '\0';
+    if (WG_VideoDrawPicture(framebuffer, graphics, chunks.time_code, 240, 64)
+        && WG_FontOpen(&font, graphics, 0U))
+    {
+        WG_FontDraw(&font, framebuffer, 241, 72, code, 0x47U);
+        result = 1;
+    }
+    WG_FontClose(&font);
+    return result;
 }

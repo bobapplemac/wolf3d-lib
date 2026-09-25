@@ -1954,6 +1954,9 @@ static void TestIntermission(void)
 {
     wg_level_t level;
     wl_intermission_t intermission;
+    wl_intermission_t ratios[8];
+    wl_victory_t victory;
+    unsigned floor;
 
     memset(&level, 0, sizeof(level));
     level.time_count = 75U * 70U;
@@ -1976,6 +1979,20 @@ static void TestIntermission(void)
     CHECK(intermission.bonus == 15000U);
     CHECK(intermission.special_floor == 1U);
     CHECK(!WL_IntermissionCalculate(&level, 60U, &intermission));
+
+    memset(ratios, 0, sizeof(ratios));
+    for (floor = 0U; floor < 8U; ++floor)
+    {
+        ratios[floor].seconds = 60U + floor;
+        ratios[floor].kill_ratio = (uint8_t)(80U + floor);
+        ratios[floor].secret_ratio = (uint8_t)(60U + floor * 2U);
+        ratios[floor].treasure_ratio = 100U;
+    }
+    CHECK(WL_VictoryCalculate(ratios, &victory));
+    CHECK(victory.seconds == 508U);
+    CHECK(victory.kill_ratio == 83U);
+    CHECK(victory.secret_ratio == 67U);
+    CHECK(victory.treasure_ratio == 100U);
 }
 
 static void TestPaletteShifts(void)
