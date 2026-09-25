@@ -80,8 +80,14 @@ dialog. The portable event boundary already provides relative mouse motion and
 three buttons, so Mouse Enabled gates both paths and the selected 0–9 value is
 carried in `wl_input_t` to the original `10/(13-adjustment)` and
 `20/(13-adjustment)` movement calculations. Joystick rows remain authored but
-disabled because no joystick event contract has been added. Customize Controls
-is retained as the next nested control-panel slice.
+disabled because no joystick event contract has been added.
+
+Customize Controls retains the original four presentation columns—Run, Open,
+Fire, and Strafe—and the Left, Right, Forward, and Back movement row. Bindings
+remain IBM set-1 scan codes, so no platform key namespace enters engine code.
+The live input adapter resolves the selected keyboard and mouse bindings into
+`wl_input_t`; mouse-button reassignment preserves the original one-action-per-
+button rule. Joystick values remain visible but disabled.
 
 `WL_PLAY.c` also owns the original demo stream boundary. The four-byte header
 retains its map byte, 16-bit total length, and skipped fourth byte; every

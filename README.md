@@ -109,6 +109,13 @@ Joystick rows remain disabled because the generic event boundary does not yet
 expose a joystick. Use `--control-menu-view` or
 `--mouse-sensitivity-view` for deterministic captures.
 
+`Customize controls` restores the original Mouse, Joystick/Gravis GamePad,
+Keyboard, and movement-key table. The supported mouse and keyboard groups can
+be edited in place: Enter selects a group and field, then the next key or mouse
+button becomes its binding. The original defaults remain Control/Alt/Shift/
+Space, arrow keys, and the three mouse buttons. Capture it with
+`--customize-controls-view`.
+
 The main menu's `Read This!` entry decodes the original 41-page help article
 directly from the selected edition's `VGAGRAPH`. Arrow keys, Enter, and Space
 navigate pages; Escape returns to the control panel. Its first page can be

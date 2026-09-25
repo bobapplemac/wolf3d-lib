@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WOLF3DGENERIC.h"
 #include "WG_AUDIO.h"
 #include "WG_ASSETS.h"
 #include "ID_CA.h"
@@ -2286,6 +2287,12 @@ static void TestScanCodeASCII(void)
     CHECK(ID_US_ScanToASCII(0x02U, 1, 0) == '!');
     CHECK(ID_US_ScanToASCII(0x39U, 0, 0) == ' ');
     CHECK(ID_US_ScanToASCII(0x80U, 0, 0) == 0);
+    CHECK(strcmp(ID_US_ScanName(WG_KEY_CONTROL), "Ctrl") == 0);
+    CHECK(strcmp(ID_US_ScanName(WG_KEY_RIGHT_SHIFT), "RShft") == 0);
+    CHECK(strcmp(ID_US_ScanName(WG_KEY_LEFT), "Left") == 0);
+    CHECK(strcmp(ID_US_ScanName(0x1eU), "A") == 0);
+    CHECK(strcmp(ID_US_ScanName(0x0dU), "+") == 0);
+    CHECK(strcmp(ID_US_ScanName(0x2bU), "|") == 0);
 }
 
 static void TestViewMath(void)
@@ -2605,6 +2612,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t sound_menu_hash = 1469598103934665603ULL;
     uint64_t control_menu_hash = 1469598103934665603ULL;
     uint64_t mouse_sensitivity_hash = 1469598103934665603ULL;
+    uint64_t customize_hash = 1469598103934665603ULL;
     uint64_t episode_menu_hash = 1469598103934665603ULL;
     uint64_t difficulty_menu_hash = 1469598103934665603ULL;
     size_t index;
@@ -2869,6 +2877,35 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                (unsigned long long)mouse_sensitivity_hash);
         CHECK(mouse_sensitivity_hash == 0xf7dc4f44ff382c6bULL);
         CHECK(!WL_DrawMouseSensitivity(framebuffer, &graphics, 10U));
+        {
+            static const uint8_t mouse_bindings[4] =
+                { UINT8_MAX, 2U, 0U, 1U };
+            static const uint16_t action_keys[4] =
+                { WG_KEY_RIGHT_SHIFT, WG_KEY_SPACE,
+                  WG_KEY_CONTROL, WG_KEY_ALT };
+            static const uint16_t movement_keys[4] =
+                { WG_KEY_LEFT, WG_KEY_RIGHT, WG_KEY_UP, WG_KEY_DOWN };
+
+            memset(framebuffer, 0, sizeof(framebuffer));
+            CHECK(WL_DrawCustomizeMenu(
+                framebuffer, &graphics, 0U, 1, mouse_bindings,
+                action_keys, movement_keys, -1, 0));
+            for (index = 0U; index < sizeof(framebuffer); ++index)
+            {
+                customize_hash ^= framebuffer[index];
+                customize_hash *= 1099511628211ULL;
+            }
+            printf("%s customize controls FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)customize_hash);
+            CHECK(customize_hash == (expected_variant
+                  == WG_GAME_WOLF3D_SHAREWARE_14
+                  ? 0xf94ac3381beb5e83ULL : 0x2ac0b2270dc20b66ULL));
+            CHECK(WL_CustomMenuMove(0U, 1, 1) == 6U);
+            CHECK(WL_CustomMenuMove(6U, 1, 1) == 8U);
+            CHECK(WL_CustomMenuMove(8U, 1, 1) == 0U);
+            CHECK(WL_CustomMenuMove(6U, -1, 0) == 8U);
+        }
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawEpisodeMenu(
             framebuffer, &graphics, 0U,

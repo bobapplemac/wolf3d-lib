@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "ID_VH.h"
+#include "ID_US_1.h"
 #include "ID_VL.h"
 
 #define WL_MENU_BORDER_COLOR 0x29U
@@ -33,6 +34,11 @@
 #define WL_CONTROL_WIDTH 284
 #define WL_CONTROL_HEIGHT (13 * 7 - 7)
 
+#define WL_CUSTOM_X 8
+#define WL_CUSTOM_Y (48 + 26)
+#define WL_CUSTOM_START 60
+#define WL_CUSTOM_SPACING 60
+
 typedef struct wl_menu_chunks
 {
     size_t options;
@@ -46,6 +52,7 @@ typedef struct wl_menu_chunks
     size_t digitized_title;
     size_t music_title;
     size_t control_title;
+    size_t customize_title;
 } wl_menu_chunks_t;
 
 typedef struct wl_menu_item
@@ -73,6 +80,7 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->digitized_title = 16U;
         chunks->music_title = 17U;
         chunks->control_title = 26U;
+        chunks->customize_title = 27U;
         return 1;
     }
     if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
@@ -89,6 +97,7 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->digitized_title = 27U;
         chunks->music_title = 28U;
         chunks->control_title = 37U;
+        chunks->customize_title = 38U;
         return 1;
     }
     return 0;
@@ -491,6 +500,210 @@ int WL_DrawMouseSensitivity(uint8_t framebuffer[320 * 200],
                WL_MENU_READ_HIGHLIGHT_COLOR);
     WG_FontClose(&font);
     return 1;
+}
+
+static int WL_CustomMenuActive(unsigned item, int mouse_enabled)
+{
+    return item == 6U || item == 8U || (item == 0U && mouse_enabled);
+}
+
+unsigned WL_CustomMenuMove(unsigned selected, int direction,
+                           int mouse_enabled)
+{
+    unsigned candidate;
+
+    if (selected >= WL_CUSTOM_MENU_ITEMS || direction == 0)
+    {
+        return selected;
+    }
+    candidate = selected;
+    do
+    {
+        if (direction < 0)
+        {
+            candidate = candidate == 0U ? WL_CUSTOM_MENU_ITEMS - 1U
+                                        : candidate - 1U;
+        }
+        else
+        {
+            candidate = candidate + 1U == WL_CUSTOM_MENU_ITEMS
+                            ? 0U : candidate + 1U;
+        }
+    } while (!WL_CustomMenuActive(candidate, mouse_enabled));
+    return candidate;
+}
+
+static void WL_CustomLabels(const wg_font_t *font, uint8_t *framebuffer,
+                            int y, const char *const labels[4])
+{
+    unsigned index;
+
+    for (index = 0U; index < 4U; ++index)
+    {
+        WG_FontDraw(font, framebuffer,
+                    WL_CUSTOM_START + (int)index * WL_CUSTOM_SPACING,
+                    y, labels[index], WL_MENU_TEXT_COLOR);
+    }
+}
+
+static void WL_CustomWindow(uint8_t *framebuffer, int y)
+{
+    WL_MenuBar(framebuffer, 5, y - 1, 310, 13,
+               WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, 5, y - 1, 310, 13);
+}
+
+static void WL_CustomCentered(const wg_font_t *font, uint8_t *framebuffer,
+                              int y, const char *text)
+{
+    size_t width = WG_FontMeasure(font, text);
+
+    WG_FontDraw(font, framebuffer, (320 - (int)width) / 2, y, text,
+                WL_MENU_READ_COLOR);
+}
+
+int WL_DrawCustomizeMenu(
+    uint8_t framebuffer[320 * 200], const wg_graphics_t *graphics,
+    unsigned selected, int mouse_enabled,
+    const uint8_t mouse_bindings[WL_CUSTOM_BINDINGS],
+    const uint16_t action_keys[WL_CUSTOM_BINDINGS],
+    const uint16_t movement_keys[WL_CUSTOM_BINDINGS],
+    int edit_column, int capture)
+{
+    static const char *const action_labels[4] =
+        { "Run", "Open", "Fire", "Strafe" };
+    static const char *const movement_labels[4] =
+        { "Left", "Right", "Frwd", "Bkwrd" };
+    static const uint8_t joystick_bindings[4] = { 3U, 2U, 0U, 1U };
+    wl_menu_chunks_t chunks;
+    wg_font_t font;
+    unsigned index;
+    int edit_y = 0;
+
+    if (framebuffer == NULL || graphics == NULL
+        || mouse_bindings == NULL || action_keys == NULL
+        || movement_keys == NULL || selected >= WL_CUSTOM_MENU_ITEMS
+        || !WL_CustomMenuActive(selected, mouse_enabled)
+        || edit_column < -1 || edit_column >= 4
+        || !WL_MenuChunks(graphics->variant, &chunks)
+        || !WG_FontOpen(&font, graphics, 1U))
+    {
+        return 0;
+    }
+    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
+                             112, 184))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    WL_MenuBar(framebuffer, 0, 10, 320, 24, 0U);
+    WL_MenuBar(framebuffer, 0, 32, 320, 1, WL_MENU_STRIPE_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.customize_title,
+                             80, 0))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+
+    WL_CustomCentered(&font, framebuffer, 48, "Mouse");
+    WL_CustomLabels(&font, framebuffer, 61, action_labels);
+    WL_CustomWindow(framebuffer, 74);
+    for (index = 0U; index < 4U; ++index)
+    {
+        char binding[3];
+
+        if (mouse_bindings[index] >= 4U)
+        {
+            continue;
+        }
+        binding[0] = 'b';
+        binding[1] = (char)('0' + mouse_bindings[index]);
+        binding[2] = '\0';
+        WG_FontDraw(&font, framebuffer,
+                    WL_CUSTOM_START + (int)index * WL_CUSTOM_SPACING,
+                    74, binding,
+                    mouse_enabled
+                        ? (selected == 0U ? WL_MENU_HIGHLIGHT_COLOR
+                                          : WL_MENU_TEXT_COLOR)
+                        : WL_MENU_DEACTIVE_COLOR);
+    }
+
+    WL_CustomCentered(&font, framebuffer, 87,
+                      "Joystick/Gravis GamePad");
+    WL_CustomLabels(&font, framebuffer, 100, action_labels);
+    WL_CustomWindow(framebuffer, 113);
+    for (index = 0U; index < 4U; ++index)
+    {
+        char binding[3] = { 'b', (char)('0' + joystick_bindings[index]), '\0' };
+
+        WG_FontDraw(&font, framebuffer,
+                    WL_CUSTOM_START + (int)index * WL_CUSTOM_SPACING,
+                    113, binding, WL_MENU_DEACTIVE_COLOR);
+    }
+
+    WL_CustomCentered(&font, framebuffer, 126, "Keyboard");
+    WL_CustomLabels(&font, framebuffer, 139, action_labels);
+    WL_CustomWindow(framebuffer, 152);
+    for (index = 0U; index < 4U; ++index)
+    {
+        WG_FontDraw(&font, framebuffer,
+                    WL_CUSTOM_START + (int)index * WL_CUSTOM_SPACING,
+                    152, ID_US_ScanName(action_keys[index]),
+                    selected == 6U ? WL_MENU_HIGHLIGHT_COLOR
+                                   : WL_MENU_TEXT_COLOR);
+    }
+
+    WL_CustomLabels(&font, framebuffer, 165, movement_labels);
+    WL_CustomWindow(framebuffer, 178);
+    for (index = 0U; index < 4U; ++index)
+    {
+        WG_FontDraw(&font, framebuffer,
+                    WL_CUSTOM_START + (int)index * WL_CUSTOM_SPACING,
+                    178, ID_US_ScanName(movement_keys[index]),
+                    selected == 8U ? WL_MENU_HIGHLIGHT_COLOR
+                                   : WL_MENU_TEXT_COLOR);
+    }
+
+    if (edit_column >= 0)
+    {
+        int edit_x = WL_CUSTOM_START + edit_column * WL_CUSTOM_SPACING;
+
+        edit_y = selected == 0U ? 74 : selected == 6U ? 152 : 178;
+        WL_MenuBar(framebuffer, edit_x - 2, edit_y, WL_CUSTOM_SPACING, 11,
+                   WL_MENU_TEXT_COLOR);
+        WL_ColorOutline(framebuffer, edit_x - 2, edit_y,
+                        WL_CUSTOM_SPACING, 11, 0U,
+                        WL_MENU_HIGHLIGHT_COLOR);
+        if (capture)
+        {
+            WG_FontDraw(&font, framebuffer, edit_x, edit_y + 1, "?", 0U);
+        }
+        else if (selected == 0U)
+        {
+            char binding[3] = { 'b', '?', '\0' };
+
+            if (mouse_bindings[edit_column] < 4U)
+            {
+                binding[1] = (char)('0' + mouse_bindings[edit_column]);
+                WG_FontDraw(&font, framebuffer, edit_x, edit_y + 1,
+                            binding, 0U);
+            }
+        }
+        else
+        {
+            const uint16_t *keys = selected == 6U
+                                       ? action_keys : movement_keys;
+            WG_FontDraw(&font, framebuffer, edit_x, edit_y + 1,
+                        ID_US_ScanName(keys[edit_column]), 0U);
+        }
+    }
+    WG_FontClose(&font);
+    return edit_column >= 0
+               || WG_VideoDrawPicture(framebuffer, graphics, chunks.cursor,
+                                      WL_CUSTOM_X,
+                                      WL_CUSTOM_Y - 2
+                                          + (int)selected * 13);
 }
 
 unsigned WL_EpisodeMenuMove(unsigned episode, int direction)

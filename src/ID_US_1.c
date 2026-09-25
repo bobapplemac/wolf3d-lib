@@ -79,3 +79,62 @@ char ID_US_ScanToASCII(uint16_t scan_code, int shifted, int caps_lock)
     }
     return (char)character;
 }
+
+const char *ID_US_ScanName(uint16_t scan_code)
+{
+    static char single[2];
+    char character;
+
+    switch (scan_code)
+    {
+        case 0x01U: return "Esc";
+        case 0x0dU: return "+";
+        case 0x0eU: return "BkSp";
+        case 0x0fU: return "Tab";
+        case 0x1cU: return "Enter";
+        case 0x1dU: return "Ctrl";
+        case 0x2aU: return "LShft";
+        case 0x2bU: return "|";
+        case 0x36U: return "RShft";
+        case 0x37U: return "PrtSc";
+        case 0x38U: return "Alt";
+        case 0x39U: return "Space";
+        case 0x3aU: return "CapsLk";
+        case 0x3bU: return "F1";
+        case 0x3cU: return "F2";
+        case 0x3dU: return "F3";
+        case 0x3eU: return "F4";
+        case 0x3fU: return "F5";
+        case 0x40U: return "F6";
+        case 0x41U: return "F7";
+        case 0x42U: return "F8";
+        case 0x43U: return "F9";
+        case 0x44U: return "F10";
+        case 0x45U: return "NumLk";
+        case 0x46U: return "ScrlLk";
+        case 0x47U: return "Home";
+        case 0x48U: return "Up";
+        case 0x49U: return "PgUp";
+        case 0x4aU: return "-";
+        case 0x4bU: return "Left";
+        case 0x4cU: return "5";
+        case 0x4dU: return "Right";
+        case 0x4eU: return "+";
+        case 0x4fU: return "End";
+        case 0x50U: return "Down";
+        case 0x51U: return "PgDn";
+        case 0x52U: return "Ins";
+        case 0x53U: return "Del";
+        case 0x57U: return "F11";
+        case 0x58U: return "F12";
+        default: break;
+    }
+    character = ID_US_ScanToASCII(scan_code, 0, 1);
+    if (character < 32 || character >= 127)
+    {
+        return "?";
+    }
+    single[0] = character;
+    single[1] = '\0';
+    return single;
+}

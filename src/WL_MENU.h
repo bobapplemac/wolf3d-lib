@@ -9,6 +9,8 @@
 #define WL_MAIN_MENU_DEFAULT_ITEM 6U
 #define WL_SOUND_MENU_ITEMS 12U
 #define WL_CONTROL_MENU_ITEMS 6U
+#define WL_CUSTOM_MENU_ITEMS 9U
+#define WL_CUSTOM_BINDINGS 4U
 
 int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                     const wg_graphics_t *graphics, unsigned selected,
@@ -26,6 +28,15 @@ unsigned WL_ControlMenuMove(unsigned selected, int direction,
 int WL_DrawMouseSensitivity(uint8_t framebuffer[320 * 200],
                             const wg_graphics_t *graphics,
                             unsigned adjustment);
+int WL_DrawCustomizeMenu(
+    uint8_t framebuffer[320 * 200], const wg_graphics_t *graphics,
+    unsigned selected, int mouse_enabled,
+    const uint8_t mouse_bindings[WL_CUSTOM_BINDINGS],
+    const uint16_t action_keys[WL_CUSTOM_BINDINGS],
+    const uint16_t movement_keys[WL_CUSTOM_BINDINGS],
+    int edit_column, int capture);
+unsigned WL_CustomMenuMove(unsigned selected, int direction,
+                           int mouse_enabled);
 int WL_DrawEpisodeMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned episode,
                        int shareware);

@@ -257,6 +257,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --mouse-sensitivity-view --frame-hash)
         set_tests_properties(mouse-sensitivity-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "f7dc4f44ff382c6b")
+        add_test(NAME customize-controls-view-wl1
+            COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view
+            --customize-controls-view --frame-hash)
+        set_tests_properties(customize-controls-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "f94ac3381beb5e83")
         add_test(NAME credits-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --credits-view
             --frame-hash)
@@ -441,6 +447,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --mouse-sensitivity-view --frame-hash)
         set_tests_properties(mouse-sensitivity-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "f7dc4f44ff382c6b")
+        add_test(NAME customize-controls-view-wl6
+            COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view
+            --customize-controls-view --frame-hash)
+        set_tests_properties(customize-controls-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "2ac0b2270dc20b66")
         add_test(NAME credits-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --credits-view
             --frame-hash)

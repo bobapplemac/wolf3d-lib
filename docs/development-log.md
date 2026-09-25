@@ -1034,3 +1034,27 @@ Regenerate the captures with:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --control-menu-view --frame-hash --dump-frame out\control-menu.ppm
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --mouse-sensitivity-view --frame-hash --dump-frame out\mouse-sensitivity.ppm
 ```
+
+## 2026-09-25: Custom control bindings
+
+- Restored the original Customize plaque and four-group table: Mouse,
+  Joystick/Gravis GamePad, Keyboard actions, and keyboard movement. Authored
+  labels, binding windows, disabled joystick values, cursor placement, and the
+  mouse legend all come from the original layout.
+- Added the original set-1 scan-code names and defaults. Keyboard action and
+  movement fields can be selected horizontally and rebound to the next key;
+  mouse Open, Fire, and Strafe fields can likewise be rebound to buttons 0–2.
+  Reusing a mouse button clears its previous action as the DOS code did.
+- Gameplay now resolves Run, Open, Fire, Strafe, four movement directions, and
+  mouse buttons through those bindings rather than fixed host keys. Weapon
+  number keys retain their original fixed behavior.
+- Added renderer hashes `f94ac3381beb5e83` (WL1) and `2ac0b2270dc20b66`
+  (WL6), plus scan-name and menu-navigation regression coverage.
+
+![Original Wolfenstein 3D custom-control table](../out/customize-controls.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --customize-controls-view --frame-hash --dump-frame out\customize-controls.ppm
+```
