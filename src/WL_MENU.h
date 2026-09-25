@@ -14,11 +14,20 @@
 #define WL_VIEW_SIZE_MIN 4U
 #define WL_VIEW_SIZE_MAX 19U
 #define WL_VIEW_SIZE_DEFAULT 15U
+#define WL_SAVE_SLOTS 10U
+#define WL_SAVE_NAME_LENGTH 31U
 
 int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                     const wg_graphics_t *graphics, unsigned selected,
                     int in_game);
 unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game);
+int WL_DrawLoadSaveMenu(
+    uint8_t framebuffer[320 * 200], const wg_graphics_t *graphics,
+    int saving, unsigned selected,
+    const uint8_t available[WL_SAVE_SLOTS],
+    const char names[WL_SAVE_SLOTS][WL_SAVE_NAME_LENGTH + 1U],
+    int editing, int confirm_overwrite);
+unsigned WL_LoadSaveMenuMove(unsigned selected, int direction);
 int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                      const wg_graphics_t *graphics, unsigned selected,
                      int adlib_effects, int digitized, int music);

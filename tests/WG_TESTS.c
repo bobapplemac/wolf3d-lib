@@ -22,6 +22,7 @@
 #include "WL_INTER.h"
 #include "WL_TEXT.h"
 #include "WG_RENDERER.h"
+#include "WG_SAVE.h"
 #include "WL_SCALE.h"
 #include "WL_STATE.h"
 #include "ID_VL.h"
@@ -2063,6 +2064,9 @@ static void TestMenuMovement(void)
     CHECK(WL_EpisodeMenuMove(5U, 1) == 0U);
     CHECK(WL_DifficultyMenuMove(0U, -1) == 3U);
     CHECK(WL_DifficultyMenuMove(3U, 1) == 0U);
+    CHECK(WL_LoadSaveMenuMove(0U, -1) == 9U);
+    CHECK(WL_LoadSaveMenuMove(9U, 1) == 0U);
+    CHECK(WL_LoadSaveMenuMove(4U, 0) == 4U);
 }
 
 static void TestPaletteShifts(void)
@@ -3475,6 +3479,128 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     WG_DataClose(&data_set);
 }
 
+static void TestPortableSave(void)
+{
+    uint8_t encoded[WG_SAVE_BUFFER_SIZE];
+    char name[WG_SAVE_NAME_BYTES] = "E1L1 - CELL BLOCK";
+    char decoded_name[WG_SAVE_NAME_BYTES];
+    wg_save_state_t source;
+    wg_save_state_t decoded;
+    size_t encoded_size = 0U;
+    size_t index;
+    uint64_t encoded_hash = 1469598103934665603ULL;
+
+    memset(&source, 0, sizeof(source));
+    memset(&decoded, 0, sizeof(decoded));
+    source.map_number = 0U;
+    source.level_start_score = 1234U;
+    source.level.map_number = 0U;
+    source.level.difficulty = WG_DIFFICULTY_HARD;
+    source.level.player_x = -1234567;
+    source.level.player_y = 7654321;
+    source.level.player_angle_fraction = -99;
+    source.level.player_angle = 357U;
+    source.level.player_tile_x = 12U;
+    source.level.player_tile_y = 34U;
+    source.level.player_health = 87U;
+    source.level.player_ammo = 43U;
+    source.level.player_keys = 3U;
+    source.level.player_lives = 2U;
+    source.level.score = 76500U;
+    source.level.next_extra = 80000U;
+    source.level.time_count = 9876U;
+    source.level.kill_count = 4U;
+    source.level.kill_total = 11U;
+    source.level.treasure_count = 2U;
+    source.level.treasure_total = 7U;
+    source.level.secret_count = 1U;
+    source.level.secret_total = 3U;
+    source.level.view_width = 240U;
+    source.level.pushwall_state = 42U;
+    source.level.pushwall_x = 10U;
+    source.level.pushwall_y = 20U;
+    source.level.pushwall_direction = 2U;
+    source.level.random.index = 71U;
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        source.level.tiles[index] = (uint8_t)(index * 3U);
+        source.level.areas[index] = (uint8_t)(index % WG_NUM_AREAS);
+        source.level.ambush_tiles[index] = (uint8_t)(index & 1U);
+        source.level.info[index] = (uint16_t)(index * 17U);
+    }
+    for (index = 0U; index < WG_NUM_AREAS; ++index)
+    {
+        source.level.area_by_player[index] = (uint8_t)(index & 1U);
+    }
+    source.level.door_count = 1U;
+    source.level.doors[0].position = 32768U;
+    source.level.doors[0].tic_count = 123U;
+    source.level.doors[0].tile_x = 8U;
+    source.level.doors[0].tile_y = 9U;
+    source.level.doors[0].vertical = 1U;
+    source.level.doors[0].lock = WG_DOOR_LOCK_1;
+    source.level.doors[0].action = WG_DOOR_OPENING;
+    source.level.static_count = 1U;
+    source.level.statics[0].tile_x = 18U;
+    source.level.statics[0].tile_y = 19U;
+    source.level.statics[0].blocking = 1U;
+    source.level.statics[0].shape = 29U;
+    source.level.statics[0].item = WG_ITEM_CHAINGUN;
+    source.level.actor_count = 1U;
+    source.level.actors[0].x = 100000;
+    source.level.actors[0].y = -200000;
+    source.level.actors[0].shape = 108U;
+    source.level.actors[0].tile_x = 21U;
+    source.level.actors[0].tile_y = 22U;
+    source.level.actors[0].direction = 5U;
+    source.level.actors[0].flags = WG_ACTOR_FLAG_SHOOTABLE
+                                  | WG_ACTOR_FLAG_ATTACK_MODE;
+    source.level.actors[0].tic_count = -7;
+    source.level.actors[0].speed = 512;
+    source.level.actors[0].hit_points = 25;
+    source.level.actors[0].state = WG_STATE_CHASE2;
+    source.level.actors[0].actor_class = WG_ACTOR_GUARD;
+    source.level_ratios[0].seconds = 75U;
+    source.level_ratios[0].bonus = 10000U;
+    source.level_ratios[0].par_seconds = 90U;
+    source.level_ratios[0].kill_ratio = 100U;
+    source.level_ratios[0].secret_ratio = 50U;
+    source.level_ratios[0].treasure_ratio = 75U;
+
+    CHECK(WG_SaveEncode(encoded, sizeof(encoded), &encoded_size,
+                        name, WG_GAME_WOLF3D_FULL_GT_14, &source));
+    CHECK(encoded_size > 20000U && encoded_size < sizeof(encoded));
+    for (index = 0U; index < encoded_size; ++index)
+    {
+        encoded_hash ^= encoded[index];
+        encoded_hash *= 1099511628211ULL;
+    }
+    CHECK(encoded_hash == 0xedaa73019f926cd8ULL);
+    CHECK(WG_SaveReadName(encoded, encoded_size,
+                          WG_GAME_WOLF3D_FULL_GT_14, decoded_name));
+    CHECK(strcmp(decoded_name, name) == 0);
+    CHECK(WG_SaveDecode(encoded, encoded_size,
+                        WG_GAME_WOLF3D_FULL_GT_14,
+                        decoded_name, &decoded));
+    CHECK(strcmp(decoded_name, name) == 0);
+    CHECK(decoded.map_number == source.map_number);
+    CHECK(decoded.level_start_score == source.level_start_score);
+    CHECK(memcmp(&decoded.level, &source.level,
+                 sizeof(source.level)) == 0);
+    CHECK(memcmp(decoded.level_ratios, source.level_ratios,
+                 sizeof(source.level_ratios)) == 0);
+    CHECK(!WG_SaveDecode(encoded, encoded_size,
+                         WG_GAME_WOLF3D_SHAREWARE_14,
+                         decoded_name, &decoded));
+    CHECK(!WG_SaveDecode(encoded, encoded_size - 1U,
+                         WG_GAME_WOLF3D_FULL_GT_14,
+                         decoded_name, &decoded));
+    encoded[WG_SAVE_NAME_BYTES + 20U] ^= 0x80U;
+    CHECK(!WG_SaveDecode(encoded, encoded_size,
+                         WG_GAME_WOLF3D_FULL_GT_14,
+                         decoded_name, &decoded));
+}
+
 int main(int argc, char **argv)
 {
     TestIMFSequencer();
@@ -3506,6 +3632,7 @@ int main(int argc, char **argv)
     TestDemoFormat();
     TestIntermission();
     TestMenuMovement();
+    TestPortableSave();
     TestPaletteShifts();
     TestPlayerDeathCamera();
     TestViewMath();

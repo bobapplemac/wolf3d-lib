@@ -35,6 +35,7 @@ They are deliberately small portability or safety layers:
 | New file group | Reason it is new |
 | --- | --- |
 | `WG_DATA`, `WG_FILE`, `WG_ENDIAN` | Checked host filesystem and byte-order boundary |
+| `WG_SAVE` | Versioned, pointer-free portable save-game encoding |
 | `WG_GRAPHICS`, `WG_MAPS`, `WG_AUDIO` | Owned, bounded resource objects replacing cache globals and far pointers |
 | `WG_ASSETS` | Safe conversion from VSWAP-native wall/sprite layouts |
 | `WG_FIXED` | Fixed-width helper independent of compiler integer models |

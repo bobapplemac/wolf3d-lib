@@ -42,6 +42,7 @@ set(WG_CORE_SOURCES
     src/WL_INTER.c
     src/WL_TEXT.c
     src/WG_RENDERER.c
+    src/WG_SAVE.c
     src/WL_SCALE.c
     src/ID_VL.c
     src/WL_MAIN.c
@@ -241,6 +242,21 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(main-menu-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "cdbff8b31548b64e")
+        add_test(NAME in-game-menu-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --in-game-menu-view
+            --frame-hash)
+        set_tests_properties(in-game-menu-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "1f8180a8ad0a0552")
+        add_test(NAME load-game-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --load-game-view
+            --frame-hash)
+        set_tests_properties(load-game-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "a0188da801550518")
+        add_test(NAME save-game-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --save-game-view
+            --frame-hash)
+        set_tests_properties(save-game-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "d81cecaa1eef0887")
         add_test(NAME sound-menu-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --sound-menu-view
             --frame-hash)
@@ -443,6 +459,21 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(main-menu-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "cdbff8b31548b64e")
+        add_test(NAME in-game-menu-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --in-game-menu-view
+            --frame-hash)
+        set_tests_properties(in-game-menu-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "1f8180a8ad0a0552")
+        add_test(NAME load-game-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --load-game-view
+            --frame-hash)
+        set_tests_properties(load-game-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "d81cecaa1eef0887")
+        add_test(NAME save-game-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --save-game-view
+            --frame-hash)
+        set_tests_properties(save-game-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "55f762913ddab4c7")
         add_test(NAME sound-menu-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --sound-menu-view
             --frame-hash)

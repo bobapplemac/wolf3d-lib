@@ -51,7 +51,9 @@ The title sequence retains `NAZI_NOR_MUS`; the control panel uses
 
 Add `--play-view` to enter the current interactive game session. The original
 keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
-Shift runs, Control attacks, Space uses, 1-4 select weapons, and Escape quits.
+Shift runs, Control attacks, Space uses, and 1-4 select weapons. Escape opens
+the in-game control panel; `Back to Game` or a second Escape resumes the exact
+paused session.
 Raw mouse motion turns and moves with the original default sensitivity; left
 button attacks, right button strafes, and middle button uses.
 The Pause key displays the original pause plaque, freezes game tics, and
@@ -95,6 +97,14 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --main-menu-v
 
 Use `--episode-menu-view` or `--difficulty-menu-view` in place of
 `--main-menu-view` to capture the two New Game panels.
+
+`Load Game` and the in-game-only `Save Game` row restore the original ten-slot
+panels, arrow-key navigation, slot-name entry, and `SAVEGAM?.WL1`/`.WL6`
+filenames in the process working directory. The portable payload is explicitly
+little-endian, versioned, edition-tagged, and checksummed; it intentionally does
+not reproduce the DOS executable's pointer-sized raw structure dump, so original
+DOS save payloads are not interchangeable. Use `--in-game-menu-view`,
+`--load-game-view`, or `--save-game-view` for deterministic captures.
 
 The Sound row opens the original three-section device panel. `None` and the
 currently implemented AdLib, Sound Blaster, and music choices take effect

@@ -65,7 +65,20 @@ then four difficulty rows with selection-specific BJ portraits. Apogee
 shareware exposes the unavailable episodes in their locked color but only
 accepts Episode 1. The selected episode becomes its first map and the selected
 difficulty is passed into level construction, enemy filtering, hit points, and
-baby-mode damage. Load/save persistence remains a subsequent menu slice.
+baby-mode damage. Escape during ordinary play now enters this same control
+panel with `Save Game` enabled and `Back to Game` selected; simulation tics and
+the IMF sequencer pause without destroying the owned map session.
+
+The Load/Save slice retains `WL_MENU.C`'s ten outlined slots, font-0 names,
+authored title plaques, wrapping cursor, and `SAVEGAM?.WL1`/`.WL6` naming. The
+original `SaveTheGame` wrote compiler-layout structures and reconstructed
+16-bit near pointers while loading. `WG_SAVE.c` is the narrow modernization
+boundary: every integer and enum is encoded explicitly little-endian, array
+counts are bounded, transient sound events are discarded, and a version,
+edition tag, and checksum reject incompatible or damaged data. The complete
+runtime level, campaign score/lives/weapons, doors, statics, actors, pushwall,
+random-table position, and eight floor ratios round-trip without depending on
+host pointer size or structure padding.
 
 The Sound slice preserves `SndMenu`'s twelve-row layout and three device
 groups. It exposes only real engine capabilities: Nuked-OPL3 effects,

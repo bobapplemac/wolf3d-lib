@@ -86,6 +86,24 @@ int WG_LoadFile(const char *path, wg_file_buffer_t *buffer)
     return 1;
 }
 
+int WG_WriteFile(const char *path, const void *data, size_t size)
+{
+    FILE *stream;
+    size_t bytes_written;
+
+    if (path == NULL || (data == NULL && size != 0U))
+    {
+        return 0;
+    }
+    stream = WG_OpenFile(path, "wb");
+    if (stream == NULL)
+    {
+        return 0;
+    }
+    bytes_written = fwrite(data, 1, size, stream);
+    return fclose(stream) == 0 && bytes_written == size;
+}
+
 void WG_FreeFile(wg_file_buffer_t *buffer)
 {
     if (buffer == NULL)

@@ -1084,3 +1084,39 @@ Regenerate the captures with:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --change-view --frame-hash --dump-frame out\change-view.ppm
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --view-size 15 --frame-hash --dump-frame out\default-view.ppm
 ```
+
+## 2026-09-25: In-game control panel and portable saves
+
+- Restored the in-game `US_ControlPanel` path. Escape freezes the 70 Hz
+  simulation, clears held input, pauses the existing IMF stream without losing
+  its sequencer position, and opens the original panel with `Save Game` active
+  and `Back to Game` selected. Returning redraws the same live map session.
+- Restored `DrawLoadSaveScreen` and `PrintLSEntry`: the authored Load/Save
+  plaques, ten font-0 slot boxes, empty labels, mouse legend, and gun cursor use
+  the original coordinates for both supplied editions. Slot selection wraps,
+  and save names accept original set-1 keyboard input.
+- Added `WG_SAVE.c` as the intentionally new portability boundary. Unlike the
+  DOS raw-structure/pointer dump, the format explicitly encodes fixed-width
+  little-endian state, validates collection bounds and edition, and protects
+  the payload with an FNV-1a checksum. Tests round-trip map arrays, player and
+  campaign data, floor ratios, doors, statics, actors, pushwall state, and RNG;
+  truncated, corrupt, and wrong-edition inputs are rejected. The nontrivial
+  encoded fixture hashes to `edaa73019f926cd8` identically on x86 and x64.
+- Added deterministic in-game-menu hash `1f8180a8ad0a0552`; Load hashes are
+  `a0188da801550518` (WL1) and `d81cecaa1eef0887` (WL6), while Save hashes are
+  `d81cecaa1eef0887` (WL1) and `55f762913ddab4c7` (WL6). All 85 tests pass in
+  MSVC x86 and x64 builds.
+
+![Original in-game control panel](../out/in-game-menu.png)
+
+![Original Load Game panel](../out/load-game.png)
+
+![Original Save Game panel](../out/save-game.png)
+
+Regenerate the captures with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --in-game-menu-view --frame-hash --dump-frame out\in-game-menu.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --load-game-view --frame-hash --dump-frame out\load-game.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-view --frame-hash --dump-frame out\save-game.ppm
+```

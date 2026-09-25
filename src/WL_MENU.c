@@ -40,6 +40,12 @@
 #define WL_CUSTOM_START 60
 #define WL_CUSTOM_SPACING 60
 
+#define WL_LOAD_SAVE_X 85
+#define WL_LOAD_SAVE_Y 55
+#define WL_LOAD_SAVE_WIDTH 175
+#define WL_LOAD_SAVE_HEIGHT (10 * 13 + 10)
+#define WL_LOAD_SAVE_INDENT 24
+
 typedef struct wl_menu_chunks
 {
     size_t options;
@@ -54,6 +60,8 @@ typedef struct wl_menu_chunks
     size_t music_title;
     size_t control_title;
     size_t customize_title;
+    size_t load_title;
+    size_t save_title;
 } wl_menu_chunks_t;
 
 typedef struct wl_menu_item
@@ -82,6 +90,8 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->music_title = 17U;
         chunks->control_title = 26U;
         chunks->customize_title = 27U;
+        chunks->load_title = 28U;
+        chunks->save_title = 29U;
         return 1;
     }
     if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
@@ -99,6 +109,8 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->music_title = 28U;
         chunks->control_title = 37U;
         chunks->customize_title = 38U;
+        chunks->load_title = 39U;
+        chunks->save_title = 40U;
         return 1;
     }
     return 0;
@@ -248,6 +260,132 @@ unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game)
         }
     } while (items[candidate].active == 0U);
     return candidate;
+}
+
+int WL_DrawLoadSaveMenu(
+    uint8_t framebuffer[320 * 200], const wg_graphics_t *graphics,
+    int saving, unsigned selected,
+    const uint8_t available[WL_SAVE_SLOTS],
+    const char names[WL_SAVE_SLOTS][WL_SAVE_NAME_LENGTH + 1U],
+    int editing, int confirm_overwrite)
+{
+    static const char empty[] = "      - EMPTY -";
+    wl_menu_chunks_t chunks;
+    wg_font_t font;
+    unsigned index;
+
+    if (framebuffer == NULL || graphics == NULL
+        || selected >= WL_SAVE_SLOTS || available == NULL || names == NULL
+        || !WL_MenuChunks(graphics->variant, &chunks)
+        || !WG_FontOpen(&font, graphics, 0U))
+    {
+        return 0;
+    }
+    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
+                             112, 184))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    WL_MenuBar(framebuffer, WL_LOAD_SAVE_X - 10, WL_LOAD_SAVE_Y - 5,
+               WL_LOAD_SAVE_WIDTH, WL_LOAD_SAVE_HEIGHT,
+               WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, WL_LOAD_SAVE_X - 10,
+                   WL_LOAD_SAVE_Y - 5, WL_LOAD_SAVE_WIDTH,
+                   WL_LOAD_SAVE_HEIGHT);
+    WL_MenuBar(framebuffer, 0, 10, 320, 24, 0U);
+    WL_MenuBar(framebuffer, 0, 32, 320, 1, WL_MENU_STRIPE_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics,
+                             saving ? chunks.save_title : chunks.load_title,
+                             60, 0))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    for (index = 0U; index < WL_SAVE_SLOTS; ++index)
+    {
+        uint8_t color = index == selected ? WL_MENU_HIGHLIGHT_COLOR
+                                          : WL_MENU_TEXT_COLOR;
+        int x = WL_LOAD_SAVE_X + WL_LOAD_SAVE_INDENT;
+        int y = WL_LOAD_SAVE_Y + (int)index * 13;
+
+        WL_ColorOutline(framebuffer, x, y,
+                        WL_LOAD_SAVE_WIDTH - WL_LOAD_SAVE_INDENT - 15,
+                        11, color, color);
+        WG_FontDraw(&font, framebuffer, x + 2, y + 1,
+                    available[index] ? names[index] : empty, color);
+        if (editing && index == selected)
+        {
+            WG_FontDraw(&font, framebuffer,
+                        x + 2 + (int)WG_FontMeasure(&font, names[index]),
+                        y + 1, "_", color);
+        }
+    }
+    WG_FontClose(&font);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.cursor,
+                             WL_LOAD_SAVE_X & ~7,
+                             WL_LOAD_SAVE_Y - 2 + (int)selected * 13))
+    {
+        return 0;
+    }
+    if (confirm_overwrite)
+    {
+        static const char *const lines[] =
+        {
+            "There's already a game",
+            "saved at this position.",
+            "      Overwrite?"
+        };
+        size_t widest = 0U;
+        unsigned line;
+        int width;
+        int height;
+        int x;
+        int y;
+
+        if (!WG_FontOpen(&font, graphics, 1U))
+        {
+            return 0;
+        }
+        for (line = 0U; line < 3U; ++line)
+        {
+            size_t line_width = WG_FontMeasure(&font, lines[line]);
+            if (line_width > widest)
+            {
+                widest = line_width;
+            }
+        }
+        width = (int)widest + 10;
+        height = (int)font.height * 3 + 10;
+        x = (320 - width) / 2;
+        y = (200 - height) / 2;
+        WL_MenuBar(framebuffer, x, y, width, height,
+                   WL_MENU_TEXT_COLOR);
+        WL_ColorOutline(framebuffer, x, y, width, height,
+                        0U, WL_MENU_HIGHLIGHT_COLOR);
+        for (line = 0U; line < 3U; ++line)
+        {
+            WG_FontDraw(&font, framebuffer, x + 5,
+                        y + 5 + (int)line * (int)font.height,
+                        lines[line], 0U);
+        }
+        WG_FontClose(&font);
+    }
+    return 1;
+}
+
+unsigned WL_LoadSaveMenuMove(unsigned selected, int direction)
+{
+    if (selected >= WL_SAVE_SLOTS || direction == 0)
+    {
+        return selected;
+    }
+    if (direction < 0)
+    {
+        return selected == 0U ? WL_SAVE_SLOTS - 1U : selected - 1U;
+    }
+    return selected + 1U == WL_SAVE_SLOTS ? 0U : selected + 1U;
 }
 
 static int WL_SoundMenuActive(unsigned item)
