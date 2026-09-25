@@ -931,3 +931,30 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --help-view --frame-hash --dump-frame out\help.ppm
 ```
+
+## 2026-09-25: Embedded demo command playback
+
+- Ported the original `PlayDemo` header and `PollControls` record format into
+  `WL_PLAY.c`: map byte, 16-bit total length, skipped fourth header byte, button
+  bitmap, and signed X/Y controls.
+- Kept demo commands as their original four-tic frames. The shared player loop
+  now accepts an explicit tic span internally, while normal gameplay remains a
+  one-tic 70 Hz call with unchanged framebuffer regressions.
+- Corpus tests decode all four streams in each supplied archive. WL1 contains
+  3,740 commands across maps 0, 2, 4, and 6; WL6 contains 5,386 commands across
+  maps 37, 43, 56, and 31. Combined command hashes are
+  `4c9ba3762f6bb28c` and `8916c710d4bc58a2`, respectively.
+- Added a 70-command headless replay checkpoint. WL1 hashes to
+  `10458addd72fb2c0`; WL6 hashes to `8f5dc9097c041505`. Complete first-demo
+  streams also run without parser, simulation, or renderer failure. Automatic
+  attract-loop sequencing remains the next front-end integration step.
+
+![Shareware embedded-demo checkpoint](../out/demo-wl1.png)
+
+![Full-release embedded-demo checkpoint](../out/demo-wl6.png)
+
+Regenerate the captures with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --demo-view --demo-commands 70 --frame-hash --dump-frame out\demo.ppm
+```

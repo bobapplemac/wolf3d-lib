@@ -68,6 +68,13 @@ difficulty is passed into level construction, enemy filtering, hit points, and
 baby-mode damage. The remaining option screens are kept as subsequent menu
 slices.
 
+`WL_PLAY.c` also owns the original demo stream boundary. The four-byte header
+retains its map byte, 16-bit total length, and skipped fourth byte; every
+following record is the original button bitmap plus signed X/Y controls. Demo
+records advance as one four-tic frame, while ordinary host input continues to
+use independent 70 Hz tics. This distinction preserves the authored movement
+rounding without slowing or coarsening live input.
+
 ## Gameplay state boundary
 
 Map planes are converted into an explicitly sized 64x64 runtime level. Plane 0

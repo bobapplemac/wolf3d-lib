@@ -1952,6 +1952,33 @@ static void TestPlayLoop(void)
     CHECK(level.doors[0].position == 1024U);
 }
 
+static void TestDemoFormat(void)
+{
+    static const uint8_t data[] =
+    {
+        3U, 10U, 0U, 0U,
+        0x05U, 0xfeU, 0x7fU,
+        0x20U, 0x01U, 0x80U
+    };
+    wl_demo_t demo;
+    wl_demo_command_t command;
+
+    memset(&demo, 0, sizeof(demo));
+    CHECK(WL_DemoOpen(&demo, data, sizeof(data)));
+    CHECK(demo.map_number == 3U);
+    CHECK(demo.command_count == 2U);
+    CHECK(WL_DemoNext(&demo, &command));
+    CHECK(command.buttons == 0x05U);
+    CHECK(command.control_x == -2);
+    CHECK(command.control_y == 127);
+    CHECK(WL_DemoNext(&demo, &command));
+    CHECK(command.buttons == 0x20U);
+    CHECK(command.control_x == 1);
+    CHECK(command.control_y == -128);
+    CHECK(!WL_DemoNext(&demo, &command));
+    CHECK(!WL_DemoOpen(&demo, data, sizeof(data) - 1U));
+}
+
 static void TestIntermission(void)
 {
     wg_level_t level;
@@ -2555,6 +2582,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t pause_hash = 1469598103934665603ULL;
     uint64_t article_hash = 1469598103934665603ULL;
     uint64_t help_hash = 1469598103934665603ULL;
+    uint64_t demo_hash = 1469598103934665603ULL;
     uint64_t menu_hash = 1469598103934665603ULL;
     uint64_t episode_menu_hash = 1469598103934665603ULL;
     uint64_t difficulty_menu_hash = 1469598103934665603ULL;
@@ -2706,6 +2734,57 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                   == WG_GAME_WOLF3D_SHAREWARE_14
                   ? 0x0555652391108503ULL : 0x0c09b4fdb0b59e80ULL));
             WL_ArticleClose(&article);
+        }
+        {
+            size_t demo_chunk = expected_variant
+                                    == WG_GAME_WOLF3D_SHAREWARE_14
+                                    ? 151U : 139U;
+            unsigned demo_number;
+
+            for (demo_number = 0U; demo_number < 4U; ++demo_number)
+            {
+                static const uint8_t shareware_maps[4] = { 0U, 2U, 4U, 6U };
+                static const size_t shareware_commands[4] =
+                    { 1152U, 1284U, 671U, 633U };
+                static const uint8_t full_maps[4] =
+                    { 37U, 43U, 56U, 31U };
+                static const size_t full_commands[4] =
+                    { 691U, 1899U, 1140U, 1656U };
+                uint8_t *demo_data = NULL;
+                size_t demo_size = 0U;
+                wl_demo_t demo;
+                size_t byte;
+
+                memset(&demo, 0, sizeof(demo));
+                CHECK(WG_GraphicsDecodeChunk(
+                    &graphics, demo_chunk + demo_number,
+                    &demo_data, &demo_size));
+                CHECK(WL_DemoOpen(&demo, demo_data, demo_size));
+                CHECK(demo.map_number
+                      == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                              ? shareware_maps[demo_number]
+                              : full_maps[demo_number]));
+                CHECK(demo.command_count
+                      == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                              ? shareware_commands[demo_number]
+                              : full_commands[demo_number]));
+                printf("%s demo %u: map %u, %u commands\n",
+                       WG_DataVariantName(data_set.variant), demo_number,
+                       (unsigned)demo.map_number,
+                       (unsigned)demo.command_count);
+                for (byte = 0U; byte < demo.command_count * 3U; ++byte)
+                {
+                    demo_hash ^= demo.commands[byte];
+                    demo_hash *= 1099511628211ULL;
+                }
+                free(demo_data);
+            }
+            printf("%s demo command FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)demo_hash);
+            CHECK(demo_hash == (expected_variant
+                  == WG_GAME_WOLF3D_SHAREWARE_14
+                  ? 0x4c9ba3762f6bb28cULL : 0x8916c710d4bc58a2ULL));
         }
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawMainMenu(framebuffer, &graphics,
@@ -3285,6 +3364,7 @@ int main(int argc, char **argv)
     TestBonusPickups();
     TestPlayerMovementAndUse();
     TestPlayLoop();
+    TestDemoFormat();
     TestIntermission();
     TestMenuMovement();
     TestPaletteShifts();

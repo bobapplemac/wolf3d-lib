@@ -123,9 +123,49 @@ void WL_PlayStateReset(wl_play_state_t *state)
     }
 }
 
-int WL_PlayTick(struct wg_level *level,
-                const struct wg_view_tables *tables,
-                wl_play_state_t *state, const wl_input_t *input)
+int WL_DemoOpen(wl_demo_t *demo, const uint8_t *data, size_t size)
+{
+    size_t length;
+
+    if (demo == NULL || data == NULL || size < 4U)
+    {
+        return 0;
+    }
+    /* PlayDemo read a 16-bit length, then skipped the fourth header byte. */
+    length = (size_t)data[1] | (size_t)data[2] << 8U;
+    if (length < 4U || length > size || (length - 4U) % 3U != 0U)
+    {
+        return 0;
+    }
+    demo->commands = data + 4U;
+    demo->command_count = (length - 4U) / 3U;
+    demo->position = 0U;
+    demo->map_number = data[0];
+    return demo->command_count != 0U;
+}
+
+int WL_DemoNext(wl_demo_t *demo, wl_demo_command_t *command)
+{
+    const uint8_t *source;
+
+    if (demo == NULL || command == NULL || demo->commands == NULL
+        || demo->position >= demo->command_count)
+    {
+        return 0;
+    }
+    source = demo->commands + demo->position * 3U;
+    command->buttons = source[0];
+    command->control_x = (int8_t)source[1];
+    command->control_y = (int8_t)source[2];
+    ++demo->position;
+    return 1;
+}
+
+static int WL_PlayFrame(struct wg_level *level,
+                        const struct wg_view_tables *tables,
+                        wl_play_state_t *state, const wl_input_t *input,
+                        unsigned tics, int demo_control,
+                        int raw_control_x, int raw_control_y)
 {
     int speed;
     int control_x;
@@ -134,20 +174,20 @@ int WL_PlayTick(struct wg_level *level,
     int attack_started = 0;
     int use_pressed;
 
-    if (level == NULL || tables == NULL || state == NULL || input == NULL)
+    if (level == NULL || tables == NULL || state == NULL || input == NULL
+        || tics == 0U)
     {
         return 0;
     }
 
-    ++level->time_count;
+    level->time_count += tics;
 
     attack_pressed = input->attack && !state->attack_held;
     use_pressed = input->use && !state->use_held;
     state->attack_held = input->attack != 0U;
     state->use_held = input->use != 0U;
 
-    /* WL_PLAY.C updates doors and pushwalls before walking the actor list. */
-    if (!WL_MoveDoors(level, 1U) || !WL_MovePushWalls(level, 1U))
+    if (!WL_MoveDoors(level, tics) || !WL_MovePushWalls(level, tics))
     {
         return 0;
     }
@@ -170,35 +210,79 @@ int WL_PlayTick(struct wg_level *level,
             }
         }
 
-        speed = input->run ? WL_RUN_MOVE : WL_BASE_MOVE;
-    control_x = ((input->right != 0U) - (input->left != 0U)) * speed;
-    control_y = ((input->down != 0U) - (input->up != 0U)) * speed;
-    control_x += input->mouse_x * 10 / (13 - WL_MOUSE_ADJUSTMENT);
-    control_y += input->mouse_y * 20 / (13 - WL_MOUSE_ADJUSTMENT);
-    if (control_x > 100)
-    {
-        control_x = 100;
-    }
-    else if (control_x < -100)
-    {
-        control_x = -100;
-    }
-    if (control_y > 100)
-    {
-        control_y = 100;
-    }
-    else if (control_y < -100)
-    {
-        control_y = -100;
-    }
+        if (demo_control)
+        {
+            control_x = raw_control_x * (int)tics;
+            control_y = raw_control_y * (int)tics;
+        }
+        else
+        {
+            speed = (input->run ? WL_RUN_MOVE : WL_BASE_MOVE) * (int)tics;
+            control_x = ((input->right != 0U) - (input->left != 0U)) * speed;
+            control_y = ((input->down != 0U) - (input->up != 0U)) * speed;
+            control_x += input->mouse_x * 10 / (13 - WL_MOUSE_ADJUSTMENT);
+            control_y += input->mouse_y * 20 / (13 - WL_MOUSE_ADJUSTMENT);
+        }
+        if (control_x > 100 * (int)tics)
+        {
+            control_x = 100 * (int)tics;
+        }
+        else if (control_x < -100 * (int)tics)
+        {
+            control_x = -100 * (int)tics;
+        }
+        if (control_y > 100 * (int)tics)
+        {
+            control_y = 100 * (int)tics;
+        }
+        else if (control_y < -100 * (int)tics)
+        {
+            control_y = -100 * (int)tics;
+        }
         if (!WL_ControlMovement(level, tables, control_x, control_y,
                                 input->strafe != 0U)
             || (!attack_started
-                && !WL_TickPlayerAttack(level, 1U, input->attack != 0U)))
+                && !WL_TickPlayerAttack(level, tics, input->attack != 0U)))
         {
             return 0;
         }
     }
 
-    return WL_TickActors(level, 1U);
+    return WL_TickActors(level, tics);
+}
+
+int WL_PlayDemoCommand(struct wg_level *level,
+                       const struct wg_view_tables *tables,
+                       wl_play_state_t *state,
+                       const wl_demo_command_t *command)
+{
+    wl_input_t input;
+    unsigned weapon;
+
+    if (command == NULL)
+    {
+        return 0;
+    }
+    memset(&input, 0, sizeof(input));
+    input.attack = (uint8_t)((command->buttons & 0x01U) != 0U);
+    input.strafe = (uint8_t)((command->buttons & 0x02U) != 0U);
+    input.run = (uint8_t)((command->buttons & 0x04U) != 0U);
+    input.use = (uint8_t)((command->buttons & 0x08U) != 0U);
+    for (weapon = 0U; weapon < 4U; ++weapon)
+    {
+        if ((command->buttons & (uint8_t)(0x10U << weapon)) != 0U)
+        {
+            input.weapon = (uint8_t)(weapon + 1U);
+            break;
+        }
+    }
+    return WL_PlayFrame(level, tables, state, &input, WL_DEMO_TICS, 1,
+                        command->control_x, command->control_y);
+}
+
+int WL_PlayTick(struct wg_level *level,
+                const struct wg_view_tables *tables,
+                wl_play_state_t *state, const wl_input_t *input)
+{
+    return WL_PlayFrame(level, tables, state, input, 1U, 0, 0, 0);
 }

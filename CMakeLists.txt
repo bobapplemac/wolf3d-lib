@@ -246,6 +246,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(help-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "afa188f7e955ec42")
+        add_test(NAME demo-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --demo-view
+            --demo-commands 70 --frame-hash)
+        set_tests_properties(demo-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "10458addd72fb2c0")
         add_test(NAME episode-menu-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --episode-menu-view
             --frame-hash)
@@ -404,6 +409,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(help-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "afa188f7e955ec42")
+        add_test(NAME demo-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --demo-view
+            --demo-commands 70 --frame-hash)
+        set_tests_properties(demo-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "8f5dc9097c041505")
         add_test(NAME episode-menu-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --episode-menu-view
             --frame-hash)

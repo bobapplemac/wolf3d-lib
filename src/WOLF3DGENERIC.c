@@ -1334,6 +1334,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int end_text_view,
                                   int main_menu_view,
                                   int help_view,
+                                  int demo_view,
+                                  unsigned demo_commands,
                                   int episode_menu_view,
                                   int difficulty_menu_view,
                                   int high_score_view,
@@ -1351,6 +1353,9 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     wl_status_t status;
     wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
     uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint8_t *demo_data = NULL;
+    size_t demo_size = 0U;
+    wl_demo_t demo;
     int success = 0;
 
     memset(&maps, 0, sizeof(maps));
@@ -1359,12 +1364,32 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     memset(&walls, 0, sizeof(walls));
     memset(&view, 0, sizeof(view));
     memset(&graphics, 0, sizeof(graphics));
-    if (!WG_MapsOpen(&maps, &wg_data_set)
+    memset(&demo, 0, sizeof(demo));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        goto cleanup;
+    }
+    if (demo_view)
+    {
+        if (!WG_GraphicsDecodeChunk(
+                &graphics,
+                wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14
+                    ? 151U : 139U,
+                &demo_data, &demo_size)
+            || !WL_DemoOpen(&demo, demo_data, demo_size))
+        {
+            goto cleanup;
+        }
+        map_number = demo.map_number;
+    }
+    if (map_number >= 60U
+        || !WG_MapsOpen(&maps, &wg_data_set)
         || !WG_MapsLoad(&maps, map_number, &map)
-        || !WG_LevelBuild(&map, &level)
+        || !(demo_view
+             ? WG_LevelBuildForDifficulty(&map, WG_DIFFICULTY_HARD, &level)
+             : WG_LevelBuild(&map, &level))
         || !WG_PagesOpen(&pages, &wg_data_set)
-        || !WG_WallCacheLoad(&walls, &pages)
-        || !WG_GraphicsOpen(&graphics, &wg_data_set))
+        || !WG_WallCacheLoad(&walls, &pages))
     {
         goto cleanup;
     }
@@ -1683,6 +1708,24 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             }
         }
     }
+    if (demo_view)
+    {
+        wl_play_state_t play;
+        wl_demo_command_t command;
+        unsigned command_number;
+
+        WL_PlayStateReset(&play);
+        WG_ViewBuildTrigTables(&view);
+        for (command_number = 0U;
+             command_number < demo_commands && WL_DemoNext(&demo, &command);
+             ++command_number)
+        {
+            if (!WL_PlayDemoCommand(&level, &view, &play, &command))
+            {
+                goto cleanup;
+            }
+        }
+    }
     if (damage_flash_view)
     {
         WL_TakeDamage(&level, 40U);
@@ -1874,6 +1917,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     success = 1;
 
 cleanup:
+    free(demo_data);
     WG_GraphicsClose(&graphics);
     WG_WallCacheFree(&walls);
     WG_PagesClose(&pages);
@@ -1893,6 +1937,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     unsigned map_number;
     unsigned actor_tics;
     unsigned forward_tics;
+    unsigned demo_commands;
 
     if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL)
         || !WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
@@ -1900,7 +1945,9 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         || !WG_FindUnsignedArgument(argc, argv, "--actor-tics", 0U,
                                     10000U, &actor_tics)
         || !WG_FindUnsignedArgument(argc, argv, "--forward-tics", 0U,
-                                    10000U, &forward_tics))
+                                    10000U, &forward_tics)
+        || !WG_FindUnsignedArgument(argc, argv, "--demo-commands", 70U,
+                                    100000U, &demo_commands))
     {
         return WG_RESULT_INVALID_ARGUMENT;
     }
@@ -1970,6 +2017,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--end-text-view"),
             WG_HasArgument(argc, argv, "--main-menu-view"),
             WG_HasArgument(argc, argv, "--help-view"),
+            WG_HasArgument(argc, argv, "--demo-view"), demo_commands,
             WG_HasArgument(argc, argv, "--episode-menu-view"),
             WG_HasArgument(argc, argv, "--difficulty-menu-view"),
             WG_HasArgument(argc, argv, "--high-score-view"),
