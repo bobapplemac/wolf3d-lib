@@ -2215,6 +2215,18 @@ static void TestRandom(void)
     CHECK(WG_RandomNext(&random) == 0U);
 }
 
+static void TestScanCodeASCII(void)
+{
+    CHECK(ID_US_ScanToASCII(0x1eU, 0, 0) == 'a');
+    CHECK(ID_US_ScanToASCII(0x1eU, 1, 0) == 'A');
+    CHECK(ID_US_ScanToASCII(0x1eU, 0, 1) == 'A');
+    CHECK(ID_US_ScanToASCII(0x1eU, 1, 1) == 'a');
+    CHECK(ID_US_ScanToASCII(0x02U, 0, 0) == '1');
+    CHECK(ID_US_ScanToASCII(0x02U, 1, 0) == '!');
+    CHECK(ID_US_ScanToASCII(0x39U, 0, 0) == ' ');
+    CHECK(ID_US_ScanToASCII(0x80U, 0, 0) == 0);
+}
+
 static void TestViewMath(void)
 {
     wg_view_tables_t tables;
@@ -3132,6 +3144,7 @@ int main(int argc, char **argv)
     TestMalformedCompression();
     TestVideo();
     TestRandom();
+    TestScanCodeASCII();
     TestActorSetup();
     TestStaticItemSetup();
     TestBossAndGhostSetup();

@@ -15,7 +15,7 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | `ID_SD.c` | `ID_SD.C`, `ID_SD_A.ASM` | IMF/AdLib service, VSWAP digitized effects, resampling, and PCM mixing |
 | `ID_VL.c` | `ID_VL.C` | Indexed framebuffer, blits, palettes, and fizzle fade |
 | `ID_VH.c` | `ID_VH.C` | Proportional font decoding and drawing |
-| `ID_US_1.c` | `ID_US_1.C` | Original deterministic random table |
+| `ID_US_1.c` | `ID_US_1.C`, `ID_IN.C` | Original deterministic random table and `US_LineInput` scan-to-ASCII translation |
 | `WL_AGENT.c` | `WL_AGENT.C`, `WL_GAME.C` | Player movement, use, combat, pickups, status, and HUD drawing |
 | `WL_ACT1.c` | `WL_ACT1.C` | Door and pushwall state, obstruction, and movement |
 | `WL_ACT2.c` | `WL_ACT2.C` | Actor construction and initial state metadata |

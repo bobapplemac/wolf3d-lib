@@ -810,3 +810,24 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --high-score-view --frame-hash --dump-frame out\high-scores.ppm
 ```
+
+## 2026-09-25: Editable high-score names
+
+- Restored the original `ID_IN.C` unshifted and shifted ASCII lookup tables at
+  the generic scan-code boundary, including Caps Lock's letter-only inversion.
+- Qualifying scores now enter the `US_LineInput` editing state: left/right,
+  Home/End, Backspace/Delete, in-place insertion, Shift, Caps Lock, Enter, and
+  Escape all retain their original behavior.
+- Name acceptance retains both original bounds: 57 stored characters and the
+  pre-insertion 100-pixel font-width check. The I-bar uses font character 128
+  at the measured cursor position.
+- Added scan-to-ASCII unit coverage and an edition-independent `BJ` editing
+  frame. WL1 and WL6 both hash to `3b75e429fe454ad8`.
+
+![BJ high-score name with the original I-bar cursor](../out/high-score-entry.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --high-score-entry-view --frame-hash --dump-frame out\high-score-entry.ppm
+```

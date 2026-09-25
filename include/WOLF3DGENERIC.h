@@ -38,17 +38,22 @@ typedef enum wg_key
     WG_KEY_2 = 0x03,
     WG_KEY_3 = 0x04,
     WG_KEY_4 = 0x05,
+    WG_KEY_BACKSPACE = 0x0e,
     WG_KEY_ENTER = 0x1c,
     WG_KEY_CONTROL = 0x1d,
     WG_KEY_LEFT_SHIFT = 0x2a,
     WG_KEY_RIGHT_SHIFT = 0x36,
     WG_KEY_ALT = 0x38,
     WG_KEY_SPACE = 0x39,
-    WG_KEY_PAUSE = 0xe1,
-    WG_KEY_LEFT = 0x4b,
+    WG_KEY_CAPS_LOCK = 0x3a,
+    WG_KEY_HOME = 0x47,
     WG_KEY_UP = 0x48,
+    WG_KEY_LEFT = 0x4b,
     WG_KEY_RIGHT = 0x4d,
-    WG_KEY_DOWN = 0x50
+    WG_KEY_END = 0x4f,
+    WG_KEY_DOWN = 0x50,
+    WG_KEY_DELETE = 0x53,
+    WG_KEY_PAUSE = 0xe1
 } wg_key_t;
 
 typedef struct wg_event

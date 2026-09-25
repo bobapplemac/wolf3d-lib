@@ -57,5 +57,11 @@ int WL_HighScoreInsert(wl_high_score_t scores[WL_MAX_HIGH_SCORES],
 int WL_DrawHighScores(uint8_t *framebuffer,
                       const wg_graphics_t *graphics,
                       const wl_high_score_t scores[WL_MAX_HIGH_SCORES]);
+size_t WL_HighScoreNameWidth(const wg_graphics_t *graphics,
+                             const char *name);
+int WL_DrawHighScoreCursor(uint8_t *framebuffer,
+                           const wg_graphics_t *graphics,
+                           const wl_high_score_t scores[WL_MAX_HIGH_SCORES],
+                           unsigned score_index, unsigned cursor);
 
 #endif

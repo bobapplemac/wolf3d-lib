@@ -614,3 +614,52 @@ cleanup:
     WG_FontClose(&font);
     return result;
 }
+
+size_t WL_HighScoreNameWidth(const wg_graphics_t *graphics,
+                             const char *name)
+{
+    wg_font_t font;
+    size_t width;
+
+    memset(&font, 0, sizeof(font));
+    if (graphics == NULL || name == NULL
+        || !WG_FontOpen(&font, graphics, 0U))
+    {
+        return (size_t)-1;
+    }
+    width = WG_FontMeasure(&font, name);
+    WG_FontClose(&font);
+    return width;
+}
+
+int WL_DrawHighScoreCursor(uint8_t *framebuffer,
+                           const wg_graphics_t *graphics,
+                           const wl_high_score_t scores[WL_MAX_HIGH_SCORES],
+                           unsigned score_index, unsigned cursor)
+{
+    wg_font_t font;
+    char prefix[WL_MAX_HIGH_NAME + 1];
+    static const char cursor_text[] = "\x80";
+    size_t length;
+    int x;
+
+    memset(&font, 0, sizeof(font));
+    if (framebuffer == NULL || graphics == NULL || scores == NULL
+        || score_index >= WL_MAX_HIGH_SCORES
+        || !WG_FontOpen(&font, graphics, 0U))
+    {
+        return 0;
+    }
+    length = strlen(scores[score_index].name);
+    if (cursor > length)
+    {
+        cursor = (unsigned)length;
+    }
+    memcpy(prefix, scores[score_index].name, cursor);
+    prefix[cursor] = '\0';
+    x = 32 + (int)WG_FontMeasure(&font, prefix) - 1;
+    WG_FontDraw(&font, framebuffer, x,
+                76 + (int)score_index * 16, cursor_text, 15U);
+    WG_FontClose(&font);
+    return 1;
+}

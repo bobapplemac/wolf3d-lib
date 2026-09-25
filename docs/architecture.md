@@ -284,8 +284,11 @@ rule—score first, completed floor as the tie-break—also live in `WL_INTER.c`
 `DrawHighScores` retains the dark-red menu field, stripe, picture headings,
 proportional names, and font characters 129-138 used for fixed-width numbers.
 Exhausting the last life inserts the score, switches to `ROSTER_MUS`, and shows
-that table. Editable player-name entry and configuration persistence remain UI
-and storage follow-ups.
+that table. A qualifying entry uses the original `ID_IN.C` shifted/unshifted
+scan-code tables and `US_LineInput` editing rules: Caps Lock, cursor movement,
+Home/End, Backspace/Delete, insertion, Enter/Escape, 57 characters, and the
+100-pixel font-width limit. Configuration persistence remains a storage
+follow-up.
 
 Win32 supplies relative mouse packets through the generic event contract rather
 than exposing window coordinates to the engine. `WL_PLAY.c` applies the original

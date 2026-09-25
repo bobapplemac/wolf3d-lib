@@ -70,6 +70,9 @@ typedef struct wg_game_session
     uint8_t intermission;
     uint8_t victory;
     uint8_t high_scores;
+    int8_t high_score_entry;
+    uint8_t high_score_cursor;
+    uint8_t high_score_caps_lock;
     wg_death_phase_t death_phase;
     uint16_t death_target_angle;
     uint16_t death_hold_tics;
@@ -681,9 +684,10 @@ static int WG_GameSessionBeginHighScores(void)
     const uint8_t *music_data;
     size_t music_size;
 
-    (void)WL_HighScoreInsert(wg_high_scores, wg_game.level.score,
-                             (uint16_t)(wg_game.map_number % 10U + 1U),
-                             (uint16_t)(wg_game.map_number / 10U));
+    wg_game.high_score_entry = (int8_t)WL_HighScoreInsert(
+        wg_high_scores, wg_game.level.score,
+        (uint16_t)(wg_game.map_number % 10U + 1U),
+        (uint16_t)(wg_game.map_number / 10U));
     if (!WL_DrawHighScores(WG_ScreenBuffer, &wg_game.graphics,
                            wg_high_scores))
     {
@@ -691,6 +695,13 @@ static int WG_GameSessionBeginHighScores(void)
     }
     wg_game.game_over = 1U;
     wg_game.high_scores = 1U;
+    if (wg_game.high_score_entry >= 0
+        && !WL_DrawHighScoreCursor(
+            WG_ScreenBuffer, &wg_game.graphics, wg_high_scores,
+            (unsigned)wg_game.high_score_entry, 0U))
+    {
+        return 0;
+    }
     memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
     if (wg_game.audio_active
         && WG_AudioGetChunk(&wg_game.audio, 261U + 23U,
@@ -699,6 +710,106 @@ static int WG_GameSessionBeginHighScores(void)
         (void)ID_SD_MusicStart(wg_game.music, music_data, music_size);
     }
     return 1;
+}
+
+static int WG_GameSessionHighScoreKey(uint16_t scan_code, int pressed)
+{
+    wl_high_score_t *score;
+    size_t length;
+    int shifted;
+    char character;
+
+    if (scan_code == WG_KEY_LEFT_SHIFT
+        || scan_code == WG_KEY_RIGHT_SHIFT)
+    {
+        wg_game.keys[scan_code] = pressed != 0;
+    }
+    if (!pressed || wg_game.high_score_entry < 0)
+    {
+        return 1;
+    }
+    score = &wg_high_scores[(unsigned)wg_game.high_score_entry];
+    length = strlen(score->name);
+    if (scan_code == WG_KEY_CAPS_LOCK)
+    {
+        wg_game.high_score_caps_lock ^= 1U;
+    }
+    else if (scan_code == WG_KEY_LEFT)
+    {
+        if (wg_game.high_score_cursor != 0U)
+        {
+            --wg_game.high_score_cursor;
+        }
+    }
+    else if (scan_code == WG_KEY_RIGHT)
+    {
+        if (wg_game.high_score_cursor < length)
+        {
+            ++wg_game.high_score_cursor;
+        }
+    }
+    else if (scan_code == WG_KEY_HOME)
+    {
+        wg_game.high_score_cursor = 0U;
+    }
+    else if (scan_code == WG_KEY_END)
+    {
+        wg_game.high_score_cursor = (uint8_t)length;
+    }
+    else if (scan_code == WG_KEY_BACKSPACE)
+    {
+        if (wg_game.high_score_cursor != 0U)
+        {
+            memmove(score->name + wg_game.high_score_cursor - 1U,
+                    score->name + wg_game.high_score_cursor,
+                    length - wg_game.high_score_cursor + 1U);
+            --wg_game.high_score_cursor;
+        }
+    }
+    else if (scan_code == WG_KEY_DELETE)
+    {
+        if (wg_game.high_score_cursor < length)
+        {
+            memmove(score->name + wg_game.high_score_cursor,
+                    score->name + wg_game.high_score_cursor + 1U,
+                    length - wg_game.high_score_cursor);
+        }
+    }
+    else if (scan_code == WG_KEY_ENTER)
+    {
+        wg_game.high_score_entry = -1;
+    }
+    else if (scan_code == WG_KEY_ESCAPE)
+    {
+        score->name[0] = '\0';
+        wg_game.high_score_entry = -1;
+    }
+    else
+    {
+        shifted = wg_game.keys[WG_KEY_LEFT_SHIFT]
+                  || wg_game.keys[WG_KEY_RIGHT_SHIFT];
+        character = ID_US_ScanToASCII(scan_code, shifted,
+                                      wg_game.high_score_caps_lock);
+        if (character >= 32 && character < 127
+            && length < WL_MAX_HIGH_NAME
+            && WL_HighScoreNameWidth(&wg_game.graphics, score->name) < 100U)
+        {
+            memmove(score->name + wg_game.high_score_cursor + 1U,
+                    score->name + wg_game.high_score_cursor,
+                    length - wg_game.high_score_cursor + 1U);
+            score->name[wg_game.high_score_cursor++] = character;
+        }
+    }
+    if (!WL_DrawHighScores(WG_ScreenBuffer, &wg_game.graphics,
+                           wg_high_scores))
+    {
+        return 0;
+    }
+    return wg_game.high_score_entry < 0
+           || WL_DrawHighScoreCursor(
+               WG_ScreenBuffer, &wg_game.graphics, wg_high_scores,
+               (unsigned)wg_game.high_score_entry,
+               wg_game.high_score_cursor);
 }
 
 static int WG_GameSessionOpen(unsigned map_number)
@@ -1027,6 +1138,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int player_death_view,
                                   int victory_view,
                                   int high_score_view,
+                                  int high_score_entry_view,
                                   unsigned actor_tics,
                                   unsigned forward_tics)
 {
@@ -1456,6 +1568,25 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
             goto cleanup;
         }
     }
+    if (high_score_entry_view)
+    {
+        wl_high_score_t scores[WL_MAX_HIGH_SCORES];
+        int entry;
+
+        WL_HighScoresDefault(scores);
+        entry = WL_HighScoreInsert(scores, 20000U, 9U, 0U);
+        if (entry < 0)
+        {
+            goto cleanup;
+        }
+        memcpy(scores[entry].name, "BJ", 3U);
+        if (!WL_DrawHighScores(WG_ScreenBuffer, &graphics, scores)
+            || !WL_DrawHighScoreCursor(WG_ScreenBuffer, &graphics, scores,
+                                       (unsigned)entry, 2U))
+        {
+            goto cleanup;
+        }
+    }
     if (damage_flash_view || bonus_flash_view)
     {
         WL_UpdatePaletteShifts(&level, WG_Palette);
@@ -1590,7 +1721,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--bonus-flash-view"),
             WG_HasArgument(argc, argv, "--player-death-view"),
             WG_HasArgument(argc, argv, "--victory-view"),
-            WG_HasArgument(argc, argv, "--high-score-view"), actor_tics,
+            WG_HasArgument(argc, argv, "--high-score-view"),
+            WG_HasArgument(argc, argv, "--high-score-entry-view"), actor_tics,
             forward_tics))
     {
         wolf3dgeneric_Shutdown();
@@ -1646,9 +1778,14 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.active && wg_game.high_scores)
                 {
-                    if (event.key == WG_KEY_ESCAPE && event.pressed)
+                    if (wg_game.high_score_entry < 0
+                        && event.key == WG_KEY_ESCAPE && event.pressed)
                     {
                         return WG_RESULT_QUIT;
+                    }
+                    if (!WG_GameSessionHighScoreKey(event.key, event.pressed))
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
                     }
                     continue;
                 }

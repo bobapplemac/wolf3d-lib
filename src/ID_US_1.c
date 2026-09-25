@@ -1,4 +1,4 @@
-/* Original US_RndT table and index behavior from ID_US_1.C. */
+/* Portable US_RndT state and US_LineInput scan translation. */
 #include "ID_US_1.h"
 
 static const uint8_t wg_random_table[256] =
@@ -21,6 +21,26 @@ static const uint8_t wg_random_table[256] =
     98,43,39,175,254,145,190,84,118,222,187,136,120,163,236,249
 };
 
+static const uint8_t id_us_ascii_names[128] =
+{
+    0,27,'1','2','3','4','5','6','7','8','9','0','-','=',8,9,
+    'q','w','e','r','t','y','u','i','o','p','[',']',13,0,'a','s',
+    'd','f','g','h','j','k','l',';',39,'`',0,92,'z','x','c','v',
+    'b','n','m',',','.','/',0,'*',0,' ',0,0,0,0,0,0,
+    0,0,0,0,0,0,0,'7','8','9','-','4','5','6','+','1',
+    '2','3','0',127
+};
+
+static const uint8_t id_us_shift_names[128] =
+{
+    0,27,'!','@','#','$','%','^','&','*','(',')','_','+',8,9,
+    'Q','W','E','R','T','Y','U','I','O','P','{','}',13,0,'A','S',
+    'D','F','G','H','J','K','L',':',34,'~',0,'|','Z','X','C','V',
+    'B','N','M','<','>','?',0,'*',0,' ',0,0,0,0,0,0,
+    0,0,0,0,0,0,0,'7','8','9','-','4','5','6','+','1',
+    '2','3','0',127
+};
+
 void WG_RandomSeed(wg_random_t *random, uint8_t index)
 {
     if (random != 0)
@@ -37,4 +57,25 @@ uint8_t WG_RandomNext(wg_random_t *random)
     }
     ++random->index;
     return wg_random_table[random->index];
+}
+
+char ID_US_ScanToASCII(uint16_t scan_code, int shifted, int caps_lock)
+{
+    uint8_t character;
+
+    if (scan_code >= 128U)
+    {
+        return 0;
+    }
+    character = shifted ? id_us_shift_names[scan_code]
+                        : id_us_ascii_names[scan_code];
+    if (caps_lock && character >= 'a' && character <= 'z')
+    {
+        character = (uint8_t)(character - ('a' - 'A'));
+    }
+    else if (caps_lock && character >= 'A' && character <= 'Z')
+    {
+        character = (uint8_t)(character + ('a' - 'A'));
+    }
+    return (char)character;
 }
