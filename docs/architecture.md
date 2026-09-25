@@ -57,9 +57,14 @@ It draws the original dark-red field, stripes, `C_OPTIONSPIC`, menu window,
 font-1 labels, disabled Save Game row, special Read This color, mouse legend,
 and gun cursor. Navigation wraps and skips disabled entries as `HandleMenu`
 did. Title input and completed high-score entry now return to this front-end
-state; New Game enters the current map and View Scores reuses the restored
-score table. Episode, difficulty, and the remaining option screens are kept as
-subsequent menu slices.
+state, while View Scores reuses the restored score table. New Game follows the
+original two-stage flow: six two-line episode rows with authored pictures,
+then four difficulty rows with selection-specific BJ portraits. Apogee
+shareware exposes the unavailable episodes in their locked color but only
+accepts Episode 1. The selected episode becomes its first map and the selected
+difficulty is passed into level construction, enemy filtering, hit points, and
+baby-mode damage. The remaining option screens are kept as subsequent menu
+slices.
 
 ## Gameplay state boundary
 

@@ -884,3 +884,30 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --main-menu-view --frame-hash --dump-frame out\main-menu.ppm
 ```
+
+## 2026-09-25: New Game episode and difficulty panels
+
+- Ported `DrawNewEpisode`, `DrawNewGame`, and `DrawNewGameDiff` into the
+  historical `WL_MENU.c` translation: original beveled windows, headings,
+  two-line episode names, episode pictures, four difficulty labels, gun cursor,
+  and selection-specific BJ portraits.
+- The full data set enables all six episodes. Shareware retains the original
+  locked color for Episodes 2-6 and refuses to advance those selections.
+  Escape backs up one panel at a time.
+- New games now start Floor 1 of the selected episode and pass the selected
+  baby/easy/medium/hard value into level construction. Campaign reloads retain
+  that difficulty rather than falling back to the legacy medium wrapper.
+- Episode-screen indexed hashes are `23ad3114db625b9b` for shareware and
+  `45053c7411aec10f` for the fully enabled WL6 screen. The medium difficulty
+  screen is edition-independent at `6ef5da5dc52ae5b0`.
+
+![Original shareware episode selector](../out/episode-menu.png)
+
+![Original medium difficulty selector](../out/difficulty-menu.png)
+
+Regenerate the captures with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --episode-menu-view --frame-hash --dump-frame out\episode-menu.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --difficulty-menu-view --frame-hash --dump-frame out\difficulty-menu.ppm
+```

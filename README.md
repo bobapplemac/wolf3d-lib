@@ -37,8 +37,9 @@ wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
 
 Press a key on the title screen to open the original control-panel main menu.
 The arrow keys move its gun cursor; Enter selects an item and Escape returns to
-the title. `New Game` currently starts the selected map (map 0 by default),
-while the original episode and difficulty submenus remain the next menu slice.
+the title. `New Game` opens the original episode and difficulty panels, then
+starts Floor 1 of the chosen episode with that difficulty. The shareware data
+retains its original locked presentation for Episodes 2 through 6.
 
 Add `--play-view` to enter the current interactive game session. The original
 keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
@@ -67,6 +68,9 @@ The control-panel fixture uses the same original graphics and font resources:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --main-menu-view --frame-hash --dump-frame main-menu.ppm
 ```
+
+Use `--episode-menu-view` or `--difficulty-menu-view` in place of
+`--main-menu-view` to capture the two New Game panels.
 
 It can also render ten deterministic seconds of the selected map's music to a
 standard 16-bit stereo WAV without opening an audio device:

@@ -27,6 +27,8 @@ typedef struct wl_menu_chunks
     size_t options;
     size_t cursor;
     size_t mouse_back;
+    size_t baby_mode;
+    size_t episode_one;
 } wl_menu_chunks_t;
 
 typedef struct wl_menu_item
@@ -46,6 +48,8 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->options = 10U;
         chunks->cursor = 11U;
         chunks->mouse_back = 18U;
+        chunks->baby_mode = 19U;
+        chunks->episode_one = 30U;
         return 1;
     }
     if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
@@ -54,6 +58,8 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->options = 22U;
         chunks->cursor = 23U;
         chunks->mouse_back = 30U;
+        chunks->baby_mode = 31U;
+        chunks->episode_one = 42U;
         return 1;
     }
     return 0;
@@ -193,4 +199,138 @@ unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game)
         }
     } while (items[candidate].active == 0U);
     return candidate;
+}
+
+unsigned WL_EpisodeMenuMove(unsigned episode, int direction)
+{
+    if (episode >= 6U || direction == 0)
+    {
+        return episode;
+    }
+    if (direction < 0)
+    {
+        return episode == 0U ? 5U : episode - 1U;
+    }
+    return episode == 5U ? 0U : episode + 1U;
+}
+
+unsigned WL_DifficultyMenuMove(unsigned difficulty, int direction)
+{
+    if (difficulty >= 4U || direction == 0)
+    {
+        return difficulty;
+    }
+    if (direction < 0)
+    {
+        return difficulty == 0U ? 3U : difficulty - 1U;
+    }
+    return difficulty == 3U ? 0U : difficulty + 1U;
+}
+
+int WL_DrawEpisodeMenu(uint8_t framebuffer[320 * 200],
+                       const wg_graphics_t *graphics, unsigned episode,
+                       int shareware)
+{
+    static const char *const names[6] =
+    {
+        "Episode 1", "Episode 2", "Episode 3",
+        "Episode 4", "Episode 5", "Episode 6"
+    };
+    static const char *const subtitles[6] =
+    {
+        "Escape from Wolfenstein", "Operation: Eisenfaust",
+        "Die, Fuhrer, Die!", "A Dark Secret", "Trail of the Madman",
+        "Confrontation"
+    };
+    wl_menu_chunks_t chunks;
+    wg_font_t font;
+    size_t title_width;
+    unsigned index;
+
+    if (framebuffer == NULL || graphics == NULL || episode >= 6U
+        || !WL_MenuChunks(graphics->variant, &chunks)
+        || !WG_FontOpen(&font, graphics, 1U))
+    {
+        return 0;
+    }
+    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
+                             112, 184))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    WL_MenuBar(framebuffer, 6, 19, 308, 162, WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, 6, 19, 308, 162);
+    title_width = WG_FontMeasure(&font, "Which episode to play?");
+    WG_FontDraw(&font, framebuffer, (320 - (int)title_width) / 2, 2,
+                "Which episode to play?", WL_MENU_READ_HIGHLIGHT_COLOR);
+
+    for (index = 0U; index < 6U; ++index)
+    {
+        uint8_t color = shareware && index != 0U
+                            ? (index == episode ? 0x67U : 0x6bU)
+                            : (index == episode ? WL_MENU_HIGHLIGHT_COLOR
+                                                : WL_MENU_TEXT_COLOR);
+        int y = 23 + (int)index * 26;
+
+        WG_FontDraw(&font, framebuffer, 98, y, names[index], color);
+        WG_FontDraw(&font, framebuffer, 98, y + (int)font.height,
+                    subtitles[index], color);
+        if (!WG_VideoDrawPicture(framebuffer, graphics,
+                                 chunks.episode_one + index, 42, y))
+        {
+            WG_FontClose(&font);
+            return 0;
+        }
+    }
+    WG_FontClose(&font);
+    return WG_VideoDrawPicture(framebuffer, graphics, chunks.cursor, 8,
+                               21 + (int)episode * 26);
+}
+
+int WL_DrawDifficultyMenu(uint8_t framebuffer[320 * 200],
+                          const wg_graphics_t *graphics, unsigned difficulty)
+{
+    static const char *const labels[4] =
+    {
+        "Can I play, Daddy?", "Don't hurt me.",
+        "Bring 'em on!", "I am Death incarnate!"
+    };
+    wl_menu_chunks_t chunks;
+    wg_font_t font;
+    unsigned index;
+
+    if (framebuffer == NULL || graphics == NULL || difficulty >= 4U
+        || !WL_MenuChunks(graphics->variant, &chunks)
+        || !WG_FontOpen(&font, graphics, 1U))
+    {
+        return 0;
+    }
+    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
+                             112, 184))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    WG_FontDraw(&font, framebuffer, 70, 68, "How tough are you?",
+                WL_MENU_READ_HIGHLIGHT_COLOR);
+    WL_MenuBar(framebuffer, 45, 90, 225, 67, WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, 45, 90, 225, 67);
+    for (index = 0U; index < 4U; ++index)
+    {
+        WG_FontDraw(&font, framebuffer, 74, 100 + (int)index * 13,
+                    labels[index], index == difficulty
+                                   ? WL_MENU_HIGHLIGHT_COLOR
+                                   : WL_MENU_TEXT_COLOR);
+    }
+    WG_FontClose(&font);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.cursor, 48,
+                             98 + (int)difficulty * 13))
+    {
+        return 0;
+    }
+    return WG_VideoDrawPicture(framebuffer, graphics,
+                               chunks.baby_mode + difficulty, 235, 107);
 }

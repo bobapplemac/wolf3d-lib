@@ -12,5 +12,12 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                     const wg_graphics_t *graphics, unsigned selected,
                     int in_game);
 unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game);
+int WL_DrawEpisodeMenu(uint8_t framebuffer[320 * 200],
+                       const wg_graphics_t *graphics, unsigned episode,
+                       int shareware);
+unsigned WL_EpisodeMenuMove(unsigned episode, int direction);
+int WL_DrawDifficultyMenu(uint8_t framebuffer[320 * 200],
+                          const wg_graphics_t *graphics, unsigned difficulty);
+unsigned WL_DifficultyMenuMove(unsigned difficulty, int direction);
 
 #endif

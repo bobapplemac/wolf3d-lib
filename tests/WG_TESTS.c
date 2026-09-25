@@ -2019,6 +2019,10 @@ static void TestMenuMovement(void)
     CHECK(WL_MainMenuMove(3U, 1, 1) == 4U);
     CHECK(WL_MainMenuMove(WL_MAIN_MENU_DEFAULT_ITEM, 0, 0)
           == WL_MAIN_MENU_DEFAULT_ITEM);
+    CHECK(WL_EpisodeMenuMove(0U, -1) == 5U);
+    CHECK(WL_EpisodeMenuMove(5U, 1) == 0U);
+    CHECK(WL_DifficultyMenuMove(0U, -1) == 3U);
+    CHECK(WL_DifficultyMenuMove(3U, 1) == 0U);
 }
 
 static void TestPaletteShifts(void)
@@ -2551,6 +2555,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t pause_hash = 1469598103934665603ULL;
     uint64_t article_hash = 1469598103934665603ULL;
     uint64_t menu_hash = 1469598103934665603ULL;
+    uint64_t episode_menu_hash = 1469598103934665603ULL;
+    uint64_t difficulty_menu_hash = 1469598103934665603ULL;
     size_t index;
     size_t actor_index;
     size_t decoded_graphics = 0;
@@ -2683,6 +2689,33 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                WG_DataVariantName(data_set.variant),
                (unsigned long long)menu_hash);
         CHECK(menu_hash == 0xcdbff8b31548b64eULL);
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawEpisodeMenu(
+            framebuffer, &graphics, 0U,
+            expected_variant == WG_GAME_WOLF3D_SHAREWARE_14));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            episode_menu_hash ^= framebuffer[index];
+            episode_menu_hash *= 1099511628211ULL;
+        }
+        printf("%s episode menu FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)episode_menu_hash);
+        CHECK(episode_menu_hash == (expected_variant
+              == WG_GAME_WOLF3D_SHAREWARE_14
+              ? 0x23ad3114db625b9bULL : 0x45053c7411aec10fULL));
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawDifficultyMenu(framebuffer, &graphics,
+                                    WG_DIFFICULTY_MEDIUM));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            difficulty_menu_hash ^= framebuffer[index];
+            difficulty_menu_hash *= 1099511628211ULL;
+        }
+        printf("%s difficulty menu FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)difficulty_menu_hash);
+        CHECK(difficulty_menu_hash == 0x6ef5da5dc52ae5b0ULL);
         for (index = 0; index + 1U < graphics.offset_count; ++index)
         {
             uint8_t *chunk_data = NULL;

@@ -241,6 +241,16 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(main-menu-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "cdbff8b31548b64e")
+        add_test(NAME episode-menu-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --episode-menu-view
+            --frame-hash)
+        set_tests_properties(episode-menu-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "23ad3114db625b9b")
+        add_test(NAME difficulty-menu-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --difficulty-menu-view
+            --frame-hash)
+        set_tests_properties(difficulty-menu-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "6ef5da5dc52ae5b0")
         add_test(NAME high-score-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --high-score-view
             --frame-hash)
@@ -384,6 +394,16 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(main-menu-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "cdbff8b31548b64e")
+        add_test(NAME episode-menu-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --episode-menu-view
+            --frame-hash)
+        set_tests_properties(episode-menu-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "45053c7411aec10f")
+        add_test(NAME difficulty-menu-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --difficulty-menu-view
+            --frame-hash)
+        set_tests_properties(difficulty-menu-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "6ef5da5dc52ae5b0")
         add_test(NAME high-score-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --high-score-view
             --frame-hash)
