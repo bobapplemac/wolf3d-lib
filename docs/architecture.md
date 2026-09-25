@@ -52,6 +52,15 @@ the headless host can also export any presented indexed frame as a PPM image.
 Keyboard events use the original IBM PC set-1 scan-code values so gameplay and
 menu code do not depend on a platform's virtual-key numbering.
 
+The first control-panel slice restores `WL_MENU.c` ownership for the main menu.
+It draws the original dark-red field, stripes, `C_OPTIONSPIC`, menu window,
+font-1 labels, disabled Save Game row, special Read This color, mouse legend,
+and gun cursor. Navigation wraps and skips disabled entries as `HandleMenu`
+did. Title input and completed high-score entry now return to this front-end
+state; New Game enters the current map and View Scores reuses the restored
+score table. Episode, difficulty, and the remaining option screens are kept as
+subsequent menu slices.
+
 ## Gameplay state boundary
 
 Map planes are converted into an explicitly sized 64x64 runtime level. Plane 0

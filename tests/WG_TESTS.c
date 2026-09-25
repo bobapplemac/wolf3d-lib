@@ -25,6 +25,7 @@
 #include "WL_STATE.h"
 #include "ID_VL.h"
 #include "WL_MAIN.h"
+#include "WL_MENU.h"
 #include "WL_PLAY.h"
 
 static int failures;
@@ -2010,6 +2011,16 @@ static void TestIntermission(void)
     CHECK(scores[1].completed == 2U);
 }
 
+static void TestMenuMovement(void)
+{
+    CHECK(WL_MainMenuMove(0U, -1, 0) == 9U);
+    CHECK(WL_MainMenuMove(9U, 1, 0) == 0U);
+    CHECK(WL_MainMenuMove(3U, 1, 0) == 5U);
+    CHECK(WL_MainMenuMove(3U, 1, 1) == 4U);
+    CHECK(WL_MainMenuMove(WL_MAIN_MENU_DEFAULT_ITEM, 0, 0)
+          == WL_MAIN_MENU_DEFAULT_ITEM);
+}
+
 static void TestPaletteShifts(void)
 {
     wg_level_t level;
@@ -2539,6 +2550,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t guard_view_hash = 1469598103934665603ULL;
     uint64_t pause_hash = 1469598103934665603ULL;
     uint64_t article_hash = 1469598103934665603ULL;
+    uint64_t menu_hash = 1469598103934665603ULL;
     size_t index;
     size_t actor_index;
     size_t decoded_graphics = 0;
@@ -2659,6 +2671,18 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                   == WG_GAME_WOLF3D_SHAREWARE_14
                   ? 0x42a18636c4286987ULL : 0x7aeca6c61a08514bULL));
         }
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawMainMenu(framebuffer, &graphics,
+                              WL_MAIN_MENU_DEFAULT_ITEM, 0));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            menu_hash ^= framebuffer[index];
+            menu_hash *= 1099511628211ULL;
+        }
+        printf("%s main menu FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)menu_hash);
+        CHECK(menu_hash == 0xcdbff8b31548b64eULL);
         for (index = 0; index + 1U < graphics.offset_count; ++index)
         {
             uint8_t *chunk_data = NULL;
@@ -3199,6 +3223,7 @@ int main(int argc, char **argv)
     TestPlayerMovementAndUse();
     TestPlayLoop();
     TestIntermission();
+    TestMenuMovement();
     TestPaletteShifts();
     TestPlayerDeathCamera();
     TestViewMath();

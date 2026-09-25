@@ -25,6 +25,7 @@
 #include "WL_INTER.h"
 #include "WL_TEXT.h"
 #include "WL_MAIN.h"
+#include "WL_MENU.h"
 #include "WL_PLAY.h"
 #include "WL_STATE.h"
 
@@ -36,6 +37,9 @@ static int wg_data_loaded;
 static unsigned wg_start_map;
 static wg_data_set_t wg_data_set;
 static wl_high_score_t wg_high_scores[WL_MAX_HIGH_SCORES];
+static uint8_t wg_menu_active;
+static uint8_t wg_front_scores;
+static unsigned wg_menu_selection = WL_MAIN_MENU_DEFAULT_ITEM;
 
 typedef enum wg_death_phase
 {
@@ -495,9 +499,30 @@ static int WG_SetDoorUseView(wg_level_t *level)
     return 0;
 }
 
-static int WG_LoadTitleScreen(const char *data_path)
+static int WG_DrawTitleScreen(void)
 {
     wg_graphics_t graphics;
+
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    if (!WG_GraphicsDecodeTitle(&graphics, wg_data_set.variant, WG_ScreenBuffer))
+    {
+        WG_ReportError("Unable to decode the Wolf3D title screen.");
+        WG_GraphicsClose(&graphics);
+        return 0;
+    }
+    WG_GraphicsClose(&graphics);
+    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+    wg_menu_active = 0U;
+    wg_front_scores = 0U;
+    return 1;
+}
+
+static int WG_LoadTitleScreen(const char *data_path)
+{
     char title[160];
     int title_length;
 
@@ -506,22 +531,12 @@ static int WG_LoadTitleScreen(const char *data_path)
         WG_ReportError("The selected directory is not a supported Wolf3D v1.4 data set.");
         return 0;
     }
-    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    if (!WG_DrawTitleScreen())
     {
         WG_ReportError("Unable to open the Wolf3D graphics resources.");
         WG_DataClose(&wg_data_set);
         return 0;
     }
-    if (!WG_GraphicsDecodeTitle(&graphics, wg_data_set.variant, WG_ScreenBuffer))
-    {
-        WG_ReportError("Unable to decode the Wolf3D title screen.");
-        WG_GraphicsClose(&graphics);
-        WG_DataClose(&wg_data_set);
-        return 0;
-    }
-    WG_GraphicsClose(&graphics);
-
-    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
     title_length = snprintf(title, sizeof(title), "wolf3dgeneric - %s",
                             WG_DataVariantName(wg_data_set.variant));
     if (title_length >= 0 && (size_t)title_length < sizeof(title))
@@ -530,6 +545,49 @@ static int WG_LoadTitleScreen(const char *data_path)
     }
     wg_data_loaded = 1;
     return 1;
+}
+
+static int WG_DrawMainMenuScreen(void)
+{
+    wg_graphics_t graphics;
+    int result;
+
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    result = WL_DrawMainMenu(WG_ScreenBuffer, &graphics,
+                             wg_menu_selection, 0);
+    WG_GraphicsClose(&graphics);
+    if (result)
+    {
+        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        wg_menu_active = 1U;
+        wg_front_scores = 0U;
+    }
+    return result;
+}
+
+static int WG_DrawFrontHighScores(void)
+{
+    wg_graphics_t graphics;
+    int result;
+
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    result = WL_DrawHighScores(WG_ScreenBuffer, &graphics, wg_high_scores);
+    WG_GraphicsClose(&graphics);
+    if (result)
+    {
+        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        wg_menu_active = 0U;
+        wg_front_scores = 1U;
+    }
+    return result;
 }
 
 static void WG_GameSessionClose(void)
@@ -542,6 +600,13 @@ static void WG_GameSessionClose(void)
     WG_WallCacheFree(&wg_game.walls);
     WG_PagesClose(&wg_game.pages);
     memset(&wg_game, 0, sizeof(wg_game));
+}
+
+static int WG_GameSessionReturnToMenu(void)
+{
+    WG_GameSessionClose();
+    wg_menu_selection = WL_MAIN_MENU_DEFAULT_ITEM;
+    return WG_DrawMainMenuScreen();
 }
 
 static int WG_GameSessionPumpAudio(void)
@@ -896,6 +961,8 @@ static int WG_GameSessionOpen(unsigned map_number)
             wg_game.music = NULL;
         }
     }
+    wg_menu_active = 0U;
+    wg_front_scores = 0U;
     success = 1;
 
 cleanup:
@@ -1162,6 +1229,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int player_death_view,
                                   int victory_view,
                                   int end_text_view,
+                                  int main_menu_view,
                                   int high_score_view,
                                   int high_score_entry_view,
                                   unsigned actor_tics,
@@ -1597,6 +1665,12 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         }
         WL_ArticleClose(&article);
     }
+    if (main_menu_view
+        && !WL_DrawMainMenu(WG_ScreenBuffer, &graphics,
+                            WL_MAIN_MENU_DEFAULT_ITEM, 0))
+    {
+        goto cleanup;
+    }
     if (high_score_view)
     {
         wl_high_score_t scores[WL_MAX_HIGH_SCORES];
@@ -1761,6 +1835,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--player-death-view"),
             WG_HasArgument(argc, argv, "--victory-view"),
             WG_HasArgument(argc, argv, "--end-text-view"),
+            WG_HasArgument(argc, argv, "--main-menu-view"),
             WG_HasArgument(argc, argv, "--high-score-view"),
             WG_HasArgument(argc, argv, "--high-score-entry-view"), actor_tics,
             forward_tics))
@@ -1769,6 +1844,26 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         return WG_RESULT_PLATFORM_ERROR;
     }
     return WG_RESULT_OK;
+}
+
+static wg_result_t WG_MainMenuActivate(void)
+{
+    switch (wg_menu_selection)
+    {
+        case 0U:
+            return WG_GameSessionOpen(wg_start_map)
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case 7U:
+            return WG_DrawFrontHighScores()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case 8U:
+            return WG_DrawTitleScreen()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case 9U:
+            return WG_RESULT_QUIT;
+        default:
+            return WG_RESULT_OK;
+    }
 }
 
 wg_result_t wolf3dgeneric_Run(void)
@@ -1865,14 +1960,28 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.active && wg_game.high_scores)
                 {
-                    if (wg_game.high_score_entry < 0
-                        && event.key == WG_KEY_ESCAPE && event.pressed)
+                    if (wg_game.high_score_entry < 0 && event.pressed)
                     {
-                        return WG_RESULT_QUIT;
+                        if (!WG_GameSessionReturnToMenu())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                        last_ticks = WG_GetTicksMs();
+                        accumulator = 0U;
+                        continue;
                     }
                     if (!WG_GameSessionHighScoreKey(event.key, event.pressed))
                     {
                         return WG_RESULT_PLATFORM_ERROR;
+                    }
+                    if (wg_game.high_score_entry < 0)
+                    {
+                        if (!WG_GameSessionReturnToMenu())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                        last_ticks = WG_GetTicksMs();
+                        accumulator = 0U;
                     }
                     continue;
                 }
@@ -1907,20 +2016,65 @@ wg_result_t wolf3dgeneric_Run(void)
                     accumulator = 0U;
                     continue;
                 }
+                if (!wg_game.active)
+                {
+                    wg_result_t menu_result = WG_RESULT_OK;
+
+                    if (!event.pressed)
+                    {
+                        continue;
+                    }
+                    if (wg_front_scores || !wg_menu_active)
+                    {
+                        if (!WG_DrawMainMenuScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.key == WG_KEY_UP)
+                    {
+                        wg_menu_selection = WL_MainMenuMove(
+                            wg_menu_selection, -1, 0);
+                        if (!WG_DrawMainMenuScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.key == WG_KEY_DOWN)
+                    {
+                        wg_menu_selection = WL_MainMenuMove(
+                            wg_menu_selection, 1, 0);
+                        if (!WG_DrawMainMenuScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.key == WG_KEY_ESCAPE)
+                    {
+                        if (!WG_DrawTitleScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                    }
+                    else if (event.key == WG_KEY_ENTER
+                             || event.key == WG_KEY_SPACE)
+                    {
+                        menu_result = WG_MainMenuActivate();
+                        if (menu_result != WG_RESULT_OK)
+                        {
+                            return menu_result;
+                        }
+                    }
+                    if (wg_game.active)
+                    {
+                        last_ticks = WG_GetTicksMs();
+                        accumulator = 0U;
+                    }
+                    continue;
+                }
                 if (event.key == WG_KEY_ESCAPE && event.pressed)
                 {
                     return WG_RESULT_QUIT;
-                }
-                if (!wg_game.active && event.key == WG_KEY_ENTER
-                    && event.pressed)
-                {
-                    if (!WG_GameSessionOpen(wg_start_map))
-                    {
-                        return WG_RESULT_PLATFORM_ERROR;
-                    }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
-                    continue;
                 }
                 if (event.key < sizeof(wg_game.keys))
                 {
@@ -1933,6 +2087,38 @@ wg_result_t wolf3dgeneric_Run(void)
             {
                 wg_game.mouse_x += event.x;
                 wg_game.mouse_y += event.y;
+            }
+            else if (event.type == WG_EVENT_MOUSE_BUTTON
+                     && !wg_game.active && event.pressed)
+            {
+                if (wg_front_scores || !wg_menu_active)
+                {
+                    if (!WG_DrawMainMenuScreen())
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                }
+                else if (event.button == 2U)
+                {
+                    if (!WG_DrawTitleScreen())
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                }
+                else if (event.button == 1U)
+                {
+                    wg_result_t menu_result = WG_MainMenuActivate();
+
+                    if (menu_result != WG_RESULT_OK)
+                    {
+                        return menu_result;
+                    }
+                    if (wg_game.active)
+                    {
+                        last_ticks = WG_GetTicksMs();
+                        accumulator = 0U;
+                    }
+                }
             }
             else if (event.type == WG_EVENT_MOUSE_BUTTON
                      && wg_game.active && event.button >= 1U

@@ -23,6 +23,7 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | `WL_GAME.c` | `WL_GAME.C` | Runtime level, area, player, door, and static-object construction |
 | `WL_PLAY.c` | `WL_PLAY.C`, `WL_AGENT.C` | Fixed 70 Hz play-loop ordering, input state, and control dispatch |
 | `WL_MAIN.c` | `WL_MAIN.C` | Trigonometric tables and projection setup |
+| `WL_MENU.c` | `WL_MENU.C` | Control-panel menu drawing and selection movement |
 | `WL_DRAW.c` | `WL_DRAW.C`, `WL_DR_A.ASM` | Fixed-point ray traversal, wall/door hits, and projected scenery ordering |
 | `WL_INTER.c` | `WL_INTER.C`, `ID_US_1.C` | Floor statistics, bonuses, victory, and high-score presentation |
 | `WL_TEXT.c` | `WL_TEXT.C` | Markup-driven help/ending article layout and word wrapping |

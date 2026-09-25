@@ -861,3 +861,26 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --end-text-view --frame-hash --dump-frame out\end-text.ppm
 ```
+
+## 2026-09-25: Control-panel main menu
+
+- Restored historical `WL_MENU.c` ownership for `DrawMainMenu`, including the
+  original colors, stripe, beveled window, font-1 labels, inactive Save Game,
+  highlighted Read This row, mouse legend, and gun cursor.
+- Menu movement wraps in both directions and skips inactive entries. Title
+  input now opens the menu; Escape returns to the title; New Game starts the
+  current map; View Scores opens the original table; and completed game-over
+  score entry returns to the menu instead of terminating the host.
+- Chunk lookup follows the exact generated headers. Apogee 1.4 inserts
+  `H_SPEARADPIC`, placing `C_OPTIONSPIC`, `C_CURSOR1PIC`, and
+  `C_MOUSELBACKPIC` at 22, 23, and 30. WL6 uses 10, 11, and 18. Both editions
+  consequently produce the identical indexed framebuffer hash
+  `cdbff8b31548b64e`.
+
+![Original Wolf3D control-panel main menu](../out/main-menu.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --main-menu-view --frame-hash --dump-frame out\main-menu.ppm
+```

@@ -35,7 +35,10 @@ original title screen. To exercise it:
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
 ```
 
-Press Enter on the title screen to start the selected map (map 0 by default).
+Press a key on the title screen to open the original control-panel main menu.
+The arrow keys move its gun cursor; Enter selects an item and Escape returns to
+the title. `New Game` currently starts the selected map (map 0 by default),
+while the original episode and difficulty submenus remain the next menu slice.
 
 Add `--play-view` to enter the current interactive game session. The original
 keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
@@ -57,6 +60,12 @@ window:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --dump-frame title.ppm
+```
+
+The control-panel fixture uses the same original graphics and font resources:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --main-menu-view --frame-hash --dump-frame main-menu.ppm
 ```
 
 It can also render ten deterministic seconds of the selected map's music to a
