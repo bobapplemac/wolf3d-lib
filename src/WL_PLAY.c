@@ -12,7 +12,6 @@
 
 #define WL_BASE_MOVE 35
 #define WL_RUN_MOVE 70
-#define WL_MOUSE_ADJUSTMENT 5
 #define WL_NUM_RED_SHIFTS 6U
 #define WL_RED_STEPS 8U
 #define WL_NUM_WHITE_SHIFTS 3U
@@ -229,8 +228,14 @@ static int WL_PlayFrame(struct wg_level *level,
             speed = (input->run ? WL_RUN_MOVE : WL_BASE_MOVE) * (int)tics;
             control_x = ((input->right != 0U) - (input->left != 0U)) * speed;
             control_y = ((input->down != 0U) - (input->up != 0U)) * speed;
-            control_x += input->mouse_x * 10 / (13 - WL_MOUSE_ADJUSTMENT);
-            control_y += input->mouse_y * 20 / (13 - WL_MOUSE_ADJUSTMENT);
+            if (input->mouse_adjustment > 9U)
+            {
+                return 0;
+            }
+            control_x += input->mouse_x * 10
+                         / (13 - (int)input->mouse_adjustment);
+            control_y += input->mouse_y * 20
+                         / (13 - (int)input->mouse_adjustment);
         }
         if (control_x > 100 * (int)tics)
         {

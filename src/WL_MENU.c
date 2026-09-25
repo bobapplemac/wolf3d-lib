@@ -28,6 +28,11 @@
 #define WL_SOUND_Y3 (WL_SOUND_Y2 + 5 * 13)
 #define WL_SOUND_WIDTH 250
 
+#define WL_CONTROL_X 24
+#define WL_CONTROL_Y 70
+#define WL_CONTROL_WIDTH 284
+#define WL_CONTROL_HEIGHT (13 * 7 - 7)
+
 typedef struct wl_menu_chunks
 {
     size_t options;
@@ -40,6 +45,7 @@ typedef struct wl_menu_chunks
     size_t effects_title;
     size_t digitized_title;
     size_t music_title;
+    size_t control_title;
 } wl_menu_chunks_t;
 
 typedef struct wl_menu_item
@@ -66,6 +72,7 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->effects_title = 15U;
         chunks->digitized_title = 16U;
         chunks->music_title = 17U;
+        chunks->control_title = 26U;
         return 1;
     }
     if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
@@ -81,6 +88,7 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->effects_title = 26U;
         chunks->digitized_title = 27U;
         chunks->music_title = 28U;
+        chunks->control_title = 37U;
         return 1;
     }
     return 0;
@@ -101,6 +109,16 @@ static void WL_MenuOutline(uint8_t *framebuffer, int x, int y,
                WL_MENU_BORDER_2_COLOR);
     WL_MenuBar(framebuffer, x + width, y, 1, height + 1,
                WL_MENU_BORDER_2_COLOR);
+}
+
+static void WL_ColorOutline(uint8_t *framebuffer, int x, int y,
+                            int width, int height,
+                            uint8_t bottom_right, uint8_t top_left)
+{
+    WL_MenuBar(framebuffer, x, y, width + 1, 1, top_left);
+    WL_MenuBar(framebuffer, x, y, 1, height + 1, top_left);
+    WL_MenuBar(framebuffer, x, y + height, width + 1, 1, bottom_right);
+    WL_MenuBar(framebuffer, x + width, y, 1, height + 1, bottom_right);
 }
 
 static void WL_MenuItems(wl_menu_item_t items[WL_MAIN_MENU_ITEMS],
@@ -339,6 +357,140 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
     return WG_VideoDrawPicture(framebuffer, graphics, chunks.cursor,
                                WL_SOUND_X & ~7,
                                WL_SOUND_Y1 - 2 + (int)selected * 13);
+}
+
+static int WL_ControlMenuActive(unsigned item, int mouse_enabled)
+{
+    return item == 0U || item == 5U || (item == 4U && mouse_enabled);
+}
+
+unsigned WL_ControlMenuMove(unsigned selected, int direction,
+                            int mouse_enabled)
+{
+    unsigned candidate;
+
+    if (selected >= WL_CONTROL_MENU_ITEMS || direction == 0)
+    {
+        return selected;
+    }
+    candidate = selected;
+    do
+    {
+        if (direction < 0)
+        {
+            candidate = candidate == 0U ? WL_CONTROL_MENU_ITEMS - 1U
+                                        : candidate - 1U;
+        }
+        else
+        {
+            candidate = candidate + 1U == WL_CONTROL_MENU_ITEMS
+                            ? 0U : candidate + 1U;
+        }
+    } while (!WL_ControlMenuActive(candidate, mouse_enabled));
+    return candidate;
+}
+
+int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
+                       const wg_graphics_t *graphics, unsigned selected,
+                       int mouse_enabled)
+{
+    static const char *const labels[WL_CONTROL_MENU_ITEMS] =
+    {
+        "Mouse Enabled", "Joystick Enabled", "Use joystick port 2",
+        "Gravis GamePad Enabled", "Mouse Sensitivity", "Customize controls"
+    };
+    wl_menu_chunks_t chunks;
+    wg_font_t font;
+    unsigned index;
+
+    if (framebuffer == NULL || graphics == NULL
+        || selected >= WL_CONTROL_MENU_ITEMS
+        || !WL_ControlMenuActive(selected, mouse_enabled)
+        || !WL_MenuChunks(graphics->variant, &chunks)
+        || !WG_FontOpen(&font, graphics, 1U))
+    {
+        return 0;
+    }
+    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    WL_MenuBar(framebuffer, 0, 10, 320, 24, 0U);
+    WL_MenuBar(framebuffer, 0, 32, 320, 1, WL_MENU_STRIPE_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.control_title,
+                             80, 0)
+        || !WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
+                                112, 184))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    WL_MenuBar(framebuffer, WL_CONTROL_X - 8, WL_CONTROL_Y - 5,
+               WL_CONTROL_WIDTH, WL_CONTROL_HEIGHT,
+               WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, WL_CONTROL_X - 8, WL_CONTROL_Y - 5,
+                   WL_CONTROL_WIDTH, WL_CONTROL_HEIGHT);
+    for (index = 0U; index < WL_CONTROL_MENU_ITEMS; ++index)
+    {
+        uint8_t color = WL_ControlMenuActive(index, mouse_enabled)
+                            ? (index == selected
+                                   ? WL_MENU_HIGHLIGHT_COLOR
+                                   : WL_MENU_TEXT_COLOR)
+                            : WL_MENU_DEACTIVE_COLOR;
+
+        WG_FontDraw(&font, framebuffer, WL_CONTROL_X + 56,
+                    WL_CONTROL_Y + (int)index * 13, labels[index], color);
+        if (index < 4U
+            && !WG_VideoDrawPicture(
+                framebuffer, graphics,
+                index == 0U && mouse_enabled
+                    ? chunks.selected : chunks.not_selected,
+                WL_CONTROL_X + 32, WL_CONTROL_Y + 3 + (int)index * 13))
+        {
+            WG_FontClose(&font);
+            return 0;
+        }
+    }
+    WG_FontClose(&font);
+    return WG_VideoDrawPicture(framebuffer, graphics, chunks.cursor,
+                               WL_CONTROL_X,
+                               WL_CONTROL_Y - 2 + (int)selected * 13);
+}
+
+int WL_DrawMouseSensitivity(uint8_t framebuffer[320 * 200],
+                            const wg_graphics_t *graphics,
+                            unsigned adjustment)
+{
+    wl_menu_chunks_t chunks;
+    wg_font_t font;
+    size_t title_width;
+
+    if (framebuffer == NULL || graphics == NULL || adjustment > 9U
+        || !WL_MenuChunks(graphics->variant, &chunks)
+        || !WG_FontOpen(&font, graphics, 1U))
+    {
+        return 0;
+    }
+    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
+                             112, 184))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    WL_MenuBar(framebuffer, 10, 80, 300, 30, WL_MENU_BACKGROUND_COLOR);
+    WL_MenuOutline(framebuffer, 10, 80, 300, 30);
+    title_width = WG_FontMeasure(&font, "Adjust Mouse Sensitivity");
+    WG_FontDraw(&font, framebuffer, (320 - (int)title_width) / 2, 82,
+                "Adjust Mouse Sensitivity", WL_MENU_READ_COLOR);
+    WG_FontDraw(&font, framebuffer, 14, 95, "Slow", WL_MENU_TEXT_COLOR);
+    WG_FontDraw(&font, framebuffer, 269, 95, "Fast", WL_MENU_TEXT_COLOR);
+    WL_MenuBar(framebuffer, 60, 97, 200, 10, WL_MENU_TEXT_COLOR);
+    WL_ColorOutline(framebuffer, 60, 97, 200, 10,
+                    0U, WL_MENU_HIGHLIGHT_COLOR);
+    WL_ColorOutline(framebuffer, 60 + (int)adjustment * 20, 97, 20, 10,
+                    0U, WL_MENU_READ_COLOR);
+    WL_MenuBar(framebuffer, 61 + (int)adjustment * 20, 98, 19, 9,
+               WL_MENU_READ_HIGHLIGHT_COLOR);
+    WG_FontClose(&font);
+    return 1;
 }
 
 unsigned WL_EpisodeMenuMove(unsigned episode, int direction)

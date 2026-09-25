@@ -246,6 +246,17 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(sound-menu-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "ccbead18acb8b045")
+        add_test(NAME control-menu-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --control-menu-view
+            --frame-hash)
+        set_tests_properties(control-menu-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "6b0f54c32a663fa5")
+        add_test(NAME mouse-sensitivity-view-wl1
+            COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view
+            --mouse-sensitivity-view --frame-hash)
+        set_tests_properties(mouse-sensitivity-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "f7dc4f44ff382c6b")
         add_test(NAME credits-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --credits-view
             --frame-hash)
@@ -419,6 +430,17 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(sound-menu-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "f311bc2002d7a216")
+        add_test(NAME control-menu-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --control-menu-view
+            --frame-hash)
+        set_tests_properties(control-menu-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "466d386e2915c931")
+        add_test(NAME mouse-sensitivity-view-wl6
+            COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view
+            --mouse-sensitivity-view --frame-hash)
+        set_tests_properties(mouse-sensitivity-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "f7dc4f44ff382c6b")
         add_test(NAME credits-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --credits-view
             --frame-hash)

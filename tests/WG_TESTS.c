@@ -1925,6 +1925,7 @@ static void TestPlayLoop(void)
     WL_PlayStateReset(&play);
     SetPlayerMovementLevel(&level);
     memset(&input, 0, sizeof(input));
+    input.mouse_adjustment = 5U;
     input.mouse_x = 16;
     input.mouse_y = -4;
     start_x = level.player_x;
@@ -1932,6 +1933,17 @@ static void TestPlayLoop(void)
     CHECK(level.player_angle == 359U);
     CHECK(level.player_x > start_x);
     CHECK(level.player_thrust_speed == 10 * 150);
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
+    memset(&input, 0, sizeof(input));
+    input.mouse_x = 16;
+    input.mouse_adjustment = 0U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.player_angle == 0U);
+    CHECK(level.player_angle_fraction == 12);
+    input.mouse_adjustment = 10U;
+    CHECK(!WL_PlayTick(&level, &tables, &play, &input));
 
     WL_PlayStateReset(&play);
     SetPlayerMovementLevel(&level);
@@ -2591,6 +2603,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t demo_hash = 1469598103934665603ULL;
     uint64_t menu_hash = 1469598103934665603ULL;
     uint64_t sound_menu_hash = 1469598103934665603ULL;
+    uint64_t control_menu_hash = 1469598103934665603ULL;
+    uint64_t mouse_sensitivity_hash = 1469598103934665603ULL;
     uint64_t episode_menu_hash = 1469598103934665603ULL;
     uint64_t difficulty_menu_hash = 1469598103934665603ULL;
     size_t index;
@@ -2825,6 +2839,36 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(WL_SoundMenuMove(7U, 1) == 10U);
         CHECK(WL_SoundMenuMove(10U, 1) == 11U);
         CHECK(WL_SoundMenuMove(11U, 1) == 0U);
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawControlMenu(framebuffer, &graphics, 0U, 1));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            control_menu_hash ^= framebuffer[index];
+            control_menu_hash *= 1099511628211ULL;
+        }
+        printf("%s control menu FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)control_menu_hash);
+        CHECK(control_menu_hash == (expected_variant
+              == WG_GAME_WOLF3D_SHAREWARE_14
+              ? 0x6b0f54c32a663fa5ULL : 0x466d386e2915c931ULL));
+        CHECK(WL_ControlMenuMove(0U, 1, 1) == 4U);
+        CHECK(WL_ControlMenuMove(4U, 1, 1) == 5U);
+        CHECK(WL_ControlMenuMove(5U, 1, 1) == 0U);
+        CHECK(WL_ControlMenuMove(0U, -1, 1) == 5U);
+        CHECK(WL_ControlMenuMove(0U, 1, 0) == 5U);
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawMouseSensitivity(framebuffer, &graphics, 5U));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            mouse_sensitivity_hash ^= framebuffer[index];
+            mouse_sensitivity_hash *= 1099511628211ULL;
+        }
+        printf("%s mouse sensitivity FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)mouse_sensitivity_hash);
+        CHECK(mouse_sensitivity_hash == 0xf7dc4f44ff382c6bULL);
+        CHECK(!WL_DrawMouseSensitivity(framebuffer, &graphics, 10U));
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawEpisodeMenu(
             framebuffer, &graphics, 0U,

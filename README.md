@@ -102,6 +102,13 @@ immediately; changing an enabled mode plays the original pistol check sound.
 PC Speaker and Disney Sound Source remain visibly disabled until those device
 emulations exist. Capture the panel with `--sound-menu-view`.
 
+The Control row restores the original mouse and joystick device panel. Mouse
+input can be enabled or disabled, and Mouse Sensitivity opens the original
+ten-position slider; the chosen value feeds the original movement formula.
+Joystick rows remain disabled because the generic event boundary does not yet
+expose a joystick. Use `--control-menu-view` or
+`--mouse-sensitivity-view` for deterministic captures.
+
 The main menu's `Read This!` entry decodes the original 41-page help article
 directly from the selected edition's `VGAGRAPH`. Arrow keys, Enter, and Space
 navigate pages; Escape returns to the control panel. Its first page can be

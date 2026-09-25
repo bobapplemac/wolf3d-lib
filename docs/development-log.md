@@ -1007,3 +1007,30 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --sound-menu-view --frame-hash --dump-frame out\sound-menu.ppm
 ```
+
+## 2026-09-25: Mouse control panel
+
+- Restored `DrawCtlScreen` from `WL_MENU.C`, including the authored Control
+  plaque, stripes, outlined device window, radio pictures, disabled joystick
+  rows, mouse legend, and wrapping gun cursor.
+- Mouse Enabled now gates relative motion and all three mouse buttons without
+  changing keyboard input. Joystick and GamePad rows remain disabled because
+  the generic platform contract currently has no joystick events.
+- Restored the nested ten-position Mouse Sensitivity dialog. Arrow keys adjust
+  the value, Enter or left mouse accepts it, and Escape or right mouse restores
+  the prior value. The selected value now reaches `WL_PLAY.c`'s original mouse
+  divisors rather than being a compile-time constant.
+- Added control-menu hashes `6b0f54c32a663fa5` (WL1) and
+  `466d386e2915c931` (WL6), plus the shared sensitivity-dialog hash
+  `f7dc4f44ff382c6b`.
+
+![Original Wolfenstein 3D control menu](../out/control-menu.png)
+
+![Original mouse sensitivity dialog](../out/mouse-sensitivity.png)
+
+Regenerate the captures with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --control-menu-view --frame-hash --dump-frame out\control-menu.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --mouse-sensitivity-view --frame-hash --dump-frame out\mouse-sensitivity.ppm
+```

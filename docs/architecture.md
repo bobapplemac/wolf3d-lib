@@ -75,6 +75,14 @@ Sound Blaster digitized samples, and Nuked-OPL3 music, alongside each original
 disabled color. The selected modes gate live playback; music-off retains a
 silent front-end mixer so the original pistol preview can still be heard.
 
+The first Control slice restores the original device list and sensitivity
+dialog. The portable event boundary already provides relative mouse motion and
+three buttons, so Mouse Enabled gates both paths and the selected 0–9 value is
+carried in `wl_input_t` to the original `10/(13-adjustment)` and
+`20/(13-adjustment)` movement calculations. Joystick rows remain authored but
+disabled because no joystick event contract has been added. Customize Controls
+is retained as the next nested control-panel slice.
+
 `WL_PLAY.c` also owns the original demo stream boundary. The four-byte header
 retains its map byte, 16-bit total length, and skipped fourth byte; every
 following record is the original button bitmap plus signed X/Y controls. Demo
