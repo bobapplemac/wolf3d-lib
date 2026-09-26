@@ -1153,26 +1153,37 @@ static int WG_DrawConfirmScreen(wg_confirm_action_t action)
 
 static int WG_SavePath(char *path, size_t path_size, unsigned slot)
 {
+    const char *extension;
     int length;
 
     if (path == NULL || slot >= WL_SAVE_SLOTS)
     {
         return 0;
     }
-    length = snprintf(path, path_size, "SAVEGAM%u%s",
-                      slot, wg_data_set.extension);
+    extension = WG_DataVariantExtension(wg_data_set.variant);
+    if (extension == NULL)
+    {
+        return 0;
+    }
+    length = snprintf(path, path_size, "SAVEGAM%u.%s", slot, extension);
     return length >= 0 && (size_t)length < path_size;
 }
 
 static int WG_ConfigPath(char *path, size_t path_size)
 {
+    const char *extension;
     int length;
 
     if (path == NULL)
     {
         return 0;
     }
-    length = snprintf(path, path_size, "CONFIG%s", wg_data_set.extension);
+    extension = WG_DataVariantExtension(wg_data_set.variant);
+    if (extension == NULL)
+    {
+        return 0;
+    }
+    length = snprintf(path, path_size, "CONFIG.%s", extension);
     return length >= 0 && (size_t)length < path_size;
 }
 

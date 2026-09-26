@@ -153,8 +153,9 @@ Use `--episode-menu-view` or `--difficulty-menu-view` in place of
 `--main-menu-view` to capture the two New Game panels.
 
 `Load Game` and the in-game-only `Save Game` row restore the original ten-slot
-panels, arrow-key navigation, slot-name entry, and `SAVEGAM?.WL1`/`.WL6`
-filenames in the process working directory. The portable payload is explicitly
+panels, arrow-key navigation, slot-name entry, and profile-specific
+`SAVEGAM?.WL1`, `.WL6`, `.SOD`, `.SDM`, `.SD1`, `.SD2`, or `.SD3` filenames in
+the process working directory. The portable payload is explicitly
 little-endian, versioned, edition-tagged, and checksummed; it intentionally does
 not reproduce the DOS executable's pointer-sized raw structure dump, so original
 DOS save payloads are not interchangeable. Use `--in-game-menu-view`,

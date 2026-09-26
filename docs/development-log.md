@@ -1337,6 +1337,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Added archive and headless gates for all three missions. Every one of the 63
   maps decodes and builds, all Spear actor classes and resources remain valid,
   and the two expansion VSWAP archives each expose 732 pages.
+- Kept save/config identity separate from the physical archive suffix. A GOG
+  M2 directory may contain `VSWAP.SOD`, but selecting `--game SD2` still uses
+  `CONFIG.SD2` and `SAVEGAM?.SD2`, preventing cross-campaign collisions.
 - Recorded exact hashes for the tested GOG archives. The Return to Danger and
   Ultimate Challenge opening frames hash to `6fa88e8f025797bf` and
   `7cc04bae15ab353c`; both retain the corrected Spear palette hash
