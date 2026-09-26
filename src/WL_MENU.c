@@ -471,7 +471,7 @@ unsigned WL_LoadSaveMenuMove(unsigned selected, int direction)
 
 static int WL_SoundMenuActive(unsigned item)
 {
-    return item == 0U || item == 2U || item == 5U || item == 7U
+    return item == 0U || item == 1U || item == 2U || item == 5U || item == 7U
         || item == 10U || item == 11U;
 }
 
@@ -502,7 +502,7 @@ unsigned WL_SoundMenuMove(unsigned selected, int direction)
 
 int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                      const wg_graphics_t *graphics, unsigned selected,
-                     int adlib_effects, int digitized, int music)
+                     unsigned sound_mode, int digitized, int music)
 {
     static const char *const labels[WL_SOUND_MENU_ITEMS] =
     {
@@ -567,8 +567,9 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                     : WL_MENU_DEACTIVE_COLOR;
         WG_FontDraw(&font, framebuffer, WL_SOUND_X + 52,
                     WL_SOUND_Y1 + (int)index * 13, labels[index], color);
-        on = (index == 0U && !adlib_effects)
-             || (index == 2U && adlib_effects)
+        on = (index == 0U && sound_mode == 0U)
+             || (index == 1U && sound_mode == 1U)
+             || (index == 2U && sound_mode == 2U)
              || (index == 5U && !digitized)
              || (index == 7U && digitized)
              || (index == 10U && !music)

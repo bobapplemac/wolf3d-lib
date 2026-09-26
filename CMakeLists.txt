@@ -262,7 +262,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --sound-menu-view
             --frame-hash)
         set_tests_properties(sound-menu-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "ccbead18acb8b045")
+            PASS_REGULAR_EXPRESSION "f46530fbaa7a0775")
         add_test(NAME control-menu-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --control-menu-view
             --frame-hash)
@@ -499,7 +499,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --sound-menu-view
             --frame-hash)
         set_tests_properties(sound-menu-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "f311bc2002d7a216")
+            PASS_REGULAR_EXPRESSION "bd51c51cceb48736")
         add_test(NAME control-menu-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --control-menu-view
             --frame-hash)

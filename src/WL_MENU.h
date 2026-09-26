@@ -32,7 +32,7 @@ int WL_DrawLoadSaveMenu(
 unsigned WL_LoadSaveMenuMove(unsigned selected, int direction);
 int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                      const wg_graphics_t *graphics, unsigned selected,
-                     int adlib_effects, int digitized, int music);
+                     unsigned sound_mode, int digitized, int music);
 unsigned WL_SoundMenuMove(unsigned selected, int direction);
 int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned selected,

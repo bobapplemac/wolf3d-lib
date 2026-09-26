@@ -8,7 +8,7 @@
 #include "WG_FILE.h"
 #include "WOLF3DGENERIC.h"
 
-#define WG_CONFIG_VERSION 1U
+#define WG_CONFIG_VERSION 2U
 
 static const uint8_t WG_ConfigMagic[8] =
     { 'W', '3', 'D', 'G', 'C', 'F', 'G', '1' };
@@ -99,7 +99,7 @@ void WG_ConfigDefaults(wg_config_t *config)
     memcpy(config->action_keys, action_keys, sizeof(action_keys));
     memcpy(config->movement_keys, movement_keys, sizeof(movement_keys));
     memcpy(config->mouse_bindings, mouse_bindings, sizeof(mouse_bindings));
-    config->adlib_effects = 1U;
+    config->sound_mode = 2U;
     config->digitized_effects = 1U;
     config->music_enabled = 1U;
     config->mouse_enabled = 1U;
@@ -111,7 +111,7 @@ static int WG_ConfigValid(const wg_config_t *config)
 {
     unsigned index;
 
-    if (config == NULL || config->adlib_effects > 1U
+    if (config == NULL || config->sound_mode > 2U
         || config->digitized_effects > 1U || config->music_enabled > 1U
         || config->mouse_enabled > 1U || config->mouse_adjustment > 9U
         || config->view_size < WL_VIEW_SIZE_MIN
@@ -182,7 +182,7 @@ int WG_ConfigEncode(uint8_t *data, size_t capacity, size_t *size,
         WG_ConfigPut16(&cursor, config->movement_keys[index]);
         WG_ConfigPut8(&cursor, config->mouse_bindings[index]);
     }
-    WG_ConfigPut8(&cursor, config->adlib_effects);
+    WG_ConfigPut8(&cursor, config->sound_mode);
     WG_ConfigPut8(&cursor, config->digitized_effects);
     WG_ConfigPut8(&cursor, config->music_enabled);
     WG_ConfigPut8(&cursor, config->mouse_enabled);
@@ -251,7 +251,7 @@ int WG_ConfigDecode(const uint8_t *data, size_t size,
         decoded.movement_keys[index] = WG_ConfigGet16(&cursor);
         decoded.mouse_bindings[index] = WG_ConfigGet8(&cursor);
     }
-    decoded.adlib_effects = WG_ConfigGet8(&cursor);
+    decoded.sound_mode = WG_ConfigGet8(&cursor);
     decoded.digitized_effects = WG_ConfigGet8(&cursor);
     decoded.music_enabled = WG_ConfigGet8(&cursor);
     decoded.mouse_enabled = WG_ConfigGet8(&cursor);

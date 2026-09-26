@@ -86,14 +86,23 @@ static void TestIMFSequencer(void)
         5U, 5U, 0U, 0U, 0U, 0U, 0U, 0U,
         2U, 0x80U
     };
+    static const uint8_t pc_chunk[] =
+    {
+        4U, 0U, 0U, 0U, 5U, 0U, 40U, 40U, 0U, 50U
+    };
+    static const uint8_t low_priority_pc[] =
+    {
+        1U, 0U, 0U, 0U, 4U, 0U, 30U
+    };
     id_sd_imf_t sequence;
     id_sd_sample_clock_t clock;
     opl_write_log_t log;
     unsigned index;
     uint32_t ticks = 0U;
     id_sd_music_t *music;
-    int16_t effect_pcm[1200U * 2U];
+    int16_t effect_pcm[1600U * 2U];
     static const uint8_t digital_samples[] = { 0U, 255U };
+    uint64_t pc_hash = 1469598103934665603ULL;
 
     CHECK(WL_MusicChunkForMap(0U) == 264U);
     CHECK(WL_MusicChunkForMap(8U) == 263U);
@@ -149,6 +158,27 @@ static void TestIMFSequencer(void)
                                  sizeof(low_priority_effect)));
         CHECK(ID_SD_MusicRender(music, effect_pcm, 1200U));
         CHECK(!ID_SD_EffectPlaying(music));
+        ID_SD_MusicDestroy(music);
+    }
+    music = ID_SD_MusicCreate(48000U);
+    CHECK(music != NULL);
+    if (music != NULL)
+    {
+        memset(effect_pcm, 0, sizeof(effect_pcm));
+        CHECK(ID_SD_PCStart(music, pc_chunk, sizeof(pc_chunk)));
+        CHECK(ID_SD_PCPlaying(music));
+        CHECK(!ID_SD_PCStart(music, low_priority_pc,
+                             sizeof(low_priority_pc)));
+        CHECK(ID_SD_MusicRender(music, effect_pcm, 1600U));
+        CHECK(!ID_SD_PCPlaying(music));
+        for (index = 0U; index < 1600U * 2U; ++index)
+        {
+            pc_hash ^= (uint16_t)effect_pcm[index];
+            pc_hash *= 1099511628211ULL;
+        }
+        printf("PC speaker PCM FNV-1a: %016llx\n",
+               (unsigned long long)pc_hash);
+        CHECK(pc_hash == 0x27841e7de4f37983ULL);
         ID_SD_MusicDestroy(music);
     }
     music = ID_SD_MusicCreate(48000U);
@@ -2857,7 +2887,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                (unsigned long long)confirm_hash);
         CHECK(confirm_hash == 0x0b2a93f76bdc8ce8ULL);
         memset(framebuffer, 0, sizeof(framebuffer));
-        CHECK(WL_DrawSoundMenu(framebuffer, &graphics, 0U, 1, 1, 1));
+        CHECK(WL_DrawSoundMenu(framebuffer, &graphics, 0U, 2U, 1, 1));
         for (index = 0U; index < sizeof(framebuffer); ++index)
         {
             sound_menu_hash ^= framebuffer[index];
@@ -2868,9 +2898,10 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                (unsigned long long)sound_menu_hash);
         CHECK(sound_menu_hash == (expected_variant
               == WG_GAME_WOLF3D_SHAREWARE_14
-              ? 0xccbead18acb8b045ULL : 0xf311bc2002d7a216ULL));
+              ? 0xf46530fbaa7a0775ULL : 0xbd51c51cceb48736ULL));
         CHECK(WL_SoundMenuMove(0U, -1) == 11U);
-        CHECK(WL_SoundMenuMove(0U, 1) == 2U);
+        CHECK(WL_SoundMenuMove(0U, 1) == 1U);
+        CHECK(WL_SoundMenuMove(1U, 1) == 2U);
         CHECK(WL_SoundMenuMove(2U, 1) == 5U);
         CHECK(WL_SoundMenuMove(5U, 1) == 7U);
         CHECK(WL_SoundMenuMove(7U, 1) == 10U);
@@ -3349,6 +3380,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         uint64_t music_hash = 1469598103934665603ULL;
         uint64_t front_music_hash = 1469598103934665603ULL;
         uint64_t mixed_hash = 1469598103934665603ULL;
+        uint64_t pc_mixed_hash = 1469598103934665603ULL;
         uint64_t digital_hash = 1469598103934665603ULL;
         const uint8_t *music_data;
         size_t music_size;
@@ -3412,6 +3444,29 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)mixed_hash);
             CHECK(mixed_hash == 0xbebd8fbdef66d214ULL);
+            ID_SD_MusicDestroy(music_player);
+            music_player = ID_SD_MusicCreate(48000U);
+            CHECK(music_player != NULL);
+            CHECK(ID_SD_MusicStart(music_player, music_data, music_size));
+            CHECK(WG_AudioGetChunk(&audio, 24U, &page_data, &page_size));
+            CHECK(ID_SD_PCStart(music_player, page_data, page_size));
+            CHECK(ID_SD_MusicRender(music_player, music_pcm, 4800U));
+            for (index = 0U;
+                 index < 4800U * 2U * sizeof(*music_pcm); ++index)
+            {
+                pc_mixed_hash ^= pcm_bytes[index];
+                pc_mixed_hash *= 1099511628211ULL;
+            }
+            printf("%s music plus PC-speaker pistol FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)pc_mixed_hash);
+            CHECK(pc_mixed_hash == 0x67e7ee416105629aULL);
+            for (index = 0U; index < 87U; ++index)
+            {
+                CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));
+                ID_SD_PCStop(music_player);
+                CHECK(ID_SD_PCStart(music_player, page_data, page_size));
+            }
             for (index = 87U; index < 174U; ++index)
             {
                 CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));
@@ -3634,7 +3689,7 @@ static void TestPortableConfig(void)
     source.movement_keys[3] = WG_KEY_HOME;
     source.mouse_bindings[0] = 2U;
     source.mouse_bindings[1] = UINT8_MAX;
-    source.adlib_effects = 0U;
+    source.sound_mode = 1U;
     source.digitized_effects = 1U;
     source.music_enabled = 0U;
     source.mouse_enabled = 1U;
@@ -3658,7 +3713,7 @@ static void TestPortableConfig(void)
     encoded[20U] ^= 1U;
     CHECK(!WG_ConfigDecode(encoded, encoded_size,
                            WG_GAME_WOLF3D_FULL_GT_14, &decoded));
-    CHECK(hash == 0xe6db4f8c7bb574b9ULL);
+    CHECK(hash == 0x2ef00b526b4c06b1ULL);
 }
 
 int main(int argc, char **argv)

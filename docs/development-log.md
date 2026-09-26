@@ -1159,3 +1159,19 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-v
 - These eight full-stream gates complement the command-format/hash checks and
   the shorter first-demo visual checkpoint, covering 9,126 recorded commands
   in total across the two editions.
+
+## 2026-09-25: Original PC-speaker sound mode
+
+- Restored `SDL_PCPlaySound`/`SDL_PCService` semantics from `ID_SD.C`: six-byte
+  `PCSound` headers, shared priority behavior, one pitch byte per 140 Hz service
+  interval, the original `sample * 60` PIT divisor table, zero-byte silence,
+  and PIT channel-2 square-wave synthesis at 1,193,182 Hz.
+- Enabled PC Speaker in the original Sound menu and persisted the three-way
+  None/PC/AdLib choice. Disney Sound Source remains unavailable because it is
+  a separate digitized-output device rather than the game's PC-speaker effects
+  mode.
+- Every PC-sound chunk in both supplied editions now passes format/playback
+  validation. A synthetic timing fixture hashes to `27841e7de4f37983`, and
+  the real PC-speaker pistol mixed over E1M1 music hashes to
+  `67e7ee416105629a` on both editions and architectures. The enabled menu hashes
+  are `f46530fbaa7a0775` (WL1) and `bd51c51cceb48736` (WL6).

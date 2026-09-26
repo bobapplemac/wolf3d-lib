@@ -79,7 +79,8 @@ static uint8_t wg_save_editing;
 static uint8_t wg_save_confirm;
 static uint8_t wg_save_caps_lock;
 static char wg_save_original_name[WL_SAVE_NAME_LENGTH + 1U];
-static uint8_t wg_adlib_effects = 1U;
+/* Original SoundMode values: off, PC speaker, AdLib. */
+static uint8_t wg_sound_mode = 2U;
 static uint8_t wg_digitized_effects = 1U;
 static uint8_t wg_music_enabled = 1U;
 static uint8_t wg_config_ready;
@@ -287,7 +288,8 @@ static void WG_FrontSoundPreviewNumber(unsigned sound_number)
         audio = &wg_front_audio;
         mixer = wg_front_music;
     }
-    if (!WG_AudioGetChunk(audio, 87U + sound_number,
+    if (!WG_AudioGetChunk(audio,
+                          (wg_sound_mode == 1U ? 0U : 87U) + sound_number,
                           &effect_data, &effect_size))
     {
         return;
@@ -319,7 +321,11 @@ static void WG_FrontSoundPreviewNumber(unsigned sound_number)
             return;
         }
     }
-    if (wg_adlib_effects)
+    if (wg_sound_mode == 1U)
+    {
+        (void)ID_SD_PCStart(mixer, effect_data, effect_size);
+    }
+    else if (wg_sound_mode == 2U)
     {
         (void)ID_SD_EffectStart(mixer, effect_data, effect_size);
     }
@@ -942,7 +948,7 @@ static void WG_ApplyConfig(const wg_config_t *config)
     memcpy(wg_movement_keys, config->movement_keys, sizeof(wg_movement_keys));
     memcpy(wg_mouse_bindings, config->mouse_bindings,
            sizeof(wg_mouse_bindings));
-    wg_adlib_effects = config->adlib_effects;
+    wg_sound_mode = config->sound_mode;
     wg_digitized_effects = config->digitized_effects;
     wg_music_enabled = config->music_enabled;
     wg_mouse_enabled = config->mouse_enabled;
@@ -962,7 +968,7 @@ static void WG_CaptureConfig(wg_config_t *config)
            sizeof(config->movement_keys));
     memcpy(config->mouse_bindings, wg_mouse_bindings,
            sizeof(config->mouse_bindings));
-    config->adlib_effects = wg_adlib_effects;
+    config->sound_mode = wg_sound_mode;
     config->digitized_effects = wg_digitized_effects;
     config->music_enabled = wg_music_enabled;
     config->mouse_enabled = wg_mouse_enabled;
@@ -1084,7 +1090,7 @@ static int WG_DrawSoundMenuScreen(void)
         return 0;
     }
     result = WL_DrawSoundMenu(WG_ScreenBuffer, &graphics,
-                              wg_sound_selection, wg_adlib_effects,
+                              wg_sound_selection, wg_sound_mode,
                               wg_digitized_effects, wg_music_enabled);
     WG_GraphicsClose(&graphics);
     if (result)
@@ -2115,7 +2121,8 @@ static int WG_GameSessionTick(void)
             const wg_sound_event_t *event =
                 &wg_game.level.sound_events[sound];
             unsigned sound_number = event->sound;
-            size_t chunk = 87U + sound_number;
+            size_t chunk = (wg_sound_mode == 1U ? 0U : 87U)
+                           + sound_number;
             int digital_number = ID_SD_DigitalNumberForSound(sound_number);
 
             if (WG_AudioGetChunk(&wg_game.audio, chunk, &data, &size))
@@ -2153,7 +2160,11 @@ static int WG_GameSessionTick(void)
                         }
                     }
                 }
-                if (!played && wg_adlib_effects)
+                if (!played && wg_sound_mode == 1U)
+                {
+                    (void)ID_SD_PCStart(wg_game.music, data, size);
+                }
+                else if (!played && wg_sound_mode == 2U)
                 {
                     (void)ID_SD_EffectStart(wg_game.music, data, size);
                 }
@@ -2729,7 +2740,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         }
     }
     if (sound_menu_view
-        && !WL_DrawSoundMenu(WG_ScreenBuffer, &graphics, 0U, 1, 1, 1))
+        && !WL_DrawSoundMenu(WG_ScreenBuffer, &graphics, 0U, 2U, 1, 1))
     {
         goto cleanup;
     }
@@ -2941,6 +2952,10 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     }
     wg_start_map = map_number;
     WG_LoadConfig();
+    if (WG_HasArgument(argc, argv, "--pc-speaker"))
+    {
+        wg_sound_mode = 1U;
+    }
     if (WG_HasArgument(argc, argv, "--view-size"))
     {
         wg_view_size = view_size;
@@ -3186,10 +3201,16 @@ static int WG_SoundMenuActivate(void)
     switch (wg_sound_selection)
     {
         case 0U:
-            wg_adlib_effects = 0U;
+            wg_sound_mode = 0U;
+            ID_SD_PCStop(wg_game.active ? wg_game.music : wg_front_music);
+            ID_SD_EffectStop(wg_game.active ? wg_game.music : wg_front_music);
+            break;
+        case 1U:
+            wg_sound_mode = 1U;
+            preview = 1;
             break;
         case 2U:
-            wg_adlib_effects = 1U;
+            wg_sound_mode = 2U;
             preview = 1;
             break;
         case 5U:

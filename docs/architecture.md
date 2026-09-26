@@ -81,11 +81,11 @@ random-table position, and eight floor ratios round-trip without depending on
 host pointer size or structure padding.
 
 The Sound slice preserves `SndMenu`'s twelve-row layout and three device
-groups. It exposes only real engine capabilities: Nuked-OPL3 effects,
-Sound Blaster digitized samples, and Nuked-OPL3 music, alongside each original
-`None` choice. PC Speaker and Disney Sound Source are rendered in the original
-disabled color. The selected modes gate live playback; music-off retains a
-silent front-end mixer so the original pistol preview can still be heard.
+groups. It exposes PC-speaker and Nuked-OPL3 effects, Sound Blaster digitized
+samples, and Nuked-OPL3 music alongside each original `None` choice. Only the
+unimplemented Disney Sound Source is rendered in the original disabled color.
+The selected modes gate live playback; music-off retains a silent front-end
+mixer so the original pistol preview can still be heard.
 
 The first Control slice restores the original device list and sensitivity
 dialog. The portable event boundary already provides relative mouse motion and
@@ -408,6 +408,12 @@ buffers and headless mode can emit the identical samples as a WAV fixture.
 AdLib effects share Nuked's channel 0 with the music chip, retain original
 priority replacement and instrument programming, and consume one pitch byte at
 140 Hz (every fifth IMF service), just as the fast DOS timer ISR did.
+
+PC-speaker effects use the parallel six-byte `PCSound` format and that same
+140 Hz service cadence. Each nonzero pitch byte selects the original
+`sample * 60` divisor for the 1,193,182 Hz PIT channel-2 square wave; zero is
+silence. The continuously phase-accumulated square wave is mixed into the host
+PCM stream without coupling its timing to presentation or game tics.
 
 Digitized effects retain the original VSWAP layout and `wolfdigimap` selection.
 `ID_SD.c` reads the terminal `(start page, byte length)` table, joins each

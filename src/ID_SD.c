@@ -20,6 +20,14 @@ struct id_sd_music
     uint16_t effect_priority;
     uint8_t effect_block;
     uint8_t effect_divider;
+    const uint8_t *pc_data;
+    uint32_t pc_length;
+    uint32_t pc_position;
+    uint64_t pc_phase;
+    uint16_t pc_priority;
+    uint16_t pc_divisor;
+    uint8_t pc_last_sample;
+    uint8_t pc_polarity;
     uint8_t *digital_data;
     size_t digital_length;
     size_t digital_position;
@@ -210,6 +218,7 @@ int ID_SD_EffectStart(id_sd_music_t *music, const uint8_t *chunk,
     {
         return 0;
     }
+    ID_SD_PCStop(music);
     ID_SD_EffectStop(music);
     music->effect_data = chunk + 23U;
     music->effect_length = length;
@@ -236,6 +245,53 @@ void ID_SD_EffectStop(id_sd_music_t *music)
 int ID_SD_EffectPlaying(const id_sd_music_t *music)
 {
     return music != NULL && music->effect_data != NULL;
+}
+
+int ID_SD_PCStart(id_sd_music_t *music, const uint8_t *chunk,
+                  size_t chunk_size)
+{
+    uint32_t length;
+    uint16_t priority;
+
+    if (music == NULL || chunk == NULL || chunk_size < 7U)
+    {
+        return 0;
+    }
+    length = WG_ReadLE32(chunk);
+    priority = WG_ReadLE16(chunk + 4U);
+    if (length == 0U || length > chunk_size - 6U
+        || (music->pc_data != NULL && priority < music->pc_priority))
+    {
+        return 0;
+    }
+    ID_SD_EffectStop(music);
+    ID_SD_PCStop(music);
+    music->pc_data = chunk + 6U;
+    music->pc_length = length;
+    music->pc_priority = priority;
+    music->pc_last_sample = UINT8_MAX;
+    return 1;
+}
+
+void ID_SD_PCStop(id_sd_music_t *music)
+{
+    if (music == NULL)
+    {
+        return;
+    }
+    music->pc_data = NULL;
+    music->pc_length = 0U;
+    music->pc_position = 0U;
+    music->pc_phase = 0U;
+    music->pc_priority = 0U;
+    music->pc_divisor = 0U;
+    music->pc_last_sample = UINT8_MAX;
+    music->pc_polarity = 0U;
+}
+
+int ID_SD_PCPlaying(const id_sd_music_t *music)
+{
+    return music != NULL && music->pc_data != NULL;
 }
 
 int ID_SD_DigiBankOpen(id_sd_digi_bank_t *bank, const wg_pages_t *pages)
@@ -493,6 +549,56 @@ static void ID_SD_EffectService(id_sd_music_t *music)
     }
 }
 
+static void ID_SD_PCService(id_sd_music_t *music)
+{
+    uint8_t sample;
+
+    if (music->pc_data == NULL)
+    {
+        return;
+    }
+    sample = music->pc_data[music->pc_position++];
+    if (sample != music->pc_last_sample)
+    {
+        music->pc_last_sample = sample;
+        music->pc_divisor = (uint16_t)((uint16_t)sample * 60U);
+        music->pc_phase = 0U;
+        music->pc_polarity = 1U;
+    }
+    if (music->pc_position == music->pc_length)
+    {
+        ID_SD_PCStop(music);
+    }
+}
+
+static void ID_SD_PCMix(id_sd_music_t *music, int16_t *stereo,
+                        uint32_t frame_count)
+{
+    uint32_t frame;
+
+    if (music->pc_data == NULL || music->pc_divisor == 0U)
+    {
+        return;
+    }
+    for (frame = 0U; frame < frame_count; ++frame)
+    {
+        int32_t sample = music->pc_polarity ? 4096 : -4096;
+        uint64_t threshold =
+            (uint64_t)music->sample_rate * music->pc_divisor;
+
+        stereo[frame * 2U] = ID_SD_ClampSample(
+            (int32_t)stereo[frame * 2U] + sample);
+        stereo[frame * 2U + 1U] = ID_SD_ClampSample(
+            (int32_t)stereo[frame * 2U + 1U] + sample);
+        music->pc_phase += ID_SD_PIT_RATE;
+        while (music->pc_phase >= threshold)
+        {
+            music->pc_phase -= threshold;
+            music->pc_polarity ^= 1U;
+        }
+    }
+}
+
 int ID_SD_MusicStart(id_sd_music_t *music, const uint8_t *chunk,
                      size_t chunk_size)
 {
@@ -572,6 +678,7 @@ int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
         }
         OPL3_GenerateStream(&music->chip, stereo, frames);
         ID_SD_DigitalMix(music, stereo, frames);
+        ID_SD_PCMix(music, stereo, frames);
         stereo += (size_t)frames * 2U;
         frame_count -= frames;
         ticks = ID_SD_SampleClockAdvance(&music->clock, frames);
@@ -585,6 +692,7 @@ int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
             {
                 music->effect_divider = 0U;
                 ID_SD_EffectService(music);
+                ID_SD_PCService(music);
             }
         }
     }

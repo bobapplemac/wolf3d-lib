@@ -61,7 +61,7 @@ static void WG_WriteLE32(FILE *stream, uint32_t value)
 }
 
 static int WG_WriteMusic(const char *data_path, unsigned map_number,
-                         int sound_number, int digitized,
+                         int sound_number, int digitized, int pc_speaker,
                          unsigned left_position, unsigned right_position,
                          const char *output_path)
 {
@@ -101,7 +101,10 @@ static int WG_WriteMusic(const char *data_path, unsigned map_number,
         int played = 0;
 
         if (sound_number > 86
-            || !WG_AudioGetChunk(&audio, 87U + (size_t)sound_number,
+            || !WG_AudioGetChunk(
+                &audio,
+                (pc_speaker && !digitized ? 0U : 87U)
+                    + (size_t)sound_number,
                                  &chunk, &chunk_size))
         {
             goto cleanup;
@@ -127,6 +130,10 @@ static int WG_WriteMusic(const char *data_path, unsigned map_number,
                                         (uint8_t)left_position,
                                         (uint8_t)right_position);
             free(digital_data);
+        }
+        else if (pc_speaker)
+        {
+            played = ID_SD_PCStart(music, chunk, chunk_size);
         }
         else
         {
@@ -287,6 +294,7 @@ int main(int argc, char **argv)
     const char *left_text;
     const char *right_text;
     int digitized;
+    int pc_speaker;
     unsigned map_number = 0U;
     unsigned left_position = 0U;
     unsigned right_position = 0U;
@@ -301,6 +309,7 @@ int main(int argc, char **argv)
     left_text = WG_ArgumentValue(argc, argv, "--left-position");
     right_text = WG_ArgumentValue(argc, argv, "--right-position");
     digitized = WG_HasArgument(argc, argv, "--digitized");
+    pc_speaker = WG_HasArgument(argc, argv, "--pc-speaker");
     if (map_text != NULL)
     {
         map_number = (unsigned)strtoul(map_text, NULL, 10);
@@ -348,6 +357,7 @@ int main(int argc, char **argv)
     if (music_path != NULL
         && (data_path == NULL
             || !WG_WriteMusic(data_path, map_number, sound_number, digitized,
+                              pc_speaker,
                               left_position, right_position, music_path)))
     {
         fprintf(stderr, "Unable to write music dump: %s\n", music_path);

@@ -113,11 +113,12 @@ not reproduce the DOS executable's pointer-sized raw structure dump, so original
 DOS save payloads are not interchangeable. Use `--in-game-menu-view`,
 `--load-game-view`, or `--save-game-view` for deterministic captures.
 
-The Sound row opens the original three-section device panel. `None` and the
-currently implemented AdLib, Sound Blaster, and music choices take effect
+The Sound row opens the original three-section device panel. `None`, PC
+Speaker, AdLib, Sound Blaster digitized effects, and music choices take effect
 immediately; changing an enabled mode plays the original pistol check sound.
-PC Speaker and Disney Sound Source remain visibly disabled until those device
-emulations exist. Capture the panel with `--sound-menu-view`.
+The PC-speaker path interprets the original sound chunks at the original 140 Hz
+service rate and synthesizes the PIT channel-2 square wave. Disney Sound Source
+remains disabled. Capture the panel with `--sound-menu-view`.
 
 The Control row restores the original mouse and joystick device panel. Mouse
 input can be enabled or disabled, and Mouse Sensitivity opens the original
@@ -164,6 +165,9 @@ VSWAP instead:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digitized --dump-music e1m1-pistol.wav
 ```
+
+Use `--pc-speaker` with `--sound N` to render the corresponding original
+PC-speaker effect instead.
 
 For mixer diagnostics, `--left-position N` and `--right-position N` accept the
 original Sound Blaster Pro attenuation values from 0 (full) to 15 (silent).
