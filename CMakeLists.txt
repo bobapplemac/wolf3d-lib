@@ -128,6 +128,8 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     set(WG_TEST_WL1_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL1 data")
     set(WG_TEST_WL6_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL6 data")
     set(WG_TEST_SOD_PATH "" CACHE PATH "Path to external Spear of Destiny SOD data")
+    set(WG_TEST_SDM_PATH "" CACHE PATH "Path to external Spear of Destiny demo SDM data")
+    set(WG_TEST_SIGNON_PATH "" CACHE PATH "Path to external original SIGNON screens")
     if(WG_TEST_WL1_PATH)
         add_test(NAME data-wl1 COMMAND wg-tests --data wl1 "${WG_TEST_WL1_PATH}")
         add_test(NAME boss-view-wl1 COMMAND wolf3dgeneric-headless
@@ -607,13 +609,59 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             PASS_REGULAR_EXPRESSION "7aa653c3de8139c6.*e2a15174c649db6a")
         add_test(NAME main-menu-view-sod COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
-            --main-menu-view --frame-hash)
+            --main-menu-view --frame-hash --palette-hash)
         set_tests_properties(main-menu-view-sod PROPERTIES
-            PASS_REGULAR_EXPRESSION "ec2699111d9f0299")
+            PASS_REGULAR_EXPRESSION "ec2699111d9f0299.*eba126e8df00d1cb")
         add_test(NAME difficulty-menu-view-sod COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
-            --difficulty-menu-view --frame-hash)
+            --difficulty-menu-view --frame-hash --palette-hash)
         set_tests_properties(difficulty-menu-view-sod PROPERTIES
-            PASS_REGULAR_EXPRESSION "4b9dd46549814400")
+            PASS_REGULAR_EXPRESSION "4b9dd46549814400.*eba126e8df00d1cb")
+    endif()
+    if(WG_TEST_SDM_PATH)
+        add_test(NAME data-sdm COMMAND wg-tests --spear-data SDM 666 2
+            "${WG_TEST_SDM_PATH}")
+        add_test(NAME title-view-sdm COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SDM_PATH}" --game SDM --frame-hash
+            --palette-hash)
+        set_tests_properties(title-view-sdm PROPERTIES
+            PASS_REGULAR_EXPRESSION "25bdc19785db9240.*e2a15174c649db6a")
+        add_test(NAME main-menu-view-sdm COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SDM_PATH}" --game SDM --play-view
+            --main-menu-view --frame-hash --palette-hash)
+        set_tests_properties(main-menu-view-sdm PROPERTIES
+            PASS_REGULAR_EXPRESSION "ec2699111d9f0299.*eba126e8df00d1cb")
+    endif()
+    if(WG_TEST_SIGNON_PATH AND WG_TEST_SOD_PATH)
+        add_test(NAME signon-apogee COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD
+            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_APOGEE.BIN"
+            --signon-palette wolf --frame-hash --palette-hash)
+        set_tests_properties(signon-apogee PROPERTIES
+            PASS_REGULAR_EXPRESSION "68c40c19462b3fdf.*1e14f48394b7e6fd")
+        add_test(NAME signon-gt COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD
+            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_GT.BIN"
+            --signon-palette wolf --frame-hash --palette-hash)
+        set_tests_properties(signon-gt PROPERTIES
+            PASS_REGULAR_EXPRESSION "cc98de2689561776.*1e14f48394b7e6fd")
+        add_test(NAME signon-id COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD
+            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_ID.BIN"
+            --signon-palette wolf --frame-hash --palette-hash)
+        set_tests_properties(signon-id PROPERTIES
+            PASS_REGULAR_EXPRESSION "4201fae01f451b4a.*1e14f48394b7e6fd")
+        add_test(NAME signon-activision COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD
+            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_ACTIVISION.BIN"
+            --signon-palette wolf --frame-hash --palette-hash)
+        set_tests_properties(signon-activision PROPERTIES
+            PASS_REGULAR_EXPRESSION "f5922c0c1ee9b90a.*1e14f48394b7e6fd")
+        add_test(NAME signon-spear COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD
+            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_SPEAR.BIN"
+            --frame-hash --palette-hash)
+        set_tests_properties(signon-spear PROPERTIES
+            PASS_REGULAR_EXPRESSION "6a68bf2c73aa7ce6.*eba126e8df00d1cb")
     endif()
 endif()

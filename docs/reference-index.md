@@ -49,6 +49,21 @@ Important locations:
 
 Use this tree first whenever intent or behavior is in question.
 
+Additional original visual references:
+
+- `wolf3d sources\SIGNON\GAMEPAL_WOLF.OBJ` and `GAMEPAL_SPEAR.OBJ` contain
+  the two executable-linked 256-color VGA game palettes. They differ only at
+  palette indices 166 and 167: Wolf uses purple entries and Spear uses dark
+  greens.
+- `wolf3d sources\SIGNON\SIGNON_APOGEE.BIN`, `SIGNON_GT.BIN`,
+  `SIGNON_ID.BIN`, `SIGNON_ACTIVISION.BIN`, and `SIGNON_SPEAR.BIN` are the
+  five raw 320x200 publisher/game startup screens. They are runtime reference
+  assets and are not vendored.
+- `game files\SDM` is a complete two-map Spear demo installation. Its eight
+  required archives, original executable/configuration, launch batch file,
+  documentation, icon, release identification, and historical FAQ were
+  inventoried separately from the full SOD mission data.
+
 ## Fidelity-oriented modern port
 
 Path: `wolf3d sources\Chocolate-Wolfenstein-3D`

@@ -2225,6 +2225,15 @@ static void TestPaletteShifts(void)
     level.bonus_count = 0U;
     WL_UpdatePaletteShifts(&level, palette);
     CHECK(memcmp(palette, WG_WolfPalette, sizeof(palette)) == 0);
+
+    level.variant = WG_GAME_SPEAR_FULL_SOD;
+    WL_UpdatePaletteShifts(&level, palette);
+    CHECK(palette[166U * 3U] == 0U);
+    CHECK(palette[166U * 3U + 1U] == 56U);
+    CHECK(palette[166U * 3U + 2U] == 0U);
+    CHECK(palette[167U * 3U] == 0U);
+    CHECK(palette[167U * 3U + 1U] == 40U);
+    CHECK(palette[167U * 3U + 2U] == 0U);
 }
 
 static void TestPlayerDeathCamera(void)
@@ -3680,11 +3689,13 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     CHECK(data_set.sprite_start == 134U);
     CHECK(data_set.sound_start == 555U);
     CHECK(data_set.rlew_tag == 0xabcdU);
-    CHECK(data_set.graphics_offset_count == 170U);
+    CHECK(data_set.graphics_offset_count
+          == (variant == WG_GAME_SPEAR_DEMO_SDM ? 134U : 170U));
     CHECK(data_set.audio_offset_count == 268U);
 
     CHECK(WG_GraphicsOpen(&graphics, &data_set));
-    CHECK(graphics.picture_count == 147U);
+    CHECK(graphics.picture_count
+          == (variant == WG_GAME_SPEAR_DEMO_SDM ? 125U : 147U));
     CHECK(WG_GraphicsDecodeTitleWithPalette(&graphics, variant, framebuffer,
                                             palette));
     for (index = 0U; index < sizeof(framebuffer); ++index)
@@ -3697,7 +3708,9 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
         palette_hash ^= palette[index];
         palette_hash *= 1099511628211ULL;
     }
-    CHECK(frame_hash == 0x7aa653c3de8139c6ULL);
+    CHECK(frame_hash == (variant == WG_GAME_SPEAR_DEMO_SDM
+                             ? 0x25bdc19785db9240ULL
+                             : 0x7aa653c3de8139c6ULL));
     CHECK(palette_hash == 0xe2a15174c649db6aULL);
 
     CHECK(WG_AudioOpen(&audio, &data_set));
@@ -3745,7 +3758,7 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     }
     CHECK(present_maps == expected_present_maps);
     CHECK(ammo_boxes != 0U);
-    CHECK(spears == 1U);
+    CHECK(spears == (variant == WG_GAME_SPEAR_DEMO_SDM ? 0U : 1U));
 
     WG_MapsClose(&maps);
     WG_PagesClose(&pages);

@@ -1242,3 +1242,20 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 ![Spear of Destiny options menu](../out/sod-main-menu.png)
 
 ![Spear of Destiny difficulty menu](../out/sod-difficulty.png)
+
+## 2026-09-26: Spear palette, SDM corpus, and selectable SIGNON screens
+
+- Replaced every unconditional Wolf palette restoration with runtime game
+  palette selection. Comparison against the original `GAMEPAL_*.OBJ` files
+  identified Spear's two changed dark-green entries at indices 166 and 167;
+  normal rendering and damage/bonus shifts now preserve them.
+- Added the supplied two-map SDM release to the external regression corpus,
+  including its 666 page archive, 125-picture graphics dictionary, distinct
+  demo title, maps, menu, and exact archive hashes.
+- Added optional `--signon FILE` startup display for original raw 320x200
+  SIGNON screens. Publisher art is selected at runtime and remains external;
+  `--signon-palette wolf|spear` can override filename/game-based selection.
+- Regression fixtures now cover all five supplied SIGNON variants and their
+  correct Wolf or Spear palette, alongside SOD and SDM menu palette hashes.
+
+![Original Spear hardware-detection SIGNON screen](../out/signon-spear.png)

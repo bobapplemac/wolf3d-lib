@@ -356,7 +356,7 @@ int WG_GraphicsDecodeTitleWithPalette(const wg_graphics_t *graphics,
         {
             return 0;
         }
-        memcpy(palette, WG_WolfPalette, 256U * 3U);
+        WG_GamePalette(variant, palette);
         return 1;
     }
 

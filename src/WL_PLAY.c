@@ -65,6 +65,7 @@ void WL_UpdatePaletteShiftsForTics(struct wg_level *level,
     unsigned red = 0U;
     unsigned white = 0U;
     size_t color;
+    uint8_t game_palette_vga[256U * 3U];
 
     if (level == NULL || palette == NULL || tics == 0U)
     {
@@ -92,15 +93,16 @@ void WL_UpdatePaletteShiftsForTics(struct wg_level *level,
     }
     if (red == 0U && white == 0U)
     {
-        memcpy(palette, WG_WolfPalette, 256U * 3U);
+        WG_GamePalette(level->variant, palette);
         return;
     }
+    WG_GamePaletteVGA(level->variant, game_palette_vga);
     for (color = 0U; color < 256U; ++color)
     {
         size_t component = color * 3U;
-        int base_red = WG_WolfPaletteVGA[component];
-        int base_green = WG_WolfPaletteVGA[component + 1U];
-        int base_blue = WG_WolfPaletteVGA[component + 2U];
+        int base_red = game_palette_vga[component];
+        int base_green = game_palette_vga[component + 1U];
+        int base_blue = game_palette_vga[component + 2U];
 
         if (red != 0U)
         {

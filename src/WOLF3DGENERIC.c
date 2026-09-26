@@ -123,6 +123,7 @@ static uint8_t wg_quick_slot_valid;
 typedef enum wg_attract_phase
 {
     WG_ATTRACT_NONE = 0,
+    WG_ATTRACT_SIGNON,
     WG_ATTRACT_TITLE,
     WG_ATTRACT_CREDITS,
     WG_ATTRACT_SCORES
@@ -379,6 +380,78 @@ static const char *WG_FindDataPath(int argc, char **argv)
         }
     }
     return NULL;
+}
+
+static int WG_FindStringArgument(int argc, char **argv,
+                                 const char *argument,
+                                 const char **value_out)
+{
+    int index;
+
+    if (argc < 0 || (argc > 0 && argv == NULL)
+        || argument == NULL || value_out == NULL)
+    {
+        return 0;
+    }
+    *value_out = NULL;
+    for (index = 1; index < argc; ++index)
+    {
+        if (strcmp(argv[index], argument) == 0)
+        {
+            if (index + 1 >= argc || argv[index + 1] == NULL)
+            {
+                return 0;
+            }
+            *value_out = argv[index + 1];
+            return 1;
+        }
+    }
+    return 1;
+}
+
+static int WG_StringContainsCaseInsensitive(const char *text,
+                                            const char *needle)
+{
+    size_t needle_length;
+
+    if (text == NULL || needle == NULL)
+    {
+        return 0;
+    }
+    needle_length = strlen(needle);
+    while (*text != '\0')
+    {
+        size_t index;
+
+        for (index = 0U; index < needle_length; ++index)
+        {
+            unsigned left = (unsigned char)text[index];
+            unsigned right = (unsigned char)needle[index];
+
+            if (left == 0U)
+            {
+                return 0;
+            }
+            if (left >= 'a' && left <= 'z')
+            {
+                left -= 'a' - 'A';
+            }
+            if (right >= 'a' && right <= 'z')
+            {
+                right -= 'a' - 'A';
+            }
+            if (left != right)
+            {
+                break;
+            }
+        }
+        if (index == needle_length)
+        {
+            return 1;
+        }
+        ++text;
+    }
+    return needle_length == 0U;
 }
 
 static int WG_FindGameSelection(int argc, char **argv,
@@ -858,7 +931,7 @@ static int WG_DrawCreditsScreen(void)
     {
         memcpy(WG_ScreenBuffer, pixels,
                (size_t)WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT);
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         WG_CloseFrontHelp();
         wg_menu_active = 0U;
         wg_front_scores = 0U;
@@ -905,6 +978,70 @@ static int WG_LoadTitleScreen(const char *data_path,
     return 1;
 }
 
+static int WG_ParseSignonPalette(const char *value,
+                                 wg_game_family_t *family)
+{
+    if (family == NULL)
+    {
+        return 0;
+    }
+    *family = WG_GAME_FAMILY_UNKNOWN;
+    if (value == NULL || strcmp(value, "auto") == 0)
+    {
+        return 1;
+    }
+    if (strcmp(value, "wolf") == 0 || strcmp(value, "wolf3d") == 0)
+    {
+        *family = WG_GAME_FAMILY_WOLF3D;
+        return 1;
+    }
+    if (strcmp(value, "spear") == 0 || strcmp(value, "sod") == 0)
+    {
+        *family = WG_GAME_FAMILY_SPEAR;
+        return 1;
+    }
+    return 0;
+}
+
+static int WG_LoadSignonScreen(const char *path,
+                               wg_game_family_t palette_family)
+{
+    wg_file_buffer_t file;
+    wg_game_variant_t palette_variant;
+
+    memset(&file, 0, sizeof(file));
+    if (path == NULL || !WG_LoadFile(path, &file)
+        || file.size != (size_t)WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT)
+    {
+        WG_FreeFile(&file);
+        WG_ReportError("SIGNON must be a raw 320x200 (64000-byte) screen.");
+        return 0;
+    }
+    if (palette_family == WG_GAME_FAMILY_UNKNOWN)
+    {
+        palette_family = WG_StringContainsCaseInsensitive(path, "SPEAR")
+                             ? WG_GAME_FAMILY_SPEAR
+                             : WG_DataVariantFamily(wg_data_set.variant);
+    }
+    palette_variant = palette_family == WG_GAME_FAMILY_SPEAR
+                          ? WG_GAME_SPEAR_FULL_SOD
+                          : WG_GAME_WOLF3D_FULL_GT_14;
+    memcpy(WG_ScreenBuffer, file.data, file.size);
+    WG_FreeFile(&file);
+    WG_GamePalette(palette_variant, WG_Palette);
+    WG_CloseFrontHelp();
+    WG_FrontMusicClose();
+    wg_menu_active = 0U;
+    wg_front_scores = 0U;
+    wg_new_game_screen = 0U;
+    wg_sound_screen = 0U;
+    wg_control_screen = 0U;
+    wg_mouse_sensitivity_screen = 0U;
+    wg_customize_screen = 0U;
+    WG_AttractSet(WG_ATTRACT_SIGNON, 3000U);
+    return 1;
+}
+
 static int WG_DrawMainMenuScreen(void)
 {
     wg_graphics_t graphics;
@@ -923,7 +1060,7 @@ static int WG_DrawMainMenuScreen(void)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 1U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
@@ -1152,7 +1289,7 @@ static int WG_DrawLoadSaveScreen(unsigned mode, int refresh)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
@@ -1185,7 +1322,7 @@ static int WG_DrawSoundMenuScreen(void)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
@@ -1219,7 +1356,7 @@ static int WG_DrawControlMenuScreen(void)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
@@ -1249,7 +1386,7 @@ static int WG_DrawMouseSensitivityScreen(void)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
@@ -1283,7 +1420,7 @@ static int WG_DrawCustomizeScreen(void)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
@@ -1313,7 +1450,7 @@ static int WG_DrawChangeViewScreen(void)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
@@ -1343,7 +1480,7 @@ static int WG_DrawFrontHighScores(int attract)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 1U;
         wg_new_game_screen = 0U;
@@ -1383,7 +1520,7 @@ static int WG_DrawEpisodeMenuScreen(void)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 1U;
@@ -1412,7 +1549,7 @@ static int WG_DrawDifficultyMenuScreen(void)
     if (result)
     {
         WG_CloseFrontHelp();
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 2U;
@@ -1449,7 +1586,7 @@ static int WG_DrawHelpScreen(void)
     WG_GraphicsClose(&graphics);
     if (result)
     {
-        memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+        WG_GamePalette(wg_data_set.variant, WG_Palette);
         wg_menu_active = 0U;
         wg_front_scores = 0U;
         wg_new_game_screen = 0U;
@@ -1674,7 +1811,7 @@ static int WG_GameSessionBeginIntermission(void)
     wg_game.mouse_buttons = 0U;
     wg_game.mouse_x = 0;
     wg_game.mouse_y = 0;
-    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+    WG_GamePalette(wg_data_set.variant, WG_Palette);
     if (wg_game.audio_active
         && WG_AudioGetChunk(&wg_game.audio,
                             WG_DataMusicBase(wg_data_set.variant) + 16U,
@@ -1709,7 +1846,7 @@ static int WG_GameSessionBeginVictory(void)
     wg_game.mouse_buttons = 0U;
     wg_game.mouse_x = 0;
     wg_game.mouse_y = 0;
-    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+    WG_GamePalette(wg_data_set.variant, WG_Palette);
     if (wg_game.audio_active
         && WG_AudioGetChunk(&wg_game.audio,
                             WG_DataMusicBase(wg_data_set.variant) + 24U,
@@ -1762,7 +1899,7 @@ static int WG_GameSessionBeginHighScores(void)
     {
         return 0;
     }
-    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+    WG_GamePalette(wg_data_set.variant, WG_Palette);
     if (wg_game.audio_active
         && WG_AudioGetChunk(&wg_game.audio,
                             WG_DataMusicBase(wg_data_set.variant)
@@ -1911,7 +2048,7 @@ static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty)
     wg_game.level.map_number = (uint8_t)map_number;
     wg_game.map_number = map_number;
     wg_game.level_start_score = wg_game.level.score;
-    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+    WG_GamePalette(wg_data_set.variant, WG_Palette);
     WG_ViewBuildTrigTables(&wg_game.view);
     if (!WG_ViewCalculateProjection(&wg_game.view,
                                     (uint16_t)(wg_view_size * 16U),
@@ -2152,7 +2289,7 @@ static int WG_GameSessionTick(void)
             {
                 return 0;
             }
-            memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+            WG_GamePalette(wg_data_set.variant, WG_Palette);
             memset(wg_game.death_source, 4, sizeof(wg_game.death_source));
             WG_FizzleStart(&wg_game.death_fizzle);
             wg_game.death_phase = WG_DEATH_FIZZLE;
@@ -2763,7 +2900,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         level.bonus_count = 18U;
     }
     failure_stage = "play-view rendering";
-    memcpy(WG_Palette, WG_WolfPalette, sizeof(WG_Palette));
+    WG_GamePalette(wg_data_set.variant, WG_Palette);
     WG_ViewBuildTrigTables(&view);
     if (!WG_ViewCalculateProjection(&view, (uint16_t)(view_size * 16U),
                                     WG_FOCAL_LENGTH)
@@ -3053,6 +3190,9 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     unsigned view_size;
     wg_game_variant_t requested_variant;
     wg_game_family_t preferred_family;
+    wg_game_family_t signon_palette_family;
+    const char *signon_path;
+    const char *signon_palette;
     int argument_index;
 
     if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL))
@@ -3068,6 +3208,11 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     }
     if (!WG_FindGameSelection(argc, argv, &requested_variant,
                               &preferred_family)
+        || !WG_FindStringArgument(argc, argv, "--signon", &signon_path)
+        || !WG_FindStringArgument(argc, argv, "--signon-palette",
+                                  &signon_palette)
+        || !WG_ParseSignonPalette(signon_palette,
+                                  &signon_palette_family)
         || !WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
                                     &map_number)
         || !WG_FindUnsignedArgument(argc, argv, "--actor-tics", 0U,
@@ -3109,6 +3254,12 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     if (data_path != NULL
         && !WG_LoadTitleScreen(data_path, requested_variant,
                                preferred_family))
+    {
+        wolf3dgeneric_Shutdown();
+        return WG_RESULT_PLATFORM_ERROR;
+    }
+    if (signon_path != NULL
+        && !WG_LoadSignonScreen(signon_path, signon_palette_family))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
@@ -3558,6 +3709,8 @@ static int WG_AttractAdvance(void)
 {
     switch (wg_attract_phase)
     {
+        case WG_ATTRACT_SIGNON:
+            return WG_DrawTitleScreen();
         case WG_ATTRACT_TITLE:
             return WG_DrawCreditsScreen();
         case WG_ATTRACT_CREDITS:

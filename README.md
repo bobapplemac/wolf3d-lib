@@ -62,6 +62,21 @@ error rather than silently starting another edition. Mission-disk map and page
 archives retain their `.SD1`/`.SD2`/`.SD3` names while sharing the original
 `.SOD` graphics and audio archives, matching the original source behavior.
 
+The original executable-linked 320x200 SIGNON screen is optional and remains
+an external asset. Select any publisher/version screen at runtime rather than
+baking one into the library:
+
+```text
+wolf3dgeneric-win32 --data "C:\path\to\game" --game WL6 --signon "C:\path\to\SIGNON_GT.BIN"
+```
+
+`--signon` accepts an original raw 64,000-byte screen. Its palette defaults to
+the selected game, except a filename containing `SPEAR` automatically selects
+Spear's palette. `--signon-palette wolf` or `--signon-palette spear` provides
+an explicit override. This keeps the executable generic, permits Apogee, GT,
+id, Activision, and Spear artwork to be chosen without rebuilding, and avoids
+distributing any copyrighted screen with the source port.
+
 Press a key on the title screen to open the original control-panel main menu.
 The arrow keys move its gun cursor; Enter selects an item and Escape returns to
 the title. `New Game` opens the original episode and difficulty panels, then

@@ -30,6 +30,22 @@ matching is case-insensitive; SHA-256 values identify the file contents.
 | `VGAHEAD.WL6` | `a9823004be77b68813f0e4d9ac35947e2e2586271fbc2fb0685ff8ecb1deb3d5` |
 | `VSWAP.WL6` | `49ba24e0b3916732cd065122de4fe6fb6e6a5009c353eafa407c0e3a5a503407` |
 
+## Spear of Destiny demo (`SDM`)
+
+| File | SHA-256 |
+| --- | --- |
+| `AUDIOHED.SDM` | `47f3236be1544f51d1dd993a168eeaa22da672fdfa30fb6a57947167afec7d25` |
+| `AUDIOT.SDM` | `410cfca99bd4b17a229031134c5436fce2daeeed3708fc2d13aad3dc05d26d36` |
+| `GAMEMAPS.SDM` | `93d6ae6ce7c9b9cbadee12003877f206432a197702dd63ef0fa8e27dafed2d77` |
+| `MAPHEAD.SDM` | `4df9b8f9999a7542ba1172ba91c153e42b345bd4fe3466f659c5613451d2ec87` |
+| `VGADICT.SDM` | `a80aa6ad4052114209db3961c81864a692172d9d86db4af1901e4b5178aa8ef3` |
+| `VGAGRAPH.SDM` | `718d69c4ff992b37bd1647cf7c16111023e69674a06e999d12847d0536ec434b` |
+| `VGAHEAD.SDM` | `776252326c47d82356d170ee7f03b8e96edbbc059fdd8167f21a21d2e8aa5148` |
+| `VSWAP.SDM` | `2312bcadc05bbcbfce24514ab3000a15a2979fa62db9075271b762823588074e` |
+
+This set contains two maps, 666 VSWAP pages, 125 graphics pictures, and the
+original two-part demo title. It is exercised independently from full SOD.
+
 Other revisions are rejected when their archive structure does not match the
 supported editions. Executables, configuration files, and save games are not
 input assets and are intentionally absent from this table.
