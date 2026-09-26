@@ -8,10 +8,10 @@ commit `05167784ef009d0d0daefe8d012b027f39dc8541`. Portable translations may
 consult Wolf4SDL and Chocolate Wolfenstein 3D; copied or adapted routines must
 retain applicable notices and remain compatible with GPL-2.0-only.
 
-Nuked-OPL3 will be maintained as a separately identified LGPL-2.1-or-later
-third-party component when audio implementation begins. Its source and license
-will accompany distributed builds. The MAME and DOSBox OPL implementations are
-not used.
+Nuked-OPL3 is maintained as a separately identified LGPL-2.1-or-later
+third-party component. Its exact upstream source, license, and local provenance
+notice accompany the tree. The MAME and DOSBox OPL implementations are not
+used.
 
 `src/WOLFPAL.inc` is the original Wolfenstein 3D 256-color VGA palette in the
 portable initializer format used by Chocolate Wolfenstein 3D. Its 6-bit channel

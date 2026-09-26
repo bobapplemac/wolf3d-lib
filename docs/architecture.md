@@ -161,7 +161,8 @@ class-specific speed, destination-tile reservation, tile-center snapping, and
 direction arrows stored in map plane 1. Cardinal and diagonal wall/actor checks
 preserve the distinction between ordinary actors and dogs, and actors stop at
 closed doors until the door reaches its fully open position. Special-boss
-movement and player/actor contact remain subsequent slices. As in
+movement, projectile contact, and player/actor separation use the same
+fixed-point movement foundation. As in
 `DoActor`, only path states with a `T_Path` thinker move; the short `path1s` and
 `path3s` states update animation time without movement.
 
@@ -197,8 +198,9 @@ Dog combat follows its separate original branch: `T_DogChase` always uses
 `SelectDodgeDir`, cannot cross doors, and begins the five-state jump when the
 next movement step reaches `MINACTORDIST` on both axes. The `10/10/10/10/10`
 jump sequence invokes `T_Bite` from its second state, retaining the two-tile
-axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sounds and the
-complete restart flow remain subsequent slices.
+axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sound dispatch
+follows the original priority rules, while fatal damage enters the completed
+turn, fizzle, life-accounting, and floor-restart flow.
 
 Player combat in `WL_AGENT.c` retains the four original `attackinfo` tables and
 their six-tic frame cadence. `DrawScaleds` stores the projected `viewx` and
@@ -354,9 +356,9 @@ code, draws `Victory()`'s `YOU WIN!` screen and BJ portrait, and switches to
 hands it to the portable `WL_TEXT.c` translation. That renderer retains the
 original 320x200 window pieces, proportional word wrapping, per-row margins,
 page counter, and recognizes `^B`, `^;`, `^P`, `^E`, `^C`, `^>`, `^L`, `^T`,
-and `^G` commands. Arrow/Enter navigation matches `ShowArticle`; Escape continues into
-the high-score table. The later control-panel return remains part of the
-front-end milestone.
+and `^G` commands. Arrow/Enter navigation matches `ShowArticle`; Escape
+continues into the high-score table and then returns through the completed
+control-panel flow.
 
 The original seven-entry high-score defaults and `CheckHighScore` ordering
 rule—score first, completed floor as the tie-break—also live in `WL_INTER.c`.

@@ -173,9 +173,10 @@ Supplied inside the trusted reference tree:
 - `game files\WL6 - GT v1.4`: the complete GT/ID/Activision full data set,
   original executable, and configuration.
 
-The two sets contain 21 files totaling 3,898,682 bytes. Their SHA-256 values were
-recorded during review and will become the initial supported-data table in the
-project tests/documentation.
+The two sets contain 21 files totaling 3,898,682 bytes. SHA-256 values for the
+sixteen required data archives are published in
+[`supported-data.md`](supported-data.md); executables and runtime files remain
+external validation material rather than engine inputs.
 
 Also available as read-only installations outside the trusted reference tree:
 

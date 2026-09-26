@@ -285,7 +285,7 @@ static int WG_WriteFrame(const char *path)
 int main(int argc, char **argv)
 {
     wg_result_t result;
-    int bootstrap_test;
+    int smoke_test;
     const char *dump_path;
     const char *music_path;
     const char *data_path;
@@ -300,7 +300,7 @@ int main(int argc, char **argv)
     unsigned right_position = 0U;
     int sound_number = -1;
 
-    bootstrap_test = argc == 2 && strcmp(argv[1], "--bootstrap-test") == 0;
+    smoke_test = argc == 2 && strcmp(argv[1], "--headless-smoke") == 0;
     dump_path = WG_DumpPath(argc, argv);
     music_path = WG_ArgumentValue(argc, argv, "--dump-music");
     data_path = WG_ArgumentValue(argc, argv, "--data");
@@ -366,11 +366,11 @@ int main(int argc, char **argv)
     }
     wolf3dgeneric_Shutdown();
 
-    if (bootstrap_test)
+    if (smoke_test)
     {
         if (result != WG_RESULT_NOT_IMPLEMENTED)
         {
-            fprintf(stderr, "Unexpected bootstrap result %d.\n", (int)result);
+            fprintf(stderr, "Unexpected headless result %d.\n", (int)result);
             return 1;
         }
         return 0;

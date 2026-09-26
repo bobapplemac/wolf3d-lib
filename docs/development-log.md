@@ -1131,7 +1131,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-v
   protected by an FNV-1a checksum. Missing or invalid configuration files fall
   back to the original defaults; interactive shutdown writes the current
   settings.
-- A nontrivial serialization fixture hashes to `e6db4f8c7bb574b9` identically
+- A nontrivial serialization fixture hashes to `2ef00b526b4c06b1` identically
   in MSVC x86 and x64 builds. Regression coverage also rejects truncated,
   corrupted, and wrong-edition files.
 
@@ -1175,3 +1175,16 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-v
   the real PC-speaker pistol mixed over E1M1 music hashes to
   `67e7ee416105629a` on both editions and architectures. The enabled menu hashes
   are `f46530fbaa7a0775` (WL1) and `bd51c51cceb48736` (WL6).
+
+## 2026-09-25: Wolfenstein 3D v1.0 release
+
+- Froze the completed first-release scope around the original Apogee shareware
+  (`WL1`) and GT/ID/Activision full (`WL6`) v1.4 editions. Spear of Destiny,
+  joystick input, and Disney Sound Source remain explicit post-1.0 targets.
+- Published the generic host contract, exact supported-data hashes, changelog,
+  and release checklist; added data-free GCC, Clang, and Clang sanitizer jobs.
+- Reviewed the full tree for licensing, generated files, commercial data, stale
+  implementation notes, and static-analyzer findings. No proprietary assets or
+  generated runtime artifacts are tracked.
+- Fresh strict-warning MSVC Release builds pass all 93 tests on both x64 and
+  x86, including all four complete demo streams and both supplied data corpora.

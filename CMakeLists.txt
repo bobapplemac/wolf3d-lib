@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(wolf3dgeneric VERSION 0.1.0 LANGUAGES C)
+project(wolf3dgeneric VERSION 1.0.0 LANGUAGES C)
 
 include(CTest)
 
@@ -118,7 +118,7 @@ if(WG_BUILD_WIN32)
 endif()
 
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)
-    add_test(NAME bootstrap-headless COMMAND wolf3dgeneric-headless --bootstrap-test)
+    add_test(NAME headless-smoke COMMAND wolf3dgeneric-headless --headless-smoke)
 
     add_executable(wg-tests tests/WG_TESTS.c)
     wg_configure_host(wg-tests)

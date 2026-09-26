@@ -229,7 +229,7 @@ int WG_GraphicsDecodePicture(const wg_graphics_t *graphics, size_t chunk,
 {
     size_t picture;
     size_t pixel_count;
-    uint8_t *planar;
+    uint8_t *planar = NULL;
     size_t planar_size;
     uint8_t *chunky;
     size_t y;
@@ -289,7 +289,7 @@ int WG_GraphicsDecodeTitle(const wg_graphics_t *graphics,
                            uint8_t framebuffer[320 * 200])
 {
     size_t title_chunk;
-    uint8_t *pixels;
+    uint8_t *pixels = NULL;
     uint16_t width;
     uint16_t height;
 

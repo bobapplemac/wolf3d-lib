@@ -1,5 +1,13 @@
 # wolf3dgeneric development plan
 
+## Completion status
+
+The Wolfenstein 3D v1.4 scope of this plan is complete in release 1.0.0. Both
+the Apogee shareware (`WL1`) and GT/ID/Activision full (`WL6`) editions pass the
+deterministic x86 and x64 regression suite. Spear of Destiny was deliberately
+separated into a possible post-1.0 target; it is not required by, or claimed as
+part of, this Wolfenstein 3D release.
+
 ## Project intent
 
 `wolf3dgeneric` will be a portable, dependency-free Wolfenstein 3D engine core in
@@ -192,9 +200,8 @@ played; save/load, death/restart, secret levels, and victory paths work.
 Exit gate: music and effects are synchronized, deterministic in headless tests,
 and audible through the Win32 host without changing game timing.
 
-### 7. Spear and portability hardening
+### 7. Portability hardening
 
-- Add Spear of Destiny and its mission disks after both v1.4 Wolf3D builds pass.
 - Build with at least MSVC plus GCC or Clang on a non-Windows runner.
 - Test 32-bit and 64-bit builds, strict warnings, sanitizers where available, and
   big-endian-safe parsing by unit test even if no big-endian runner is available.
@@ -244,11 +251,10 @@ Available and verified on the workstation:
 - the supplied Wolfenstein 3D v1.4 full/shareware data and DOS executables, plus
   the installed Wolfenstein 3D/Spear data and GOG DOSBox.
 
-Not currently installed are a native GCC/Clang toolchain, an active WSL distro,
-and SDL development libraries. None blocks the initial dependency-free Windows
-and headless work. Before the portability milestone, a GitLab Linux runner or a
-local Clang/MSYS2 toolchain will be required; this should be added only when the
-plan is approved and the need is immediate.
+The completed project also carries GitLab jobs for native GCC, Clang, and
+Clang AddressSanitizer/UndefinedBehaviorSanitizer builds on Debian. Visual
+Studio's bundled Clang static analyzer was run locally during release hardening.
+SDL is intentionally not required by either the engine or its reference hosts.
 
 ## Review decisions
 

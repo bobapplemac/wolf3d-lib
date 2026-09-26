@@ -1,7 +1,7 @@
 # wolf3dgeneric
 
-`wolf3dgeneric` is a work-in-progress portable Wolfenstein 3D engine core in the
-spirit of [doomgeneric](https://github.com/ozkl/doomgeneric). A platform host
+`wolf3dgeneric` is a portable Wolfenstein 3D v1.4 engine core in the spirit of
+[doomgeneric](https://github.com/ozkl/doomgeneric). A platform host
 provides a small video, input, timing, and audio boundary; the engine retains the
 original game's 320x200 indexed rendering, 70 Hz timing, data formats, and game
 behavior.
@@ -10,15 +10,21 @@ The project deliberately does not add modern gameplay or rendering features.
 It requires separately supplied original game data and does not include any
 Wolfenstein 3D assets.
 
-Development is currently in the bootstrap phase. See
-[`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) for the staged implementation and
-acceptance gates. [`docs/source-layout.md`](docs/source-layout.md) maps each
+The first-release scope supports the Apogee shareware (`WL1`) and
+GT/ID/Activision full (`WL6`) v1.4 data sets. Spear of Destiny, joystick input,
+and Disney Sound Source output are outside this Wolf3D release scope. See
+[`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) for the completed staged plan.
+[`docs/source-layout.md`](docs/source-layout.md) maps each
 portable translation unit to its original Wolfenstein 3D source owner, and the
 [`development log`](docs/development-log.md) records deterministic visual
 milestones. Third-party code and exact revisions are recorded in
-[`THIRD_PARTY.md`](THIRD_PARTY.md).
+[`THIRD_PARTY.md`](THIRD_PARTY.md). The small host API is documented in the
+[`porting guide`](docs/porting-guide.md), and exact tested asset hashes are in
+[`supported data`](docs/supported-data.md). Release changes and final acceptance
+gates are recorded in [`CHANGELOG.md`](CHANGELOG.md) and the
+[`release checklist`](docs/release-checklist.md).
 
-## Bootstrap build on Windows
+## Build on Windows
 
 Configure with a Visual Studio developer command prompt:
 
@@ -28,8 +34,11 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The current vertical slice validates both v1.4 data editions and displays the
-original title screen. To exercise it:
+The same CMake project builds on Linux with GCC or Clang; the Win32 host is
+automatically omitted there. Strict Linux compiler and sanitizer jobs are
+defined in `.gitlab-ci.yml`.
+
+To run the interactive Win32 host:
 
 ```text
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
@@ -172,7 +181,7 @@ PC-speaker effect instead.
 For mixer diagnostics, `--left-position N` and `--right-position N` accept the
 original Sound Blaster Pro attenuation values from 0 (full) to 15 (silent).
 
-The current renderer checkpoint can export the initial Episode 1, Floor 1 wall
+The headless renderer can export the initial Episode 1, Floor 1 wall
 view, static scenery, ordinary enemies and dead guards, ready pistol, and status
 bar. Patrol movement, actor awareness, ordinary enemy chase movement, and the
 original guard/officer/mutant/SS hitscan and dog melee attack states are active.

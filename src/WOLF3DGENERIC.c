@@ -340,11 +340,16 @@ static const char *WG_FindDataPath(int argc, char **argv)
 {
     int index;
 
+    if (argc <= 0 || argv == NULL)
+    {
+        return NULL;
+    }
     for (index = 1; index < argc; ++index)
     {
-        if (strcmp(argv[index], "--data") == 0)
+        if (argv[index] != NULL && strcmp(argv[index], "--data") == 0)
         {
-            return index + 1 < argc ? argv[index + 1] : NULL;
+            return index + 1 < argc && argv[index + 1] != NULL
+                       ? argv[index + 1] : NULL;
         }
     }
     return NULL;
@@ -354,9 +359,13 @@ static int WG_HasArgument(int argc, char **argv, const char *argument)
 {
     int index;
 
+    if (argc <= 0 || argv == NULL || argument == NULL)
+    {
+        return 0;
+    }
     for (index = 1; index < argc; ++index)
     {
-        if (strcmp(argv[index], argument) == 0)
+        if (argv[index] != NULL && strcmp(argv[index], argument) == 0)
         {
             return 1;
         }
@@ -371,19 +380,20 @@ static int WG_FindUnsignedArgument(int argc, char **argv,
 {
     int index;
 
-    if (argument == NULL || value_out == NULL)
+    if (argc < 0 || (argc > 0 && argv == NULL)
+        || argument == NULL || value_out == NULL)
     {
         return 0;
     }
     *value_out = default_value;
     for (index = 1; index < argc; ++index)
     {
-        if (strcmp(argv[index], argument) == 0)
+        if (argv[index] != NULL && strcmp(argv[index], argument) == 0)
         {
             char *end;
             unsigned long value;
 
-            if (index + 1 >= argc)
+            if (index + 1 >= argc || argv[index + 1] == NULL)
             {
                 return 0;
             }
@@ -2906,9 +2916,20 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     unsigned demo_number;
     unsigned demo_commands;
     unsigned view_size;
+    int argument_index;
 
-    if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL)
-        || !WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
+    if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL))
+    {
+        return WG_RESULT_INVALID_ARGUMENT;
+    }
+    for (argument_index = 0; argument_index < argc; ++argument_index)
+    {
+        if (argv[argument_index] == NULL)
+        {
+            return WG_RESULT_INVALID_ARGUMENT;
+        }
+    }
+    if (!WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
                                     &map_number)
         || !WG_FindUnsignedArgument(argc, argv, "--actor-tics", 0U,
                                     10000U, &actor_tics)
@@ -2941,7 +2962,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         return WG_RESULT_PLATFORM_ERROR;
     }
 
-    WG_SetWindowTitle("wolf3dgeneric bootstrap");
+    WG_SetWindowTitle("wolf3dgeneric");
     wg_initialized = 1;
     wg_next_demo = 0U;
     data_path = WG_FindDataPath(argc, argv);
