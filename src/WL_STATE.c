@@ -2240,6 +2240,7 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                     }
                     if (actor->actor_class == WG_ACTOR_ANGEL)
                     {
+                        level->victory_flag = 1U;
                         level->level_completed = 1U;
                         actor->tic_count += terminal_duration;
                         break;

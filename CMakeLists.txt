@@ -622,6 +622,32 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --boss-view --frame-hash --palette-hash)
         set_tests_properties(trans-view-sod PROPERTIES
             PASS_REGULAR_EXPRESSION "522d665351e0e1d8.*eba126e8df00d1cb")
+        add_test(NAME intermission-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view --map 4
+            --intermission-view --frame-hash --palette-hash)
+        set_tests_properties(intermission-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "9cc20a4c95361c33.*eba126e8df00d1cb")
+        add_test(NAME victory-collapse-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
+            --victory-collapse-view --collapse-frame 3
+            --frame-hash --palette-hash)
+        set_tests_properties(victory-collapse-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "63c83359329a021d.*eba126e8df00d1cb")
+        add_test(NAME victory-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view --map 20
+            --victory-view --frame-hash --palette-hash)
+        set_tests_properties(victory-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "036fbc4175dd12ab.*eba126e8df00d1cb")
+        add_test(NAME end-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
+            --end-text-view --end-page 1 --frame-hash --palette-hash)
+        set_tests_properties(end-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "a61316452da19e48.*af03d438783b33e8")
+        add_test(NAME high-score-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
+            --high-score-view --frame-hash --palette-hash)
+        set_tests_properties(high-score-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "27c6ea7dee4ac784.*eba126e8df00d1cb")
     endif()
     if(WG_TEST_SDM_PATH)
         add_test(NAME data-sdm COMMAND wg-tests --spear-data SDM 666 2
@@ -636,6 +662,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --main-menu-view --frame-hash --palette-hash)
         set_tests_properties(main-menu-view-sdm PROPERTIES
             PASS_REGULAR_EXPRESSION "ec2699111d9f0299.*eba126e8df00d1cb")
+        add_test(NAME intermission-view-sdm COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SDM_PATH}" --game SDM --play-view --map 1
+            --intermission-view --frame-hash --palette-hash)
+        set_tests_properties(intermission-view-sdm PROPERTIES
+            PASS_REGULAR_EXPRESSION "4b48bd845813fdf5.*eba126e8df00d1cb")
     endif()
     if(WG_TEST_SIGNON_PATH AND WG_TEST_SOD_PATH)
         add_test(NAME signon-apogee COMMAND wolf3dgeneric-headless

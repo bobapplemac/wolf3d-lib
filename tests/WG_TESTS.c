@@ -1915,6 +1915,19 @@ static void TestPlayerMovementAndUse(void)
     CHECK(WG_NextMapNumber(19U, 0) == 11U);
     CHECK(WG_NextMapNumber(29U, 0) == 27U);
     CHECK(WG_NextMapNumber(59U, 0) == 53U);
+    CHECK(WG_NextMapNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                     3U, 1) == 18U);
+    CHECK(WG_NextMapNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                     11U, 1) == 19U);
+    CHECK(WG_NextMapNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                     18U, 0) == 4U);
+    CHECK(WG_NextMapNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                     19U, 0) == 12U);
+    CHECK(WG_NextMapNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                     10U, 0) == 11U);
+    CHECK(WG_CampaignEndsAfterIntermission(WG_GAME_SPEAR_DEMO_SDM, 1U));
+    CHECK(!WG_CampaignEndsAfterIntermission(WG_GAME_SPEAR_DEMO_SDM, 0U));
+    CHECK(!WG_CampaignEndsAfterIntermission(WG_GAME_SPEAR_FULL_SOD, 1U));
 
     SetPlayerMovementLevel(&level);
     level.score = 12345U;
@@ -2235,7 +2248,7 @@ static void TestIntermission(void)
 {
     wg_level_t level;
     wl_intermission_t intermission;
-    wl_intermission_t ratios[8];
+    wl_intermission_t ratios[WL_MAX_LEVEL_RATIOS];
     wl_victory_t victory;
     unsigned floor;
     wl_high_score_t scores[WL_MAX_HIGH_SCORES];
@@ -2262,6 +2275,20 @@ static void TestIntermission(void)
     CHECK(intermission.special_floor == 1U);
     CHECK(!WL_IntermissionCalculate(&level, 60U, &intermission));
 
+    level.variant = WG_GAME_SPEAR_FULL_SOD;
+    level.time_count = 120U * 70U;
+    CHECK(WL_IntermissionCalculate(&level, 2U, &intermission));
+    CHECK(intermission.par_seconds == 165U);
+    CHECK(intermission.bonus == 52500U);
+    CHECK(!intermission.special_floor);
+    CHECK(WL_IntermissionCalculate(&level, 4U, &intermission));
+    CHECK(intermission.par_seconds == 0U);
+    CHECK(intermission.bonus == 15000U);
+    CHECK(intermission.special_floor);
+    CHECK(WL_IntermissionIsSpecial(WG_GAME_SPEAR_FULL_SOD, 17U));
+    CHECK(!WL_IntermissionIsSpecial(WG_GAME_SPEAR_FULL_SOD, 16U));
+    CHECK(WL_IntermissionIsSpecial(WG_GAME_SPEAR_FULL_SOD, 18U));
+
     memset(ratios, 0, sizeof(ratios));
     for (floor = 0U; floor < 8U; ++floor)
     {
@@ -2275,6 +2302,20 @@ static void TestIntermission(void)
     CHECK(victory.kill_ratio == 83U);
     CHECK(victory.secret_ratio == 67U);
     CHECK(victory.treasure_ratio == 100U);
+    memset(ratios, 0, sizeof(ratios));
+    for (floor = 0U; floor < 14U; ++floor)
+    {
+        ratios[floor].seconds = 60U;
+        ratios[floor].kill_ratio = 84U;
+        ratios[floor].secret_ratio = 70U;
+        ratios[floor].treasure_ratio = 98U;
+    }
+    CHECK(WL_VictoryCalculateForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                        ratios, &victory));
+    CHECK(victory.seconds == 840U);
+    CHECK(victory.kill_ratio == 84U);
+    CHECK(victory.secret_ratio == 70U);
+    CHECK(victory.treasure_ratio == 98U);
 
     WL_HighScoresDefault(scores);
     CHECK(WL_HighScoreInsert(scores, 9999U, 10U, 2U) == -1);
@@ -3920,6 +3961,7 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
 static void TestPortableSave(void)
 {
     uint8_t encoded[WG_SAVE_BUFFER_SIZE];
+    uint8_t legacy[WG_SAVE_BUFFER_SIZE];
     char name[WG_SAVE_NAME_BYTES] = "E1L1 - CELL BLOCK";
     char decoded_name[WG_SAVE_NAME_BYTES];
     wg_save_state_t source;
@@ -3927,6 +3969,8 @@ static void TestPortableSave(void)
     size_t encoded_size = 0U;
     size_t index;
     uint64_t encoded_hash = 1469598103934665603ULL;
+    size_t legacy_size;
+    uint32_t legacy_checksum;
 
     memset(&source, 0, sizeof(source));
     memset(&decoded, 0, sizeof(decoded));
@@ -4013,7 +4057,9 @@ static void TestPortableSave(void)
         encoded_hash ^= encoded[index];
         encoded_hash *= 1099511628211ULL;
     }
-    CHECK(encoded_hash == 0xedaa73019f926cd8ULL);
+    printf("portable save FNV-1a: %016llx\n",
+           (unsigned long long)encoded_hash);
+    CHECK(encoded_hash == 0x10e6e63fdd18f6b9ULL);
     CHECK(WG_SaveReadName(encoded, encoded_size,
                           WG_GAME_WOLF3D_FULL_GT_14, decoded_name));
     CHECK(strcmp(decoded_name, name) == 0);
@@ -4027,6 +4073,40 @@ static void TestPortableSave(void)
                  sizeof(source.level)) == 0);
     CHECK(memcmp(decoded.level_ratios, source.level_ratios,
                  sizeof(source.level_ratios)) == 0);
+
+    /* Version 1 stored eight 14-byte ratio records. Rebuild that layout from
+       the version-2 fixture and prove old saves retain their campaign state. */
+    memcpy(legacy, encoded, encoded_size);
+    legacy_size = encoded_size - 12U * 14U;
+    memmove(legacy + 48U + 8U * 14U,
+            legacy + 48U + WL_MAX_LEVEL_RATIOS * 14U,
+            encoded_size - 4U
+                - (48U + WL_MAX_LEVEL_RATIOS * 14U));
+    legacy[40] = 1U;
+    legacy[41] = 0U;
+    legacy_checksum = 2166136261U;
+    for (index = WG_SAVE_NAME_BYTES; index < legacy_size - 4U; ++index)
+    {
+        legacy_checksum ^= legacy[index];
+        legacy_checksum *= 16777619U;
+    }
+    legacy[legacy_size - 4U] = (uint8_t)legacy_checksum;
+    legacy[legacy_size - 3U] = (uint8_t)(legacy_checksum >> 8);
+    legacy[legacy_size - 2U] = (uint8_t)(legacy_checksum >> 16);
+    legacy[legacy_size - 1U] = (uint8_t)(legacy_checksum >> 24);
+    CHECK(WG_SaveDecode(legacy, legacy_size,
+                        WG_GAME_WOLF3D_FULL_GT_14,
+                        decoded_name, &decoded));
+    CHECK(memcmp(&decoded.level, &source.level,
+                 sizeof(source.level)) == 0);
+    CHECK(memcmp(decoded.level_ratios, source.level_ratios,
+                 8U * sizeof(source.level_ratios[0])) == 0);
+    for (index = 8U; index < WL_MAX_LEVEL_RATIOS; ++index)
+    {
+        wl_intermission_t empty = { 0 };
+        CHECK(memcmp(&decoded.level_ratios[index], &empty,
+                     sizeof(empty)) == 0);
+    }
     CHECK(!WG_SaveDecode(encoded, encoded_size,
                          WG_GAME_WOLF3D_SHAREWARE_14,
                          decoded_name, &decoded));

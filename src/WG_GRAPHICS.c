@@ -397,3 +397,76 @@ int WG_GraphicsDecodeTitleWithPalette(const wg_graphics_t *graphics,
     free(vga_palette);
     return 1;
 }
+
+int WG_GraphicsDecodeScreenWithPalette(const wg_graphics_t *graphics,
+                                       size_t screen_chunk,
+                                       size_t palette_chunk,
+                                       uint8_t framebuffer[320 * 200],
+                                       uint8_t palette[256 * 3])
+{
+    size_t next;
+    size_t start;
+    size_t end;
+    uint8_t *planar = NULL;
+    uint8_t *vga_palette = NULL;
+    size_t palette_size;
+    size_t index;
+
+    if (graphics == NULL || framebuffer == NULL || palette == NULL
+        || screen_chunk + 1U >= graphics->offset_count)
+    {
+        return 0;
+    }
+    next = screen_chunk + 1U;
+    while (next < graphics->offset_count
+           && graphics->offsets[next] == WG_SPARSE_OFFSET)
+    {
+        ++next;
+    }
+    if (graphics->offsets[screen_chunk] == WG_SPARSE_OFFSET
+        || next >= graphics->offset_count)
+    {
+        return 0;
+    }
+    start = graphics->offsets[screen_chunk];
+    end = graphics->offsets[next];
+    if (end < start || end > graphics->graph.size || end - start < 4U
+        || WG_ReadLE32(graphics->graph.data + start) != 320U * 200U)
+    {
+        return 0;
+    }
+
+    /* CA_CacheScreen's screenhack expands four consecutive 80x200 VGA
+       planes directly into the four hardware planes. */
+    planar = (uint8_t *)malloc(320U * 200U);
+    if (planar == NULL
+        || !WG_HuffmanExpand(graphics->graph.data + start + 4U,
+                             end - start - 4U, planar, 320U * 200U,
+                             graphics->dictionary))
+    {
+        free(planar);
+        return 0;
+    }
+    for (index = 0U; index < 320U * 200U; ++index)
+    {
+        size_t x = index % 320U;
+        size_t y = index / 320U;
+        framebuffer[index] = planar[(x & 3U) * 16000U
+                                    + y * 80U + (x >> 2)];
+    }
+    free(planar);
+
+    if (!WG_GraphicsDecodeChunk(graphics, palette_chunk, &vga_palette,
+                                &palette_size)
+        || palette_size != 256U * 3U)
+    {
+        free(vga_palette);
+        return 0;
+    }
+    for (index = 0U; index < palette_size; ++index)
+    {
+        palette[index] = (uint8_t)((unsigned)vga_palette[index] * 255U / 63U);
+    }
+    free(vga_palette);
+    return 1;
+}

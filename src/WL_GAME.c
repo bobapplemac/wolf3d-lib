@@ -664,6 +664,41 @@ unsigned WG_NextMapNumber(unsigned map_number, int secret_level)
     return map_number + 1U;
 }
 
+unsigned WG_NextMapNumberForVariant(wg_game_variant_t variant,
+                                    unsigned map_number, int secret_level)
+{
+    if (WG_DataVariantFamily(variant) != WG_GAME_FAMILY_SPEAR)
+    {
+        return WG_NextMapNumber(map_number, secret_level);
+    }
+    if (secret_level)
+    {
+        if (map_number == 3U)
+        {
+            return 18U;
+        }
+        if (map_number == 11U)
+        {
+            return 19U;
+        }
+    }
+    if (map_number == 18U)
+    {
+        return 4U;
+    }
+    if (map_number == 19U)
+    {
+        return 12U;
+    }
+    return map_number + 1U;
+}
+
+int WG_CampaignEndsAfterIntermission(wg_game_variant_t variant,
+                                     unsigned map_number)
+{
+    return variant == WG_GAME_SPEAR_DEMO_SDM && map_number == 1U;
+}
+
 void WG_CampaignCapture(wg_campaign_state_t *state,
                         const wg_level_t *level)
 {

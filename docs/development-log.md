@@ -1278,3 +1278,31 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   indexed frame hashes to `522d665351e0e1d8` under Spear's corrected palette.
 
 ![Trans Grosse decoded and rendered from the original SOD archives](../out/sod-trans-boss.png)
+
+## 2026-09-26: Spear campaign, intermission, and ending flow
+
+- Restored Spear's 20-entry level-ratio history, its original par-time table,
+  six boss/secret-floor completion messages, 14-floor victory averages, and
+  secret routes (maps 4/12 to 19/20, returning to maps 5/13). Portable saves
+  are now version 2 while version-1 eight-ratio saves remain readable.
+- Artifact collection now transfers the campaign into map 21 at the exact
+  pickup position and angle, retains the campaign state, and grants the gold
+  key. Angel of Death's terminal state completes the campaign.
+- Restored the four-frame BJ collapse with its original 140/105/105/210-tic
+  holds, the Spear victory summary, all ten illustrated ending steps and their
+  nine embedded palettes, the two original debrief captions, and the Spear
+  high-score backdrop/layout. The ending-screen decoder directly reproduces
+  `CA_CacheScreen`'s four VGA planes from the original archives.
+- SDM now stops after completing its second and final map and proceeds to high
+  scores, matching the `SPEARDEMO` branch rather than attempting map 3.
+- The strict MSVC matrix now passes all 114 tests. New visual gates cover the
+  boss intermission, collapse, victory summary, illustrated ending, SOD high
+  scores, and SDM final intermission with their proper palettes.
+
+![Spear boss-floor intermission](../out/sod-trans-intermission.png)
+
+![Spear victory summary](../out/sod-victory.png)
+
+![Spear illustrated ending debrief](../out/sod-end-1.png)
+
+![Spear high-score table](../out/sod-high-scores.png)

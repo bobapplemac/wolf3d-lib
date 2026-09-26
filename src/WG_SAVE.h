@@ -16,7 +16,7 @@ typedef struct wg_save_state
     wg_level_t level;
     unsigned map_number;
     uint32_t level_start_score;
-    wl_intermission_t level_ratios[8];
+    wl_intermission_t level_ratios[WL_MAX_LEVEL_RATIOS];
 } wg_save_state_t;
 
 int WG_SaveEncode(uint8_t *data, size_t capacity, size_t *size,

@@ -250,6 +250,10 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
                             wg_game_variant_t variant, wg_level_t *level);
 int WG_QueueSound(wg_level_t *level, wg_sound_t sound);
 unsigned WG_NextMapNumber(unsigned map_number, int secret_level);
+unsigned WG_NextMapNumberForVariant(wg_game_variant_t variant,
+                                    unsigned map_number, int secret_level);
+int WG_CampaignEndsAfterIntermission(wg_game_variant_t variant,
+                                     unsigned map_number);
 void WG_CampaignCapture(wg_campaign_state_t *state,
                         const wg_level_t *level);
 int WG_CampaignApply(wg_level_t *level,

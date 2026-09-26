@@ -39,5 +39,10 @@ int WG_GraphicsDecodeTitleWithPalette(const wg_graphics_t *graphics,
                                       wg_game_variant_t variant,
                                       uint8_t framebuffer[320 * 200],
                                       uint8_t palette[256 * 3]);
+int WG_GraphicsDecodeScreenWithPalette(const wg_graphics_t *graphics,
+                                       size_t screen_chunk,
+                                       size_t palette_chunk,
+                                       uint8_t framebuffer[320 * 200],
+                                       uint8_t palette[256 * 3]);
 
 #endif

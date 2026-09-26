@@ -261,11 +261,17 @@ deterministic victory diagnostic uses eight 1:15 perfect floors:
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --victory-view --frame-hash --dump-frame victory.ppm
 ```
 
+For full Spear data, `--victory-collapse-view --collapse-frame 0..3`
+captures one of the four original pre-summary collapse frames.
+
 The first EndText page can be captured directly with:
 
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --end-text-view --frame-hash --dump-frame end-text.ppm
 ```
+
+With full Spear data, `--end-text-view --end-page 0..9` selects one of the
+original illustrated ending screens (including the two caption variants).
 
 Running out of lives now ranks the final score with the original seven-entry
 table, displays `DrawHighScores`, and switches to `ROSTER_MUS`. The initial

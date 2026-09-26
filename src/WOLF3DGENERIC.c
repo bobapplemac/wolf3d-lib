@@ -170,6 +170,8 @@ typedef struct wg_game_session
     uint8_t paused;
     uint8_t intermission;
     uint8_t victory;
+    uint8_t victory_collapse_phase;
+    uint16_t victory_collapse_tics;
     uint8_t end_text;
     size_t end_text_page;
     wl_article_t article;
@@ -187,7 +189,7 @@ typedef struct wg_game_session
     unsigned next_map_number;
     uint32_t level_start_score;
     wl_intermission_t intermission_state;
-    wl_intermission_t level_ratios[8];
+    wl_intermission_t level_ratios[WL_MAX_LEVEL_RATIOS];
     int32_t sound_x;
     int32_t sound_y;
     uint8_t demo_playback;
@@ -203,6 +205,7 @@ static unsigned WG_GameSessionNextMap(void);
 static int WG_GameSessionRender(void);
 static int WG_GameSessionOpen(unsigned map_number,
                               wg_difficulty_t difficulty);
+static int WG_GameSessionReload(unsigned map_number, int died);
 
 static void WG_CloseFrontHelp(void)
 {
@@ -1807,9 +1810,14 @@ static int WG_GameSessionBeginIntermission(void)
         return 0;
     }
     wg_game.next_map_number = WG_GameSessionNextMap();
-    if (wg_game.map_number % 10U < 8U)
+    if (!WL_IntermissionIsSpecial(wg_data_set.variant,
+                                  wg_game.map_number))
     {
-        wg_game.level_ratios[wg_game.map_number % 10U] =
+        unsigned ratio_index =
+            WG_DataVariantFamily(wg_data_set.variant)
+                    == WG_GAME_FAMILY_SPEAR
+                ? wg_game.map_number : wg_game.map_number % 10U;
+        wg_game.level_ratios[ratio_index] =
             wg_game.intermission_state;
     }
     wg_game.intermission = 1U;
@@ -1841,9 +1849,23 @@ static int WG_GameSessionBeginVictory(void)
     size_t music_size;
     wl_victory_t victory;
 
-    if (!WL_VictoryCalculate(wg_game.level_ratios, &victory)
-        || !WL_DrawVictory(WG_ScreenBuffer, &wg_game.graphics,
-                           &wg_game.level, &victory))
+    if (!WL_VictoryCalculateForVariant(wg_data_set.variant,
+                                       wg_game.level_ratios, &victory))
+    {
+        return 0;
+    }
+    if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR
+        && wg_data_set.variant != WG_GAME_SPEAR_DEMO_SDM)
+    {
+        if (!WL_DrawSpearCollapse(WG_ScreenBuffer, &wg_game.graphics, 0U))
+        {
+            return 0;
+        }
+        wg_game.victory_collapse_phase = 1U;
+        wg_game.victory_collapse_tics = 140U;
+    }
+    else if (!WL_DrawVictory(WG_ScreenBuffer, &wg_game.graphics,
+                             &wg_game.level, &victory))
     {
         return 0;
     }
@@ -1855,7 +1877,56 @@ static int WG_GameSessionBeginVictory(void)
     WG_GamePalette(wg_data_set.variant, WG_Palette);
     if (wg_game.audio_active
         && WG_AudioGetChunk(&wg_game.audio,
-                            WG_DataMusicBase(wg_data_set.variant) + 24U,
+                            WG_DataMusicBase(wg_data_set.variant)
+                                + (WG_DataVariantFamily(wg_data_set.variant)
+                                           == WG_GAME_FAMILY_SPEAR ? 7U : 24U),
+                            &music_data, &music_size))
+    {
+        (void)ID_SD_MusicStart(wg_game.music, music_data, music_size);
+    }
+    return 1;
+}
+
+static int WG_GameSessionAdvanceVictory(void)
+{
+    static const uint16_t hold_tics[4] = { 140U, 105U, 105U, 210U };
+    const uint8_t *music_data;
+    size_t music_size;
+    wl_victory_t victory;
+
+    if (wg_game.victory_collapse_phase == 0U)
+    {
+        return 1;
+    }
+    if (wg_game.victory_collapse_tics != 0U)
+    {
+        --wg_game.victory_collapse_tics;
+        if (wg_game.victory_collapse_tics != 0U)
+        {
+            return 1;
+        }
+    }
+    if (wg_game.victory_collapse_phase < 4U)
+    {
+        ++wg_game.victory_collapse_phase;
+        wg_game.victory_collapse_tics =
+            hold_tics[wg_game.victory_collapse_phase - 1U];
+        return WL_DrawSpearCollapse(
+            WG_ScreenBuffer, &wg_game.graphics,
+            (unsigned)wg_game.victory_collapse_phase - 1U);
+    }
+
+    wg_game.victory_collapse_phase = 0U;
+    if (!WL_VictoryCalculateForVariant(wg_data_set.variant,
+                                       wg_game.level_ratios, &victory)
+        || !WL_DrawVictory(WG_ScreenBuffer, &wg_game.graphics,
+                           &wg_game.level, &victory))
+    {
+        return 0;
+    }
+    if (wg_game.audio_active
+        && WG_AudioGetChunk(&wg_game.audio,
+                            WG_DataMusicBase(wg_data_set.variant) + 6U,
                             &music_data, &music_size))
     {
         (void)ID_SD_MusicStart(wg_game.music, music_data, music_size);
@@ -1865,10 +1936,19 @@ static int WG_GameSessionBeginVictory(void)
 
 static int WG_GameSessionBeginEndText(void)
 {
-    if (!WL_ArticleOpen(&wg_game.article, &wg_game.graphics,
-                        wg_game.map_number / 10U)
-        || !WL_ArticleRender(&wg_game.article, &wg_game.graphics, 0U,
-                             WG_ScreenBuffer))
+    if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        if (wg_data_set.variant == WG_GAME_SPEAR_DEMO_SDM
+            || !WL_DrawSpearEndPage(WG_ScreenBuffer, WG_Palette,
+                                    &wg_game.graphics, 0U))
+        {
+            return 0;
+        }
+    }
+    else if (!WL_ArticleOpen(&wg_game.article, &wg_game.graphics,
+                             wg_game.map_number / 10U)
+             || !WL_ArticleRender(&wg_game.article, &wg_game.graphics, 0U,
+                                  WG_ScreenBuffer))
     {
         WL_ArticleClose(&wg_game.article);
         return 0;
@@ -1877,6 +1957,24 @@ static int WG_GameSessionBeginEndText(void)
     wg_game.end_text_page = 0U;
     memset(wg_game.keys, 0, sizeof(wg_game.keys));
     return 1;
+}
+
+static int WG_GameSessionRenderEndPage(void)
+{
+    if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        return WL_DrawSpearEndPage(WG_ScreenBuffer, WG_Palette,
+                                   &wg_game.graphics,
+                                   (unsigned)wg_game.end_text_page);
+    }
+    return WL_ArticleRender(&wg_game.article, &wg_game.graphics,
+                            wg_game.end_text_page, WG_ScreenBuffer);
+}
+
+static size_t WG_GameSessionEndPageCount(void)
+{
+    return WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR
+               ? WL_SPEAR_END_PAGE_COUNT : wg_game.article.page_count;
 }
 
 static int WG_GameSessionBeginHighScores(void)
@@ -1916,6 +2014,16 @@ static int WG_GameSessionBeginHighScores(void)
         (void)ID_SD_MusicStart(wg_game.music, music_data, music_size);
     }
     return 1;
+}
+
+static int WG_GameSessionFinishIntermission(void)
+{
+    if (WG_CampaignEndsAfterIntermission(wg_data_set.variant,
+                                         wg_game.map_number))
+    {
+        return WG_GameSessionBeginHighScores();
+    }
+    return WG_GameSessionReload(wg_game.next_map_number, 0);
 }
 
 static int WG_GameSessionHighScoreKey(uint16_t scan_code, int pressed)
@@ -2235,14 +2343,15 @@ static void WG_GameSessionInput(wl_input_t *input)
 
 static unsigned WG_GameSessionNextMap(void)
 {
-    return WG_NextMapNumber(wg_game.map_number,
-                            wg_game.level.secret_level != 0U);
+    return WG_NextMapNumberForVariant(wg_data_set.variant,
+                                      wg_game.map_number,
+                                      wg_game.level.secret_level != 0U);
 }
 
 static int WG_GameSessionReload(unsigned map_number, int died)
 {
     wg_campaign_state_t state;
-    wl_intermission_t level_ratios[8];
+    wl_intermission_t level_ratios[WL_MAX_LEVEL_RATIOS];
     wg_difficulty_t difficulty = wg_game.level.difficulty;
     uint32_t start_score = died ? wg_game.level_start_score
                                 : wg_game.level.score;
@@ -2268,6 +2377,35 @@ static int WG_GameSessionReload(unsigned map_number, int died)
     return WG_GameSessionRender();
 }
 
+static int WG_GameSessionEnterSpearMap(void)
+{
+    wg_campaign_state_t state;
+    wl_intermission_t level_ratios[WL_MAX_LEVEL_RATIOS];
+    wg_difficulty_t difficulty = wg_game.level.difficulty;
+    int32_t spear_x = wg_game.level.spear_x;
+    int32_t spear_y = wg_game.level.spear_y;
+    uint16_t spear_angle = wg_game.level.spear_angle;
+    uint32_t score = wg_game.level.score;
+
+    WG_CampaignCapture(&state, &wg_game.level);
+    memcpy(level_ratios, wg_game.level_ratios, sizeof(level_ratios));
+    WG_GameSessionClose();
+    if (!WG_GameSessionOpen(20U, difficulty)
+        || !WG_CampaignApply(&wg_game.level, &state, score, 0))
+    {
+        return 0;
+    }
+    memcpy(wg_game.level_ratios, level_ratios, sizeof(level_ratios));
+    wg_game.level.player_x = spear_x;
+    wg_game.level.player_y = spear_y;
+    wg_game.level.player_tile_x = (uint8_t)(spear_x / WG_FIXED_ONE);
+    wg_game.level.player_tile_y = (uint8_t)(spear_y / WG_FIXED_ONE);
+    wg_game.level.player_angle = spear_angle;
+    wg_game.level.player_keys |= 1U;
+    wg_game.level_start_score = score;
+    return WG_GameSessionRender();
+}
+
 static int WG_GameSessionTick(void)
 {
     wl_input_t input;
@@ -2275,9 +2413,13 @@ static int WG_GameSessionTick(void)
     size_t sound;
     int demo_last_command = 0;
 
-    if (wg_game.game_over || wg_game.victory)
+    if (wg_game.game_over)
     {
         return 1;
+    }
+    if (wg_game.victory)
+    {
+        return WG_GameSessionAdvanceVictory();
     }
     if (!wg_game.demo_playback && wg_game.level.player_dead)
     {
@@ -2447,6 +2589,10 @@ static int WG_GameSessionTick(void)
         }
         return 1;
     }
+    if (wg_game.level.spear_found)
+    {
+        return WG_GameSessionEnterSpearMap();
+    }
     if (wg_game.level.level_completed)
     {
         if (wg_game.level.victory_flag)
@@ -2487,7 +2633,10 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int bonus_flash_view,
                                   int player_death_view,
                                   int victory_view,
+                                  int victory_collapse_view,
+                                  unsigned collapse_frame,
                                   int end_text_view,
+                                  unsigned end_page,
                                   int main_menu_view,
                                   int load_save_view,
                                   int sound_menu_view,
@@ -2956,33 +3105,51 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     }
     if (victory_view)
     {
-        wl_intermission_t ratios[8];
+        wl_intermission_t ratios[WL_MAX_LEVEL_RATIOS];
         wl_victory_t victory;
         unsigned floor;
+        unsigned floor_count = WG_DataVariantFamily(wg_data_set.variant)
+                                   == WG_GAME_FAMILY_SPEAR ? 14U : 8U;
 
         memset(ratios, 0, sizeof(ratios));
-        for (floor = 0U; floor < 8U; ++floor)
+        for (floor = 0U; floor < floor_count; ++floor)
         {
             ratios[floor].seconds = 75U;
             ratios[floor].kill_ratio = 100U;
             ratios[floor].secret_ratio = 100U;
             ratios[floor].treasure_ratio = 100U;
         }
-        if (!WL_VictoryCalculate(ratios, &victory)
+        if (!WL_VictoryCalculateForVariant(wg_data_set.variant,
+                                           ratios, &victory)
             || !WL_DrawVictory(WG_ScreenBuffer, &graphics,
                                &level, &victory))
         {
             goto cleanup;
         }
     }
+    if (victory_collapse_view
+        && !WL_DrawSpearCollapse(WG_ScreenBuffer, &graphics,
+                                 collapse_frame))
+    {
+        goto cleanup;
+    }
     if (end_text_view)
     {
         wl_article_t article;
 
         memset(&article, 0, sizeof(article));
-        if (!WL_ArticleOpen(&article, &graphics, map_number / 10U)
-            || !WL_ArticleRender(&article, &graphics, 0U,
-                                 WG_ScreenBuffer))
+        if (WG_DataVariantFamily(wg_data_set.variant)
+                == WG_GAME_FAMILY_SPEAR)
+        {
+            if (!WL_DrawSpearEndPage(WG_ScreenBuffer, WG_Palette,
+                                     &graphics, end_page))
+            {
+                goto cleanup;
+            }
+        }
+        else if (!WL_ArticleOpen(&article, &graphics, map_number / 10U)
+                 || !WL_ArticleRender(&article, &graphics, end_page,
+                                      WG_ScreenBuffer))
         {
             WL_ArticleClose(&article);
             goto cleanup;
@@ -3194,6 +3361,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     unsigned demo_number;
     unsigned demo_commands;
     unsigned view_size;
+    unsigned end_page;
+    unsigned collapse_frame;
     wg_game_variant_t requested_variant;
     wg_game_family_t preferred_family;
     wg_game_family_t signon_palette_family;
@@ -3231,6 +3400,11 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
                                     3U, &demo_number)
         || !WG_FindUnsignedArgument(argc, argv, "--view-size", 20U,
                                     20U, &view_size)
+        || !WG_FindUnsignedArgument(argc, argv, "--end-page", 0U,
+                                    WL_SPEAR_END_PAGE_COUNT - 1U,
+                                    &end_page)
+        || !WG_FindUnsignedArgument(argc, argv, "--collapse-frame", 0U,
+                                    3U, &collapse_frame)
         || view_size < WL_VIEW_SIZE_MIN)
     {
         return WG_RESULT_INVALID_ARGUMENT;
@@ -3316,7 +3490,10 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--bonus-flash-view"),
             WG_HasArgument(argc, argv, "--player-death-view"),
             WG_HasArgument(argc, argv, "--victory-view"),
+            WG_HasArgument(argc, argv, "--victory-collapse-view"),
+            collapse_frame,
             WG_HasArgument(argc, argv, "--end-text-view"),
+            end_page,
             WG_HasArgument(argc, argv, "--main-menu-view")
                 ? 1 : WG_HasArgument(argc, argv, "--in-game-menu-view")
                           ? 2 : 0,
@@ -3942,6 +4119,10 @@ wg_result_t wolf3dgeneric_Run(void)
                     {
                         continue;
                     }
+                    if (wg_game.victory_collapse_phase != 0U)
+                    {
+                        continue;
+                    }
                     if (!wg_game.end_text)
                     {
                         if (!WG_GameSessionBeginEndText())
@@ -3963,9 +4144,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         if (wg_game.end_text_page != 0U)
                         {
                             --wg_game.end_text_page;
-                            if (!WL_ArticleRender(
-                                    &wg_game.article, &wg_game.graphics,
-                                    wg_game.end_text_page, WG_ScreenBuffer))
+                            if (!WG_GameSessionRenderEndPage())
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
@@ -3978,15 +4157,19 @@ wg_result_t wolf3dgeneric_Run(void)
                              || event.key == WG_KEY_SPACE)
                     {
                         if (wg_game.end_text_page + 1U
-                            < wg_game.article.page_count)
+                            < WG_GameSessionEndPageCount())
                         {
                             ++wg_game.end_text_page;
-                            if (!WL_ArticleRender(
-                                    &wg_game.article, &wg_game.graphics,
-                                    wg_game.end_text_page, WG_ScreenBuffer))
+                            if (!WG_GameSessionRenderEndPage())
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                        }
+                        else if (WG_DataVariantFamily(wg_data_set.variant)
+                                 == WG_GAME_FAMILY_SPEAR
+                                 && !WG_GameSessionBeginHighScores())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
                         }
                     }
                     continue;
@@ -4020,7 +4203,7 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.active && wg_game.intermission && event.pressed)
                 {
-                    if (!WG_GameSessionReload(wg_game.next_map_number, 0))
+                    if (!WG_GameSessionFinishIntermission())
                     {
                         return WG_RESULT_PLATFORM_ERROR;
                     }
@@ -5034,6 +5217,10 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.victory)
                 {
+                    if (wg_game.victory_collapse_phase != 0U)
+                    {
+                        continue;
+                    }
                     if (event.pressed && !wg_game.end_text)
                     {
                         if (!WG_GameSessionBeginEndText())
@@ -5050,15 +5237,20 @@ wg_result_t wolf3dgeneric_Run(void)
                     }
                     else if (event.pressed && event.button == 1U
                              && wg_game.end_text_page + 1U
-                                < wg_game.article.page_count)
+                                < WG_GameSessionEndPageCount())
                     {
                         ++wg_game.end_text_page;
-                        if (!WL_ArticleRender(
-                                &wg_game.article, &wg_game.graphics,
-                                wg_game.end_text_page, WG_ScreenBuffer))
+                        if (!WG_GameSessionRenderEndPage())
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }
+                    }
+                    else if (event.pressed && event.button == 1U
+                             && WG_DataVariantFamily(wg_data_set.variant)
+                                == WG_GAME_FAMILY_SPEAR
+                             && !WG_GameSessionBeginHighScores())
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
                     }
                     continue;
                 }
@@ -5078,7 +5270,7 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.intermission && event.pressed)
                 {
-                    if (!WG_GameSessionReload(wg_game.next_map_number, 0))
+                    if (!WG_GameSessionFinishIntermission())
                     {
                         return WG_RESULT_PLATFORM_ERROR;
                     }

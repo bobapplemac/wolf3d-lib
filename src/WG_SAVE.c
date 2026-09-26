@@ -7,7 +7,7 @@
 #include "WG_ENDIAN.h"
 #include "WG_FILE.h"
 
-#define WG_SAVE_VERSION 1U
+#define WG_SAVE_VERSION 2U
 
 static const uint8_t WG_SaveMagic[8] =
     { 'W', '3', 'D', 'G', 'S', 'A', 'V', 'E' };
@@ -409,7 +409,7 @@ int WG_SaveEncode(uint8_t *data, size_t capacity, size_t *size,
     WG_SaveU8(&writer, (uint8_t)variant);
     WG_SaveU8(&writer, (uint8_t)state->map_number);
     WG_SaveU32(&writer, state->level_start_score);
-    for (index = 0U; index < 8U; ++index)
+    for (index = 0U; index < WL_MAX_LEVEL_RATIOS; ++index)
     {
         WG_SaveIntermission(&writer, &state->level_ratios[index]);
     }
@@ -433,12 +433,19 @@ int WG_SaveReadName(const uint8_t *data, size_t size,
                     wg_game_variant_t variant,
                     char name[WG_SAVE_NAME_BYTES])
 {
-    if (data == NULL || name == NULL
-        || size < WG_SAVE_NAME_BYTES + sizeof(WG_SaveMagic) + 4U
+    uint16_t version;
+
+    if (data == NULL
+        || size < WG_SAVE_NAME_BYTES + sizeof(WG_SaveMagic) + 4U)
+    {
+        return 0;
+    }
+    version = WG_ReadLE16(data + WG_SAVE_NAME_BYTES
+                          + sizeof(WG_SaveMagic));
+    if (name == NULL
         || memcmp(data + WG_SAVE_NAME_BYTES, WG_SaveMagic,
                   sizeof(WG_SaveMagic)) != 0
-        || WG_ReadLE16(data + WG_SAVE_NAME_BYTES + sizeof(WG_SaveMagic))
-               != WG_SAVE_VERSION
+        || (version != 1U && version != WG_SAVE_VERSION)
         || data[WG_SAVE_NAME_BYTES + sizeof(WG_SaveMagic) + 2U]
                != (uint8_t)variant)
     {
@@ -488,11 +495,13 @@ int WG_SaveDecode(const uint8_t *data, size_t size,
     state->map_number = WG_LoadU8(&reader);
     state->level_start_score = WG_LoadU32(&reader);
     if (!reader.valid || memcmp(magic, WG_SaveMagic, sizeof(magic)) != 0
-        || version != WG_SAVE_VERSION || stored_variant != (uint8_t)variant)
+        || (version != 1U && version != WG_SAVE_VERSION)
+        || stored_variant != (uint8_t)variant)
     {
         return 0;
     }
-    for (index = 0U; index < 8U; ++index)
+    for (index = 0U; index < (version == 1U ? 8U : WL_MAX_LEVEL_RATIOS);
+         ++index)
     {
         WG_LoadIntermission(&reader, &state->level_ratios[index]);
     }

@@ -54,6 +54,14 @@ static const uint16_t wl_par_seconds[60] =
     390U, 240U, 270U, 360U, 300U, 330U, 330U, 510U,   0U,   0U
 };
 
+static const uint16_t wl_spear_par_seconds[20] =
+{
+     90U, 210U, 165U, 210U,   0U,
+    270U, 195U, 165U, 285U,   0U,
+    390U, 270U, 165U, 270U, 360U,
+      0U, 360U,   0U,   0U,   0U
+};
+
 static int WL_IntermissionChunks(wg_game_variant_t variant,
                                  wl_intermission_chunks_t *chunks)
 {
@@ -70,6 +78,14 @@ static int WL_IntermissionChunks(wg_game_variant_t variant,
         /* This late Apogee graph places the level-end lump at chunk 55. */
         chunks->guy = 55U;
     }
+    else if (variant == WG_GAME_SPEAR_DEMO_SDM)
+    {
+        chunks->guy = 31U;
+    }
+    else if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        chunks->guy = 36U;
+    }
     else
     {
         return 0;
@@ -82,6 +98,17 @@ static int WL_IntermissionChunks(wg_game_variant_t variant,
     chunks->time_code = chunks->guy - 6U;
     chunks->bj_win = chunks->guy + 42U;
     return 1;
+}
+
+int WL_IntermissionIsSpecial(wg_game_variant_t variant,
+                             unsigned map_number)
+{
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        return map_number == 4U || map_number == 9U || map_number == 15U
+               || (map_number >= 17U && map_number <= 19U);
+    }
+    return map_number % 10U >= 8U;
 }
 
 static int WL_HighScoreChunks(wg_game_variant_t variant,
@@ -100,6 +127,11 @@ static int WL_HighScoreChunks(wg_game_variant_t variant,
     {
         chunks->time_code = 49U;
         chunks->title = 102U;
+    }
+    else if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        chunks->time_code = 0U;
+        chunks->title = 29U;
     }
     else
     {
@@ -197,19 +229,28 @@ int WL_IntermissionCalculate(const wg_level_t *level,
     unsigned floor;
     uint32_t time_left;
 
+    int spear;
+
     if (level == NULL || intermission == NULL || map_number >= 60U)
     {
         return 0;
     }
     memset(intermission, 0, sizeof(*intermission));
+    spear = WG_DataVariantFamily(level->variant) == WG_GAME_FAMILY_SPEAR;
+    if (spear && map_number >= 20U)
+    {
+        return 0;
+    }
     floor = map_number % 10U;
     intermission->seconds = level->time_count / 70U;
     if (intermission->seconds > 99U * 60U)
     {
         intermission->seconds = 99U * 60U;
     }
-    intermission->par_seconds = wl_par_seconds[map_number];
-    intermission->special_floor = floor >= 8U;
+    intermission->par_seconds = spear ? wl_spear_par_seconds[map_number]
+                                      : wl_par_seconds[map_number];
+    intermission->special_floor = (uint8_t)WL_IntermissionIsSpecial(
+        level->variant, map_number);
     if (intermission->special_floor)
     {
         intermission->bonus = 15000U;
@@ -282,8 +323,40 @@ int WL_DrawLevelCompleted(uint8_t *framebuffer,
     floor = map_number % 10U;
     if (intermission->special_floor)
     {
+        const char *message = "secret floor\n completed!";
+        int x = 14;
+
+        if (WG_DataVariantFamily(graphics->variant)
+            == WG_GAME_FAMILY_SPEAR)
+        {
+            switch (map_number)
+            {
+            case 4U:
+                message = " trans\n grosse\n defeated!";
+                break;
+            case 9U:
+                message = "barnacle\nwilhelm\n defeated!";
+                break;
+            case 15U:
+                message = "ubermutant\n defeated!";
+                break;
+            case 17U:
+                message = " death\n knight\n defeated!";
+                break;
+            case 18U:
+                message = "secret tunnel\n    area\n  completed!";
+                x = 13;
+                break;
+            case 19U:
+                message = "secret castle\n    area\n  completed!";
+                x = 13;
+                break;
+            default:
+                break;
+            }
+        }
         return WL_IntermissionWrite(framebuffer, graphics, &chunks,
-                                    14, 4, "secret floor\n completed!")
+                                    x, 4, message)
                && WL_IntermissionWrite(framebuffer, graphics, &chunks,
                                        10, 16, "15000 bonus!");
     }
@@ -390,6 +463,42 @@ int WL_VictoryCalculate(const wl_intermission_t ratios[8],
     return 1;
 }
 
+int WL_VictoryCalculateForVariant(
+    wg_game_variant_t variant,
+    const wl_intermission_t ratios[WL_MAX_LEVEL_RATIOS],
+    wl_victory_t *victory)
+{
+    unsigned index;
+    unsigned count = WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR
+                         ? 20U : 8U;
+    unsigned divisor = WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR
+                           ? 14U : 8U;
+    unsigned kills = 0U;
+    unsigned secrets = 0U;
+    unsigned treasures = 0U;
+
+    if (ratios == NULL || victory == NULL)
+    {
+        return 0;
+    }
+    memset(victory, 0, sizeof(*victory));
+    for (index = 0U; index < count; ++index)
+    {
+        victory->seconds += ratios[index].seconds;
+        kills += ratios[index].kill_ratio;
+        secrets += ratios[index].secret_ratio;
+        treasures += ratios[index].treasure_ratio;
+    }
+    if (victory->seconds > 99U * 60U)
+    {
+        victory->seconds = 99U * 60U;
+    }
+    victory->kill_ratio = (uint8_t)(kills / divisor);
+    victory->secret_ratio = (uint8_t)(secrets / divisor);
+    victory->treasure_ratio = (uint8_t)(treasures / divisor);
+    return 1;
+}
+
 int WL_DrawVictory(uint8_t *framebuffer,
                    const wg_graphics_t *graphics,
                    const wg_level_t *level,
@@ -470,7 +579,9 @@ int WL_DrawVictory(uint8_t *framebuffer,
     {
         return 0;
     }
-    if (level->difficulty < WG_DIFFICULTY_MEDIUM)
+    if (level->difficulty < WG_DIFFICULTY_MEDIUM
+        || WG_DataVariantFamily(graphics->variant)
+               == WG_GAME_FAMILY_SPEAR)
     {
         return 1;
     }
@@ -486,6 +597,82 @@ int WL_DrawVictory(uint8_t *framebuffer,
     }
     WG_FontClose(&font);
     return result;
+}
+
+int WL_DrawSpearCollapse(uint8_t *framebuffer,
+                         const wg_graphics_t *graphics,
+                         unsigned frame)
+{
+    if (framebuffer == NULL || graphics == NULL || frame >= 4U
+        || graphics->variant == WG_GAME_SPEAR_DEMO_SDM
+        || WG_DataVariantFamily(graphics->variant) != WG_GAME_FAMILY_SPEAR)
+    {
+        return 0;
+    }
+    WG_VideoBar(framebuffer, 0, 0, 320, 200, 0x7fU);
+    return WG_VideoDrawPicture(framebuffer, graphics, 31U + frame, 124, 44);
+}
+
+int WL_DrawSpearEndPage(uint8_t *framebuffer,
+                        uint8_t palette[256 * 3],
+                        const wg_graphics_t *graphics,
+                        unsigned page)
+{
+    static const uint8_t screen_chunks[WL_SPEAR_END_PAGE_COUNT] =
+    {
+        81U, 83U, 83U, 84U, 85U, 86U, 87U, 88U, 89U, 82U
+    };
+    static const uint8_t palette_chunks[WL_SPEAR_END_PAGE_COUNT] =
+    {
+        154U, 156U, 156U, 157U, 158U, 159U, 160U, 161U, 162U, 155U
+    };
+    static const char *const captions[2][2] =
+    {
+        {
+            "We owe you a great debt, Mr. Blazkowicz.",
+            "You have served your country well."
+        },
+        {
+            "With the spear gone, the Allies will finally",
+            "by able to destroy Hitler..."
+        }
+    };
+    wg_font_t font;
+    unsigned line;
+
+    if (framebuffer == NULL || palette == NULL || graphics == NULL
+        || graphics->variant == WG_GAME_SPEAR_DEMO_SDM
+        || WG_DataVariantFamily(graphics->variant) != WG_GAME_FAMILY_SPEAR
+        || page >= WL_SPEAR_END_PAGE_COUNT
+        || !WG_GraphicsDecodeScreenWithPalette(
+                graphics, screen_chunks[page], palette_chunks[page],
+                framebuffer, palette))
+    {
+        return 0;
+    }
+    if (page != 1U && page != 2U)
+    {
+        return 1;
+    }
+
+    memset(&font, 0, sizeof(font));
+    if (!WG_FontOpen(&font, graphics, 0U))
+    {
+        return 0;
+    }
+    if (page == 2U)
+    {
+        WG_VideoBar(framebuffer, 0, 180, 320, 20, 0U);
+    }
+    for (line = 0U; line < 2U; ++line)
+    {
+        const char *text = captions[page - 1U][line];
+        int x = (320 - (int)WG_FontMeasure(&font, text)) / 2;
+        WG_FontDraw(&font, framebuffer, x, 180 + (int)line * 10,
+                    text, 0xd0U);
+    }
+    WG_FontClose(&font);
+    return 1;
 }
 
 void WL_HighScoresDefault(wl_high_score_t scores[WL_MAX_HIGH_SCORES])
@@ -548,22 +735,45 @@ int WL_DrawHighScores(uint8_t *framebuffer,
     wl_high_score_chunks_t chunks;
     wg_font_t font;
     unsigned index;
+    int spear;
     int result = 0;
 
     memset(&font, 0, sizeof(font));
     if (framebuffer == NULL || graphics == NULL || scores == NULL
-        || !WL_HighScoreChunks(graphics->variant, &chunks)
-        || !WG_FontOpen(&font, graphics, 0U))
+        || !WL_HighScoreChunks(graphics->variant, &chunks))
     {
         return 0;
     }
-    WG_VideoBar(framebuffer, 0, 0, 320, 200, 0x29U);
-    WG_VideoBar(framebuffer, 0, 10, 320, 24, 0U);
-    WG_VideoBar(framebuffer, 0, 32, 320, 1, 0x2cU);
-    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.title, 48, 0)
+    spear = WG_DataVariantFamily(graphics->variant)
+                == WG_GAME_FAMILY_SPEAR;
+    if (!WG_FontOpen(&font, graphics, spear ? 1U : 0U))
+    {
+        return 0;
+    }
+    if (spear)
+    {
+        if (!WG_VideoDrawPicture(framebuffer, graphics, 3U, 0, 0))
+        {
+            goto cleanup;
+        }
+        WG_VideoBar(framebuffer, 0, 10, 320, 24, 0U);
+        WG_VideoBar(framebuffer, 0, 32, 320, 1, 0x2cU);
+        if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.title, 0, 0))
+        {
+            goto cleanup;
+        }
+    }
+    else
+    {
+        WG_VideoBar(framebuffer, 0, 0, 320, 200, 0x29U);
+        WG_VideoBar(framebuffer, 0, 10, 320, 24, 0U);
+        WG_VideoBar(framebuffer, 0, 32, 320, 1, 0x2cU);
+    }
+    if (!spear
+        && (!WG_VideoDrawPicture(framebuffer, graphics, chunks.title, 48, 0)
         || !WG_VideoDrawPicture(framebuffer, graphics, chunks.name, 32, 68)
         || !WG_VideoDrawPicture(framebuffer, graphics, chunks.level, 160, 68)
-        || !WG_VideoDrawPicture(framebuffer, graphics, chunks.score, 224, 68))
+        || !WG_VideoDrawPicture(framebuffer, graphics, chunks.score, 224, 68)))
     {
         goto cleanup;
     }
@@ -577,36 +787,54 @@ int WL_DrawHighScores(uint8_t *framebuffer,
         int x;
         int y = 76 + (int)index * 16;
 
-        (void)WL_HighScoreDrawText(&font, framebuffer, 32, y,
+        (void)WL_HighScoreDrawText(&font, framebuffer,
+                                   spear ? 16 : 32, y,
                                    scores[index].name);
         (void)snprintf(number, sizeof(number), "%u",
                        (unsigned)scores[index].completed);
-        for (digit = 0U; number[digit] != '\0'; ++digit)
+        for (digit = 0U; !spear && number[digit] != '\0'; ++digit)
         {
             fixed[digit] = (char)((unsigned char)number[digit]
                                   + (129U - (unsigned)'0'));
         }
         fixed[digit] = '\0';
-        width = WG_FontMeasure(&font, fixed);
-        x = 176 - (int)width - 6;
-        x = WL_HighScoreDrawText(&font, framebuffer, x, y, "E");
-        (void)snprintf(episode, sizeof(episode), "%u",
-                       (unsigned)scores[index].episode + 1U);
-        x = WL_HighScoreDrawText(&font, framebuffer, x, y, episode);
-        x = WL_HighScoreDrawText(&font, framebuffer, x, y, "/L");
-        (void)WL_HighScoreDrawText(&font, framebuffer, x, y, fixed);
+        width = WG_FontMeasure(&font, spear ? number : fixed);
+        if (spear)
+        {
+            x = 194 - (int)width;
+            if (scores[index].completed == 21U)
+            {
+                (void)WG_VideoDrawPicture(framebuffer, graphics, 30U,
+                                          x + 8, y - 1);
+            }
+            else
+            {
+                (void)WL_HighScoreDrawText(&font, framebuffer, x, y, number);
+            }
+        }
+        else
+        {
+            x = 176 - (int)width - 6;
+            x = WL_HighScoreDrawText(&font, framebuffer, x, y, "E");
+            (void)snprintf(episode, sizeof(episode), "%u",
+                           (unsigned)scores[index].episode + 1U);
+            x = WL_HighScoreDrawText(&font, framebuffer, x, y, episode);
+            x = WL_HighScoreDrawText(&font, framebuffer, x, y, "/L");
+            (void)WL_HighScoreDrawText(&font, framebuffer, x, y, fixed);
+        }
 
         (void)snprintf(number, sizeof(number), "%lu",
                        (unsigned long)scores[index].score);
-        for (digit = 0U; number[digit] != '\0'; ++digit)
+        for (digit = 0U; !spear && number[digit] != '\0'; ++digit)
         {
             fixed[digit] = (char)((unsigned char)number[digit]
                                   + (129U - (unsigned)'0'));
         }
         fixed[digit] = '\0';
-        width = WG_FontMeasure(&font, fixed);
+        width = WG_FontMeasure(&font, spear ? number : fixed);
         (void)WL_HighScoreDrawText(&font, framebuffer,
-                                   264 - (int)width, y, fixed);
+                                   (spear ? 292 : 264) - (int)width, y,
+                                   spear ? number : fixed);
     }
     result = 1;
 
@@ -646,7 +874,9 @@ int WL_DrawHighScoreCursor(uint8_t *framebuffer,
     memset(&font, 0, sizeof(font));
     if (framebuffer == NULL || graphics == NULL || scores == NULL
         || score_index >= WL_MAX_HIGH_SCORES
-        || !WG_FontOpen(&font, graphics, 0U))
+        || !WG_FontOpen(&font, graphics,
+                        WG_DataVariantFamily(graphics->variant)
+                                == WG_GAME_FAMILY_SPEAR ? 1U : 0U))
     {
         return 0;
     }
@@ -657,7 +887,9 @@ int WL_DrawHighScoreCursor(uint8_t *framebuffer,
     }
     memcpy(prefix, scores[score_index].name, cursor);
     prefix[cursor] = '\0';
-    x = 32 + (int)WG_FontMeasure(&font, prefix) - 1;
+    x = (WG_DataVariantFamily(graphics->variant) == WG_GAME_FAMILY_SPEAR
+             ? 16 : 32)
+        + (int)WG_FontMeasure(&font, prefix) - 1;
     WG_FontDraw(&font, framebuffer, x,
                 76 + (int)score_index * 16, cursor_text, 15U);
     WG_FontClose(&font);
