@@ -129,6 +129,9 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     set(WG_TEST_WL6_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL6 data")
     set(WG_TEST_SOD_PATH "" CACHE PATH "Path to external Spear of Destiny SOD data")
     set(WG_TEST_SDM_PATH "" CACHE PATH "Path to external Spear of Destiny demo SDM data")
+    set(WG_TEST_SD1_PATH "" CACHE PATH "Path to external Spear mission 1 data")
+    set(WG_TEST_SD2_PATH "" CACHE PATH "Path to external Spear mission 2 data")
+    set(WG_TEST_SD3_PATH "" CACHE PATH "Path to external Spear mission 3 data")
     set(WG_TEST_SIGNON_PATH "" CACHE PATH "Path to external original SIGNON screens")
     if(WG_TEST_WL1_PATH)
         add_test(NAME data-wl1 COMMAND wg-tests --data wl1 "${WG_TEST_WL1_PATH}")
@@ -668,6 +671,24 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
         set_tests_properties(intermission-view-sdm PROPERTIES
             PASS_REGULAR_EXPRESSION "4b48bd845813fdf5.*eba126e8df00d1cb")
     endif()
+
+    foreach(_wg_mission IN ITEMS 1 2 3)
+        set(_wg_mission_path "WG_TEST_SD${_wg_mission}_PATH")
+        if(${_wg_mission_path})
+            if(_wg_mission EQUAL 1)
+                set(_wg_mission_pages 666)
+            else()
+                set(_wg_mission_pages 732)
+            endif()
+            add_test(NAME external_sd${_wg_mission}_archive
+                COMMAND wg-tests --spear-data SD${_wg_mission}
+                    ${_wg_mission_pages} 21 "${${_wg_mission_path}}")
+            add_test(NAME external_sd${_wg_mission}_headless
+                COMMAND wolf3dgeneric-headless
+                    --data "${${_wg_mission_path}}"
+                    --game SD${_wg_mission} --frame-hash)
+        endif()
+    endforeach()
     if(WG_TEST_SIGNON_PATH AND WG_TEST_SOD_PATH)
         add_test(NAME signon-apogee COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD

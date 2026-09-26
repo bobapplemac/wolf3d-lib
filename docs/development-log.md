@@ -1322,3 +1322,26 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   sound range, and archive tests validate all 81 PC/AdLib effect pairs, all 24
   full-game music tracks, all 40 full-game digitized samples, and the smaller
   SDM payload actually present on disk.
+
+## 2026-09-26: Spear mission-pack corpus validation
+
+- Added support for both historical mission-pack naming (mission-specific
+  `.SD1`/`.SD2`/`.SD3` maps and pages plus shared `.SOD` graphics/audio) and
+  the GOG layout, where each isolated mission directory renames every archive
+  to `.SOD`. An explicit `--game SD1`, `SD2`, or `SD3` preserves campaign
+  identity in either layout.
+- Restored the original engine's tolerance for isolated or clustered ambush
+  markers with no adjacent area tile. Return to Danger and Ultimate Challenge
+  contain several such markers; the DOS setup code retained an unassigned
+  area byte rather than rejecting the map.
+- Added archive and headless gates for all three missions. Every one of the 63
+  maps decodes and builds, all Spear actor classes and resources remain valid,
+  and the two expansion VSWAP archives each expose 732 pages.
+- Recorded exact hashes for the tested GOG archives. The Return to Danger and
+  Ultimate Challenge opening frames hash to `6fa88e8f025797bf` and
+  `7cc04bae15ab353c`; both retain the corrected Spear palette hash
+  `eba126e8df00d1cb`.
+
+![Return to Danger opening map](../out/sd2-opening.png)
+
+![Ultimate Challenge opening map](../out/sd3-opening.png)

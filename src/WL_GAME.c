@@ -131,8 +131,8 @@ static int WG_DifficultyDirection(uint16_t info, uint16_t easy_base,
     return 0;
 }
 
-static int WG_AmbushArea(const wg_map_t *map, size_t index,
-                         uint8_t *area_number)
+static void WG_AmbushArea(const wg_map_t *map, size_t index,
+                          uint8_t *area_number)
 {
     size_t x = index % WG_LEVEL_SIZE;
     size_t y = index / WG_LEVEL_SIZE;
@@ -156,13 +156,17 @@ static int WG_AmbushArea(const wg_map_t *map, size_t index,
     {
         tile = map->planes[0][index - 1U];
     }
-    if (tile < WG_AREA_TILE
-        || tile >= WG_AREA_TILE + WG_NUM_AREAS)
+    if (tile >= WG_AREA_TILE
+        && tile < WG_AREA_TILE + WG_NUM_AREAS)
     {
-        return 0;
+        *area_number = (uint8_t)(tile - WG_AREA_TILE);
     }
-    *area_number = (uint8_t)(tile - WG_AREA_TILE);
-    return 1;
+    else
+    {
+        /* The original accepted isolated ambush markers and left their area
+           byte at -1. Several mission-pack maps rely on that tolerance. */
+        *area_number = WG_NO_AREA;
+    }
 }
 
 static int WG_StaticBlocks(unsigned type)
@@ -258,10 +262,7 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
         {
             level->tiles[index] = 0U;
             level->ambush_tiles[index] = 1U;
-            if (!WG_AmbushArea(map, index, &level->areas[index]))
-            {
-                return 0;
-            }
+            WG_AmbushArea(map, index, &level->areas[index]);
         }
         else
         {

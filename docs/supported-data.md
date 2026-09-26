@@ -46,6 +46,37 @@ matching is case-insensitive; SHA-256 values identify the file contents.
 This set contains two maps, 666 VSWAP pages, 125 graphics pictures, and the
 original two-part demo title. It is exercised independently from full SOD.
 
+## Spear of Destiny and mission packs (GOG layout)
+
+The tested GOG installation places each mission in its own `M1`, `M2`, or
+`M3` directory and uses `.SOD` for every archive. Select `--game SOD` for M1,
+`--game SD2` for M2, and `--game SD3` for M3. The historically named
+`.SD1`/`.SD2`/`.SD3` map/page layout is supported as well.
+
+All three directories share these files:
+
+| File | SHA-256 |
+| --- | --- |
+| `AUDIOHED.SOD` | `74f038a0d17e3075a8ed8be58b58a6f4ce590cd5371a140be49f8312de0415a5` |
+| `AUDIOT.SOD` | `531b33871d4503f6f5e9131225d0739a6a24b07b0d02de62723bba813719e909` |
+| `VGADICT.SOD` | `80713ce71576626acf5f83701ae163bc15511ce6a22416748d47d80bf406ce3d` |
+| `VGAGRAPH.SOD` | `80f96fbaf7fa91c1eb5a8aa1d4bffdebce8a9b508aa60a1354bdcc50fa537d97` |
+| `VGAHEAD.SOD` | `79950407f8948fa09479d8ba738aaeadc146e115a9d23e289e1a2105361e5909` |
+
+Mission-specific archives:
+
+| Mission | File | SHA-256 |
+| --- | --- | --- |
+| M1 / Spear of Destiny | `GAMEMAPS.SOD` | `772d834d97d429388be3cd7caa517e49a7e82e06367bd6f16d46c6b96e25ae1d` |
+| M1 / Spear of Destiny | `MAPHEAD.SOD` | `3093aa7b0c88a3dfac9f5cc16d9f1b2fee338a9c4f43e1063ce15ca109498736` |
+| M1 / Spear of Destiny | `VSWAP.SOD` | `6d9e54808a4738f11c37964d032c9a1c68a8ca98fcb18e6ccba286502967a568` |
+| M2 / Return to Danger | `GAMEMAPS.SOD` | `29c6c1c3dbd2fe21e2e642615a0f6943952c1d7aff70e148d1b3b54e254899ba` |
+| M2 / Return to Danger | `MAPHEAD.SOD` | `b3749cd2175284ed8b3ae4dbbd3704f5ef116b30ea49a373fed5538170bc0bbe` |
+| M2 / Return to Danger | `VSWAP.SOD` | `97112755b1a07ab9ef5031f76ff04288de7e5bf910020e965f4bde9bcb7a96a6` |
+| M3 / Ultimate Challenge | `GAMEMAPS.SOD` | `4f4a9d0a9cda58eb6dfc6663b8e63090a7f4e941b71b01261964c242b9bc7470` |
+| M3 / Ultimate Challenge | `MAPHEAD.SOD` | `3d7f82e2d578f9081da6887119c6324e19137dae5bee11cdf6a8e8147fc5d503` |
+| M3 / Ultimate Challenge | `VSWAP.SOD` | `d3e357682f5ff5e54c7406a191d207e8e25bfd2d42c80206a2e378fb658c4c5d` |
+
 Other revisions are rejected when their archive structure does not match the
 supported editions. Executables, configuration files, and save games are not
 input assets and are intentionally absent from this table.

@@ -59,8 +59,12 @@ Wolf3D data, while one beginning with `spear` or `sod` prefers Spear data. An
 unrecognized basename, or `--game auto`, performs unqualified automatic
 detection. An explicit extension is strict: missing or invalid data produces an
 error rather than silently starting another edition. Mission-disk map and page
-archives retain their `.SD1`/`.SD2`/`.SD3` names while sharing the original
+archives may retain their `.SD1`/`.SD2`/`.SD3` names while sharing the original
 `.SOD` graphics and audio archives, matching the original source behavior.
+The GOG layout is also supported: when `SD1`, `SD2`, or `SD3` is selected
+explicitly, the engine accepts that mission's isolated directory with all of
+its archives renamed to `.SOD`. Automatic detection cannot distinguish those
+three identically named layouts, so select the corresponding `SDn` profile.
 
 The original executable-linked 320x200 SIGNON screen is optional and remains
 an external asset. Select any publisher/version screen at runtime rather than

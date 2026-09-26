@@ -3978,8 +3978,31 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
 
                 CHECK(map.width == 64U);
                 CHECK(map.height == 64U);
-                CHECK(WG_LevelBuildForVariant(&map, WG_DIFFICULTY_MEDIUM,
-                                              variant, &level));
+                if (!WG_LevelBuildForVariant(&map, WG_DIFFICULTY_MEDIUM,
+                                             variant, &level))
+                {
+                    size_t player_starts = 0U;
+                    size_t tile_index;
+
+                    for (tile_index = 0U;
+                         tile_index < (size_t)map.width * map.height;
+                         ++tile_index)
+                    {
+                        if (map.planes[1][tile_index] >= 19U
+                            && map.planes[1][tile_index] <= 22U)
+                        {
+                            ++player_starts;
+                        }
+                    }
+                    fprintf(stderr,
+                            "%s map %zu (%s) did not build: players=%zu, "
+                            "statics=%u, actors=%u, doors=%u\n",
+                            WG_DataVariantName(variant), index, map.name,
+                            player_starts, (unsigned)level.static_count,
+                            (unsigned)level.actor_count,
+                            (unsigned)level.door_count);
+                    CHECK(0);
+                }
                 for (object_index = 0U; object_index < level.static_count;
                      ++object_index)
                 {

@@ -138,6 +138,30 @@ static int WG_DataHasProfile(const char *root,
                            sizeof(audio_names) / sizeof(audio_names[0]));
 }
 
+static int WG_DataHasProfileWithExtension(const char *root,
+                                          const wg_data_profile_t *profile,
+                                          const char *extension)
+{
+    static const char *const map_names[] = { "GAMEMAPS", "MAPHEAD", "VSWAP" };
+    static const char *const graphics_names[] =
+        { "VGADICT", "VGAGRAPH", "VGAHEAD" };
+    static const char *const audio_names[] = { "AUDIOHED", "AUDIOT" };
+
+    return WG_DataHasFiles(root, extension, map_names,
+                           sizeof(map_names) / sizeof(map_names[0]))
+        && WG_DataHasFiles(root, profile->graphics_extension, graphics_names,
+                           sizeof(graphics_names) / sizeof(graphics_names[0]))
+        && WG_DataHasFiles(root, profile->audio_extension, audio_names,
+                           sizeof(audio_names) / sizeof(audio_names[0]));
+}
+
+static int WG_DataIsMissionPack(wg_game_variant_t variant)
+{
+    return variant == WG_GAME_SPEAR_MISSION_1_SD1
+        || variant == WG_GAME_SPEAR_MISSION_2_SD2
+        || variant == WG_GAME_SPEAR_MISSION_3_SD3;
+}
+
 static int WG_DataReadHeaderCounts(wg_data_set_t *data_set)
 {
     char path[1200];
@@ -254,6 +278,7 @@ int WG_DataOpenSelected(wg_data_set_t *data_set, const char *root,
                         wg_game_family_t preferred_family)
 {
     const wg_data_profile_t *selected = NULL;
+    const char *selected_extension = NULL;
     size_t root_length;
     size_t index;
     size_t matches = 0U;
@@ -273,8 +298,18 @@ int WG_DataOpenSelected(wg_data_set_t *data_set, const char *root,
     if (requested_variant != WG_GAME_UNKNOWN)
     {
         selected = WG_DataProfile(requested_variant);
-        if (selected == NULL
-            || !WG_DataHasProfile(root, selected))
+        if (selected != NULL && WG_DataHasProfile(root, selected))
+        {
+            selected_extension = selected->extension;
+        }
+        else if (selected != NULL && WG_DataIsMissionPack(requested_variant)
+                 && WG_DataHasProfileWithExtension(root, selected, ".SOD"))
+        {
+            /* GOG installs each mission in a separate directory but renames
+               its SD1/SD2/SD3 map and page archives to the SOD extension. */
+            selected_extension = ".SOD";
+        }
+        else
         {
             WG_DataClose(data_set);
             return 0;
@@ -314,10 +349,11 @@ int WG_DataOpenSelected(wg_data_set_t *data_set, const char *root,
             WG_DataClose(data_set);
             return 0;
         }
+        selected_extension = selected->extension;
     }
 
     data_set->variant = selected->variant;
-    memcpy(data_set->extension, selected->extension, 5U);
+    memcpy(data_set->extension, selected_extension, 5U);
     memcpy(data_set->graphics_extension, selected->graphics_extension, 5U);
     memcpy(data_set->audio_extension, selected->audio_extension, 5U);
 
