@@ -1147,3 +1147,15 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-v
   becomes `End Game`, while `Back to Demo` becomes `Back to Game`. The corrected
   panel hashes to `9d4fae41d9d29488` in both editions; the shared confirmation
   fixture hashes to `0b2a93f76bdc8ce8`.
+
+## 2026-09-25: Complete embedded-demo coverage
+
+- Added `--demo-number 0..3` to the deterministic headless path and ran every
+  recorded command in all four embedded streams from each supplied edition.
+- The completed WL1 streams hash to `5b816ab21404372a`, `d0abd2087b49a774`,
+  `0b21e54546425858`, and `3829f1bd054113c9`. The WL6 streams hash to
+  `8b78f328d66287ab`, `4cc5578ebc5d9cfc`, `90df6b099486f7b1`, and
+  `c32e04314c8181d4`.
+- These eight full-stream gates complement the command-format/hash checks and
+  the shorter first-demo visual checkpoint, covering 9,126 recorded commands
+  in total across the two editions.

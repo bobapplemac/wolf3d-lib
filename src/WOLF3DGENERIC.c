@@ -2221,6 +2221,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int credits_view,
                                   int help_view,
                                   int demo_view,
+                                  unsigned demo_number,
                                   unsigned demo_commands,
                                   int episode_menu_view,
                                   int difficulty_menu_view,
@@ -2261,7 +2262,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         if (!WG_GraphicsDecodeChunk(
                 &graphics,
                 wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14
-                    ? 151U : 139U,
+                    ? 151U + demo_number : 139U + demo_number,
                 &demo_data, &demo_size)
             || !WL_DemoOpen(&demo, demo_data, demo_size))
         {
@@ -2891,6 +2892,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     unsigned map_number;
     unsigned actor_tics;
     unsigned forward_tics;
+    unsigned demo_number;
     unsigned demo_commands;
     unsigned view_size;
 
@@ -2903,6 +2905,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
                                     10000U, &forward_tics)
         || !WG_FindUnsignedArgument(argc, argv, "--demo-commands", 70U,
                                     100000U, &demo_commands)
+        || !WG_FindUnsignedArgument(argc, argv, "--demo-number", 0U,
+                                    3U, &demo_number)
         || !WG_FindUnsignedArgument(argc, argv, "--view-size", 20U,
                                     20U, &view_size)
         || view_size < WL_VIEW_SIZE_MIN)
@@ -2990,7 +2994,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--change-view"),
             WG_HasArgument(argc, argv, "--credits-view"),
             WG_HasArgument(argc, argv, "--help-view"),
-            WG_HasArgument(argc, argv, "--demo-view"), demo_commands,
+            WG_HasArgument(argc, argv, "--demo-view"), demo_number,
+            demo_commands,
             WG_HasArgument(argc, argv, "--episode-menu-view"),
             WG_HasArgument(argc, argv, "--difficulty-menu-view"),
             WG_HasArgument(argc, argv, "--high-score-view"),

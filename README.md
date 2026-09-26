@@ -71,11 +71,13 @@ music through the official Nuked-OPL3 implementation at 48 kHz:
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data" --play-view
 ```
 
-Embedded demos now decode their original map, button bits, and signed movement
-bytes. A deterministic first-demo checkpoint can be rendered with:
+Embedded demos decode their original map, button bits, and signed movement
+bytes. `--demo-number 0` through `3` selects a stream; all four are exercised
+to completion for both supported editions by the regression suite. A
+deterministic first-demo checkpoint can be rendered with:
 
 ```text
-wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --demo-view --demo-commands 70 --frame-hash --dump-frame demo.ppm
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --demo-view --demo-number 0 --demo-commands 70 --frame-hash --dump-frame demo.ppm
 ```
 
 Each recorded command advances one original four-tic demo frame. Automatic
