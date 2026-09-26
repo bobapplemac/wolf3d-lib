@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(wolf3dgeneric VERSION 1.0.0 LANGUAGES C)
+project(wolf3dgeneric VERSION 1.1.0 LANGUAGES C)
 
 include(CTest)
 
@@ -23,6 +23,7 @@ set(WG_CORE_SOURCES
     src/WG_AUDIO.c
     src/WG_CONFIG.c
     src/ID_CA.c
+    src/ID_IN.c
     src/WG_DATA.c
     src/WG_FILE.c
     src/WG_FIXED.c
@@ -268,6 +269,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(control-menu-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "6b0f54c32a663fa5")
+        add_test(NAME joystick-menu-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --joystick-menu-view
+            --frame-hash)
+        set_tests_properties(joystick-menu-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "6a7611870fce1ab5")
         add_test(NAME mouse-sensitivity-view-wl1
             COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view
@@ -505,6 +511,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(control-menu-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "466d386e2915c931")
+        add_test(NAME joystick-menu-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --play-view --joystick-menu-view
+            --frame-hash)
+        set_tests_properties(joystick-menu-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "07dc46006dc97b99")
         add_test(NAME mouse-sensitivity-view-wl6
             COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view

@@ -36,21 +36,25 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
 unsigned WL_SoundMenuMove(unsigned selected, int direction);
 int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned selected,
-                       int mouse_enabled);
+                       int mouse_enabled, int joystick_present,
+                       int joystick_enabled, unsigned joystick_port,
+                       int gamepad_enabled);
 unsigned WL_ControlMenuMove(unsigned selected, int direction,
-                            int mouse_enabled);
+                            int mouse_enabled, int joystick_present,
+                            int joystick_enabled);
 int WL_DrawMouseSensitivity(uint8_t framebuffer[320 * 200],
                             const wg_graphics_t *graphics,
                             unsigned adjustment);
 int WL_DrawCustomizeMenu(
     uint8_t framebuffer[320 * 200], const wg_graphics_t *graphics,
-    unsigned selected, int mouse_enabled,
+    unsigned selected, int mouse_enabled, int joystick_enabled,
     const uint8_t mouse_bindings[WL_CUSTOM_BINDINGS],
+    const uint8_t joystick_bindings[WL_CUSTOM_BINDINGS],
     const uint16_t action_keys[WL_CUSTOM_BINDINGS],
     const uint16_t movement_keys[WL_CUSTOM_BINDINGS],
     int edit_column, int capture);
 unsigned WL_CustomMenuMove(unsigned selected, int direction,
-                           int mouse_enabled);
+                           int mouse_enabled, int joystick_enabled);
 int WL_DrawChangeView(uint8_t framebuffer[320 * 200],
                       const wg_graphics_t *graphics, unsigned view_size);
 int WL_DrawEpisodeMenu(uint8_t framebuffer[320 * 200],

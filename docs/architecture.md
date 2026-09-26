@@ -91,15 +91,18 @@ The first Control slice restores the original device list and sensitivity
 dialog. The portable event boundary already provides relative mouse motion and
 three buttons, so Mouse Enabled gates both paths and the selected 0–9 value is
 carried in `wl_input_t` to the original `10/(13-adjustment)` and
-`20/(13-adjustment)` movement calculations. Joystick rows remain authored but
-disabled because no joystick event contract has been added.
+`20/(13-adjustment)` movement calculations. The joystick rows use a normalized
+two-device host event and `ID_IN.c` applies the original calibrated outer-third
+dead zone and signed `-127..127` delta scaling.
 
 Customize Controls retains the original four presentation columns—Run, Open,
 Fire, and Strafe—and the Left, Right, Forward, and Back movement row. Bindings
 remain IBM set-1 scan codes, so no platform key namespace enters engine code.
 The live input adapter resolves the selected keyboard and mouse bindings into
 `wl_input_t`; mouse-button reassignment preserves the original one-action-per-
-button rule. Joystick values remain visible but disabled.
+button rule. Joystick bindings preserve the same one-action-per-button rule,
+with the original attack/strafe/use/run defaults and two-button versus Gravis
+four-button gating.
 
 Change View retains the original size-4-through-19 selection boundary and
 size-15 default. `WL_GAME.c` owns the authored gray surround and asymmetric
@@ -370,15 +373,19 @@ scan-code tables and `US_LineInput` editing rules: Caps Lock, cursor movement,
 Home/End, Backspace/Delete, insertion, Enter/Escape, 57 characters, and the
 100-pixel font-width limit. `WG_CONFIG.c` replaces the compiler-layout-dependent
 DOS configuration dump with an explicitly sized, little-endian format carrying
-the same high scores, sound choices, mouse settings, key bindings, and view
-size. Edition tagging, bounds checks, and a checksum reject incompatible or
-damaged files.
+the same high scores, sound choices, mouse and joystick settings, bindings, and
+view size. Edition tagging, bounds checks, and a checksum reject incompatible
+or damaged files; version-2 files gain the original joystick defaults when read.
 
 Win32 supplies relative mouse packets through the generic event contract rather
 than exposing window coordinates to the engine. `WL_PLAY.c` applies the original
 default `PollMouseMove` scale (`x * 10 / 8`, `y * 20 / 8`) before the same
 per-tic ±100 control clamp used by keyboard/demo input. The original default
 button mapping is retained: left attacks, right strafes, and middle uses.
+The same contract carries two normalized joystick slots. `ID_IN.c` owns the
+original calibration curve, port selection, and four-button state; Win32
+dynamically loads XInput and maps its left stick/D-pad and A/B/X/Y without
+making that API a dependency of the engine core.
 
 The DOS Pause interrupt remains a distinct generic key rather than masquerading
 as an ordinary scan code. While paused, the host continues pumping PCM so sound

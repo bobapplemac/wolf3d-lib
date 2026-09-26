@@ -8,7 +8,8 @@
 #include "WG_FILE.h"
 #include "WOLF3DGENERIC.h"
 
-#define WG_CONFIG_VERSION 2U
+#define WG_CONFIG_VERSION 3U
+#define WG_CONFIG_LEGACY_VERSION 2U
 
 static const uint8_t WG_ConfigMagic[8] =
     { 'W', '3', 'D', 'G', 'C', 'F', 'G', '1' };
@@ -89,6 +90,8 @@ void WG_ConfigDefaults(wg_config_t *config)
         { WG_KEY_LEFT, WG_KEY_RIGHT, WG_KEY_UP, WG_KEY_DOWN };
     static const uint8_t mouse_bindings[WL_CUSTOM_BINDINGS] =
         { UINT8_MAX, 2U, 0U, 1U };
+    static const uint8_t joystick_bindings[WL_CUSTOM_BINDINGS] =
+        { 3U, 2U, 0U, 1U };
 
     if (config == NULL)
     {
@@ -99,6 +102,8 @@ void WG_ConfigDefaults(wg_config_t *config)
     memcpy(config->action_keys, action_keys, sizeof(action_keys));
     memcpy(config->movement_keys, movement_keys, sizeof(movement_keys));
     memcpy(config->mouse_bindings, mouse_bindings, sizeof(mouse_bindings));
+    memcpy(config->joystick_bindings, joystick_bindings,
+           sizeof(joystick_bindings));
     config->sound_mode = 2U;
     config->digitized_effects = 1U;
     config->music_enabled = 1U;
@@ -114,6 +119,8 @@ static int WG_ConfigValid(const wg_config_t *config)
     if (config == NULL || config->sound_mode > 2U
         || config->digitized_effects > 1U || config->music_enabled > 1U
         || config->mouse_enabled > 1U || config->mouse_adjustment > 9U
+        || config->joystick_enabled > 1U || config->joystick_port > 1U
+        || config->gamepad_enabled > 1U
         || config->view_size < WL_VIEW_SIZE_MIN
         || config->view_size > WL_VIEW_SIZE_MAX)
     {
@@ -124,7 +131,9 @@ static int WG_ConfigValid(const wg_config_t *config)
         if (config->action_keys[index] >= 128U
             || config->movement_keys[index] >= 128U
             || (config->mouse_bindings[index] >= 3U
-                && config->mouse_bindings[index] != UINT8_MAX))
+                && config->mouse_bindings[index] != UINT8_MAX)
+            || (config->joystick_bindings[index] >= 4U
+                && config->joystick_bindings[index] != UINT8_MAX))
         {
             return 0;
         }
@@ -188,6 +197,13 @@ int WG_ConfigEncode(uint8_t *data, size_t capacity, size_t *size,
     WG_ConfigPut8(&cursor, config->mouse_enabled);
     WG_ConfigPut8(&cursor, config->mouse_adjustment);
     WG_ConfigPut8(&cursor, config->view_size);
+    for (index = 0U; index < WL_CUSTOM_BINDINGS; ++index)
+    {
+        WG_ConfigPut8(&cursor, config->joystick_bindings[index]);
+    }
+    WG_ConfigPut8(&cursor, config->joystick_enabled);
+    WG_ConfigPut8(&cursor, config->joystick_port);
+    WG_ConfigPut8(&cursor, config->gamepad_enabled);
     if (!cursor.valid || cursor.size - cursor.position < 4U)
     {
         return 0;
@@ -221,7 +237,7 @@ int WG_ConfigDecode(const uint8_t *data, size_t size,
     {
         return 0;
     }
-    memset(&decoded, 0, sizeof(decoded));
+    WG_ConfigDefaults(&decoded);
     cursor.write_data = NULL;
     cursor.read_data = data;
     cursor.size = size - 4U;
@@ -257,9 +273,20 @@ int WG_ConfigDecode(const uint8_t *data, size_t size,
     decoded.mouse_enabled = WG_ConfigGet8(&cursor);
     decoded.mouse_adjustment = WG_ConfigGet8(&cursor);
     decoded.view_size = WG_ConfigGet8(&cursor);
+    if (version == WG_CONFIG_VERSION)
+    {
+        for (index = 0U; index < WL_CUSTOM_BINDINGS; ++index)
+        {
+            decoded.joystick_bindings[index] = WG_ConfigGet8(&cursor);
+        }
+        decoded.joystick_enabled = WG_ConfigGet8(&cursor);
+        decoded.joystick_port = WG_ConfigGet8(&cursor);
+        decoded.gamepad_enabled = WG_ConfigGet8(&cursor);
+    }
     if (!cursor.valid || cursor.position != cursor.size
         || memcmp(magic, WG_ConfigMagic, sizeof(magic)) != 0
-        || version != WG_CONFIG_VERSION
+        || (version != WG_CONFIG_VERSION
+            && version != WG_CONFIG_LEGACY_VERSION)
         || stored_variant != (uint8_t)variant
         || !WG_ConfigValid(&decoded))
     {

@@ -1188,3 +1188,30 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-v
   generated runtime artifacts are tracked.
 - Fresh strict-warning MSVC Release builds pass all 93 tests on both x64 and
   x86, including all four complete demo streams and both supplied data corpora.
+
+## 2026-09-26: Portable joystick input
+
+- Added `ID_IN.c` under its original source basename. Hosts report two
+  normalized device slots, while the engine reproduces `IN_SetupJoy`'s central
+  two-thirds dead zone and `INL_GetJoyDelta`'s signed `-127..127` outer-third
+  scaling rather than assigning Wolf3D behavior to each platform backend.
+- Restored Joystick Enabled, Use joystick port 2, and Gravis GamePad Enabled;
+  the selected device contributes its original discrete movement alongside
+  keyboard and mouse input. Two-button mode exposes buttons 0/1, while Gravis
+  mode exposes all four original configurable action bindings.
+- Joystick axes and buttons navigate menus, acknowledgements, articles, pause,
+  and confirmation paths. The Win32 host dynamically discovers XInput without
+  a new link-time dependency and maps the left stick/D-pad plus A/B/X/Y.
+- Configuration version 3 persists joystick selection, mode, and bindings while
+  continuing to decode version-2 files with original joystick defaults. Its
+  nontrivial serialization fixture hashes to `7ae7b2e1e945a7a6`.
+- The enabled control panel hashes to `6a7611870fce1ab5` (WL1) and
+  `07dc46006dc97b99` (WL6). The project-specific GitLab CI file was removed.
+
+![Original control panel with joystick enabled](../out/joystick-menu-wl6.png)
+
+Regenerate the capture with:
+
+```text
+wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-menu-view --frame-hash --dump-frame out\joystick-menu.ppm
+```

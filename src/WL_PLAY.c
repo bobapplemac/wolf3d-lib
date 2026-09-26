@@ -236,6 +236,25 @@ static int WL_PlayFrame(struct wg_level *level,
                          / (13 - (int)input->mouse_adjustment);
             control_y += input->mouse_y * 20
                          / (13 - (int)input->mouse_adjustment);
+            if (input->joystick_enabled)
+            {
+                if (input->joystick_x > 64)
+                {
+                    control_x += speed;
+                }
+                else if (input->joystick_x < -64)
+                {
+                    control_x -= speed;
+                }
+                if (input->joystick_y > 64)
+                {
+                    control_y += speed;
+                }
+                else if (input->joystick_y < -64)
+                {
+                    control_y -= speed;
+                }
+            }
         }
         if (control_x > 100 * (int)tics)
         {

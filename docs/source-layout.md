@@ -11,6 +11,7 @@ lowercase `.c`, `.h`, and `.inc` forms for portable toolchain detection.
 | Portable file | Original owner | Current responsibility |
 | --- | --- | --- |
 | `ID_CA.c` | `ID_CA.C` | Huffman, Carmack, and RLEW expansion |
+| `ID_IN.c` | `ID_IN.C` | Two-port joystick state, original calibrated dead zone, and signed delta scaling |
 | `ID_PM.c` | `ID_PM.C` | Bounded VSWAP page access |
 | `ID_SD.c` | `ID_SD.C`, `ID_SD_A.ASM` | IMF/AdLib and 140 Hz PC-speaker service, VSWAP digitized effects, resampling, and PCM mixing |
 | `ID_VL.c` | `ID_VL.C` | Indexed framebuffer, blits, palettes, and fizzle fade |

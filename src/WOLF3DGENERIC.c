@@ -12,6 +12,7 @@
 #include "WG_FILE.h"
 #include "WG_GRAPHICS.h"
 #include "WG_ENDIAN.h"
+#include "ID_IN.h"
 #include "ID_US_1.h"
 #include "WL_AGENT.h"
 #include "WL_ACT1.h"
@@ -65,6 +66,11 @@ static int wg_customize_edit_column = -1;
 static uint8_t wg_customize_capture;
 static uint8_t wg_mouse_bindings[WL_CUSTOM_BINDINGS] =
     { UINT8_MAX, 2U, 0U, 1U };
+static uint8_t wg_joystick_bindings[WL_CUSTOM_BINDINGS] =
+    { 3U, 2U, 0U, 1U };
+static uint8_t wg_joystick_enabled;
+static uint8_t wg_joystick_port;
+static uint8_t wg_gamepad_enabled;
 static uint16_t wg_action_keys[WL_CUSTOM_BINDINGS] =
     { WG_KEY_RIGHT_SHIFT, WG_KEY_SPACE, WG_KEY_CONTROL, WG_KEY_ALT };
 static uint16_t wg_movement_keys[WL_CUSTOM_BINDINGS] =
@@ -958,12 +964,17 @@ static void WG_ApplyConfig(const wg_config_t *config)
     memcpy(wg_movement_keys, config->movement_keys, sizeof(wg_movement_keys));
     memcpy(wg_mouse_bindings, config->mouse_bindings,
            sizeof(wg_mouse_bindings));
+    memcpy(wg_joystick_bindings, config->joystick_bindings,
+           sizeof(wg_joystick_bindings));
     wg_sound_mode = config->sound_mode;
     wg_digitized_effects = config->digitized_effects;
     wg_music_enabled = config->music_enabled;
     wg_mouse_enabled = config->mouse_enabled;
     wg_mouse_adjustment = config->mouse_adjustment;
     wg_saved_mouse_adjustment = config->mouse_adjustment;
+    wg_joystick_enabled = config->joystick_enabled;
+    wg_joystick_port = config->joystick_port;
+    wg_gamepad_enabled = config->gamepad_enabled;
     wg_view_size = config->view_size;
     wg_change_view_size = config->view_size;
     wg_saved_view_size = config->view_size;
@@ -978,11 +989,16 @@ static void WG_CaptureConfig(wg_config_t *config)
            sizeof(config->movement_keys));
     memcpy(config->mouse_bindings, wg_mouse_bindings,
            sizeof(config->mouse_bindings));
+    memcpy(config->joystick_bindings, wg_joystick_bindings,
+           sizeof(config->joystick_bindings));
     config->sound_mode = wg_sound_mode;
     config->digitized_effects = wg_digitized_effects;
     config->music_enabled = wg_music_enabled;
     config->mouse_enabled = wg_mouse_enabled;
     config->mouse_adjustment = (uint8_t)wg_mouse_adjustment;
+    config->joystick_enabled = wg_joystick_enabled;
+    config->joystick_port = wg_joystick_port;
+    config->gamepad_enabled = wg_gamepad_enabled;
     config->view_size = (uint8_t)wg_view_size;
 }
 
@@ -1131,7 +1147,11 @@ static int WG_DrawControlMenuScreen(void)
         return 0;
     }
     result = WL_DrawControlMenu(WG_ScreenBuffer, &graphics,
-                                wg_control_selection, wg_mouse_enabled);
+                                wg_control_selection, wg_mouse_enabled,
+                                ID_IN_JoystickPresent(0U)
+                                    || ID_IN_JoystickPresent(1U),
+                                wg_joystick_enabled, wg_joystick_port,
+                                wg_gamepad_enabled);
     WG_GraphicsClose(&graphics);
     if (result)
     {
@@ -1192,7 +1212,8 @@ static int WG_DrawCustomizeScreen(void)
     }
     result = WL_DrawCustomizeMenu(
         WG_ScreenBuffer, &graphics, wg_customize_selection,
-        wg_mouse_enabled, wg_mouse_bindings, wg_action_keys,
+        wg_mouse_enabled, wg_joystick_enabled, wg_mouse_bindings,
+        wg_joystick_bindings, wg_action_keys,
         wg_movement_keys, wg_customize_edit_column,
         wg_customize_capture);
     WG_GraphicsClose(&graphics);
@@ -1923,6 +1944,8 @@ static int WG_ActionPressed(unsigned action)
 {
     uint16_t key;
     uint8_t button;
+    uint8_t joystick_button;
+    uint8_t joystick_buttons;
 
     if (action >= WL_CUSTOM_BINDINGS)
     {
@@ -1930,13 +1953,21 @@ static int WG_ActionPressed(unsigned action)
     }
     key = wg_action_keys[action];
     button = wg_mouse_bindings[action];
+    joystick_button = wg_joystick_bindings[action];
+    joystick_buttons = ID_IN_JoyButtons(wg_joystick_port);
     return (key < sizeof(wg_game.keys) && wg_game.keys[key])
         || (wg_mouse_enabled && button < 3U
-            && (wg_game.mouse_buttons & (uint8_t)(1U << button)) != 0U);
+            && (wg_game.mouse_buttons & (uint8_t)(1U << button)) != 0U)
+        || (wg_joystick_enabled && joystick_button < 4U
+            && (wg_gamepad_enabled || joystick_button < 2U)
+            && (joystick_buttons & (uint8_t)(1U << joystick_button)) != 0U);
 }
 
 static void WG_GameSessionInput(wl_input_t *input)
 {
+    int joystick_x;
+    int joystick_y;
+
     memset(input, 0, sizeof(*input));
     input->up = wg_game.keys[wg_movement_keys[2U]];
     input->down = wg_game.keys[wg_movement_keys[3U]];
@@ -1973,6 +2004,14 @@ static void WG_GameSessionInput(wl_input_t *input)
                                        ? INT16_MAX
                                    : wg_game.mouse_y < INT16_MIN
                                        ? INT16_MIN : wg_game.mouse_y);
+    }
+    if (wg_joystick_enabled
+        && ID_IN_JoystickPresent(wg_joystick_port))
+    {
+        ID_IN_GetJoyDelta(wg_joystick_port, &joystick_x, &joystick_y);
+        input->joystick_x = (int8_t)joystick_x;
+        input->joystick_y = (int8_t)joystick_y;
+        input->joystick_enabled = 1U;
     }
     wg_game.mouse_x = 0;
     wg_game.mouse_y = 0;
@@ -2755,7 +2794,11 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         goto cleanup;
     }
     if (control_menu_view
-        && !WL_DrawControlMenu(WG_ScreenBuffer, &graphics, 0U, 1))
+        && !WL_DrawControlMenu(
+            WG_ScreenBuffer, &graphics,
+            control_menu_view == 2 ? 1U : 0U, 1,
+            control_menu_view == 2, control_menu_view == 2,
+            0U, control_menu_view == 2))
     {
         goto cleanup;
     }
@@ -2766,8 +2809,9 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     }
     if (customize_controls_view
         && !WL_DrawCustomizeMenu(
-            WG_ScreenBuffer, &graphics, 0U, 1,
-            wg_mouse_bindings, wg_action_keys, wg_movement_keys, -1, 0))
+            WG_ScreenBuffer, &graphics, 0U, 1, 0,
+            wg_mouse_bindings, wg_joystick_bindings,
+            wg_action_keys, wg_movement_keys, -1, 0))
     {
         goto cleanup;
     }
@@ -2955,6 +2999,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     }
 
     memset(WG_Palette, 0, sizeof(WG_Palette));
+    ID_IN_ResetJoysticks();
     if (!WG_Init())
     {
         free(WG_ScreenBuffer);
@@ -3024,7 +3069,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--load-game-view")
                 ? 1 : WG_HasArgument(argc, argv, "--save-game-view") ? 2 : 0,
             WG_HasArgument(argc, argv, "--sound-menu-view"),
-            WG_HasArgument(argc, argv, "--control-menu-view"),
+            WG_HasArgument(argc, argv, "--joystick-menu-view")
+                ? 2 : WG_HasArgument(argc, argv, "--control-menu-view"),
             WG_HasArgument(argc, argv, "--mouse-sensitivity-view"),
             WG_HasArgument(argc, argv, "--customize-controls-view"),
             WG_HasArgument(argc, argv, "--change-view"),
@@ -3283,11 +3329,45 @@ static int WG_ControlMenuActivate(void)
             }
             WG_FrontSoundPreview();
             return 1;
+        case 1U:
+            if (!ID_IN_JoystickPresent(0U)
+                && !ID_IN_JoystickPresent(1U))
+            {
+                return 1;
+            }
+            if (!ID_IN_JoystickPresent(wg_joystick_port))
+            {
+                wg_joystick_port ^= 1U;
+            }
+            wg_joystick_enabled = (uint8_t)!wg_joystick_enabled;
+            if (!WG_DrawControlMenuScreen())
+            {
+                return 0;
+            }
+            WG_FrontSoundPreview();
+            return 1;
+        case 2U:
+            wg_joystick_port ^= 1U;
+            if (!WG_DrawControlMenuScreen())
+            {
+                return 0;
+            }
+            WG_FrontSoundPreview();
+            return 1;
+        case 3U:
+            wg_gamepad_enabled = (uint8_t)!wg_gamepad_enabled;
+            if (!WG_DrawControlMenuScreen())
+            {
+                return 0;
+            }
+            WG_FrontSoundPreview();
+            return 1;
         case 4U:
             wg_saved_mouse_adjustment = wg_mouse_adjustment;
             return WG_DrawMouseSensitivityScreen();
         case 5U:
-            wg_customize_selection = wg_mouse_enabled ? 0U : 6U;
+            wg_customize_selection = wg_mouse_enabled ? 0U
+                                      : wg_joystick_enabled ? 3U : 6U;
             wg_customize_edit_column = -1;
             wg_customize_capture = 0U;
             return WG_DrawCustomizeScreen();
@@ -3344,6 +3424,29 @@ static int WG_CustomizeAssignMouse(uint8_t button)
     return WG_DrawCustomizeScreen();
 }
 
+static int WG_CustomizeAssignJoystick(uint8_t button)
+{
+    unsigned action;
+
+    if (button >= 4U || wg_customize_selection != 3U
+        || wg_customize_edit_column < 0
+        || wg_customize_edit_column >= (int)WL_CUSTOM_BINDINGS)
+    {
+        return 0;
+    }
+    for (action = 0U; action < WL_CUSTOM_BINDINGS; ++action)
+    {
+        if (wg_joystick_bindings[action] == button)
+        {
+            wg_joystick_bindings[action] = UINT8_MAX;
+        }
+    }
+    wg_joystick_bindings[wg_customize_edit_column] = button;
+    wg_customize_capture = 0U;
+    WG_FrontSoundPreviewNumber(WG_SOUND_SHOOT_DOOR);
+    return WG_DrawCustomizeScreen();
+}
+
 static int WG_AttractAdvance(void)
 {
     switch (wg_attract_phase)
@@ -3389,6 +3492,122 @@ wg_result_t wolf3dgeneric_Run(void)
             if (event.type == WG_EVENT_QUIT)
             {
                 return WG_RESULT_QUIT;
+            }
+            if (event.type == WG_EVENT_JOYSTICK)
+            {
+                uint8_t old_buttons;
+                int old_x;
+                int old_y;
+                int new_x;
+                int new_y;
+                int was_present;
+                uint8_t pressed_buttons;
+                int ui_input;
+
+                if (event.joystick >= ID_IN_MAX_JOYSTICKS)
+                {
+                    continue;
+                }
+                was_present = ID_IN_JoystickPresent(event.joystick);
+                old_buttons = ID_IN_JoyButtons(event.joystick);
+                ID_IN_GetJoyDelta(event.joystick, &old_x, &old_y);
+                if (!ID_IN_SetJoystick(event.joystick, event.connected,
+                                       event.x, event.y, event.buttons))
+                {
+                    continue;
+                }
+                ID_IN_GetJoyDelta(event.joystick, &new_x, &new_y);
+                pressed_buttons = (uint8_t)(ID_IN_JoyButtons(event.joystick)
+                                            & (uint8_t)~old_buttons);
+                if (wg_control_screen
+                    && was_present
+                           != ID_IN_JoystickPresent(event.joystick))
+                {
+                    if ((!ID_IN_JoystickPresent(0U)
+                         && !ID_IN_JoystickPresent(1U)
+                         && wg_control_selection == 1U)
+                        || (!wg_joystick_enabled
+                            && (wg_control_selection == 2U
+                                || wg_control_selection == 3U)))
+                    {
+                        wg_control_selection = 0U;
+                    }
+                    if (!WG_DrawControlMenuScreen())
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                }
+                if (event.joystick != wg_joystick_port)
+                {
+                    continue;
+                }
+                if (!wg_joystick_enabled)
+                {
+                    continue;
+                }
+                if (!wg_gamepad_enabled)
+                {
+                    pressed_buttons &= 3U;
+                }
+                if (wg_customize_screen && wg_customize_capture
+                    && wg_customize_selection == 3U
+                    && pressed_buttons != 0U)
+                {
+                    uint8_t button;
+
+                    for (button = 0U; button < 4U; ++button)
+                    {
+                        if ((pressed_buttons & (uint8_t)(1U << button)) != 0U)
+                        {
+                            break;
+                        }
+                    }
+                    if (!WG_CustomizeAssignJoystick(button))
+                    {
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                    continue;
+                }
+                ui_input = !wg_game.active || wg_game.control_panel
+                    || wg_game.demo_playback || wg_game.level.player_dead
+                    || wg_game.victory || wg_game.high_scores
+                    || wg_game.intermission || wg_game.paused
+                    || wg_confirm_action != WG_CONFIRM_NONE;
+                if (!ui_input)
+                {
+                    continue;
+                }
+                event.type = WG_EVENT_KEY;
+                event.pressed = 1;
+                if ((pressed_buttons & 1U) != 0U)
+                {
+                    event.key = wg_confirm_action != WG_CONFIRM_NONE
+                                    ? WG_KEY_Y : WG_KEY_ENTER;
+                }
+                else if ((pressed_buttons & 2U) != 0U)
+                {
+                    event.key = WG_KEY_ESCAPE;
+                }
+                else if (new_x < -64 && old_x >= -64)
+                {
+                    event.key = WG_KEY_LEFT;
+                }
+                else if (new_x > 64 && old_x <= 64)
+                {
+                    event.key = WG_KEY_RIGHT;
+                }
+                else if (new_y < -64 && old_y >= -64)
+                {
+                    event.key = WG_KEY_UP;
+                }
+                else if (new_y > 64 && old_y <= 64)
+                {
+                    event.key = WG_KEY_DOWN;
+                }
+                else
+                {
+                    continue;
+                }
             }
             if (wg_confirm_action != WG_CONFIRM_NONE
                 && event.type == WG_EVENT_MOUSE_BUTTON)
@@ -3828,7 +4047,8 @@ wg_result_t wolf3dgeneric_Run(void)
                                     return WG_RESULT_PLATFORM_ERROR;
                                 }
                             }
-                            else if (wg_customize_selection != 0U
+                            else if ((wg_customize_selection == 6U
+                                      || wg_customize_selection == 8U)
                                      && event.key < sizeof(wg_game.keys)
                                      && !WG_CustomizeAssignKey(event.key))
                             {
@@ -3887,7 +4107,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             wg_customize_selection = WL_CustomMenuMove(
                                 wg_customize_selection, -1,
-                                wg_mouse_enabled);
+                                wg_mouse_enabled, wg_joystick_enabled);
                             if (!WG_DrawCustomizeScreen())
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
@@ -3897,7 +4117,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             wg_customize_selection = WL_CustomMenuMove(
                                 wg_customize_selection, 1,
-                                wg_mouse_enabled);
+                                wg_mouse_enabled, wg_joystick_enabled);
                             if (!WG_DrawCustomizeScreen())
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
@@ -3968,7 +4188,10 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             wg_control_selection = WL_ControlMenuMove(
                                 wg_control_selection, -1,
-                                wg_mouse_enabled);
+                                wg_mouse_enabled,
+                                ID_IN_JoystickPresent(0U)
+                                    || ID_IN_JoystickPresent(1U),
+                                wg_joystick_enabled);
                             if (!WG_DrawControlMenuScreen())
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
@@ -3978,7 +4201,10 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             wg_control_selection = WL_ControlMenuMove(
                                 wg_control_selection, 1,
-                                wg_mouse_enabled);
+                                wg_mouse_enabled,
+                                ID_IN_JoystickPresent(0U)
+                                    || ID_IN_JoystickPresent(1U),
+                                wg_joystick_enabled);
                             if (!WG_DrawControlMenuScreen())
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
@@ -4714,5 +4940,6 @@ void wolf3dgeneric_Shutdown(void)
     wg_config_ready = 0U;
     wg_confirm_action = WG_CONFIRM_NONE;
     wg_quick_slot_valid = 0U;
+    ID_IN_ResetJoysticks();
     wg_initialized = 0;
 }

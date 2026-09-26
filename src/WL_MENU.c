@@ -589,13 +589,19 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                                WL_SOUND_Y1 - 2 + (int)selected * 13);
 }
 
-static int WL_ControlMenuActive(unsigned item, int mouse_enabled)
+static int WL_ControlMenuActive(unsigned item, int mouse_enabled,
+                                int joystick_present,
+                                int joystick_enabled)
 {
-    return item == 0U || item == 5U || (item == 4U && mouse_enabled);
+    return item == 0U || item == 5U
+        || (item == 1U && joystick_present)
+        || ((item == 2U || item == 3U) && joystick_enabled)
+        || (item == 4U && mouse_enabled);
 }
 
 unsigned WL_ControlMenuMove(unsigned selected, int direction,
-                            int mouse_enabled)
+                            int mouse_enabled, int joystick_present,
+                            int joystick_enabled)
 {
     unsigned candidate;
 
@@ -616,13 +622,16 @@ unsigned WL_ControlMenuMove(unsigned selected, int direction,
             candidate = candidate + 1U == WL_CONTROL_MENU_ITEMS
                             ? 0U : candidate + 1U;
         }
-    } while (!WL_ControlMenuActive(candidate, mouse_enabled));
+    } while (!WL_ControlMenuActive(candidate, mouse_enabled,
+                                   joystick_present, joystick_enabled));
     return candidate;
 }
 
 int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned selected,
-                       int mouse_enabled)
+                       int mouse_enabled, int joystick_present,
+                       int joystick_enabled, unsigned joystick_port,
+                       int gamepad_enabled)
 {
     static const char *const labels[WL_CONTROL_MENU_ITEMS] =
     {
@@ -635,7 +644,9 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
 
     if (framebuffer == NULL || graphics == NULL
         || selected >= WL_CONTROL_MENU_ITEMS
-        || !WL_ControlMenuActive(selected, mouse_enabled)
+        || joystick_port > 1U
+        || !WL_ControlMenuActive(selected, mouse_enabled,
+                                 joystick_present, joystick_enabled)
         || !WL_MenuChunks(graphics->variant, &chunks)
         || !WG_FontOpen(&font, graphics, 1U))
     {
@@ -659,7 +670,9 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                    WL_CONTROL_WIDTH, WL_CONTROL_HEIGHT);
     for (index = 0U; index < WL_CONTROL_MENU_ITEMS; ++index)
     {
-        uint8_t color = WL_ControlMenuActive(index, mouse_enabled)
+        uint8_t color = WL_ControlMenuActive(index, mouse_enabled,
+                                             joystick_present,
+                                             joystick_enabled)
                             ? (index == selected
                                    ? WL_MENU_HIGHLIGHT_COLOR
                                    : WL_MENU_TEXT_COLOR)
@@ -670,7 +683,10 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
         if (index < 4U
             && !WG_VideoDrawPicture(
                 framebuffer, graphics,
-                index == 0U && mouse_enabled
+                (index == 0U && mouse_enabled)
+                    || (index == 1U && joystick_enabled)
+                    || (index == 2U && joystick_port != 0U)
+                    || (index == 3U && gamepad_enabled)
                     ? chunks.selected : chunks.not_selected,
                 WL_CONTROL_X + 32, WL_CONTROL_Y + 3 + (int)index * 13))
         {
@@ -723,13 +739,15 @@ int WL_DrawMouseSensitivity(uint8_t framebuffer[320 * 200],
     return 1;
 }
 
-static int WL_CustomMenuActive(unsigned item, int mouse_enabled)
+static int WL_CustomMenuActive(unsigned item, int mouse_enabled,
+                               int joystick_enabled)
 {
-    return item == 6U || item == 8U || (item == 0U && mouse_enabled);
+    return item == 6U || item == 8U || (item == 0U && mouse_enabled)
+        || (item == 3U && joystick_enabled);
 }
 
 unsigned WL_CustomMenuMove(unsigned selected, int direction,
-                           int mouse_enabled)
+                           int mouse_enabled, int joystick_enabled)
 {
     unsigned candidate;
 
@@ -750,7 +768,8 @@ unsigned WL_CustomMenuMove(unsigned selected, int direction,
             candidate = candidate + 1U == WL_CUSTOM_MENU_ITEMS
                             ? 0U : candidate + 1U;
         }
-    } while (!WL_CustomMenuActive(candidate, mouse_enabled));
+    } while (!WL_CustomMenuActive(candidate, mouse_enabled,
+                                  joystick_enabled));
     return candidate;
 }
 
@@ -819,8 +838,9 @@ static void WL_CustomCentered(const wg_font_t *font, uint8_t *framebuffer,
 
 int WL_DrawCustomizeMenu(
     uint8_t framebuffer[320 * 200], const wg_graphics_t *graphics,
-    unsigned selected, int mouse_enabled,
+    unsigned selected, int mouse_enabled, int joystick_enabled,
     const uint8_t mouse_bindings[WL_CUSTOM_BINDINGS],
+    const uint8_t joystick_bindings[WL_CUSTOM_BINDINGS],
     const uint16_t action_keys[WL_CUSTOM_BINDINGS],
     const uint16_t movement_keys[WL_CUSTOM_BINDINGS],
     int edit_column, int capture)
@@ -829,16 +849,16 @@ int WL_DrawCustomizeMenu(
         { "Run", "Open", "Fire", "Strafe" };
     static const char *const movement_labels[4] =
         { "Left", "Right", "Frwd", "Bkwrd" };
-    static const uint8_t joystick_bindings[4] = { 3U, 2U, 0U, 1U };
     wl_menu_chunks_t chunks;
     wg_font_t font;
     unsigned index;
     int edit_y = 0;
 
     if (framebuffer == NULL || graphics == NULL
-        || mouse_bindings == NULL || action_keys == NULL
+        || mouse_bindings == NULL || joystick_bindings == NULL
+        || action_keys == NULL
         || movement_keys == NULL || selected >= WL_CUSTOM_MENU_ITEMS
-        || !WL_CustomMenuActive(selected, mouse_enabled)
+        || !WL_CustomMenuActive(selected, mouse_enabled, joystick_enabled)
         || edit_column < -1 || edit_column >= 4
         || !WL_MenuChunks(graphics->variant, &chunks)
         || !WG_FontOpen(&font, graphics, 1U))
@@ -890,11 +910,21 @@ int WL_DrawCustomizeMenu(
     WL_CustomWindow(framebuffer, 113);
     for (index = 0U; index < 4U; ++index)
     {
-        char binding[3] = { 'b', (char)('0' + joystick_bindings[index]), '\0' };
+        char binding[3] = { 'b', '?', '\0' };
+
+        if (joystick_bindings[index] >= 4U)
+        {
+            continue;
+        }
+        binding[1] = (char)('0' + joystick_bindings[index]);
 
         WG_FontDraw(&font, framebuffer,
                     WL_CUSTOM_START + (int)index * WL_CUSTOM_SPACING,
-                    113, binding, WL_MENU_DEACTIVE_COLOR);
+                    113, binding,
+                    joystick_enabled
+                        ? (selected == 3U ? WL_MENU_HIGHLIGHT_COLOR
+                                          : WL_MENU_TEXT_COLOR)
+                        : WL_MENU_DEACTIVE_COLOR);
     }
 
     WL_CustomCentered(&font, framebuffer, 126, "Keyboard");
@@ -924,7 +954,8 @@ int WL_DrawCustomizeMenu(
     {
         int edit_x = WL_CUSTOM_START + edit_column * WL_CUSTOM_SPACING;
 
-        edit_y = selected == 0U ? 74 : selected == 6U ? 152 : 178;
+        edit_y = selected == 0U ? 74 : selected == 3U ? 113
+                                              : selected == 6U ? 152 : 178;
         WL_MenuBar(framebuffer, edit_x - 2, edit_y, WL_CUSTOM_SPACING, 11,
                    WL_MENU_TEXT_COLOR);
         WL_ColorOutline(framebuffer, edit_x - 2, edit_y,
@@ -934,13 +965,16 @@ int WL_DrawCustomizeMenu(
         {
             WG_FontDraw(&font, framebuffer, edit_x, edit_y + 1, "?", 0U);
         }
-        else if (selected == 0U)
+        else if (selected == 0U || selected == 3U)
         {
             char binding[3] = { 'b', '?', '\0' };
+            const uint8_t *bindings = selected == 0U
+                                          ? mouse_bindings
+                                          : joystick_bindings;
 
-            if (mouse_bindings[edit_column] < 4U)
+            if (bindings[edit_column] < 4U)
             {
-                binding[1] = (char)('0' + mouse_bindings[edit_column]);
+                binding[1] = (char)('0' + bindings[edit_column]);
                 WG_FontDraw(&font, framebuffer, edit_x, edit_y + 1,
                             binding, 0U);
             }

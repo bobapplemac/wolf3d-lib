@@ -2,11 +2,11 @@
 
 ## Completion status
 
-The Wolfenstein 3D v1.4 scope of this plan is complete in release 1.0.0. Both
+The Wolfenstein 3D v1.4 scope of this plan is complete. Both
 the Apogee shareware (`WL1`) and GT/ID/Activision full (`WL6`) editions pass the
-deterministic x86 and x64 regression suite. Spear of Destiny was deliberately
-separated into a possible post-1.0 target; it is not required by, or claimed as
-part of, this Wolfenstein 3D release.
+deterministic x86 and x64 regression suite; release 1.1 also restores portable
+joystick support. Spear of Destiny remains deliberately separate and is not
+required by, or claimed as part of, this Wolfenstein 3D release.
 
 ## Project intent
 
@@ -85,7 +85,7 @@ surface is small and resembles this responsibility set:
 - initialize and shut down the host;
 - present a 320x200 indexed frame and current palette;
 - report monotonic milliseconds and sleep/yield;
-- supply key up/down events and relative mouse motion;
+- supply key up/down, relative mouse, and normalized joystick events;
 - set a window title and report fatal errors;
 - open an audio sink or accept core-generated signed PCM.
 
@@ -102,7 +102,7 @@ machines, without making that risky refactor a prerequisite for the port.
 - `headless`: no window or sound; scripted input, virtual time, frame/palette
   hashes, demo playback, and automated regression tests.
 - `win32`: dependency-free Windows window, nearest-neighbor 4:3 presentation,
-  keyboard/mouse input, monotonic timing, and native PCM output.
+  keyboard/mouse/XInput input, monotonic timing, and native PCM output.
 - A deliberately small SDL or other third-party example may be added later, but
   it must remain optional and outside the engine core.
 
@@ -202,8 +202,8 @@ and audible through the Win32 host without changing game timing.
 
 ### 7. Portability hardening
 
-- Build with at least MSVC plus GCC or Clang on a non-Windows runner.
-- Test 32-bit and 64-bit builds, strict warnings, sanitizers where available, and
+- Keep the portable C boundary suitable for MSVC, GCC, and Clang.
+- Test 32-bit and 64-bit builds, strict warnings, static analysis, and
   big-endian-safe parsing by unit test even if no big-endian runner is available.
 - Document how to implement a new host in one small source file.
 
@@ -233,7 +233,7 @@ Testing will be layered rather than relying only on manual play:
 6. Audio PCM hashes for selected music/effect sequences.
 7. DOSBox reference captures for screens and behavioral edge cases.
 8. Interactive smoke tests on the dependency-free Win32 host.
-9. Cross-compiler CI plus sanitizers when a suitable runner is available.
+9. Cross-compiler and sanitizer checks when a suitable toolchain is available.
 
 Generated configs, saves, screenshots, and recordings will go to the build/test
 tree, not the source tree. Tests will never modify the installed GOG files.
@@ -251,10 +251,9 @@ Available and verified on the workstation:
 - the supplied Wolfenstein 3D v1.4 full/shareware data and DOS executables, plus
   the installed Wolfenstein 3D/Spear data and GOG DOSBox.
 
-The completed project also carries GitLab jobs for native GCC, Clang, and
-Clang AddressSanitizer/UndefinedBehaviorSanitizer builds on Debian. Visual
-Studio's bundled Clang static analyzer was run locally during release hardening.
-SDL is intentionally not required by either the engine or its reference hosts.
+Visual Studio's bundled Clang static analyzer was run locally during release
+hardening. SDL is intentionally not required by either the engine or its
+reference hosts.
 
 ## Review decisions
 

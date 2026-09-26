@@ -29,9 +29,16 @@ physical Pause key to `WG_KEY_PAUSE` because its hardware sequence is not a
 normal one-byte scan code.
 
 Mouse motion is relative. Mouse buttons are numbered 1 (left), 2 (right), and
-3 (middle), with press and release events. The current generic boundary
-deliberately contains no joystick event because joystick support is outside the
-Wolf3D v1.4 first-release host scope.
+3 (middle), with press and release events.
+
+Joystick hosts emit `WG_EVENT_JOYSTICK` whenever one of the first two devices
+connects, disconnects, or changes state. `joystick` is zero or one, `connected`
+states whether that slot is available, `x` and `y` span `INT16_MIN` through
+`INT16_MAX` with negative Y meaning up, and the low four bits of `buttons`
+represent buttons 0 through 3. Send a disconnected event with centered axes and
+no buttons when a device disappears. The core applies `ID_IN.C`'s calibrated
+outer-third scaling and the game's additional 64-unit movement threshold; hosts
+must not add a second dead zone unless required by their device API.
 
 ## Video and audio ownership
 

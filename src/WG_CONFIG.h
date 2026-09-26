@@ -16,11 +16,15 @@ typedef struct wg_config
     uint16_t action_keys[WL_CUSTOM_BINDINGS];
     uint16_t movement_keys[WL_CUSTOM_BINDINGS];
     uint8_t mouse_bindings[WL_CUSTOM_BINDINGS];
+    uint8_t joystick_bindings[WL_CUSTOM_BINDINGS];
     uint8_t sound_mode;
     uint8_t digitized_effects;
     uint8_t music_enabled;
     uint8_t mouse_enabled;
     uint8_t mouse_adjustment;
+    uint8_t joystick_enabled;
+    uint8_t joystick_port;
+    uint8_t gamepad_enabled;
     uint8_t view_size;
 } wg_config_t;
 

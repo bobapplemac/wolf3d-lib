@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <mmsystem.h>
 #include <shellapi.h>
+#include <xinput.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -14,6 +15,14 @@ static uint32_t wg_pixels[WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT];
 static LARGE_INTEGER wg_counter_frequency;
 static LARGE_INTEGER wg_counter_start;
 static int wg_quit_pending;
+
+typedef DWORD (WINAPI *wg_xinput_get_state_t)(DWORD, XINPUT_STATE *);
+static HMODULE wg_xinput_module;
+static wg_xinput_get_state_t wg_xinput_get_state;
+static int16_t wg_joystick_x[WG_MAX_JOYSTICKS];
+static int16_t wg_joystick_y[WG_MAX_JOYSTICKS];
+static uint32_t wg_joystick_buttons[WG_MAX_JOYSTICKS];
+static uint8_t wg_joystick_connected[WG_MAX_JOYSTICKS];
 
 #define WG_PCM_BUFFER_COUNT 4U
 #define WG_PCM_BUFFER_FRAMES 512U
@@ -41,7 +50,7 @@ static void wg_queue_event(const wg_event_t *event)
 
 static void wg_queue_mouse_button(uint8_t button, int pressed)
 {
-    wg_event_t event;
+    wg_event_t event = { 0 };
 
     event.type = WG_EVENT_MOUSE_BUTTON;
     event.pressed = pressed;
@@ -50,6 +59,99 @@ static void wg_queue_mouse_button(uint8_t button, int pressed)
     event.y = 0;
     event.button = button;
     wg_queue_event(&event);
+}
+
+static void wg_load_xinput(void)
+{
+    static const wchar_t *const libraries[] =
+    {
+        L"xinput1_4.dll", L"xinput1_3.dll", L"xinput9_1_0.dll"
+    };
+    size_t index;
+
+    for (index = 0U; index < sizeof(libraries) / sizeof(libraries[0]); ++index)
+    {
+        wg_xinput_module = LoadLibraryW(libraries[index]);
+        if (wg_xinput_module != NULL)
+        {
+            wg_xinput_get_state = (wg_xinput_get_state_t)GetProcAddress(
+                wg_xinput_module, "XInputGetState");
+            if (wg_xinput_get_state != NULL)
+            {
+                return;
+            }
+            FreeLibrary(wg_xinput_module);
+            wg_xinput_module = NULL;
+        }
+    }
+}
+
+static void wg_poll_joysticks(void)
+{
+    DWORD joystick;
+
+    if (wg_xinput_get_state == NULL)
+    {
+        return;
+    }
+    for (joystick = 0U; joystick < WG_MAX_JOYSTICKS; ++joystick)
+    {
+        XINPUT_STATE state;
+        int connected;
+        int16_t x = 0;
+        int16_t y = 0;
+        uint32_t buttons = 0U;
+
+        ZeroMemory(&state, sizeof(state));
+        connected = wg_xinput_get_state(joystick, &state) == ERROR_SUCCESS;
+        if (connected)
+        {
+            WORD source = state.Gamepad.wButtons;
+            SHORT source_y = state.Gamepad.sThumbLY;
+
+            x = state.Gamepad.sThumbLX;
+            y = source_y == INT16_MIN ? INT16_MAX : (int16_t)-source_y;
+            if ((source & XINPUT_GAMEPAD_DPAD_LEFT) != 0U)
+            {
+                x = INT16_MIN;
+            }
+            else if ((source & XINPUT_GAMEPAD_DPAD_RIGHT) != 0U)
+            {
+                x = INT16_MAX;
+            }
+            if ((source & XINPUT_GAMEPAD_DPAD_UP) != 0U)
+            {
+                y = INT16_MIN;
+            }
+            else if ((source & XINPUT_GAMEPAD_DPAD_DOWN) != 0U)
+            {
+                y = INT16_MAX;
+            }
+            buttons |= (source & XINPUT_GAMEPAD_A) != 0U ? 1U : 0U;
+            buttons |= (source & XINPUT_GAMEPAD_B) != 0U ? 2U : 0U;
+            buttons |= (source & XINPUT_GAMEPAD_X) != 0U ? 4U : 0U;
+            buttons |= (source & XINPUT_GAMEPAD_Y) != 0U ? 8U : 0U;
+        }
+        if (connected != wg_joystick_connected[joystick]
+            || x != wg_joystick_x[joystick]
+            || y != wg_joystick_y[joystick]
+            || buttons != wg_joystick_buttons[joystick])
+        {
+            wg_event_t event = { 0 };
+
+            wg_joystick_connected[joystick] = (uint8_t)connected;
+            wg_joystick_x[joystick] = x;
+            wg_joystick_y[joystick] = y;
+            wg_joystick_buttons[joystick] = buttons;
+            event.type = WG_EVENT_JOYSTICK;
+            event.joystick = (uint8_t)joystick;
+            event.connected = (uint8_t)connected;
+            event.x = x;
+            event.y = y;
+            event.buttons = buttons;
+            wg_queue_event(&event);
+        }
+    }
 }
 
 static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
@@ -64,7 +166,7 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
         case WM_KEYUP:
         case WM_SYSKEYUP:
         {
-            wg_event_t event;
+            wg_event_t event = { 0 };
 
             event.type = WG_EVENT_KEY;
             event.pressed = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
@@ -93,7 +195,7 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
 
                 if (x != 0 || y != 0)
                 {
-                    wg_event_t event;
+                    wg_event_t event = { 0 };
 
                     event.type = WG_EVENT_MOUSE_MOTION;
                     event.pressed = 0;
@@ -200,6 +302,11 @@ int WG_Init(void)
     wg_event_read = 0;
     wg_event_write = 0;
     wg_quit_pending = 0;
+    ZeroMemory(wg_joystick_x, sizeof(wg_joystick_x));
+    ZeroMemory(wg_joystick_y, sizeof(wg_joystick_y));
+    ZeroMemory(wg_joystick_buttons, sizeof(wg_joystick_buttons));
+    ZeroMemory(wg_joystick_connected, sizeof(wg_joystick_connected));
+    wg_load_xinput();
     ShowWindow(wg_window, SW_SHOW);
     return 1;
 }
@@ -207,6 +314,12 @@ int WG_Init(void)
 void WG_Shutdown(void)
 {
     WG_PCMShutdown();
+    wg_xinput_get_state = NULL;
+    if (wg_xinput_module != NULL)
+    {
+        FreeLibrary(wg_xinput_module);
+        wg_xinput_module = NULL;
+    }
     if (wg_window != NULL)
     {
         DestroyWindow(wg_window);
@@ -293,6 +406,8 @@ int WG_PollEvent(wg_event_t *event)
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
+
+    wg_poll_joysticks();
 
     if (wg_event_read != wg_event_write)
     {

@@ -11,6 +11,7 @@ extern "C" {
 #define WG_SCREEN_WIDTH 320
 #define WG_SCREEN_HEIGHT 200
 #define WG_PALETTE_COLORS 256
+#define WG_MAX_JOYSTICKS 2
 
 typedef enum wg_result
 {
@@ -27,7 +28,8 @@ typedef enum wg_event_type
     WG_EVENT_QUIT,
     WG_EVENT_KEY,
     WG_EVENT_MOUSE_MOTION,
-    WG_EVENT_MOUSE_BUTTON
+    WG_EVENT_MOUSE_BUTTON,
+    WG_EVENT_JOYSTICK
 } wg_event_type_t;
 
 /* IBM PC set-1 scan codes, matching the identifiers used by Wolf3D. */
@@ -76,6 +78,9 @@ typedef struct wg_event
     int16_t x;
     int16_t y;
     uint8_t button;
+    uint8_t joystick;
+    uint8_t connected;
+    uint32_t buttons;
 } wg_event_t;
 
 extern uint8_t *WG_ScreenBuffer;

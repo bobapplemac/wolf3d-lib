@@ -10,9 +10,9 @@ The project deliberately does not add modern gameplay or rendering features.
 It requires separately supplied original game data and does not include any
 Wolfenstein 3D assets.
 
-The first-release scope supports the Apogee shareware (`WL1`) and
-GT/ID/Activision full (`WL6`) v1.4 data sets. Spear of Destiny, joystick input,
-and Disney Sound Source output are outside this Wolf3D release scope. See
+The supported scope includes the Apogee shareware (`WL1`) and
+GT/ID/Activision full (`WL6`) v1.4 data sets. Spear of Destiny and Disney Sound
+Source output remain outside the current Wolf3D release scope. See
 [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) for the completed staged plan.
 [`docs/source-layout.md`](docs/source-layout.md) maps each
 portable translation unit to its original Wolfenstein 3D source owner, and the
@@ -34,9 +34,8 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The same CMake project builds on Linux with GCC or Clang; the Win32 host is
-automatically omitted there. Strict Linux compiler and sanitizer jobs are
-defined in `.gitlab-ci.yml`.
+The same CMake project supports Linux builds with GCC or Clang; the Win32 host
+is automatically omitted there.
 
 To run the interactive Win32 host:
 
@@ -132,15 +131,18 @@ remains disabled. Capture the panel with `--sound-menu-view`.
 The Control row restores the original mouse and joystick device panel. Mouse
 input can be enabled or disabled, and Mouse Sensitivity opens the original
 ten-position slider; the chosen value feeds the original movement formula.
-Joystick rows remain disabled because the generic event boundary does not yet
-expose a joystick. Use `--control-menu-view` or
+The generic event boundary accepts two normalized joystick devices. Joystick
+Enabled, port 2 selection, and two- or four-button Gravis GamePad mode retain
+their original behavior. The Win32 host maps XInput controllers to the left
+stick/D-pad and A, B, X, Y buttons without adding a link-time dependency. Use
+`--control-menu-view`, `--joystick-menu-view`, or
 `--mouse-sensitivity-view` for deterministic captures.
 
 `Customize controls` restores the original Mouse, Joystick/Gravis GamePad,
-Keyboard, and movement-key table. The supported mouse and keyboard groups can
-be edited in place: Enter selects a group and field, then the next key or mouse
+Keyboard, and movement-key table. Every active group can be edited in place:
+Enter selects a group and field, then the next key, mouse button, or joystick
 button becomes its binding. The original defaults remain Control/Alt/Shift/
-Space, arrow keys, and the three mouse buttons. Capture it with
+Space, arrow keys, three mouse buttons, and four joystick buttons. Capture it with
 `--customize-controls-view`.
 
 `Change View` restores the original 4–19 step viewport-size panel. Arrow keys

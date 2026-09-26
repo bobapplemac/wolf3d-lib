@@ -22,6 +22,9 @@ typedef struct wl_input
     uint8_t mouse_adjustment;
     int16_t mouse_x;
     int16_t mouse_y;
+    int8_t joystick_x;
+    int8_t joystick_y;
+    uint8_t joystick_enabled;
 } wl_input_t;
 
 typedef struct wl_play_state

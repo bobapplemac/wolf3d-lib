@@ -6,6 +6,7 @@
 #include "WG_AUDIO.h"
 #include "WG_ASSETS.h"
 #include "ID_CA.h"
+#include "ID_IN.h"
 #include "WG_DATA.h"
 #include "WG_CONFIG.h"
 #include "WG_FIXED.h"
@@ -1980,6 +1981,24 @@ static void TestPlayLoop(void)
 
     WL_PlayStateReset(&play);
     SetPlayerMovementLevel(&level);
+    memset(&input, 0, sizeof(input));
+    input.joystick_enabled = 1U;
+    input.joystick_x = 127;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.player_angle == 359U);
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
+    memset(&input, 0, sizeof(input));
+    input.joystick_enabled = 1U;
+    input.joystick_y = -127;
+    start_x = level.player_x;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.player_x > start_x);
+    CHECK(level.player_thrust_speed == 35 * 150);
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
     level.door_count = 1U;
     level.doors[0].tile_x = 11U;
     level.doors[0].tile_y = 10U;
@@ -1995,6 +2014,28 @@ static void TestPlayLoop(void)
     CHECK(level.doors[0].position == 0U);
     CHECK(WL_PlayTick(&level, &tables, &play, &input));
     CHECK(level.doors[0].position == 1024U);
+}
+
+static void TestJoystickInput(void)
+{
+    int x = 1;
+    int y = 1;
+
+    ID_IN_ResetJoysticks();
+    CHECK(!ID_IN_JoystickPresent(0U));
+    ID_IN_GetJoyDelta(0U, &x, &y);
+    CHECK(x == 0 && y == 0);
+    CHECK(ID_IN_SetJoystick(0U, 1, INT16_MIN, INT16_MAX, 0x1fU));
+    CHECK(ID_IN_JoystickPresent(0U));
+    CHECK(ID_IN_JoyButtons(0U) == 0x0fU);
+    ID_IN_GetJoyDelta(0U, &x, &y);
+    CHECK(x == -127 && y == 127);
+    CHECK(ID_IN_SetJoystick(0U, 1, -21845, 21845, 0U));
+    ID_IN_GetJoyDelta(0U, &x, &y);
+    CHECK(x == 0 && y == 0);
+    CHECK(ID_IN_SetJoystick(0U, 0, INT16_MIN, INT16_MAX, 0x0fU));
+    CHECK(!ID_IN_JoystickPresent(0U));
+    CHECK(!ID_IN_SetJoystick(ID_IN_MAX_JOYSTICKS, 1, 0, 0, 0U));
 }
 
 static void TestDemoFormat(void)
@@ -2353,6 +2394,10 @@ static void TestViewMath(void)
     WG_ViewBuildTrigTables(&tables);
     cosine = WG_ViewCosineTable(&tables);
     CHECK(cosine != NULL);
+    if (cosine == NULL)
+    {
+        return;
+    }
     CHECK(tables.sine[0] == 0);
     CHECK(tables.sine[WG_ANGLE_QUADRANT] == WG_FIXED_ONE);
     CHECK(tables.sine[2 * WG_ANGLE_QUADRANT] == 0);
@@ -2908,7 +2953,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(WL_SoundMenuMove(10U, 1) == 11U);
         CHECK(WL_SoundMenuMove(11U, 1) == 0U);
         memset(framebuffer, 0, sizeof(framebuffer));
-        CHECK(WL_DrawControlMenu(framebuffer, &graphics, 0U, 1));
+        CHECK(WL_DrawControlMenu(framebuffer, &graphics, 0U, 1,
+                                 0, 0, 0U, 0));
         for (index = 0U; index < sizeof(framebuffer); ++index)
         {
             control_menu_hash ^= framebuffer[index];
@@ -2920,11 +2966,14 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(control_menu_hash == (expected_variant
               == WG_GAME_WOLF3D_SHAREWARE_14
               ? 0x6b0f54c32a663fa5ULL : 0x466d386e2915c931ULL));
-        CHECK(WL_ControlMenuMove(0U, 1, 1) == 4U);
-        CHECK(WL_ControlMenuMove(4U, 1, 1) == 5U);
-        CHECK(WL_ControlMenuMove(5U, 1, 1) == 0U);
-        CHECK(WL_ControlMenuMove(0U, -1, 1) == 5U);
-        CHECK(WL_ControlMenuMove(0U, 1, 0) == 5U);
+        CHECK(WL_ControlMenuMove(0U, 1, 1, 0, 0) == 4U);
+        CHECK(WL_ControlMenuMove(4U, 1, 1, 0, 0) == 5U);
+        CHECK(WL_ControlMenuMove(5U, 1, 1, 0, 0) == 0U);
+        CHECK(WL_ControlMenuMove(0U, -1, 1, 0, 0) == 5U);
+        CHECK(WL_ControlMenuMove(0U, 1, 0, 0, 0) == 5U);
+        CHECK(WL_ControlMenuMove(0U, 1, 1, 1, 0) == 1U);
+        CHECK(WL_ControlMenuMove(1U, 1, 1, 1, 1) == 2U);
+        CHECK(WL_ControlMenuMove(2U, 1, 1, 1, 1) == 3U);
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawMouseSensitivity(framebuffer, &graphics, 5U));
         for (index = 0U; index < sizeof(framebuffer); ++index)
@@ -2940,6 +2989,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         {
             static const uint8_t mouse_bindings[4] =
                 { UINT8_MAX, 2U, 0U, 1U };
+            static const uint8_t joystick_bindings[4] =
+                { 3U, 2U, 0U, 1U };
             static const uint16_t action_keys[4] =
                 { WG_KEY_RIGHT_SHIFT, WG_KEY_SPACE,
                   WG_KEY_CONTROL, WG_KEY_ALT };
@@ -2948,7 +2999,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
 
             memset(framebuffer, 0, sizeof(framebuffer));
             CHECK(WL_DrawCustomizeMenu(
-                framebuffer, &graphics, 0U, 1, mouse_bindings,
+                framebuffer, &graphics, 0U, 1, 0, mouse_bindings,
+                joystick_bindings,
                 action_keys, movement_keys, -1, 0));
             for (index = 0U; index < sizeof(framebuffer); ++index)
             {
@@ -2961,10 +3013,11 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             CHECK(customize_hash == (expected_variant
                   == WG_GAME_WOLF3D_SHAREWARE_14
                   ? 0xf94ac3381beb5e83ULL : 0x2ac0b2270dc20b66ULL));
-            CHECK(WL_CustomMenuMove(0U, 1, 1) == 6U);
-            CHECK(WL_CustomMenuMove(6U, 1, 1) == 8U);
-            CHECK(WL_CustomMenuMove(8U, 1, 1) == 0U);
-            CHECK(WL_CustomMenuMove(6U, -1, 0) == 8U);
+            CHECK(WL_CustomMenuMove(0U, 1, 1, 0) == 6U);
+            CHECK(WL_CustomMenuMove(6U, 1, 1, 0) == 8U);
+            CHECK(WL_CustomMenuMove(8U, 1, 1, 0) == 0U);
+            CHECK(WL_CustomMenuMove(6U, -1, 0, 0) == 8U);
+            CHECK(WL_CustomMenuMove(0U, 1, 1, 1) == 3U);
         }
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawEpisodeMenu(
@@ -3673,12 +3726,16 @@ static void TestPortableSave(void)
 
 static void TestPortableConfig(void)
 {
-    uint8_t encoded[WG_CONFIG_BUFFER_SIZE];
+    uint8_t encoded[WG_CONFIG_BUFFER_SIZE] = { 0 };
+    uint8_t legacy[WG_CONFIG_BUFFER_SIZE] = { 0 };
     wg_config_t source;
     wg_config_t decoded;
+    wg_config_t defaults;
     size_t encoded_size = 0U;
     size_t index;
     uint64_t hash = 1469598103934665603ULL;
+    uint32_t legacy_checksum = 2166136261U;
+    size_t legacy_size;
 
     WG_ConfigDefaults(&source);
     source.high_scores[0].score = 123456U;
@@ -3694,6 +3751,11 @@ static void TestPortableConfig(void)
     source.music_enabled = 0U;
     source.mouse_enabled = 1U;
     source.mouse_adjustment = 9U;
+    source.joystick_bindings[0] = 2U;
+    source.joystick_bindings[1] = UINT8_MAX;
+    source.joystick_enabled = 1U;
+    source.joystick_port = 1U;
+    source.gamepad_enabled = 1U;
     source.view_size = 19U;
 
     CHECK(WG_ConfigEncode(encoded, sizeof(encoded), &encoded_size,
@@ -3710,10 +3772,34 @@ static void TestPortableConfig(void)
                            WG_GAME_WOLF3D_SHAREWARE_14, &decoded));
     CHECK(!WG_ConfigDecode(encoded, encoded_size - 1U,
                            WG_GAME_WOLF3D_FULL_GT_14, &decoded));
+    memcpy(legacy, encoded, encoded_size);
     encoded[20U] ^= 1U;
     CHECK(!WG_ConfigDecode(encoded, encoded_size,
                            WG_GAME_WOLF3D_FULL_GT_14, &decoded));
-    CHECK(hash == 0x2ef00b526b4c06b1ULL);
+    printf("portable config FNV-1a: %016llx\n",
+           (unsigned long long)hash);
+    CHECK(hash == 0x7ae7b2e1e945a7a6ULL);
+
+    legacy[8U] = 2U;
+    legacy[9U] = 0U;
+    legacy_size = encoded_size - 7U;
+    for (index = 0U; index < legacy_size - 4U; ++index)
+    {
+        legacy_checksum ^= legacy[index];
+        legacy_checksum *= 16777619U;
+    }
+    legacy[legacy_size - 4U] = (uint8_t)legacy_checksum;
+    legacy[legacy_size - 3U] = (uint8_t)(legacy_checksum >> 8U);
+    legacy[legacy_size - 2U] = (uint8_t)(legacy_checksum >> 16U);
+    legacy[legacy_size - 1U] = (uint8_t)(legacy_checksum >> 24U);
+    WG_ConfigDefaults(&defaults);
+    CHECK(WG_ConfigDecode(legacy, legacy_size,
+                          WG_GAME_WOLF3D_FULL_GT_14, &decoded));
+    CHECK(memcmp(decoded.joystick_bindings, defaults.joystick_bindings,
+                 sizeof(decoded.joystick_bindings)) == 0);
+    CHECK(decoded.joystick_enabled == 0U);
+    CHECK(decoded.joystick_port == 0U);
+    CHECK(decoded.gamepad_enabled == 0U);
 }
 
 int main(int argc, char **argv)
@@ -3744,6 +3830,7 @@ int main(int argc, char **argv)
     TestBonusPickups();
     TestPlayerMovementAndUse();
     TestPlayLoop();
+    TestJoystickInput();
     TestDemoFormat();
     TestIntermission();
     TestMenuMovement();
