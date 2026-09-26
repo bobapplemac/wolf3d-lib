@@ -1102,7 +1102,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --view-size 1
   campaign data, floor ratios, doors, statics, actors, pushwall state, and RNG;
   truncated, corrupt, and wrong-edition inputs are rejected. The nontrivial
   encoded fixture hashes to `edaa73019f926cd8` identically on x86 and x64.
-- Added deterministic in-game-menu hash `1f8180a8ad0a0552`; Load hashes are
+- Added deterministic in-game-menu hash `9d4fae41d9d29488`; Load hashes are
   `a0188da801550518` (WL1) and `d81cecaa1eef0887` (WL6), while Save hashes are
   `d81cecaa1eef0887` (WL1) and `55f762913ddab4c7` (WL6). All 85 tests pass in
   MSVC x86 and x64 builds.
@@ -1134,3 +1134,16 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-v
 - A nontrivial serialization fixture hashes to `e6db4f8c7bb574b9` identically
   in MSVC x86 and x64 builds. Regression coverage also rejects truncated,
   corrupted, and wrong-edition files.
+
+## 2026-09-25: Original function keys and confirmation paths
+
+- Restored the original F1–F10 in-game dispatch: Read This, Save, Load, Sound,
+  Change View, Control, End Game, Quick Save, Quick Load, and Quit. The selected
+  save slot becomes the quick slot after a successful save or load.
+- Restored the original current-game, end-game, quick-load, and quit Y/N
+  overlays. Gameplay tics stop while a gameplay confirmation is visible, while
+  audio continues through its independent stream.
+- Corrected the in-game control panel's historical dynamic row: `View Scores`
+  becomes `End Game`, while `Back to Demo` becomes `Back to Game`. The corrected
+  panel hashes to `9d4fae41d9d29488` in both editions; the shared confirmation
+  fixture hashes to `0b2a93f76bdc8ce8`.

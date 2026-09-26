@@ -2,6 +2,7 @@
 #include "WL_MENU.h"
 
 #include <stddef.h>
+#include <string.h>
 
 #include "ID_VH.h"
 #include "ID_US_1.h"
@@ -161,6 +162,7 @@ static void WL_MenuItems(wl_menu_item_t items[WL_MAIN_MENU_ITEMS],
     }
     if (in_game)
     {
+        items[7].text = "End Game";
         items[8].text = "Back to Game";
         items[8].active = 2U;
     }
@@ -260,6 +262,85 @@ unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game)
         }
     } while (items[candidate].active == 0U);
     return candidate;
+}
+
+int WL_DrawConfirm(uint8_t framebuffer[320 * 200],
+                   const wg_graphics_t *graphics, const char *message)
+{
+    const char *line_start;
+    const char *cursor;
+    wg_font_t font;
+    size_t widest = 0U;
+    unsigned lines = 0U;
+    int width;
+    int height;
+    int x;
+    int y;
+
+    if (framebuffer == NULL || graphics == NULL || message == NULL
+        || !WG_FontOpen(&font, graphics, 1U))
+    {
+        return 0;
+    }
+    line_start = message;
+    for (cursor = message;; ++cursor)
+    {
+        if (*cursor == '\n' || *cursor == '\0')
+        {
+            char line[80];
+            size_t length = (size_t)(cursor - line_start);
+            size_t measured;
+
+            if (length >= sizeof(line))
+            {
+                WG_FontClose(&font);
+                return 0;
+            }
+            memcpy(line, line_start, length);
+            line[length] = '\0';
+            measured = WG_FontMeasure(&font, line);
+            if (measured > widest)
+            {
+                widest = measured;
+            }
+            ++lines;
+            if (*cursor == '\0')
+            {
+                break;
+            }
+            line_start = cursor + 1;
+        }
+    }
+    width = (int)widest + 10;
+    height = (int)font.height * (int)lines + 10;
+    x = (320 - width) / 2;
+    y = (160 - height) / 2;
+    WL_MenuBar(framebuffer, x, y, width, height, WL_MENU_TEXT_COLOR);
+    WL_ColorOutline(framebuffer, x, y, width, height,
+                    0U, WL_MENU_HIGHLIGHT_COLOR);
+    line_start = message;
+    lines = 0U;
+    for (cursor = message;; ++cursor)
+    {
+        if (*cursor == '\n' || *cursor == '\0')
+        {
+            char line[80];
+            size_t length = (size_t)(cursor - line_start);
+
+            memcpy(line, line_start, length);
+            line[length] = '\0';
+            WG_FontDraw(&font, framebuffer, x + 5,
+                        y + 5 + (int)lines * (int)font.height, line, 0U);
+            ++lines;
+            if (*cursor == '\0')
+            {
+                break;
+            }
+            line_start = cursor + 1;
+        }
+    }
+    WG_FontClose(&font);
+    return 1;
 }
 
 int WL_DrawLoadSaveMenu(

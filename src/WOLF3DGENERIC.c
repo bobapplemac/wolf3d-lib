@@ -85,6 +85,18 @@ static uint8_t wg_music_enabled = 1U;
 static uint8_t wg_config_ready;
 static unsigned wg_next_demo;
 
+typedef enum wg_confirm_action
+{
+    WG_CONFIRM_NONE = 0,
+    WG_CONFIRM_NEW_GAME,
+    WG_CONFIRM_END_GAME,
+    WG_CONFIRM_QUICK_LOAD,
+    WG_CONFIRM_QUIT
+} wg_confirm_action_t;
+
+static wg_confirm_action_t wg_confirm_action;
+static uint8_t wg_quick_slot_valid;
+
 typedef enum wg_attract_phase
 {
     WG_ATTRACT_NONE = 0,
@@ -840,6 +852,64 @@ static int WG_DrawMainMenuScreen(void)
     return result;
 }
 
+static int WG_DrawConfirmScreen(wg_confirm_action_t action)
+{
+    static const char current_game[] =
+        "You are currently in\n"
+        "a game. Continuing will\n"
+        "erase old game. Ok?";
+    static const char end_game[] =
+        "Are you sure you want\n"
+        "to end the game you\n"
+        "are playing? (Y or N):";
+    static const char quit_game[] =
+        "Are you sure you want\n"
+        "to quit this great game?";
+    char quick_load[80];
+    const char *message;
+    wg_graphics_t graphics;
+    int result;
+
+    if (action == WG_CONFIRM_NEW_GAME)
+    {
+        message = current_game;
+    }
+    else if (action == WG_CONFIRM_END_GAME)
+    {
+        message = end_game;
+    }
+    else if (action == WG_CONFIRM_QUICK_LOAD)
+    {
+        if (snprintf(quick_load, sizeof(quick_load),
+                     "Load Game called\n\"%s\"?",
+                     wg_save_names[wg_save_selection]) < 0)
+        {
+            return 0;
+        }
+        message = quick_load;
+    }
+    else if (action == WG_CONFIRM_QUIT)
+    {
+        message = quit_game;
+    }
+    else
+    {
+        return 0;
+    }
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    result = WL_DrawConfirm(WG_ScreenBuffer, &graphics, message);
+    WG_GraphicsClose(&graphics);
+    if (result)
+    {
+        wg_confirm_action = action;
+    }
+    return result;
+}
+
 static int WG_SavePath(char *path, size_t path_size, unsigned slot)
 {
     int length;
@@ -1369,6 +1439,8 @@ static int WG_GameSessionSave(unsigned slot)
         return 0;
     }
     wg_save_available[slot] = 1U;
+    wg_save_selection = slot;
+    wg_quick_slot_valid = 1U;
     wg_save_editing = 0U;
     return WG_GameSessionLeaveControlPanel();
 }
@@ -1397,6 +1469,8 @@ static int WG_GameSessionLoad(unsigned slot)
     wg_game.mouse_buttons = 0U;
     wg_game.mouse_x = 0;
     wg_game.mouse_y = 0;
+    wg_save_selection = slot;
+    wg_quick_slot_valid = 1U;
     return WG_GameSessionRender();
 }
 
@@ -2934,6 +3008,11 @@ static wg_result_t WG_MainMenuActivate(void)
     switch (wg_menu_selection)
     {
         case 0U:
+            if (wg_game.control_panel)
+            {
+                return WG_DrawConfirmScreen(WG_CONFIRM_NEW_GAME)
+                           ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+            }
             wg_episode_selection = wg_start_map / 10U;
             if (wg_episode_selection >= 6U)
             {
@@ -2964,6 +3043,11 @@ static wg_result_t WG_MainMenuActivate(void)
             return WG_DrawChangeViewScreen()
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         case 7U:
+            if (wg_game.control_panel)
+            {
+                return WG_DrawConfirmScreen(WG_CONFIRM_END_GAME)
+                           ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+            }
             return WG_DrawFrontHighScores(0)
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         case 6U:
@@ -2979,9 +3063,114 @@ static wg_result_t WG_MainMenuActivate(void)
             return WG_DrawTitleScreen()
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         case 9U:
-            return WG_RESULT_QUIT;
+            return WG_DrawConfirmScreen(WG_CONFIRM_QUIT)
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         default:
             return WG_RESULT_OK;
+    }
+}
+
+static wg_result_t WG_ConfirmKey(uint16_t key)
+{
+    wg_confirm_action_t action = wg_confirm_action;
+    int accepted = key == WG_KEY_Y;
+
+    if (!accepted && key != WG_KEY_N && key != WG_KEY_ESCAPE)
+    {
+        return WG_RESULT_OK;
+    }
+    wg_confirm_action = WG_CONFIRM_NONE;
+    if (!accepted)
+    {
+        if (wg_game.active && !wg_game.control_panel)
+        {
+            return WG_GameSessionRender()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        }
+        return WG_DrawMainMenuScreen()
+                   ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+    }
+    switch (action)
+    {
+        case WG_CONFIRM_NEW_GAME:
+            wg_episode_selection = wg_start_map / 10U;
+            if (wg_episode_selection >= 6U)
+            {
+                wg_episode_selection = 0U;
+            }
+            return WG_DrawEpisodeMenuScreen()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case WG_CONFIRM_END_GAME:
+            return WG_GameSessionReturnToMenu()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case WG_CONFIRM_QUICK_LOAD:
+            return WG_GameSessionLoad(wg_save_selection)
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case WG_CONFIRM_QUIT:
+            return WG_RESULT_QUIT;
+        default:
+            return WG_RESULT_PLATFORM_ERROR;
+    }
+}
+
+static wg_result_t WG_GameQuickKey(uint16_t key)
+{
+    if (key == WG_KEY_F7)
+    {
+        return WG_DrawConfirmScreen(WG_CONFIRM_END_GAME)
+                   ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+    }
+    if (key == WG_KEY_F8 && wg_quick_slot_valid
+        && wg_save_available[wg_save_selection])
+    {
+        return WG_GameSessionSave(wg_save_selection)
+                   ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+    }
+    if (key == WG_KEY_F9 && wg_quick_slot_valid
+        && wg_save_available[wg_save_selection])
+    {
+        return WG_DrawConfirmScreen(WG_CONFIRM_QUICK_LOAD)
+                   ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+    }
+    if (key == WG_KEY_F10)
+    {
+        return WG_DrawConfirmScreen(WG_CONFIRM_QUIT)
+                   ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+    }
+    if (!WG_GameSessionOpenControlPanel())
+    {
+        return WG_RESULT_PLATFORM_ERROR;
+    }
+    switch (key)
+    {
+        case WG_KEY_F1:
+            wg_help_page = 0U;
+            return WG_DrawHelpScreen()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case WG_KEY_F2:
+        case WG_KEY_F8:
+            return WG_DrawLoadSaveScreen(2U, 1)
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case WG_KEY_F3:
+        case WG_KEY_F9:
+            return WG_DrawLoadSaveScreen(1U, 1)
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case WG_KEY_F4:
+            wg_sound_selection = 0U;
+            return WG_DrawSoundMenuScreen()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case WG_KEY_F5:
+            wg_saved_view_size = wg_view_size;
+            wg_change_view_size = wg_view_size > WL_VIEW_SIZE_MAX
+                                      ? WL_VIEW_SIZE_MAX : wg_view_size;
+            return WG_DrawChangeViewScreen()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        case WG_KEY_F6:
+            wg_control_selection = 0U;
+            return WG_DrawControlMenuScreen()
+                       ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+        default:
+            return WG_RESULT_PLATFORM_ERROR;
     }
 }
 
@@ -3154,8 +3343,45 @@ wg_result_t wolf3dgeneric_Run(void)
             {
                 return WG_RESULT_QUIT;
             }
+            if (wg_confirm_action != WG_CONFIRM_NONE
+                && event.type == WG_EVENT_MOUSE_BUTTON)
+            {
+                if (event.pressed)
+                {
+                    wg_result_t confirm_result = WG_ConfirmKey(
+                        event.button == 1U ? WG_KEY_Y : WG_KEY_ESCAPE);
+
+                    if (confirm_result != WG_RESULT_OK)
+                    {
+                        return confirm_result;
+                    }
+                    last_ticks = WG_GetTicksMs();
+                    accumulator = 0U;
+                }
+                continue;
+            }
+            if (wg_confirm_action != WG_CONFIRM_NONE
+                && event.type != WG_EVENT_KEY)
+            {
+                continue;
+            }
             if (event.type == WG_EVENT_KEY)
             {
+                if (wg_confirm_action != WG_CONFIRM_NONE)
+                {
+                    if (event.pressed)
+                    {
+                        wg_result_t confirm_result = WG_ConfirmKey(event.key);
+
+                        if (confirm_result != WG_RESULT_OK)
+                        {
+                            return confirm_result;
+                        }
+                        last_ticks = WG_GetTicksMs();
+                        accumulator = 0U;
+                    }
+                    continue;
+                }
                 if (wg_game.active && wg_game.demo_playback)
                 {
                     if (event.pressed)
@@ -3909,6 +4135,19 @@ wg_result_t wolf3dgeneric_Run(void)
                     accumulator = 0U;
                     continue;
                 }
+                if (event.pressed && event.key >= WG_KEY_F1
+                    && event.key <= WG_KEY_F10)
+                {
+                    wg_result_t quick_result = WG_GameQuickKey(event.key);
+
+                    if (quick_result != WG_RESULT_OK)
+                    {
+                        return quick_result;
+                    }
+                    last_ticks = WG_GetTicksMs();
+                    accumulator = 0U;
+                    continue;
+                }
                 if (event.key < sizeof(wg_game.keys))
                 {
                     wg_game.keys[event.key] = event.pressed != 0;
@@ -4334,7 +4573,8 @@ wg_result_t wolf3dgeneric_Run(void)
 
             last_ticks = now;
             if (wg_game.paused || wg_game.intermission
-                || wg_game.control_panel)
+                || wg_game.control_panel
+                || wg_confirm_action != WG_CONFIRM_NONE)
             {
                 accumulator = 0U;
                 elapsed = 0U;
@@ -4425,5 +4665,7 @@ void wolf3dgeneric_Shutdown(void)
     wg_attract_phase = WG_ATTRACT_NONE;
     wg_attract_deadline = 0U;
     wg_config_ready = 0U;
+    wg_confirm_action = WG_CONFIRM_NONE;
+    wg_quick_slot_valid = 0U;
     wg_initialized = 0;
 }

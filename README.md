@@ -54,6 +54,11 @@ keyboard defaults are active: arrows move and turn, Alt+left/right strafes,
 Shift runs, Control attacks, Space uses, and 1-4 select weapons. Escape opens
 the in-game control panel; `Back to Game` or a second Escape resumes the exact
 paused session.
+The original in-game function keys are also active: F1 Read This, F2 Save,
+F3 Load, F4 Sound, F5 Change View, F6 Control, F7 End Game, F8 Quick Save,
+F9 Quick Load, and F10 Quit. Destructive choices retain their Y/N confirmation
+dialogs. After a slot has been chosen, quick save/load reuse it as in the DOS
+game.
 Raw mouse motion turns and moves with the original default sensitivity; left
 button attacks, right button strafes, and middle button uses.
 The Pause key displays the original pause plaque, freezes game tics, and

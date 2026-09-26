@@ -2624,6 +2624,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t help_hash = 1469598103934665603ULL;
     uint64_t demo_hash = 1469598103934665603ULL;
     uint64_t menu_hash = 1469598103934665603ULL;
+    uint64_t confirm_hash = 1469598103934665603ULL;
     uint64_t sound_menu_hash = 1469598103934665603ULL;
     uint64_t control_menu_hash = 1469598103934665603ULL;
     uint64_t mouse_sensitivity_hash = 1469598103934665603ULL;
@@ -2842,6 +2843,19 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                WG_DataVariantName(data_set.variant),
                (unsigned long long)menu_hash);
         CHECK(menu_hash == 0xcdbff8b31548b64eULL);
+        CHECK(WL_DrawConfirm(framebuffer, &graphics,
+                             "Are you sure you want\n"
+                             "to end the game you\n"
+                             "are playing? (Y or N):"));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            confirm_hash ^= framebuffer[index];
+            confirm_hash *= 1099511628211ULL;
+        }
+        printf("%s confirmation FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)confirm_hash);
+        CHECK(confirm_hash == 0x0b2a93f76bdc8ce8ULL);
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawSoundMenu(framebuffer, &graphics, 0U, 1, 1, 1));
         for (index = 0U; index < sizeof(framebuffer); ++index)
