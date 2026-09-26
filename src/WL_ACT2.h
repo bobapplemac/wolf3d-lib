@@ -35,7 +35,17 @@ typedef enum wg_actor_class
     WG_ACTOR_ROCKET,
     WG_ACTOR_SMOKE,
     WG_ACTOR_EXPLOSION,
-    WG_ACTOR_FIRE
+    WG_ACTOR_FIRE,
+    WG_ACTOR_SPECTRE,
+    WG_ACTOR_ANGEL,
+    WG_ACTOR_TRANS,
+    WG_ACTOR_UBER,
+    WG_ACTOR_WILL,
+    WG_ACTOR_DEATH,
+    WG_ACTOR_HROCKET,
+    WG_ACTOR_HSMOKE,
+    WG_ACTOR_HEXPLOSION,
+    WG_ACTOR_SPARK
 } wg_actor_class_t;
 
 typedef enum wg_ghost_kind
@@ -103,7 +113,15 @@ typedef enum wg_actor_state
     WG_STATE_BOOM3,
     WG_STATE_FIRE1,
     WG_STATE_FIRE2,
-    WG_STATE_ATTACK_PENDING
+    WG_STATE_ATTACK_PENDING,
+    WG_STATE_ANGEL_TIRED1,
+    WG_STATE_ANGEL_TIRED2,
+    WG_STATE_ANGEL_TIRED3,
+    WG_STATE_ANGEL_TIRED4,
+    WG_STATE_ANGEL_TIRED5,
+    WG_STATE_ANGEL_TIRED6,
+    WG_STATE_ANGEL_TIRED7,
+    WG_STATE_SPECTRE_DORMANT
 } wg_actor_state_t;
 
 typedef struct wg_actor

@@ -38,6 +38,17 @@
 #define WG_SPR_FAT_W1 396U
 #define WG_SPR_FAT_SHOOT1 400U
 
+/* Spear of Destiny's conditional sprite enum, from WL_DEF.H. */
+#define WG_SPR_TRANS_W1 326U
+#define WG_SPR_TRANS_SHOOT1 330U
+#define WG_SPR_UBER_W1 349U
+#define WG_SPR_UBER_SHOOT1 353U
+#define WG_SPR_DEATH_W1 362U
+#define WG_SPR_DEATH_SHOOT1 366U
+#define WG_SPR_SPECTRE_W1 377U
+#define WG_SPR_ANGEL_W1 385U
+#define WG_SPR_ANGEL_SHOOT1 389U
+
 #define WG_SPEED_PATROL 512
 #define WG_SPEED_DOG 1500
 
@@ -50,6 +61,13 @@ static int32_t WL_StartHitPoints(wg_difficulty_t difficulty,
         {950, 950, 300, 950, 950, 950, 950},
         {1050, 1550, 400, 1050, 1050, 1050, 1050},
         {1200, 2400, 500, 1200, 1200, 1200, 1200}
+    };
+    static const int32_t spear_hit_points[4][6] =
+    {
+        {5, 1450, 850, 1050, 950, 1250},
+        {10, 1550, 950, 1150, 1050, 1350},
+        {15, 1650, 1050, 1250, 1150, 1450},
+        {25, 2000, 1200, 1400, 1300, 1600}
     };
 
     if (difficulty > WG_DIFFICULTY_HARD)
@@ -85,6 +103,18 @@ static int32_t WL_StartHitPoints(wg_difficulty_t difficulty,
         return boss_hit_points[difficulty][5];
     case WG_ACTOR_FAT:
         return boss_hit_points[difficulty][6];
+    case WG_ACTOR_SPECTRE:
+        return spear_hit_points[difficulty][0];
+    case WG_ACTOR_ANGEL:
+        return spear_hit_points[difficulty][1];
+    case WG_ACTOR_TRANS:
+        return spear_hit_points[difficulty][2];
+    case WG_ACTOR_UBER:
+        return spear_hit_points[difficulty][3];
+    case WG_ACTOR_WILL:
+        return spear_hit_points[difficulty][4];
+    case WG_ACTOR_DEATH:
+        return spear_hit_points[difficulty][5];
     default:
         return 0;
     }
@@ -167,6 +197,16 @@ static uint16_t WL_BossAttackShape(wg_actor_class_t actor_class)
         return WG_SPR_GRETEL_SHOOT1;
     case WG_ACTOR_FAT:
         return WG_SPR_FAT_SHOOT1;
+    case WG_ACTOR_TRANS:
+        return WG_SPR_TRANS_SHOOT1;
+    case WG_ACTOR_UBER:
+        return WG_SPR_UBER_SHOOT1;
+    case WG_ACTOR_WILL:
+        return 341U;
+    case WG_ACTOR_DEATH:
+        return WG_SPR_DEATH_SHOOT1;
+    case WG_ACTOR_ANGEL:
+        return WG_SPR_ANGEL_SHOOT1;
     default:
         return 0U;
     }
@@ -343,6 +383,30 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
         shape = WG_SPR_FAT_W1;
         direction = 6U;
         break;
+    case WG_ACTOR_SPECTRE:
+        shape = WG_SPR_SPECTRE_W1;
+        direction = 0U;
+        break;
+    case WG_ACTOR_ANGEL:
+        shape = WG_SPR_ANGEL_W1;
+        direction = 0U;
+        break;
+    case WG_ACTOR_TRANS:
+        shape = WG_SPR_TRANS_W1;
+        direction = 0U;
+        break;
+    case WG_ACTOR_UBER:
+        shape = WG_SPR_UBER_W1;
+        direction = 0U;
+        break;
+    case WG_ACTOR_WILL:
+        shape = 337U;
+        direction = 0U;
+        break;
+    case WG_ACTOR_DEATH:
+        shape = WG_SPR_DEATH_W1;
+        direction = 0U;
+        break;
     default:
         return 0;
     }
@@ -364,7 +428,7 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
     actor->angle = 0U;
     actor->flags = WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_AMBUSH;
-    actor->tic_count = 0;
+    actor->tic_count = actor_class == WG_ACTOR_SPECTRE ? 10 : 0;
     actor->reaction_time = 0;
     actor->speed = WG_SPEED_PATROL;
     actor->distance = 0;

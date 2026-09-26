@@ -617,6 +617,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --difficulty-menu-view --frame-hash --palette-hash)
         set_tests_properties(difficulty-menu-view-sod PROPERTIES
             PASS_REGULAR_EXPRESSION "4b9dd46549814400.*eba126e8df00d1cb")
+        add_test(NAME trans-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view --map 4
+            --boss-view --frame-hash --palette-hash)
+        set_tests_properties(trans-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "522d665351e0e1d8.*eba126e8df00d1cb")
     endif()
     if(WG_TEST_SDM_PATH)
         add_test(NAME data-sdm COMMAND wg-tests --spear-data SDM 666 2

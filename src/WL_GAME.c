@@ -342,6 +342,8 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
         else
         {
             uint8_t direction;
+            int spear = WG_DataVariantFamily(variant)
+                        == WG_GAME_FAMILY_SPEAR;
 
             if (WG_DifficultyDirection(info, 108U, 36U, difficulty,
                                        &direction))
@@ -432,49 +434,49 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
                     return 0;
                 }
             }
-            else if (info == 214U
+            else if (!spear && info == 214U
                      && !WL_SpawnBoss(level, WG_ACTOR_BOSS,
                                      (uint8_t)(index % WG_LEVEL_SIZE),
                                      (uint8_t)(index / WG_LEVEL_SIZE)))
             {
                 return 0;
             }
-            else if (info == 197U
+            else if (!spear && info == 197U
                      && !WL_SpawnBoss(level, WG_ACTOR_GRETEL,
                                      (uint8_t)(index % WG_LEVEL_SIZE),
                                      (uint8_t)(index / WG_LEVEL_SIZE)))
             {
                 return 0;
             }
-            else if (info == 215U
+            else if (!spear && info == 215U
                      && !WL_SpawnBoss(level, WG_ACTOR_GIFT,
                                      (uint8_t)(index % WG_LEVEL_SIZE),
                                      (uint8_t)(index / WG_LEVEL_SIZE)))
             {
                 return 0;
             }
-            else if (info == 179U
+            else if (!spear && info == 179U
                      && !WL_SpawnBoss(level, WG_ACTOR_FAT,
                                      (uint8_t)(index % WG_LEVEL_SIZE),
                                      (uint8_t)(index / WG_LEVEL_SIZE)))
             {
                 return 0;
             }
-            else if (info == 196U
+            else if (!spear && info == 196U
                      && !WL_SpawnBoss(level, WG_ACTOR_SCHABBS,
                                      (uint8_t)(index % WG_LEVEL_SIZE),
                                      (uint8_t)(index / WG_LEVEL_SIZE)))
             {
                 return 0;
             }
-            else if (info == 160U
+            else if (!spear && info == 160U
                      && !WL_SpawnBoss(level, WG_ACTOR_FAKE,
                                      (uint8_t)(index % WG_LEVEL_SIZE),
                                      (uint8_t)(index / WG_LEVEL_SIZE)))
             {
                 return 0;
             }
-            else if (info == 178U
+            else if (!spear && info == 178U
                      && !WL_SpawnBoss(level, WG_ACTOR_MECHA_HITLER,
                                      (uint8_t)(index % WG_LEVEL_SIZE),
                                      (uint8_t)(index / WG_LEVEL_SIZE)))
@@ -501,11 +503,53 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
                     return 0;
                 }
             }
-            else if (info >= 224U && info <= 227U
+            else if (!spear && info >= 224U && info <= 227U
                      && !WL_SpawnGhost(level,
                          (wg_ghost_kind_t)(info - 224U),
                          (uint8_t)(index % WG_LEVEL_SIZE),
                          (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (spear && info == 106U
+                     && !WL_SpawnBoss(level, WG_ACTOR_SPECTRE,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (spear && info == 107U
+                     && !WL_SpawnBoss(level, WG_ACTOR_ANGEL,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (spear && info == 125U
+                     && !WL_SpawnBoss(level, WG_ACTOR_TRANS,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (spear && info == 142U
+                     && !WL_SpawnBoss(level, WG_ACTOR_UBER,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (spear && info == 143U
+                     && !WL_SpawnBoss(level, WG_ACTOR_WILL,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
+            {
+                return 0;
+            }
+            else if (spear && info == 161U
+                     && !WL_SpawnBoss(level, WG_ACTOR_DEATH,
+                                     (uint8_t)(index % WG_LEVEL_SIZE),
+                                     (uint8_t)(index / WG_LEVEL_SIZE)))
             {
                 return 0;
             }

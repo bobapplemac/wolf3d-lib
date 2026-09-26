@@ -1259,3 +1259,22 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   correct Wolf or Spear palette, alongside SOD and SDM menu palette hashes.
 
 ![Original Spear hardware-detection SIGNON screen](../out/signon-spear.png)
+
+## 2026-09-26: Original Spear actors and projectiles
+
+- Restored the six `SPEAR`-conditional actor classes from the original
+  `WL_ACT2.C`: Spectre, Angel of Death, Trans Grosse, Ubermutant, Wilhelm
+  Strasse, and Death Knight. Their original map codes now replace the Wolf3D
+  boss codes only when a Spear-family profile is active.
+- Transcribed the original difficulty hit points, score awards, key drops,
+  walk and attack frames, state durations, projectile actions, death frames,
+  and chase speeds. The archive-wide SOD gate proves that all six classes are
+  present and every initial sprite resolves inside the real page archive.
+- Added Spear's separate rocket/smoke/explosion sprite ranges, Death Knight's
+  angled heavy rockets, Angel sparks, Ubermutant's close-range bonus damage,
+  Angel's repeated three-volley/rest cycle, and the Spectre fade/dormancy/wake
+  cycle.
+- Added a deterministic real-map Trans Grosse render at Mission 1 map 5. The
+  indexed frame hashes to `522d665351e0e1d8` under Spear's corrected palette.
+
+![Trans Grosse decoded and rendered from the original SOD archives](../out/sod-trans-boss.png)

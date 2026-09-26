@@ -420,6 +420,67 @@ static void TestBossAndGhostSetup(void)
     CHECK(level.actors[6].attack_shape == 338U);
 }
 
+static void TestSpearBossSetup(void)
+{
+    static const uint16_t actor_codes[] =
+    {
+        106U, 107U, 125U, 142U, 143U, 161U, 214U
+    };
+    static const wg_actor_class_t expected_classes[] =
+    {
+        WG_ACTOR_SPECTRE, WG_ACTOR_ANGEL, WG_ACTOR_TRANS,
+        WG_ACTOR_UBER, WG_ACTOR_WILL, WG_ACTOR_DEATH
+    };
+    static const uint16_t expected_shapes[] =
+    {
+        377U, 385U, 326U, 349U, 337U, 362U
+    };
+    static const int32_t expected_hit_points[] =
+    {
+        5, 1450, 850, 1050, 950, 1250
+    };
+    uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_map_t map;
+    wg_level_t level;
+    size_t index;
+
+    memset(&map, 0, sizeof(map));
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        plane_zero[index] = WG_AREA_TILE;
+        plane_one[index] = 0U;
+    }
+    plane_one[WG_LEVEL_SIZE + 1U] = 19U;
+    for (index = 0U; index < sizeof(actor_codes) / sizeof(actor_codes[0]);
+         ++index)
+    {
+        plane_one[2U * WG_LEVEL_SIZE + 2U + index] = actor_codes[index];
+    }
+    map.width = WG_LEVEL_SIZE;
+    map.height = WG_LEVEL_SIZE;
+    map.planes[0] = plane_zero;
+    map.planes[1] = plane_one;
+
+    CHECK(WG_LevelBuildForVariant(&map, WG_DIFFICULTY_BABY,
+                                  WG_GAME_SPEAR_FULL_SOD, &level));
+    CHECK(level.actor_count == 6U);
+    CHECK(level.kill_total == 6U);
+    for (index = 0U; index < level.actor_count; ++index)
+    {
+        CHECK(level.actors[index].actor_class == expected_classes[index]);
+        CHECK(level.actors[index].shape == expected_shapes[index]);
+        CHECK(level.actors[index].hit_points == expected_hit_points[index]);
+        CHECK(level.actors[index].rotate == 0U);
+    }
+    CHECK(level.actors[0].tic_count == 10);
+    CHECK(level.actors[1].attack_shape == 389U);
+    CHECK(level.actors[2].attack_shape == 330U);
+    CHECK(level.actors[3].attack_shape == 353U);
+    CHECK(level.actors[4].attack_shape == 341U);
+    CHECK(level.actors[5].attack_shape == 366U);
+}
+
 static void TestPatrolMovement(void)
 {
     uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
@@ -1478,6 +1539,68 @@ static void TestBossDamageAndDeath(void)
         CHECK(hitler->tic_count == 20);
         CHECK(WL_TickActors(&level, 20U));
         CHECK(level.victory_flag == 1U);
+    }
+}
+
+static void TestSpearBossDamageAndDeath(void)
+{
+    static const struct spear_death_case
+    {
+        wg_actor_class_t actor_class;
+        int32_t hit_points;
+        unsigned death_tics;
+        uint16_t first_shape;
+        uint16_t dead_shape;
+        int drops_key;
+    } cases[] =
+    {
+        {WG_ACTOR_SPECTRE, 5, 30U, 381U, 384U, 0},
+        {WG_ACTOR_ANGEL, 1450, 72U, 385U, 400U, 0},
+        {WG_ACTOR_TRANS, 850, 47U, 326U, 333U, 1},
+        {WG_ACTOR_UBER, 1050, 62U, 349U, 361U, 1},
+        {WG_ACTOR_WILL, 950, 41U, 337U, 348U, 1},
+        {WG_ACTOR_DEATH, 1250, 71U, 362U, 376U, 1}
+    };
+    size_t index;
+
+    for (index = 0U; index < sizeof(cases) / sizeof(cases[0]); ++index)
+    {
+        wg_level_t level;
+        wg_actor_t *actor;
+
+        memset(&level, 0, sizeof(level));
+        level.variant = WG_GAME_SPEAR_FULL_SOD;
+        level.difficulty = WG_DIFFICULTY_BABY;
+        level.player_x = WG_FIXED_ONE / 2;
+        level.player_y = WG_FIXED_ONE / 2;
+        CHECK(WL_SpawnBoss(&level, cases[index].actor_class, 10U, 10U));
+        actor = &level.actors[0];
+        CHECK(actor->hit_points == cases[index].hit_points);
+        CHECK(WL_DamageActor(&level, 0U,
+                             (unsigned)cases[index].hit_points / 2U + 1U));
+        CHECK(actor->state == WG_STATE_DIE1);
+        CHECK(actor->shape == cases[index].first_shape);
+        CHECK(level.score == (cases[index].actor_class == WG_ACTOR_SPECTRE
+                                  ? 200U : 5000U));
+        CHECK(level.static_count == (uint16_t)cases[index].drops_key);
+        CHECK(WL_TickActors(&level, cases[index].death_tics));
+        CHECK(actor->state == WG_STATE_DEAD);
+        CHECK(actor->shape == cases[index].dead_shape);
+        if (cases[index].actor_class == WG_ACTOR_SPECTRE)
+        {
+            CHECK(actor->tic_count == 300);
+            CHECK(WL_TickActors(&level, 300U));
+            CHECK(actor->state == WG_STATE_SPECTRE_DORMANT);
+            CHECK(WL_TickActors(&level, 10U));
+            CHECK(actor->state == WG_STATE_STAND);
+            CHECK((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) != 0U);
+        }
+        else if (cases[index].actor_class == WG_ACTOR_ANGEL)
+        {
+            CHECK(actor->tic_count == 130);
+            CHECK(WL_TickActors(&level, 130U));
+            CHECK(level.level_completed == 1U);
+        }
     }
 }
 
@@ -3670,6 +3793,7 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     size_t present_maps = 0U;
     size_t ammo_boxes = 0U;
     size_t spears = 0U;
+    size_t actor_classes[WG_ACTOR_SPARK + 1U] = { 0U };
     size_t index;
 
     memset(&data_set, 0, sizeof(data_set));
@@ -3751,6 +3875,19 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
                         ++spears;
                     }
                 }
+                for (object_index = 0U; object_index < level.actor_count;
+                     ++object_index)
+                {
+                    const wg_actor_t *actor = &level.actors[object_index];
+
+                    CHECK(actor->actor_class <= WG_ACTOR_SPARK);
+                    if (actor->actor_class <= WG_ACTOR_SPARK)
+                    {
+                        ++actor_classes[actor->actor_class];
+                    }
+                    CHECK((size_t)data_set.sprite_start + actor->shape
+                          < data_set.sound_start);
+                }
                 ++present_maps;
                 WG_MapFree(&map);
             }
@@ -3759,6 +3896,19 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     CHECK(present_maps == expected_present_maps);
     CHECK(ammo_boxes != 0U);
     CHECK(spears == (variant == WG_GAME_SPEAR_DEMO_SDM ? 0U : 1U));
+    CHECK(actor_classes[WG_ACTOR_BOSS] == 0U);
+    CHECK(actor_classes[WG_ACTOR_SCHABBS] == 0U);
+    CHECK(actor_classes[WG_ACTOR_FAKE] == 0U);
+    CHECK(actor_classes[WG_ACTOR_MECHA_HITLER] == 0U);
+    if (variant != WG_GAME_SPEAR_DEMO_SDM)
+    {
+        CHECK(actor_classes[WG_ACTOR_SPECTRE] != 0U);
+        CHECK(actor_classes[WG_ACTOR_ANGEL] != 0U);
+        CHECK(actor_classes[WG_ACTOR_TRANS] != 0U);
+        CHECK(actor_classes[WG_ACTOR_UBER] != 0U);
+        CHECK(actor_classes[WG_ACTOR_WILL] != 0U);
+        CHECK(actor_classes[WG_ACTOR_DEATH] != 0U);
+    }
 
     WG_MapsClose(&maps);
     WG_PagesClose(&pages);
@@ -4024,6 +4174,7 @@ int main(int argc, char **argv)
     TestActorSetup();
     TestStaticItemSetup();
     TestBossAndGhostSetup();
+    TestSpearBossSetup();
     TestPatrolMovement();
     TestActorAwareness();
     TestDoorAreaConnectivity();
@@ -4036,6 +4187,7 @@ int main(int argc, char **argv)
     TestActorDamageAndDeath();
     TestSpearActorShapes();
     TestBossDamageAndDeath();
+    TestSpearBossDamageAndDeath();
     TestPlayerWeapons();
     TestBonusPickups();
     TestPlayerMovementAndUse();

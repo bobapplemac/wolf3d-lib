@@ -576,7 +576,13 @@ static int WG_IsBossClass(wg_actor_class_t actor_class)
            || actor_class == WG_ACTOR_MECHA_HITLER
            || actor_class == WG_ACTOR_GRETEL
            || actor_class == WG_ACTOR_GIFT
-           || actor_class == WG_ACTOR_FAT;
+           || actor_class == WG_ACTOR_FAT
+           || actor_class == WG_ACTOR_SPECTRE
+           || actor_class == WG_ACTOR_ANGEL
+           || actor_class == WG_ACTOR_TRANS
+           || actor_class == WG_ACTOR_UBER
+           || actor_class == WG_ACTOR_WILL
+           || actor_class == WG_ACTOR_DEATH;
 }
 
 static wg_actor_t *WG_FindBossViewActor(wg_level_t *level)
