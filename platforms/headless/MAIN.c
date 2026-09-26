@@ -106,7 +106,7 @@ static int WG_WriteMusic(const char *data_path,
     {
         int played = 0;
 
-        if (sound_number > 86
+        if ((size_t)sound_number >= WG_DataSoundCount(data_set.variant)
             || !WG_AudioGetChunk(
                 &audio,
                 (pc_speaker && !digitized
@@ -118,8 +118,8 @@ static int WG_WriteMusic(const char *data_path,
         }
         if (digitized)
         {
-            int digital_number = ID_SD_DigitalNumberForSound(
-                (unsigned)sound_number);
+            int digital_number = ID_SD_DigitalNumberForSoundForVariant(
+                data_set.variant, (unsigned)sound_number);
             uint8_t *digital_data = NULL;
             size_t digital_length = 0U;
 

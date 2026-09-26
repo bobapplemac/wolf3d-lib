@@ -1306,3 +1306,19 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 ![Spear illustrated ending debrief](../out/sod-end-1.png)
 
 ![Spear high-score table](../out/sod-high-scores.png)
+
+## 2026-09-26: Semantic Spear sound mapping
+
+- Replaced the accidental assumption that Wolf3D and Spear share every sound
+  number with a runtime semantic mapping. Common effects retain their original
+  numbers, while missiles, later guard death cries, the ammunition box, and
+  every Spear boss voice/effect resolve to the corresponding `AUDIOSOD.H`
+  entry.
+- Restored Spectre sight/fade, Angel sight/fire/death/breathing, Trans sight
+  and death, Wilhelm sight and death, Ubermutant death, Death Knight sight,
+  death, and missile, artifact pickup, and Angel's intermediate slurpie cue.
+- Added Spear's separate digitized-sound map, including SDM's reduced set and
+  AdLib fallback. The headless WAV diagnostic now accepts the proper 0-80 SOD
+  sound range, and archive tests validate all 81 PC/AdLib effect pairs, all 24
+  full-game music tracks, all 40 full-game digitized samples, and the smaller
+  SDM payload actually present on disk.

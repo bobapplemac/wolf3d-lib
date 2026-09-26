@@ -100,6 +100,7 @@ static void TestIMFSequencer(void)
     opl_write_log_t log;
     unsigned index;
     uint32_t ticks = 0U;
+    unsigned sound_number;
     id_sd_music_t *music;
     int16_t effect_pcm[1600U * 2U];
     static const uint8_t digital_samples[] = { 0U, 255U };
@@ -112,6 +113,25 @@ static void TestIMFSequencer(void)
     CHECK(WL_MusicChunkForMap(60U) == 264U);
     CHECK(ID_SD_DigitalNumberForSound(WG_SOUND_ATTACK_PISTOL) == 5);
     CHECK(ID_SD_DigitalNumberForSound(WG_SOUND_ATTACK_KNIFE) == -1);
+    CHECK(WG_SoundNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                   WG_SOUND_MISSILE_FIRE,
+                                   &sound_number)
+          && sound_number == 8U);
+    CHECK(WG_SoundNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                   WG_SOUND_DEATH_SCREAM_4,
+                                   &sound_number)
+          && sound_number == 50U);
+    CHECK(WG_SoundNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                   WG_SOUND_ANGEL_DEATH,
+                                   &sound_number)
+          && sound_number == 77U);
+    CHECK(!WG_SoundNumberForVariant(WG_GAME_WOLF3D_FULL_GT_14,
+                                    WG_SOUND_ANGEL_DEATH,
+                                    &sound_number));
+    CHECK(ID_SD_DigitalNumberForSoundForVariant(
+              WG_GAME_SPEAR_FULL_SOD, 70U) == 29);
+    CHECK(ID_SD_DigitalNumberForSoundForVariant(
+              WG_GAME_SPEAR_DEMO_SDM, 70U) == -1);
 
     memset(&sequence, 0, sizeof(sequence));
     memset(&log, 0, sizeof(log));
@@ -1552,14 +1572,21 @@ static void TestSpearBossDamageAndDeath(void)
         uint16_t first_shape;
         uint16_t dead_shape;
         int drops_key;
+        wg_sound_t death_sound;
     } cases[] =
     {
-        {WG_ACTOR_SPECTRE, 5, 30U, 381U, 384U, 0},
-        {WG_ACTOR_ANGEL, 1450, 72U, 385U, 400U, 0},
-        {WG_ACTOR_TRANS, 850, 47U, 326U, 333U, 1},
-        {WG_ACTOR_UBER, 1050, 62U, 349U, 361U, 1},
-        {WG_ACTOR_WILL, 950, 41U, 337U, 348U, 1},
-        {WG_ACTOR_DEATH, 1250, 71U, 362U, 376U, 1}
+        {WG_ACTOR_SPECTRE, 5, 30U, 381U, 384U, 0,
+         WG_SOUND_GHOST_FADE},
+        {WG_ACTOR_ANGEL, 1450, 72U, 385U, 400U, 0,
+         WG_SOUND_ANGEL_DEATH},
+        {WG_ACTOR_TRANS, 850, 47U, 326U, 333U, 1,
+         WG_SOUND_TRANS_DEATH},
+        {WG_ACTOR_UBER, 1050, 62U, 349U, 361U, 1,
+         WG_SOUND_UBER_DEATH},
+        {WG_ACTOR_WILL, 950, 41U, 337U, 348U, 1,
+         WG_SOUND_WILHELM_DEATH},
+        {WG_ACTOR_DEATH, 1250, 71U, 362U, 376U, 1,
+         WG_SOUND_KNIGHT_DEATH}
     };
     size_t index;
 
@@ -1580,6 +1607,8 @@ static void TestSpearBossDamageAndDeath(void)
                              (unsigned)cases[index].hit_points / 2U + 1U));
         CHECK(actor->state == WG_STATE_DIE1);
         CHECK(actor->shape == cases[index].first_shape);
+        CHECK(level.sound_event_count == 1U);
+        CHECK(level.sound_events[0].sound == cases[index].death_sound);
         CHECK(level.score == (cases[index].actor_class == WG_ACTOR_SPECTRE
                                   ? 200U : 5000U));
         CHECK(level.static_count == (uint16_t)cases[index].drops_key);
@@ -3835,6 +3864,8 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     size_t ammo_boxes = 0U;
     size_t spears = 0U;
     size_t actor_classes[WG_ACTOR_SPARK + 1U] = { 0U };
+    const uint8_t *chunk_data;
+    size_t chunk_size;
     size_t index;
 
     memset(&data_set, 0, sizeof(data_set));
@@ -3881,6 +3912,57 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     CHECK(WG_AudioOpen(&audio, &data_set));
     CHECK(audio.offset_count == 268U);
     CHECK(WG_PagesOpen(&pages, &data_set));
+    {
+        id_sd_music_t *player = ID_SD_MusicCreate(48000U);
+        id_sd_digi_bank_t digi_bank;
+        uint8_t *digital_data = NULL;
+        size_t digital_length = 0U;
+        size_t music_count = 0U;
+        size_t digital_count = 0U;
+
+        CHECK(player != NULL);
+        for (index = 0U; index < 81U; ++index)
+        {
+            CHECK(WG_AudioGetChunk(&audio, index,
+                                   &chunk_data, &chunk_size));
+            ID_SD_PCStop(player);
+            CHECK(ID_SD_PCStart(player, chunk_data, chunk_size));
+        }
+        for (index = 81U; index < 162U; ++index)
+        {
+            CHECK(WG_AudioGetChunk(&audio, index,
+                                   &chunk_data, &chunk_size));
+            ID_SD_EffectStop(player);
+            CHECK(ID_SD_EffectStart(player, chunk_data, chunk_size));
+        }
+        for (index = 243U; index < 267U; ++index)
+        {
+            if (WG_AudioGetChunk(&audio, index,
+                                 &chunk_data, &chunk_size)
+                && ID_SD_MusicStart(player, chunk_data, chunk_size))
+            {
+                ++music_count;
+            }
+        }
+        CHECK(music_count
+              == (variant == WG_GAME_SPEAR_DEMO_SDM ? 6U : 24U));
+        memset(&digi_bank, 0, sizeof(digi_bank));
+        CHECK(ID_SD_DigiBankOpen(&digi_bank, &pages));
+        CHECK(digi_bank.count == 40U);
+        for (index = 0U; index < digi_bank.count; ++index)
+        {
+            if (ID_SD_DigiBankLoad(&digi_bank, index,
+                                   &digital_data, &digital_length))
+            {
+                ++digital_count;
+                free(digital_data);
+                digital_data = NULL;
+            }
+        }
+        CHECK(digital_count
+              == (variant == WG_GAME_SPEAR_DEMO_SDM ? 24U : 40U));
+        ID_SD_MusicDestroy(player);
+    }
     CHECK(WG_MapsOpen(&maps, &data_set));
     if (maps.header_offsets != NULL)
     {

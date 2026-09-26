@@ -81,7 +81,23 @@ typedef enum wg_sound
     WG_SOUND_MEIN = 83,
     WG_SOUND_ROSE = 84,
     WG_SOUND_MISSILE_FIRE = 85,
-    WG_SOUND_MISSILE_HIT = 86
+    WG_SOUND_MISSILE_HIT = 86,
+    WG_SOUND_GHOST_SIGHT = 87,
+    WG_SOUND_GHOST_FADE = 88,
+    WG_SOUND_ANGEL_SIGHT = 89,
+    WG_SOUND_ANGEL_FIRE = 90,
+    WG_SOUND_ANGEL_DEATH = 91,
+    WG_SOUND_ANGEL_TIRED = 92,
+    WG_SOUND_TRANS_SIGHT = 93,
+    WG_SOUND_TRANS_DEATH = 94,
+    WG_SOUND_WILHELM_SIGHT = 95,
+    WG_SOUND_WILHELM_DEATH = 96,
+    WG_SOUND_UBER_DEATH = 97,
+    WG_SOUND_KNIGHT_SIGHT = 98,
+    WG_SOUND_KNIGHT_DEATH = 99,
+    WG_SOUND_KNIGHT_MISSILE = 100,
+    WG_SOUND_GET_SPEAR = 101,
+    WG_SOUND_GET_AMMO_BOX = 102
 } wg_sound_t;
 
 typedef struct wg_sound_event
@@ -249,6 +265,8 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
 int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
                             wg_game_variant_t variant, wg_level_t *level);
 int WG_QueueSound(wg_level_t *level, wg_sound_t sound);
+int WG_SoundNumberForVariant(wg_game_variant_t variant,
+                             wg_sound_t sound, unsigned *sound_number);
 unsigned WG_NextMapNumber(unsigned map_number, int secret_level);
 unsigned WG_NextMapNumberForVariant(wg_game_variant_t variant,
                                     unsigned map_number, int secret_level);

@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "ID_PM.h"
+#include "WG_DATA.h"
 
 #define ID_SD_IMF_RATE 700U
 #define ID_SD_DIGITAL_RATE 7042U
@@ -80,6 +81,8 @@ int ID_SD_DigiBankOpen(id_sd_digi_bank_t *bank, const wg_pages_t *pages);
 int ID_SD_DigiBankLoad(const id_sd_digi_bank_t *bank, size_t sound,
                        uint8_t **data, size_t *length);
 int ID_SD_DigitalNumberForSound(unsigned sound);
+int ID_SD_DigitalNumberForSoundForVariant(wg_game_variant_t variant,
+                                           unsigned sound);
 int ID_SD_DigitalStart(id_sd_music_t *music, const uint8_t *data,
                        size_t length, uint16_t priority,
                        uint8_t left_position, uint8_t right_position);

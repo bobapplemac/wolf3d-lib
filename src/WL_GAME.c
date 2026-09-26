@@ -646,6 +646,68 @@ int WG_QueueSound(wg_level_t *level, wg_sound_t sound)
     return 1;
 }
 
+int WG_SoundNumberForVariant(wg_game_variant_t variant,
+                             wg_sound_t sound, unsigned *sound_number)
+{
+    unsigned result;
+
+    if (sound_number == NULL || sound < 0)
+    {
+        return 0;
+    }
+    if (WG_DataVariantFamily(variant) != WG_GAME_FAMILY_SPEAR)
+    {
+        if ((unsigned)sound >= 87U)
+        {
+            return 0;
+        }
+        *sound_number = (unsigned)sound;
+        return 1;
+    }
+    if ((unsigned)sound <= 49U
+        || sound == WG_SOUND_SS_SIGHT || sound == WG_SOUND_AHHHG
+        || sound == WG_SOUND_LEBEN || sound == WG_SOUND_NAZI_FIRE
+        || sound == WG_SOUND_BOSS_FIRE || sound == WG_SOUND_SS_FIRE
+        || sound == WG_SOUND_SLURPIE || sound == WG_SOUND_OFFICER_SIGHT
+        || sound == WG_SOUND_NEIN_SOWAS || sound == WG_SOUND_DOG_ATTACK)
+    {
+        result = (unsigned)sound;
+    }
+    else
+    {
+        switch (sound)
+        {
+        case WG_SOUND_DEATH_SCREAM_4: result = 50U; break;
+        case WG_SOUND_DEATH_SCREAM_5: result = 53U; break;
+        case WG_SOUND_DEATH_SCREAM_6: result = 57U; break;
+        case WG_SOUND_DEATH_SCREAM_7: result = 54U; break;
+        case WG_SOUND_DEATH_SCREAM_8: result = 55U; break;
+        case WG_SOUND_DEATH_SCREAM_9: result = 63U; break;
+        case WG_SOUND_MISSILE_FIRE: result = 8U; break;
+        case WG_SOUND_MISSILE_HIT: result = 1U; break;
+        case WG_SOUND_GHOST_SIGHT: result = 3U; break;
+        case WG_SOUND_GHOST_FADE: result = 62U; break;
+        case WG_SOUND_ANGEL_SIGHT: result = 65U; break;
+        case WG_SOUND_ANGEL_FIRE: result = 69U; break;
+        case WG_SOUND_ANGEL_DEATH: result = 77U; break;
+        case WG_SOUND_ANGEL_TIRED: result = 80U; break;
+        case WG_SOUND_TRANS_SIGHT: result = 70U; break;
+        case WG_SOUND_TRANS_DEATH: result = 71U; break;
+        case WG_SOUND_WILHELM_SIGHT: result = 72U; break;
+        case WG_SOUND_WILHELM_DEATH: result = 73U; break;
+        case WG_SOUND_UBER_DEATH: result = 74U; break;
+        case WG_SOUND_KNIGHT_SIGHT: result = 75U; break;
+        case WG_SOUND_KNIGHT_DEATH: result = 76U; break;
+        case WG_SOUND_KNIGHT_MISSILE: result = 78U; break;
+        case WG_SOUND_GET_SPEAR: result = 79U; break;
+        case WG_SOUND_GET_AMMO_BOX: result = 64U; break;
+        default: return 0;
+        }
+    }
+    *sound_number = result;
+    return 1;
+}
+
 unsigned WG_NextMapNumber(unsigned map_number, int secret_level)
 {
     static const uint8_t elevator_back_to[6] = {1U, 1U, 7U, 3U, 5U, 3U};

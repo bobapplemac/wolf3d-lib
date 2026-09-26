@@ -420,6 +420,48 @@ int ID_SD_DigitalNumberForSound(unsigned sound)
     return -1;
 }
 
+int ID_SD_DigitalNumberForSoundForVariant(wg_game_variant_t variant,
+                                           unsigned sound)
+{
+    static const uint8_t spear_mapping[][2] =
+    {
+        {21U, 0U}, {41U, 1U}, {19U, 2U}, {18U, 3U}, {26U, 4U},
+        {24U, 5U}, {11U, 6U}, {51U, 7U}, {59U, 8U}, {60U, 9U},
+        {29U, 10U}, {22U, 11U}, {16U, 12U}, {46U, 13U}, {10U, 14U},
+        {52U, 15U}, {56U, 16U}, {58U, 17U}, {61U, 18U}, {66U, 19U},
+        {67U, 20U}, {68U, 21U}, {40U, 22U}, {50U, 23U}, {25U, 23U},
+        {53U, 24U}, {57U, 25U}, {54U, 26U}, {55U, 27U}, {63U, 28U},
+        {70U, 29U}, {71U, 30U}, {72U, 31U}, {73U, 32U}, {74U, 33U},
+        {75U, 34U}, {76U, 35U}, {65U, 36U}, {77U, 37U}, {38U, 38U},
+        {79U, 39U}
+    };
+    size_t index;
+
+    if (WG_DataVariantFamily(variant) != WG_GAME_FAMILY_SPEAR)
+    {
+        return ID_SD_DigitalNumberForSound(sound);
+    }
+    for (index = 0U;
+         index < sizeof(spear_mapping) / sizeof(spear_mapping[0]);
+         ++index)
+    {
+        if (spear_mapping[index][0] == sound)
+        {
+            if (variant == WG_GAME_SPEAR_DEMO_SDM
+                && (spear_mapping[index][1] == 1U
+                    || spear_mapping[index][1] == 14U
+                    || (spear_mapping[index][1] >= 19U
+                        && spear_mapping[index][1] <= 21U)
+                    || spear_mapping[index][1] >= 24U))
+            {
+                return -1;
+            }
+            return spear_mapping[index][1];
+        }
+    }
+    return -1;
+}
+
 int ID_SD_DigitalStart(id_sd_music_t *music, const uint8_t *data,
                        size_t length, uint16_t priority,
                        uint8_t left_position, uint8_t right_position)

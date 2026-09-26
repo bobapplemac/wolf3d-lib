@@ -295,7 +295,16 @@ static void WG_FrontSoundPreviewNumber(unsigned sound_number)
     id_sd_music_t *mixer;
     const uint8_t *effect_data;
     size_t effect_size;
-    int digital_number = ID_SD_DigitalNumberForSound(sound_number);
+    int digital_number;
+
+    if (!WG_SoundNumberForVariant(wg_data_set.variant,
+                                  (wg_sound_t)sound_number,
+                                  &sound_number))
+    {
+        return;
+    }
+    digital_number = ID_SD_DigitalNumberForSoundForVariant(
+        wg_data_set.variant, sound_number);
 
     if (wg_game.active)
     {
@@ -2158,7 +2167,8 @@ static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty)
         goto cleanup;
     }
     wg_game.level.shareware =
-        wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14;
+        wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14
+        || wg_data_set.variant == WG_GAME_SPEAR_DEMO_SDM;
     wg_game.level.map_number = (uint8_t)map_number;
     wg_game.map_number = map_number;
     wg_game.level_start_score = wg_game.level.score;
@@ -2527,11 +2537,20 @@ static int WG_GameSessionTick(void)
             size_t size;
             const wg_sound_event_t *event =
                 &wg_game.level.sound_events[sound];
-            unsigned sound_number = event->sound;
+            unsigned sound_number;
+            int digital_number;
+
+            if (!WG_SoundNumberForVariant(wg_data_set.variant,
+                                          (wg_sound_t)event->sound,
+                                          &sound_number))
+            {
+                continue;
+            }
             size_t chunk = (wg_sound_mode == 1U ? 0U
                                 : WG_DataSoundCount(wg_data_set.variant))
                            + sound_number;
-            int digital_number = ID_SD_DigitalNumberForSound(sound_number);
+            digital_number = ID_SD_DigitalNumberForSoundForVariant(
+                wg_data_set.variant, sound_number);
 
             if (WG_AudioGetChunk(&wg_game.audio, chunk, &data, &size))
             {
@@ -2711,7 +2730,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
-    level.shareware = wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14;
+    level.shareware = wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14
+                      || wg_data_set.variant == WG_GAME_SPEAR_DEMO_SDM;
     level.map_number = (uint8_t)map_number;
     if (open_doors)
     {

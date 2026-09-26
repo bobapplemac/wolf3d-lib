@@ -353,9 +353,7 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
             return 0;
         }
         WL_GiveAmmo(level, 25U);
-        /* SOD calls GETAMMOBOXSND here; semantic sound remapping is
-         * performed by the active data profile. */
-        sound = WG_SOUND_GET_AMMO;
+        sound = WG_SOUND_GET_AMMO_BOX;
         break;
     case WG_ITEM_MACHINEGUN:
         WL_GiveWeapon(level, WG_WEAPON_MACHINEGUN);
@@ -403,6 +401,7 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
         level->spear_angle = level->player_angle;
         level->victory_flag = 1U;
         level->bonus_count = 18U;
+        (void)WG_QueueSound(level, WG_SOUND_GET_SPEAR);
         object->removed = 1U;
         object->blocking = 0U;
         return 1;

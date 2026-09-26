@@ -488,6 +488,30 @@ static void WL_QueueDeathSound(wg_level_t *level, const wg_actor_t *actor)
             sound = WG_SOUND_ROSE;
             positioned = 0;
             break;
+        case WG_ACTOR_SPECTRE:
+            sound = WG_SOUND_GHOST_FADE;
+            positioned = 0;
+            break;
+        case WG_ACTOR_ANGEL:
+            sound = WG_SOUND_ANGEL_DEATH;
+            positioned = 0;
+            break;
+        case WG_ACTOR_TRANS:
+            sound = WG_SOUND_TRANS_DEATH;
+            positioned = 0;
+            break;
+        case WG_ACTOR_UBER:
+            sound = WG_SOUND_UBER_DEATH;
+            positioned = 0;
+            break;
+        case WG_ACTOR_WILL:
+            sound = WG_SOUND_WILHELM_DEATH;
+            positioned = 0;
+            break;
+        case WG_ACTOR_DEATH:
+            sound = WG_SOUND_KNIGHT_DEATH;
+            positioned = 0;
+            break;
         default:
             return;
         }
@@ -647,6 +671,10 @@ static int WL_TickPainOrDeath(wg_level_t *level, wg_actor_t *actor,
         actor->shape = WL_DeathShape(level->variant,
                                      actor->actor_class, frame);
         actor->tic_count += WL_DeathFrameDuration(actor->actor_class, frame);
+        if (actor->actor_class == WG_ACTOR_ANGEL && frame == 1U)
+        {
+            (void)WG_QueueSound(level, WG_SOUND_SLURPIE);
+        }
     }
     return 1;
 }
@@ -1651,10 +1679,19 @@ static void WL_T_SpearLaunch(wg_level_t *level, const wg_actor_t *actor,
     {
         projectile_class = WG_ACTOR_HROCKET;
         WL_T_Shoot(level, (wg_actor_t *)actor);
+        (void)WG_QueueSoundAt(level, WG_SOUND_KNIGHT_MISSILE,
+                              actor->x, actor->y);
     }
     else if (actor->actor_class == WG_ACTOR_ANGEL)
     {
         projectile_class = WG_ACTOR_SPARK;
+        (void)WG_QueueSoundAt(level, WG_SOUND_ANGEL_FIRE,
+                              actor->x, actor->y);
+    }
+    else
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_MISSILE_FIRE,
+                              actor->x, actor->y);
     }
     projectile = WL_SpawnAimedProjectile(level, actor, projectile_class);
     if (projectile != NULL && actor->actor_class == WG_ACTOR_DEATH)
@@ -2110,7 +2147,11 @@ static void WL_T_Shoot(wg_level_t *level, wg_actor_t *actor)
     }
     else if (actor->actor_class == WG_ACTOR_BOSS
              || actor->actor_class == WG_ACTOR_MECHA_HITLER
-             || actor->actor_class == WG_ACTOR_REAL_HITLER)
+             || actor->actor_class == WG_ACTOR_REAL_HITLER
+             || actor->actor_class == WG_ACTOR_TRANS
+             || actor->actor_class == WG_ACTOR_UBER
+             || actor->actor_class == WG_ACTOR_WILL
+             || actor->actor_class == WG_ACTOR_DEATH)
     {
         (void)WG_QueueSoundAt(level, WG_SOUND_BOSS_FIRE,
                               actor->x, actor->y);
@@ -2311,6 +2352,12 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 actor->tic_count += 40;
                 actor->shape = (uint16_t)(391U +
                     ((actor->state - WG_STATE_ANGEL_TIRED1) & 1U));
+                if (actor->state == WG_STATE_ANGEL_TIRED3
+                    || actor->state == WG_STATE_ANGEL_TIRED5
+                    || actor->state == WG_STATE_ANGEL_TIRED7)
+                {
+                    (void)WG_QueueSound(level, WG_SOUND_ANGEL_TIRED);
+                }
             }
             continue;
         }
@@ -2555,6 +2602,7 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                         actor->state = WG_STATE_ANGEL_TIRED1;
                         actor->tic_count += 40;
                         actor->shape = 391U;
+                        (void)WG_QueueSound(level, WG_SOUND_ANGEL_TIRED);
                     }
                     else if ((WG_RandomNext(&level->random) & 1U) != 0U)
                     {
@@ -3026,17 +3074,26 @@ static void WL_FirstSighting(wg_level_t *level, wg_actor_t *actor)
         actor->speed *= 3;
         break;
     case WG_ACTOR_SPECTRE:
+        (void)WG_QueueSound(level, WG_SOUND_GHOST_SIGHT);
         actor->speed = 800;
         break;
     case WG_ACTOR_ANGEL:
+        (void)WG_QueueSound(level, WG_SOUND_ANGEL_SIGHT);
+        actor->speed = 1536;
+        break;
     case WG_ACTOR_TRANS:
+        (void)WG_QueueSound(level, WG_SOUND_TRANS_SIGHT);
         actor->speed = 1536;
         break;
     case WG_ACTOR_UBER:
         actor->speed = 3000;
         break;
     case WG_ACTOR_WILL:
+        (void)WG_QueueSound(level, WG_SOUND_WILHELM_SIGHT);
+        actor->speed = 2048;
+        break;
     case WG_ACTOR_DEATH:
+        (void)WG_QueueSound(level, WG_SOUND_KNIGHT_SIGHT);
         actor->speed = 2048;
         break;
     default:
