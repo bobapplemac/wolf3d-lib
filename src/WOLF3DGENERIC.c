@@ -7,6 +7,7 @@
 
 #include "WG_DATA.h"
 #include "WG_AUDIO.h"
+#include "WG_CONFIG.h"
 #include "WG_FIXED.h"
 #include "WG_FILE.h"
 #include "WG_GRAPHICS.h"
@@ -81,6 +82,7 @@ static char wg_save_original_name[WL_SAVE_NAME_LENGTH + 1U];
 static uint8_t wg_adlib_effects = 1U;
 static uint8_t wg_digitized_effects = 1U;
 static uint8_t wg_music_enabled = 1U;
+static uint8_t wg_config_ready;
 static unsigned wg_next_demo;
 
 typedef enum wg_attract_phase
@@ -849,6 +851,85 @@ static int WG_SavePath(char *path, size_t path_size, unsigned slot)
     length = snprintf(path, path_size, "SAVEGAM%u%s",
                       slot, wg_data_set.extension);
     return length >= 0 && (size_t)length < path_size;
+}
+
+static int WG_ConfigPath(char *path, size_t path_size)
+{
+    int length;
+
+    if (path == NULL)
+    {
+        return 0;
+    }
+    length = snprintf(path, path_size, "CONFIG%s", wg_data_set.extension);
+    return length >= 0 && (size_t)length < path_size;
+}
+
+static void WG_ApplyConfig(const wg_config_t *config)
+{
+    memcpy(wg_high_scores, config->high_scores, sizeof(wg_high_scores));
+    memcpy(wg_action_keys, config->action_keys, sizeof(wg_action_keys));
+    memcpy(wg_movement_keys, config->movement_keys, sizeof(wg_movement_keys));
+    memcpy(wg_mouse_bindings, config->mouse_bindings,
+           sizeof(wg_mouse_bindings));
+    wg_adlib_effects = config->adlib_effects;
+    wg_digitized_effects = config->digitized_effects;
+    wg_music_enabled = config->music_enabled;
+    wg_mouse_enabled = config->mouse_enabled;
+    wg_mouse_adjustment = config->mouse_adjustment;
+    wg_saved_mouse_adjustment = config->mouse_adjustment;
+    wg_view_size = config->view_size;
+    wg_change_view_size = config->view_size;
+    wg_saved_view_size = config->view_size;
+}
+
+static void WG_CaptureConfig(wg_config_t *config)
+{
+    memset(config, 0, sizeof(*config));
+    memcpy(config->high_scores, wg_high_scores, sizeof(config->high_scores));
+    memcpy(config->action_keys, wg_action_keys, sizeof(config->action_keys));
+    memcpy(config->movement_keys, wg_movement_keys,
+           sizeof(config->movement_keys));
+    memcpy(config->mouse_bindings, wg_mouse_bindings,
+           sizeof(config->mouse_bindings));
+    config->adlib_effects = wg_adlib_effects;
+    config->digitized_effects = wg_digitized_effects;
+    config->music_enabled = wg_music_enabled;
+    config->mouse_enabled = wg_mouse_enabled;
+    config->mouse_adjustment = (uint8_t)wg_mouse_adjustment;
+    config->view_size = (uint8_t)wg_view_size;
+}
+
+static void WG_LoadConfig(void)
+{
+    wg_config_t config;
+    char path[32];
+
+    WG_ConfigDefaults(&config);
+    if (wg_data_loaded && WG_IsInteractive()
+        && WG_ConfigPath(path, sizeof(path)))
+    {
+        (void)WG_ConfigReadFile(path, wg_data_set.variant, &config);
+    }
+    WG_ApplyConfig(&config);
+    wg_config_ready = 1U;
+}
+
+static void WG_WriteConfig(void)
+{
+    wg_config_t config;
+    char path[32];
+
+    if (!wg_config_ready || !wg_data_loaded || !WG_IsInteractive()
+        || !WG_ConfigPath(path, sizeof(path)))
+    {
+        return;
+    }
+    WG_CaptureConfig(&config);
+    if (!WG_ConfigWriteFile(path, wg_data_set.variant, &config))
+    {
+        WG_ReportError("Unable to write the Wolf3D configuration file.");
+    }
 }
 
 static void WG_RefreshSaveSlots(void)
@@ -2781,9 +2862,11 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         return WG_RESULT_PLATFORM_ERROR;
     }
     wg_start_map = map_number;
-    wg_view_size = WG_HasArgument(argc, argv, "--view-size")
-                       ? view_size : WL_VIEW_SIZE_DEFAULT;
-    WL_HighScoresDefault(wg_high_scores);
+    WG_LoadConfig();
+    if (WG_HasArgument(argc, argv, "--view-size"))
+    {
+        wg_view_size = view_size;
+    }
     if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
         && WG_IsInteractive())
     {
@@ -4317,6 +4400,7 @@ void wolf3dgeneric_Shutdown(void)
     }
 
     WG_CloseFrontHelp();
+    WG_WriteConfig();
     WG_GameSessionClose();
     WG_FrontMusicClose();
     WG_Shutdown();
@@ -4340,5 +4424,6 @@ void wolf3dgeneric_Shutdown(void)
     wg_saved_view_size = WL_VIEW_SIZE_DEFAULT;
     wg_attract_phase = WG_ATTRACT_NONE;
     wg_attract_deadline = 0U;
+    wg_config_ready = 0U;
     wg_initialized = 0;
 }

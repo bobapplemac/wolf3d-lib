@@ -366,8 +366,11 @@ Exhausting the last life inserts the score, switches to `ROSTER_MUS`, and shows
 that table. A qualifying entry uses the original `ID_IN.C` shifted/unshifted
 scan-code tables and `US_LineInput` editing rules: Caps Lock, cursor movement,
 Home/End, Backspace/Delete, insertion, Enter/Escape, 57 characters, and the
-100-pixel font-width limit. Configuration persistence remains a storage
-follow-up.
+100-pixel font-width limit. `WG_CONFIG.c` replaces the compiler-layout-dependent
+DOS configuration dump with an explicitly sized, little-endian format carrying
+the same high scores, sound choices, mouse settings, key bindings, and view
+size. Edition tagging, bounds checks, and a checksum reject incompatible or
+damaged files.
 
 Win32 supplies relative mouse packets through the generic event contract rather
 than exposing window coordinates to the engine. `WL_PLAY.c` applies the original

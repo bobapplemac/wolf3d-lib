@@ -7,6 +7,7 @@
 #include "WG_ASSETS.h"
 #include "ID_CA.h"
 #include "WG_DATA.h"
+#include "WG_CONFIG.h"
 #include "WG_FIXED.h"
 #include "ID_VH.h"
 #include "WG_GRAPHICS.h"
@@ -3601,6 +3602,51 @@ static void TestPortableSave(void)
                          decoded_name, &decoded));
 }
 
+static void TestPortableConfig(void)
+{
+    uint8_t encoded[WG_CONFIG_BUFFER_SIZE];
+    wg_config_t source;
+    wg_config_t decoded;
+    size_t encoded_size = 0U;
+    size_t index;
+    uint64_t hash = 1469598103934665603ULL;
+
+    WG_ConfigDefaults(&source);
+    source.high_scores[0].score = 123456U;
+    source.high_scores[0].completed = 8U;
+    source.high_scores[0].episode = 2U;
+    memcpy(source.high_scores[0].name, "PORTABLE", 9U);
+    source.action_keys[0] = WG_KEY_ALT;
+    source.movement_keys[3] = WG_KEY_HOME;
+    source.mouse_bindings[0] = 2U;
+    source.mouse_bindings[1] = UINT8_MAX;
+    source.adlib_effects = 0U;
+    source.digitized_effects = 1U;
+    source.music_enabled = 0U;
+    source.mouse_enabled = 1U;
+    source.mouse_adjustment = 9U;
+    source.view_size = 19U;
+
+    CHECK(WG_ConfigEncode(encoded, sizeof(encoded), &encoded_size,
+                          WG_GAME_WOLF3D_FULL_GT_14, &source));
+    for (index = 0U; index < encoded_size; ++index)
+    {
+        hash ^= encoded[index];
+        hash *= 1099511628211ULL;
+    }
+    CHECK(WG_ConfigDecode(encoded, encoded_size,
+                          WG_GAME_WOLF3D_FULL_GT_14, &decoded));
+    CHECK(memcmp(&source, &decoded, sizeof(source)) == 0);
+    CHECK(!WG_ConfigDecode(encoded, encoded_size,
+                           WG_GAME_WOLF3D_SHAREWARE_14, &decoded));
+    CHECK(!WG_ConfigDecode(encoded, encoded_size - 1U,
+                           WG_GAME_WOLF3D_FULL_GT_14, &decoded));
+    encoded[20U] ^= 1U;
+    CHECK(!WG_ConfigDecode(encoded, encoded_size,
+                           WG_GAME_WOLF3D_FULL_GT_14, &decoded));
+    CHECK(hash == 0xe6db4f8c7bb574b9ULL);
+}
+
 int main(int argc, char **argv)
 {
     TestIMFSequencer();
@@ -3633,6 +3679,7 @@ int main(int argc, char **argv)
     TestIntermission();
     TestMenuMovement();
     TestPortableSave();
+    TestPortableConfig();
     TestPaletteShifts();
     TestPlayerDeathCamera();
     TestViewMath();

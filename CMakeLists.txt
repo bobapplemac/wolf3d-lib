@@ -21,6 +21,7 @@ target_compile_features(nuked-opl3 PUBLIC c_std_99)
 set(WG_CORE_SOURCES
     src/WG_ASSETS.c
     src/WG_AUDIO.c
+    src/WG_CONFIG.c
     src/ID_CA.c
     src/WG_DATA.c
     src/WG_FILE.c

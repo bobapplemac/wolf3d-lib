@@ -1120,3 +1120,17 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --in-game-men
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --load-game-view --frame-hash --dump-frame out\load-game.ppm
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-view --frame-hash --dump-frame out\save-game.ppm
 ```
+
+## 2026-09-25: Portable configuration and high scores
+
+- Added `WG_CONFIG.c`, the portable counterpart to `WL_MAIN.C`'s raw DOS
+  `CONFIG.WL1` / `CONFIG.WL6` structure dump. It explicitly encodes high
+  scores, sound selections, mouse state and sensitivity, custom controls, and
+  view size without serializing compiler padding or host-sized fields.
+- The format is versioned, little-endian, edition-tagged, range-checked, and
+  protected by an FNV-1a checksum. Missing or invalid configuration files fall
+  back to the original defaults; interactive shutdown writes the current
+  settings.
+- A nontrivial serialization fixture hashes to `e6db4f8c7bb574b9` identically
+  in MSVC x86 and x64 builds. Regression coverage also rejects truncated,
+  corrupted, and wrong-edition files.
