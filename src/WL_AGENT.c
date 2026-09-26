@@ -1000,6 +1000,15 @@ int WL_TickPlayerAttack(struct wg_level *level, unsigned tics,
     return 1;
 }
 
+unsigned WL_StatusDisplayFloor(wg_game_variant_t variant, unsigned map)
+{
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR && map == 20U)
+    {
+        return 18U;
+    }
+    return map + 1U;
+}
+
 int WL_DrawStatusBar(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     const wg_graphics_t *graphics, const wl_status_t *status)
@@ -1026,7 +1035,9 @@ int WL_DrawStatusBar(
            && WL_DrawNumber(framebuffer, graphics, &chunks,
                             14, 16, 1, status->lives)
            && WL_DrawNumber(framebuffer, graphics, &chunks,
-                            2, 16, 2, (uint32_t)status->map + 1U)
+                            2, 16, 2,
+                            WL_StatusDisplayFloor(graphics->variant,
+                                                  status->map))
            && WL_DrawNumber(framebuffer, graphics, &chunks,
                             27, 16, 2, status->ammo)
            && WL_StatusDrawPicture(framebuffer, graphics,

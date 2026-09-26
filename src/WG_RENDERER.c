@@ -7,7 +7,7 @@
 #include "WL_DRAW.h"
 #include "WL_SCALE.h"
 
-static const uint8_t wg_ceiling_colors[60] =
+static const uint8_t wg_wolf_ceiling_colors[60] =
 {
     0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0xbf,
     0x4e,0x4e,0x4e,0x1d,0x8d,0x4e,0x1d,0x2d,0x1d,0x8d,
@@ -15,6 +15,13 @@ static const uint8_t wg_ceiling_colors[60] =
     0x1d,0x9d,0x2d,0xdd,0xdd,0x9d,0x2d,0x4d,0x1d,0xdd,
     0x7d,0x1d,0x2d,0x2d,0xdd,0xd7,0x1d,0x1d,0x1d,0x2d,
     0x1d,0x1d,0x1d,0x1d,0xdd,0xdd,0x7d,0xdd,0xdd,0xdd
+};
+
+static const uint8_t wg_spear_ceiling_colors[21] =
+{
+    0x6f, 0x4f, 0x1d, 0xde, 0xdf, 0x2e, 0x7f, 0x9e, 0xae, 0x7f,
+    0x1d, 0xde, 0xdf, 0xde, 0xdf, 0xde, 0xe1, 0xdc, 0x2e, 0x1d,
+    0xdc
 };
 
 int WG_WallCacheLoad(wg_wall_cache_t *cache, const wg_pages_t *pages)
@@ -77,11 +84,27 @@ int WG_RenderStaticView(
     wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
     uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE])
 {
-    size_t color_index = (size_t)episode * 10U + map;
+    const uint8_t *ceiling_colors;
+    size_t ceiling_color_count;
+    size_t color_index;
     int view_height;
     int view_x;
     int view_y;
     int pixel;
+
+    if (WG_DataVariantFamily(level != NULL ? level->variant : WG_GAME_UNKNOWN)
+        == WG_GAME_FAMILY_SPEAR)
+    {
+        ceiling_colors = wg_spear_ceiling_colors;
+        ceiling_color_count = sizeof(wg_spear_ceiling_colors);
+        color_index = map;
+    }
+    else
+    {
+        ceiling_colors = wg_wolf_ceiling_colors;
+        ceiling_color_count = sizeof(wg_wolf_ceiling_colors);
+        color_index = (size_t)episode * 10U + map;
+    }
 
     if (framebuffer == NULL || level == NULL || tables == NULL
         || walls == NULL || walls->pixels == NULL || hits == NULL
@@ -89,7 +112,7 @@ int WG_RenderStaticView(
         || tables->view_width < 64U
         || tables->view_width > WG_VIDEO_WIDTH
         || (tables->view_width & 15U) != 0U
-        || color_index >= sizeof(wg_ceiling_colors)
+        || color_index >= ceiling_color_count
         || walls->count < 8U
         || !WG_RaycastWallsVisible(
             level, tables, player_x, player_y, player_angle,
@@ -108,7 +131,7 @@ int WG_RenderStaticView(
     for (pixel = 0; pixel < view_height / 2; ++pixel)
     {
         memset(framebuffer + (view_y + pixel) * WG_VIDEO_WIDTH + view_x,
-               wg_ceiling_colors[color_index], tables->view_width);
+               ceiling_colors[color_index], tables->view_width);
     }
     for (; pixel < view_height; ++pixel)
     {

@@ -459,12 +459,16 @@ static void TestSpearBossSetup(void)
     {
         5, 1450, 850, 1050, 950, 1250
     };
+
     uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     wg_map_t map;
     wg_level_t level;
     size_t index;
 
+    CHECK(WL_StatusDisplayFloor(WG_GAME_SPEAR_FULL_SOD, 20U) == 18U);
+    CHECK(WL_StatusDisplayFloor(WG_GAME_SPEAR_FULL_SOD, 19U) == 20U);
+    CHECK(WL_StatusDisplayFloor(WG_GAME_WOLF3D_FULL_GT_14, 20U) == 21U);
     memset(&map, 0, sizeof(map));
     for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
     {
@@ -2913,6 +2917,12 @@ static void TestStaticRenderer(void)
     CHECK(framebuffer[80 * WG_VIDEO_WIDTH + 159] == 77);
     CHECK(visible_tiles[32 * WG_LEVEL_SIZE + 32] == 1U);
     CHECK(visible_tiles[32 * WG_LEVEL_SIZE + 40] == 1U);
+    level.variant = WG_GAME_SPEAR_FULL_SOD;
+    CHECK(WG_RenderStaticView(framebuffer, &level, &tables, &walls, 0, 0,
+                              32 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                              32 * WG_FIXED_ONE + WG_FIXED_ONE / 2, 0, hits,
+                              visible_tiles));
+    CHECK(framebuffer[0] == 0x6f);
 }
 
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,

@@ -1275,7 +1275,8 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   Angel's repeated three-volley/rest cycle, and the Spectre fade/dormancy/wake
   cycle.
 - Added a deterministic real-map Trans Grosse render at Mission 1 map 5. The
-  indexed frame hashes to `522d665351e0e1d8` under Spear's corrected palette.
+  indexed frame hashes to `dd1b3992157d8354` under Spear's corrected palette
+  and original map-specific ceiling color.
 
 ![Trans Grosse decoded and rendered from the original SOD archives](../out/sod-trans-boss.png)
 
@@ -1341,9 +1342,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   M2 directory may contain `VSWAP.SOD`, but selecting `--game SD2` still uses
   `CONFIG.SD2` and `SAVEGAM?.SD2`, preventing cross-campaign collisions.
 - Recorded exact hashes for the tested GOG archives. The Return to Danger and
-  Ultimate Challenge opening frames hash to `6fa88e8f025797bf` and
-  `7cc04bae15ab353c`; both retain the corrected Spear palette hash
-  `eba126e8df00d1cb`.
+  Ultimate Challenge opening frames hash to `952d61e2cbbc6545` and
+  `4f0e225bd4412cbc`; both use the corrected Spear palette and original
+  ceiling-color table.
 
 ![Return to Danger opening map](../out/sd2-opening.png)
 
@@ -1363,10 +1364,20 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   screen; the next proceeds to high scores. Its deterministic frame hashes to
   `e8186a081eb15e49`.
 - Added real-archive gates for the full SOD and SDM demo streams, each hashing
-  to `3bf8d81e8e44dc0a` after 70 recorded commands.
+  to `525cbfb8e59bee04` after 70 recorded commands.
 
 ![Spear embedded attract demo](../out/sod-demo.png)
 
 ![Spear credits](../out/sod-credits.png)
 
 ![SDM completion message](../out/sdm-conclusion.png)
+
+## 2026-09-26: Original Spear ceiling colors
+
+- Restored the original `SPEAR`-conditional 21-entry `vgaCeiling` table instead
+  of indexing Wolf3D's 60-map table. The renderer selects the table from the
+  runtime game family, so the correction applies equally to SOD, SDM, and all
+  three mission profiles without compile-time branches.
+- Added a renderer-level assertion for Spear map 1's `0x6f` ceiling and updated
+  the affected Trans Grosse and attract-demo visual hashes. UI-only screens
+  remain byte-identical.

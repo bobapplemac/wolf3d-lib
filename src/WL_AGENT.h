@@ -54,5 +54,6 @@ int WL_TickPlayerAttack(struct wg_level *level, unsigned tics,
 int WL_DrawStatusBar(
     uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
     const wg_graphics_t *graphics, const wl_status_t *status);
+unsigned WL_StatusDisplayFloor(wg_game_variant_t variant, unsigned map);
 
 #endif
