@@ -48,6 +48,8 @@ int WL_DrawLevelCompleted(uint8_t *framebuffer,
                           const wg_level_t *level,
                           unsigned map_number,
                           const wl_intermission_t *intermission);
+int WL_DrawSpearDemoConclusion(uint8_t *framebuffer,
+                               const wg_graphics_t *graphics);
 int WL_VictoryCalculate(const wl_intermission_t ratios[8],
                         wl_victory_t *victory);
 int WL_VictoryCalculateForVariant(

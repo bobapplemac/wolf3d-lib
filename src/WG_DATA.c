@@ -479,3 +479,60 @@ size_t WG_DataMusicBase(wg_game_variant_t variant)
     return WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR
                ? 243U : 261U;
 }
+
+unsigned WG_DataDemoCount(wg_game_variant_t variant)
+{
+    return variant == WG_GAME_SPEAR_DEMO_SDM ? 1U : 4U;
+}
+
+size_t WG_DataDemoChunk(wg_game_variant_t variant, unsigned demo_number)
+{
+    size_t first_chunk;
+
+    if (demo_number >= WG_DataDemoCount(variant))
+    {
+        return SIZE_MAX;
+    }
+    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    {
+        first_chunk = 151U;
+    }
+    else if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        first_chunk = 139U;
+    }
+    else if (variant == WG_GAME_SPEAR_DEMO_SDM)
+    {
+        first_chunk = 132U;
+    }
+    else if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        first_chunk = 164U;
+    }
+    else
+    {
+        return SIZE_MAX;
+    }
+    return first_chunk + demo_number;
+}
+
+size_t WG_DataCreditsChunk(wg_game_variant_t variant)
+{
+    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    {
+        return 101U;
+    }
+    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        return 89U;
+    }
+    if (variant == WG_GAME_SPEAR_DEMO_SDM)
+    {
+        return 78U;
+    }
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        return 92U;
+    }
+    return SIZE_MAX;
+}

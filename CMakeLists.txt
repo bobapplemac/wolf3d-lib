@@ -651,6 +651,17 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --high-score-view --frame-hash --palette-hash)
         set_tests_properties(high-score-view-sod PROPERTIES
             PASS_REGULAR_EXPRESSION "27c6ea7dee4ac784.*eba126e8df00d1cb")
+        add_test(NAME demo-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
+            --demo-view --demo-number 0 --demo-commands 70
+            --frame-hash --palette-hash)
+        set_tests_properties(demo-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "3bf8d81e8e44dc0a.*eba126e8df00d1cb")
+        add_test(NAME credits-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
+            --credits-view --frame-hash --palette-hash)
+        set_tests_properties(credits-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "9a2558b3b98c49d0.*eba126e8df00d1cb")
     endif()
     if(WG_TEST_SDM_PATH)
         add_test(NAME data-sdm COMMAND wg-tests --spear-data SDM 666 2
@@ -670,6 +681,22 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --intermission-view --frame-hash --palette-hash)
         set_tests_properties(intermission-view-sdm PROPERTIES
             PASS_REGULAR_EXPRESSION "4b48bd845813fdf5.*eba126e8df00d1cb")
+        add_test(NAME demo-view-sdm COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SDM_PATH}" --game SDM --play-view
+            --demo-view --demo-number 0 --demo-commands 70
+            --frame-hash --palette-hash)
+        set_tests_properties(demo-view-sdm PROPERTIES
+            PASS_REGULAR_EXPRESSION "3bf8d81e8e44dc0a.*eba126e8df00d1cb")
+        add_test(NAME credits-view-sdm COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SDM_PATH}" --game SDM --play-view
+            --credits-view --frame-hash --palette-hash)
+        set_tests_properties(credits-view-sdm PROPERTIES
+            PASS_REGULAR_EXPRESSION "9a2558b3b98c49d0.*eba126e8df00d1cb")
+        add_test(NAME conclusion-view-sdm COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SDM_PATH}" --game SDM --play-view --map 1
+            --demo-conclusion-view --frame-hash --palette-hash)
+        set_tests_properties(conclusion-view-sdm PROPERTIES
+            PASS_REGULAR_EXPRESSION "e8186a081eb15e49.*eba126e8df00d1cb")
     endif()
 
     foreach(_wg_mission IN ITEMS 1 2 3)

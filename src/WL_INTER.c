@@ -7,10 +7,23 @@
 #include "ID_VL.h"
 #include "ID_VH.h"
 #include "WL_AGENT.h"
+#include "WL_MENU.h"
 
 #define WL_INTERMISSION_BACKGROUND 127U
 #define WL_INTERMISSION_PAR_AMOUNT 500U
 #define WL_INTERMISSION_PERFECT_BONUS 10000U
+
+int WL_DrawSpearDemoConclusion(uint8_t *framebuffer,
+                               const wg_graphics_t *graphics)
+{
+    static const char message[] =
+        "This concludes your demo\n"
+        "of Spear of Destiny! Now,\n"
+        "go to your local software\n"
+        "store and buy it!";
+
+    return WL_DrawConfirm(framebuffer, graphics, message);
+}
 
 typedef struct wl_intermission_chunks
 {

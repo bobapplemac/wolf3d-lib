@@ -4344,6 +4344,18 @@ static void TestGameSelection(void)
     CHECK(strcmp(WG_DataVariantExtension(WG_GAME_SPEAR_DEMO_SDM),
                  "SDM") == 0);
     CHECK(WG_DataVariantExtension(WG_GAME_UNKNOWN) == NULL);
+    CHECK(WG_DataDemoChunk(WG_GAME_WOLF3D_SHAREWARE_14, 0U) == 151U);
+    CHECK(WG_DataDemoChunk(WG_GAME_WOLF3D_FULL_GT_14, 3U) == 142U);
+    CHECK(WG_DataDemoChunk(WG_GAME_SPEAR_FULL_SOD, 0U) == 164U);
+    CHECK(WG_DataDemoChunk(WG_GAME_SPEAR_MISSION_3_SD3, 3U) == 167U);
+    CHECK(WG_DataDemoChunk(WG_GAME_SPEAR_DEMO_SDM, 0U) == 132U);
+    CHECK(WG_DataDemoChunk(WG_GAME_SPEAR_DEMO_SDM, 1U) == SIZE_MAX);
+    CHECK(WG_DataDemoCount(WG_GAME_SPEAR_DEMO_SDM) == 1U);
+    CHECK(WG_DataDemoCount(WG_GAME_SPEAR_FULL_SOD) == 4U);
+    CHECK(WG_DataCreditsChunk(WG_GAME_WOLF3D_SHAREWARE_14) == 101U);
+    CHECK(WG_DataCreditsChunk(WG_GAME_WOLF3D_FULL_GT_14) == 89U);
+    CHECK(WG_DataCreditsChunk(WG_GAME_SPEAR_FULL_SOD) == 92U);
+    CHECK(WG_DataCreditsChunk(WG_GAME_SPEAR_DEMO_SDM) == 78U);
 }
 
 int main(int argc, char **argv)

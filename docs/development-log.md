@@ -1345,3 +1345,25 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 ![Return to Danger opening map](../out/sd2-opening.png)
 
 ![Ultimate Challenge opening map](../out/sd3-opening.png)
+
+## 2026-09-26: Spear attract loop and SDM conclusion
+
+- Replaced the remaining Wolf-specific attract resource assumptions with
+  profile data. Full Spear uses embedded demo chunks 164-167, SDM uses its
+  sole chunk 132, and the demo automatically repeats that stream as in the
+  original `SPEARDEMO` build.
+- Corrected the credits screen to chunk 92 for full Spear and chunk 78 for
+  SDM. Both archive editions reproduce the same original credits frame at
+  hash `9a2558b3b98c49d0` with the Spear palette.
+- Restored SDM's original four-line purchase message after completing Floor 2.
+  The first acknowledgement now opens that message over the completed-floor
+  screen; the next proceeds to high scores. Its deterministic frame hashes to
+  `e8186a081eb15e49`.
+- Added real-archive gates for the full SOD and SDM demo streams, each hashing
+  to `3bf8d81e8e44dc0a` after 70 recorded commands.
+
+![Spear embedded attract demo](../out/sod-demo.png)
+
+![Spear credits](../out/sod-credits.png)
+
+![SDM completion message](../out/sdm-conclusion.png)

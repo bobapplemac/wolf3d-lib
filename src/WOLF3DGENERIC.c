@@ -169,6 +169,7 @@ typedef struct wg_game_session
     uint8_t game_over;
     uint8_t paused;
     uint8_t intermission;
+    uint8_t demo_conclusion;
     uint8_t victory;
     uint8_t victory_collapse_phase;
     uint16_t victory_collapse_tics;
@@ -941,7 +942,7 @@ static int WG_DrawCreditsScreen(void)
     int result = 0;
 
     memset(&graphics, 0, sizeof(graphics));
-    chunk = wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14 ? 101U : 89U;
+    chunk = WG_DataCreditsChunk(wg_data_set.variant);
     if (WG_GraphicsOpen(&graphics, &wg_data_set)
         && WG_GraphicsDecodePicture(&graphics, chunk, &pixels,
                                     &width, &height)
@@ -2030,6 +2031,20 @@ static int WG_GameSessionFinishIntermission(void)
     if (WG_CampaignEndsAfterIntermission(wg_data_set.variant,
                                          wg_game.map_number))
     {
+        if (wg_data_set.variant == WG_GAME_SPEAR_DEMO_SDM
+            && !wg_game.demo_conclusion)
+        {
+            if (!WL_DrawSpearDemoConclusion(WG_ScreenBuffer,
+                                             &wg_game.graphics))
+            {
+                return 0;
+            }
+            wg_game.demo_conclusion = 1U;
+            WG_FrontSoundPreviewNumber(WG_SOUND_BONUS_EXTRA_LIFE);
+            memset(wg_game.keys, 0, sizeof(wg_game.keys));
+            wg_game.mouse_buttons = 0U;
+            return 1;
+        }
         return WG_GameSessionBeginHighScores();
     }
     return WG_GameSessionReload(wg_game.next_map_number, 0);
@@ -2237,18 +2252,17 @@ static int WG_GameSessionOpenDemo(unsigned demo_number)
     wl_demo_t demo;
     uint8_t *data = NULL;
     size_t size = 0U;
-    size_t first_chunk;
+    size_t demo_chunk;
 
-    if (demo_number >= 4U)
+    demo_chunk = WG_DataDemoChunk(wg_data_set.variant, demo_number);
+    if (demo_chunk == SIZE_MAX)
     {
         return 0;
     }
     memset(&graphics, 0, sizeof(graphics));
     memset(&demo, 0, sizeof(demo));
-    first_chunk = wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14
-                      ? 151U : 139U;
     if (!WG_GraphicsOpen(&graphics, &wg_data_set)
-        || !WG_GraphicsDecodeChunk(&graphics, first_chunk + demo_number,
+        || !WG_GraphicsDecodeChunk(&graphics, demo_chunk,
                                    &data, &size)
         || !WL_DemoOpen(&demo, data, size))
     {
@@ -2648,6 +2662,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
                                   int door_use_view,
                                   int pause_view,
                                   int intermission_view,
+                                  int demo_conclusion_view,
                                   int damage_flash_view,
                                   int bonus_flash_view,
                                   int player_death_view,
@@ -2705,10 +2720,11 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     }
     if (demo_view)
     {
+        size_t demo_chunk = WG_DataDemoChunk(wg_data_set.variant,
+                                             demo_number);
+
         if (!WG_GraphicsDecodeChunk(
-                &graphics,
-                wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14
-                    ? 151U + demo_number : 139U + demo_number,
+                &graphics, demo_chunk,
                 &demo_data, &demo_size)
             || !WL_DemoOpen(&demo, demo_data, demo_size))
         {
@@ -3108,7 +3124,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     {
         goto cleanup;
     }
-    if (intermission_view)
+    if (intermission_view || demo_conclusion_view)
     {
         wl_intermission_t intermission;
 
@@ -3122,6 +3138,12 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         {
             goto cleanup;
         }
+    }
+    if (demo_conclusion_view
+        && (wg_data_set.variant != WG_GAME_SPEAR_DEMO_SDM
+            || !WL_DrawSpearDemoConclusion(WG_ScreenBuffer, &graphics)))
+    {
+        goto cleanup;
     }
     if (victory_view)
     {
@@ -3242,8 +3264,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         uint8_t *pixels = NULL;
         uint16_t width;
         uint16_t height;
-        size_t chunk = graphics.variant == WG_GAME_WOLF3D_SHAREWARE_14
-                           ? 101U : 89U;
+        size_t chunk = WG_DataCreditsChunk(graphics.variant);
 
         if (!WG_GraphicsDecodePicture(&graphics, chunk, &pixels,
                                       &width, &height)
@@ -3506,6 +3527,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--door-use-view"),
             WG_HasArgument(argc, argv, "--pause-view"),
             WG_HasArgument(argc, argv, "--intermission-view"),
+            WG_HasArgument(argc, argv, "--demo-conclusion-view"),
             WG_HasArgument(argc, argv, "--damage-flash-view"),
             WG_HasArgument(argc, argv, "--bonus-flash-view"),
             WG_HasArgument(argc, argv, "--player-death-view"),
@@ -3923,7 +3945,8 @@ static int WG_AttractAdvance(void)
             {
                 return 0;
             }
-            wg_next_demo = (wg_next_demo + 1U) % 4U;
+            wg_next_demo = (wg_next_demo + 1U)
+                           % WG_DataDemoCount(wg_data_set.variant);
             return 1;
         default:
             return 1;
