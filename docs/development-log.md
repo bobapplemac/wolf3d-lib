@@ -1215,3 +1215,30 @@ Regenerate the capture with:
 ```text
 wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-menu-view --frame-hash --dump-frame out\joystick-menu.ppm
 ```
+
+## 2026-09-26: Spear runtime profiles and first visual milestones
+
+- Added one runtime data-profile system for `WL1`, `WL6`, `SOD`, `SDM`,
+  `SD1`, `SD2`, and `SD3`. `--game EXT` is authoritative; otherwise a
+  `wolf*` executable name prefers Wolf3D data and `spear*`/`sod*` prefers
+  Spear data, with unambiguous archive detection as the fallback.
+- Kept a single binary and source tree. Mission-disk profiles use their
+  `SD1`/`SD2`/`SD3` map and page extensions while retaining the original
+  shared `.SOD` graphics and audio convention.
+- Decoded the original two-part SOD title and VGA palette directly from the
+  archives, added the nine-row Spear options menu, and restored Spear's direct
+  New Game-to-difficulty flow (there is no Wolf episode selector).
+- Added SOD status-bar/menu chunk mappings, the original 21-map music order,
+  profile-specific audio bases, the four-sprite shift for ordinary enemies,
+  the 25-round ammunition box, and Spear artifact collection state.
+- The current strict MSVC test matrix contains 99 tests. SOD archive parsing,
+  all 21 Mission 1 maps, title/palette hashes, main menu, difficulty menu,
+  ordinary enemy shape transitions, and Spear-only items are now regression
+  checked. Spear bosses, intermission/victory sequences, and semantic sound
+  remapping remain the next fidelity tranche.
+
+![Spear of Destiny title decoded from the original archives](../out/sod-title.png)
+
+![Spear of Destiny options menu](../out/sod-main-menu.png)
+
+![Spear of Destiny difficulty menu](../out/sod-difficulty.png)

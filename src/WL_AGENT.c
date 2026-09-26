@@ -37,32 +37,52 @@ typedef struct wl_status_chunks
 static int WL_StatusChunks(wg_game_variant_t variant,
                            wl_status_chunks_t *chunks)
 {
-    size_t status_bar;
-
     if (chunks == NULL)
     {
         return 0;
     }
     if (variant == WG_GAME_WOLF3D_FULL_GT_14)
     {
-        status_bar = 86U;
+        chunks->status_bar = 86U;
+        chunks->knife = 91U;
+        chunks->no_key = 95U;
+        chunks->blank_digit = 98U;
+        chunks->zero_digit = 99U;
+        chunks->face_1a = 109U;
     }
     else if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
     {
         /* The supplied Apogee v1.4 WL1 graph is four chunks later than the
            early generated GFXE_WL1.H retained in the source release. */
-        status_bar = 98U;
+        chunks->status_bar = 98U;
+        chunks->knife = 103U;
+        chunks->no_key = 107U;
+        chunks->blank_digit = 110U;
+        chunks->zero_digit = 111U;
+        chunks->face_1a = 121U;
+    }
+    else if (variant == WG_GAME_SPEAR_DEMO_SDM)
+    {
+        chunks->status_bar = 76U;
+        chunks->knife = 79U;
+        chunks->no_key = 83U;
+        chunks->blank_digit = 86U;
+        chunks->zero_digit = 87U;
+        chunks->face_1a = 97U;
+    }
+    else if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        chunks->status_bar = 90U;
+        chunks->knife = 101U;
+        chunks->no_key = 105U;
+        chunks->blank_digit = 108U;
+        chunks->zero_digit = 109U;
+        chunks->face_1a = 119U;
     }
     else
     {
         return 0;
     }
-    chunks->status_bar = status_bar;
-    chunks->knife = status_bar + 5U;
-    chunks->no_key = status_bar + 9U;
-    chunks->blank_digit = status_bar + 12U;
-    chunks->zero_digit = status_bar + 13U;
-    chunks->face_1a = status_bar + 23U;
     return 1;
 }
 
@@ -327,6 +347,16 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
         WL_GiveAmmo(level, 4U);
         sound = WG_SOUND_GET_AMMO;
         break;
+    case WG_ITEM_AMMO25:
+        if (level->player_ammo == 99U)
+        {
+            return 0;
+        }
+        WL_GiveAmmo(level, 25U);
+        /* SOD calls GETAMMOBOXSND here; semantic sound remapping is
+         * performed by the active data profile. */
+        sound = WG_SOUND_GET_AMMO;
+        break;
     case WG_ITEM_MACHINEGUN:
         WL_GiveWeapon(level, WG_WEAPON_MACHINEGUN);
         sound = WG_SOUND_GET_MACHINEGUN;
@@ -366,6 +396,16 @@ int WL_GetBonus(struct wg_level *level, size_t static_index)
         WL_HealSelf(level, 1U);
         sound = WG_SOUND_SLURPIE;
         break;
+    case WG_ITEM_SPEAR:
+        level->spear_found = 1U;
+        level->spear_x = level->player_x;
+        level->spear_y = level->player_y;
+        level->spear_angle = level->player_angle;
+        level->victory_flag = 1U;
+        level->bonus_count = 18U;
+        object->removed = 1U;
+        object->blocking = 0U;
+        return 1;
     default:
         return 0;
     }

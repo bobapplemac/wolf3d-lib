@@ -178,6 +178,7 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
                          int patrol)
 {
     wg_actor_t *actor;
+    uint16_t sprite_offset;
     int destination_x = tile_x;
     int destination_y = tile_y;
 
@@ -210,14 +211,18 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
         return 0;
     }
     actor = &level->actors[level->actor_count++];
+    sprite_offset = WG_DataVariantFamily(level->variant)
+                            == WG_GAME_FAMILY_SPEAR ? 4U : 0U;
     actor->x = (int32_t)tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
     actor->y = (int32_t)tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
     actor->tile_x = (uint8_t)destination_x;
     actor->tile_y = (uint8_t)destination_y;
     actor->direction = (uint8_t)(map_direction * 2U);
-    actor->shape = shape;
-    actor->base_shape = WL_PatrolShape(actor_class);
-    actor->attack_shape = WL_AttackShape(actor_class);
+    actor->shape = (uint16_t)(shape + sprite_offset);
+    actor->base_shape = (uint16_t)(WL_PatrolShape(actor_class)
+                                   + sprite_offset);
+    actor->attack_shape = (uint16_t)(WL_AttackShape(actor_class)
+                                     + sprite_offset);
     actor->rotate = 1U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
     actor->angle = 0U;
@@ -282,8 +287,10 @@ int WL_SpawnDeadGuard(struct wg_level *level, uint8_t tile_x, uint8_t tile_y)
     actor->tile_x = tile_x;
     actor->tile_y = tile_y;
     actor->direction = 0U;
-    actor->shape = WG_SPR_GRD_DEAD;
-    actor->base_shape = WG_SPR_GRD_DEAD;
+    actor->shape = (uint16_t)(WG_SPR_GRD_DEAD
+        + (WG_DataVariantFamily(level->variant) == WG_GAME_FAMILY_SPEAR
+               ? 4U : 0U));
+    actor->base_shape = actor->shape;
     actor->attack_shape = 0U;
     actor->rotate = 0U;
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];

@@ -114,6 +114,24 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->save_title = 40U;
         return 1;
     }
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        chunks->options = 16U;
+        chunks->cursor = 5U;
+        chunks->mouse_back = 4U;
+        chunks->baby_mode = 21U;
+        chunks->episode_one = 0U;
+        chunks->not_selected = 7U;
+        chunks->selected = 8U;
+        chunks->effects_title = 17U;
+        chunks->digitized_title = 18U;
+        chunks->music_title = 19U;
+        chunks->control_title = 15U;
+        chunks->customize_title = 9U;
+        chunks->load_title = 27U;
+        chunks->save_title = 28U;
+        return 1;
+    }
     return 0;
 }
 
@@ -145,7 +163,7 @@ static void WL_ColorOutline(uint8_t *framebuffer, int x, int y,
 }
 
 static void WL_MenuItems(wl_menu_item_t items[WL_MAIN_MENU_ITEMS],
-                         int in_game)
+                         int in_game, wg_game_variant_t variant)
 {
     static const char *const labels[WL_MAIN_MENU_ITEMS] =
     {
@@ -159,6 +177,10 @@ static void WL_MenuItems(wl_menu_item_t items[WL_MAIN_MENU_ITEMS],
         items[index].text = labels[index];
         items[index].active = index == 4U ? (uint8_t)(in_game ? 1U : 0U)
                             : index == 6U ? 2U : 1U;
+    }
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        items[6].active = 0U;
     }
     if (in_game)
     {
@@ -184,7 +206,7 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WL_MenuItems(items, in_game);
+    WL_MenuItems(items, in_game, graphics->variant);
     if (items[selected].active == 0U)
     {
         WG_FontClose(&font);
@@ -206,13 +228,33 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
         return 0;
     }
     WL_MenuBar(framebuffer, WL_MENU_X - 8, WL_MENU_Y - 3,
-               WL_MENU_WIDTH, WL_MENU_HEIGHT, WL_MENU_BACKGROUND_COLOR);
+               WL_MENU_WIDTH,
+               WG_DataVariantFamily(graphics->variant)
+                       == WG_GAME_FAMILY_SPEAR
+                   ? WL_MENU_HEIGHT - 13 : WL_MENU_HEIGHT,
+               WL_MENU_BACKGROUND_COLOR);
     WL_MenuOutline(framebuffer, WL_MENU_X - 8, WL_MENU_Y - 3,
-                   WL_MENU_WIDTH, WL_MENU_HEIGHT);
+                   WL_MENU_WIDTH,
+                   WG_DataVariantFamily(graphics->variant)
+                           == WG_GAME_FAMILY_SPEAR
+                       ? WL_MENU_HEIGHT - 13 : WL_MENU_HEIGHT);
 
     for (index = 0U; index < WL_MAIN_MENU_ITEMS; ++index)
     {
         uint8_t color;
+        unsigned row = index;
+
+        if (WG_DataVariantFamily(graphics->variant) == WG_GAME_FAMILY_SPEAR)
+        {
+            if (index == 6U)
+            {
+                continue;
+            }
+            if (index > 6U)
+            {
+                --row;
+            }
+        }
 
         if (items[index].active == 0U)
         {
@@ -229,15 +271,28 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                                       : WL_MENU_TEXT_COLOR;
         }
         WG_FontDraw(&font, framebuffer, WL_MENU_X + WL_MENU_INDENT,
-                    WL_MENU_Y + (int)index * 13, items[index].text, color);
+                    WL_MENU_Y + (int)row * 13, items[index].text, color);
     }
     WG_FontClose(&font);
     return WG_VideoDrawPicture(framebuffer, graphics, chunks.cursor,
                                WL_MENU_X & ~7,
-                               WL_MENU_Y - 2 + (int)selected * 13);
+                               WL_MENU_Y - 2
+                                   + (int)(selected
+                                       - (WG_DataVariantFamily(
+                                                graphics->variant)
+                                                  == WG_GAME_FAMILY_SPEAR
+                                              && selected > 6U ? 1U : 0U))
+                                         * 13);
 }
 
 unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game)
+{
+    return WL_MainMenuMoveForVariant(selected, direction, in_game,
+                                     WG_GAME_WOLF3D_FULL_GT_14);
+}
+
+unsigned WL_MainMenuMoveForVariant(unsigned selected, int direction,
+                                   int in_game, wg_game_variant_t variant)
 {
     wl_menu_item_t items[WL_MAIN_MENU_ITEMS];
     unsigned candidate;
@@ -246,7 +301,7 @@ unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game)
     {
         return selected;
     }
-    WL_MenuItems(items, in_game);
+    WL_MenuItems(items, in_game, variant);
     candidate = selected;
     do
     {

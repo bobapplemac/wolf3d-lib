@@ -216,13 +216,15 @@ static wg_item_type_t WG_StaticItem(unsigned type)
     case 34U:
     case 38U:
         return WG_ITEM_GIBS;
+    case 49U: return WG_ITEM_AMMO25;
+    case 51U: return WG_ITEM_SPEAR;
     default:
         return WG_ITEM_NONE;
     }
 }
 
-int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
-                               wg_level_t *level)
+int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
+                            wg_game_variant_t variant, wg_level_t *level)
 {
     size_t index;
     int player_found = 0;
@@ -237,6 +239,7 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
     }
     memset(level, 0, sizeof(*level));
     memset(level->areas, WG_NO_AREA, sizeof(level->areas));
+    level->variant = variant;
     level->difficulty = difficulty;
     level->player_health = 100U;
     level->player_ammo = 8U;
@@ -287,7 +290,9 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
             level->player_angle = (uint16_t)angle;
             player_found = 1;
         }
-        else if (info >= 23U && info <= 71U)
+        else if (info >= 23U
+                 && info <= (WG_DataVariantFamily(variant)
+                                  == WG_GAME_FAMILY_SPEAR ? 74U : 71U))
         {
             wg_static_object_t *object;
             unsigned type = info - 23U;
@@ -300,14 +305,31 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
             object->tile_x = (uint8_t)(index % WG_LEVEL_SIZE);
             object->tile_y = (uint8_t)(index / WG_LEVEL_SIZE);
             object->blocking = (uint8_t)WG_StaticBlocks(type);
+            if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+            {
+                if (type == 15U || type == 44U || type == 48U
+                    || type == 50U)
+                {
+                    object->blocking = 1U;
+                }
+                else if (type == 40U)
+                {
+                    object->blocking = 0U;
+                }
+            }
             object->removed = 0U;
             /*
              * SPR_DEMO and SPR_DEATHCAM precede SPR_STAT_0. The final
              * non-Spear statinfo entry is the duplicate ammo clip.
              */
-            object->shape = info == 71U ? 28U : (uint16_t)(type + 2U);
-            object->item = info == 71U ? WG_ITEM_CLIP2
-                                       : WG_StaticItem(type);
+            object->shape = info == 71U
+                                && WG_DataVariantFamily(variant)
+                                   != WG_GAME_FAMILY_SPEAR
+                                ? 28U : (uint16_t)(type + 2U);
+            object->item = info == 71U
+                               && WG_DataVariantFamily(variant)
+                                  != WG_GAME_FAMILY_SPEAR
+                               ? WG_ITEM_CLIP2 : WG_StaticItem(type);
             if (object->item == WG_ITEM_CROSS
                 || object->item == WG_ITEM_CHALICE
                 || object->item == WG_ITEM_BIBLE
@@ -554,7 +576,15 @@ int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
 
 int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
 {
-    return WG_LevelBuildForDifficulty(map, WG_DIFFICULTY_MEDIUM, level);
+    return WG_LevelBuildForVariant(map, WG_DIFFICULTY_MEDIUM,
+                                   WG_GAME_WOLF3D_FULL_GT_14, level);
+}
+
+int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
+                               wg_level_t *level)
+{
+    return WG_LevelBuildForVariant(map, difficulty,
+                                   WG_GAME_WOLF3D_FULL_GT_14, level);
 }
 
 int WG_QueueSound(wg_level_t *level, wg_sound_t sound)

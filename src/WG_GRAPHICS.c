@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "WG_ENDIAN.h"
+#include "WG_PALETTE.h"
 
 #define WG_SPARSE_OFFSET 0x00ffffffU
 #define WG_START_PICTURES 3U
@@ -19,6 +20,14 @@ static size_t WG_GraphicsPictureCount(wg_game_variant_t variant)
     {
         return 144U;
     }
+    if (variant == WG_GAME_SPEAR_DEMO_SDM)
+    {
+        return 125U;
+    }
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        return 147U;
+    }
     return 0;
 }
 
@@ -26,7 +35,8 @@ static int WG_GraphicsPath(char *destination, size_t destination_size,
                            const wg_data_set_t *data_set, const char *base)
 {
     int result = snprintf(destination, destination_size, "%s/%s%s",
-                          data_set->root, base, data_set->extension);
+                          data_set->root, base,
+                          data_set->graphics_extension);
     return result >= 0 && (size_t)result < destination_size;
 }
 
@@ -319,5 +329,71 @@ int WG_GraphicsDecodeTitle(const wg_graphics_t *graphics,
     }
     memcpy(framebuffer, pixels, 320U * 200U);
     free(pixels);
+    return 1;
+}
+
+int WG_GraphicsDecodeTitleWithPalette(const wg_graphics_t *graphics,
+                                      wg_game_variant_t variant,
+                                      uint8_t framebuffer[320 * 200],
+                                      uint8_t palette[256 * 3])
+{
+    size_t first_chunk;
+    size_t palette_chunk;
+    uint8_t *pixels = NULL;
+    uint8_t *vga_palette = NULL;
+    size_t palette_size;
+    uint16_t width;
+    uint16_t height;
+    size_t index;
+
+    if (graphics == NULL || framebuffer == NULL || palette == NULL)
+    {
+        return 0;
+    }
+    if (WG_DataVariantFamily(variant) != WG_GAME_FAMILY_SPEAR)
+    {
+        if (!WG_GraphicsDecodeTitle(graphics, variant, framebuffer))
+        {
+            return 0;
+        }
+        memcpy(palette, WG_WolfPalette, 256U * 3U);
+        return 1;
+    }
+
+    first_chunk = variant == WG_GAME_SPEAR_DEMO_SDM ? 74U : 79U;
+    palette_chunk = variant == WG_GAME_SPEAR_DEMO_SDM ? 131U : 153U;
+    if (!WG_GraphicsDecodePicture(graphics, first_chunk, &pixels,
+                                  &width, &height)
+        || width != 320U || height != 80U)
+    {
+        free(pixels);
+        return 0;
+    }
+    memcpy(framebuffer, pixels, 320U * 80U);
+    free(pixels);
+    pixels = NULL;
+
+    if (!WG_GraphicsDecodePicture(graphics, first_chunk + 1U, &pixels,
+                                  &width, &height)
+        || width != 320U || height != 120U)
+    {
+        free(pixels);
+        return 0;
+    }
+    memcpy(framebuffer + 320U * 80U, pixels, 320U * 120U);
+    free(pixels);
+
+    if (!WG_GraphicsDecodeChunk(graphics, palette_chunk, &vga_palette,
+                                &palette_size)
+        || palette_size != 256U * 3U)
+    {
+        free(vga_palette);
+        return 0;
+    }
+    for (index = 0U; index < palette_size; ++index)
+    {
+        palette[index] = (uint8_t)((unsigned)vga_palette[index] * 255U / 63U);
+    }
+    free(vga_palette);
     return 1;
 }

@@ -21,6 +21,8 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                     const wg_graphics_t *graphics, unsigned selected,
                     int in_game);
 unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game);
+unsigned WL_MainMenuMoveForVariant(unsigned selected, int direction,
+                                   int in_game, wg_game_variant_t variant);
 int WL_DrawConfirm(uint8_t framebuffer[320 * 200],
                    const wg_graphics_t *graphics, const char *message);
 int WL_DrawLoadSaveMenu(

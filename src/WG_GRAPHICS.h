@@ -35,5 +35,9 @@ int WG_GraphicsDecodePicture(const wg_graphics_t *graphics, size_t chunk,
 int WG_GraphicsDecodeTitle(const wg_graphics_t *graphics,
                            wg_game_variant_t variant,
                            uint8_t framebuffer[320 * 200]);
+int WG_GraphicsDecodeTitleWithPalette(const wg_graphics_t *graphics,
+                                      wg_game_variant_t variant,
+                                      uint8_t framebuffer[320 * 200],
+                                      uint8_t palette[256 * 3]);
 
 #endif

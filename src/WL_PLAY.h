@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "WG_DATA.h"
+
 struct wg_level;
 struct wg_view_tables;
 struct wg_graphics;
@@ -58,6 +60,8 @@ int WL_PlayDemoCommand(struct wg_level *level,
                        wl_play_state_t *state,
                        const wl_demo_command_t *command);
 size_t WL_MusicChunkForMap(unsigned map_number);
+size_t WL_MusicChunkForVariant(wg_game_variant_t variant,
+                               unsigned map_number);
 int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics);
 void WL_UpdatePaletteShifts(struct wg_level *level,
                             uint8_t palette[256 * 3]);

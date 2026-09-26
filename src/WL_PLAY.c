@@ -29,7 +29,23 @@ int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics)
     /* The supplied Apogee v1.4 WL1 graph uses the later layout also used by
        its status bar: PAUSEDPIC is chunk 145 rather than the source release's
        early generated-header values. */
-    chunk = graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14 ? 145U : 133U;
+    if (graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    {
+        chunk = 145U;
+    }
+    else if (graphics->variant == WG_GAME_SPEAR_DEMO_SDM)
+    {
+        chunk = 126U;
+    }
+    else if (WG_DataVariantFamily(graphics->variant)
+             == WG_GAME_FAMILY_SPEAR)
+    {
+        chunk = 148U;
+    }
+    else
+    {
+        chunk = 133U;
+    }
     /* Original LatchDrawPic(20-4, 80-2*8, PAUSEDPIC): its x unit was
        eight pixels, hence the centered 128,64 destination below. */
     return WG_VideoDrawPicture(framebuffer, graphics, chunk, 128, 64);
@@ -121,6 +137,23 @@ size_t WL_MusicChunkForMap(unsigned map_number)
     };
 
     return 261U + songs[map_number < 60U ? map_number : 0U];
+}
+
+size_t WL_MusicChunkForVariant(wg_game_variant_t variant,
+                               unsigned map_number)
+{
+    static const uint8_t spear_songs[21] =
+    {
+        4U, 0U, 2U, 22U, 15U, 1U, 5U, 9U, 10U, 15U,
+        8U, 3U, 12U, 11U, 13U, 15U, 21U, 15U, 18U, 0U, 17U
+    };
+
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        return WG_DataMusicBase(variant)
+               + spear_songs[map_number < 21U ? map_number : 0U];
+    }
+    return WL_MusicChunkForMap(map_number);
 }
 
 void WL_PlayStateReset(wl_play_state_t *state)

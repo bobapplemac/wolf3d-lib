@@ -10,7 +10,7 @@ static int WG_AudioPath(char *destination, size_t destination_size,
                         const wg_data_set_t *data_set, const char *base)
 {
     int result = snprintf(destination, destination_size, "%s/%s%s",
-                          data_set->root, base, data_set->extension);
+                          data_set->root, base, data_set->audio_extension);
     return result >= 0 && (size_t)result < destination_size;
 }
 

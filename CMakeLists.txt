@@ -127,6 +127,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
 
     set(WG_TEST_WL1_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL1 data")
     set(WG_TEST_WL6_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL6 data")
+    set(WG_TEST_SOD_PATH "" CACHE PATH "Path to external Spear of Destiny SOD data")
     if(WG_TEST_WL1_PATH)
         add_test(NAME data-wl1 COMMAND wg-tests --data wl1 "${WG_TEST_WL1_PATH}")
         add_test(NAME boss-view-wl1 COMMAND wolf3dgeneric-headless
@@ -595,5 +596,24 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --high-score-entry-view --frame-hash)
         set_tests_properties(high-score-entry-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "3b75e429fe454ad8")
+    endif()
+    if(WG_TEST_SOD_PATH)
+        add_test(NAME data-sod COMMAND wg-tests --spear-data SOD 666 21
+            "${WG_TEST_SOD_PATH}")
+        add_test(NAME title-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --frame-hash
+            --palette-hash)
+        set_tests_properties(title-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "7aa653c3de8139c6.*e2a15174c649db6a")
+        add_test(NAME main-menu-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
+            --main-menu-view --frame-hash)
+        set_tests_properties(main-menu-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "ec2699111d9f0299")
+        add_test(NAME difficulty-menu-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
+            --difficulty-menu-view --frame-hash)
+        set_tests_properties(difficulty-menu-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "4b9dd46549814400")
     endif()
 endif()

@@ -60,7 +60,10 @@ static void WG_WriteLE32(FILE *stream, uint32_t value)
     (void)fwrite(bytes, 1U, sizeof(bytes), stream);
 }
 
-static int WG_WriteMusic(const char *data_path, unsigned map_number,
+static int WG_WriteMusic(const char *data_path,
+                         wg_game_variant_t requested_variant,
+                         wg_game_family_t preferred_family,
+                         unsigned map_number,
                          int sound_number, int digitized, int pc_speaker,
                          unsigned left_position, unsigned right_position,
                          const char *output_path)
@@ -84,9 +87,12 @@ static int WG_WriteMusic(const char *data_path, unsigned map_number,
     memset(&audio, 0, sizeof(audio));
     memset(&pages, 0, sizeof(pages));
     memset(&digi_bank, 0, sizeof(digi_bank));
-    if (!WG_DataOpen(&data_set, data_path)
+    if (!WG_DataOpenSelected(&data_set, data_path, requested_variant,
+                             preferred_family)
         || !WG_AudioOpen(&audio, &data_set)
-        || !WG_AudioGetChunk(&audio, WL_MusicChunkForMap(map_number),
+        || !WG_AudioGetChunk(&audio,
+                             WL_MusicChunkForVariant(data_set.variant,
+                                                     map_number),
                              &chunk, &chunk_size))
     {
         goto cleanup;
@@ -103,7 +109,8 @@ static int WG_WriteMusic(const char *data_path, unsigned map_number,
         if (sound_number > 86
             || !WG_AudioGetChunk(
                 &audio,
-                (pc_speaker && !digitized ? 0U : 87U)
+                (pc_speaker && !digitized
+                     ? 0U : WG_DataSoundCount(data_set.variant))
                     + (size_t)sound_number,
                                  &chunk, &chunk_size))
         {
@@ -295,6 +302,9 @@ int main(int argc, char **argv)
     const char *right_text;
     int digitized;
     int pc_speaker;
+    wg_game_variant_t requested_variant = WG_GAME_UNKNOWN;
+    wg_game_family_t preferred_family;
+    const char *game_text;
     unsigned map_number = 0U;
     unsigned left_position = 0U;
     unsigned right_position = 0U;
@@ -304,6 +314,19 @@ int main(int argc, char **argv)
     dump_path = WG_DumpPath(argc, argv);
     music_path = WG_ArgumentValue(argc, argv, "--dump-music");
     data_path = WG_ArgumentValue(argc, argv, "--data");
+    game_text = WG_ArgumentValue(argc, argv, "--game");
+    preferred_family = WG_DataExecutableFamily(argc > 0 ? argv[0] : NULL);
+    if (game_text != NULL)
+    {
+        if (!WG_DataParseGame(game_text, &requested_variant))
+        {
+            fprintf(stderr, "Unknown game data extension: %s\n", game_text);
+            return 1;
+        }
+        preferred_family = requested_variant == WG_GAME_UNKNOWN
+                               ? WG_GAME_FAMILY_UNKNOWN
+                               : WG_DataVariantFamily(requested_variant);
+    }
     map_text = WG_ArgumentValue(argc, argv, "--map");
     sound_text = WG_ArgumentValue(argc, argv, "--sound");
     left_text = WG_ArgumentValue(argc, argv, "--left-position");
@@ -356,8 +379,8 @@ int main(int argc, char **argv)
     }
     if (music_path != NULL
         && (data_path == NULL
-            || !WG_WriteMusic(data_path, map_number, sound_number, digitized,
-                              pc_speaker,
+            || !WG_WriteMusic(data_path, requested_variant, preferred_family,
+                              map_number, sound_number, digitized, pc_speaker,
                               left_position, right_position, music_path)))
     {
         fprintf(stderr, "Unable to write music dump: %s\n", music_path);

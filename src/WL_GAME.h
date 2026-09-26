@@ -129,7 +129,9 @@ typedef enum wg_item_type
     WG_ITEM_CROWN,
     WG_ITEM_FULLHEAL,
     WG_ITEM_GIBS,
-    WG_ITEM_CLIP2
+    WG_ITEM_CLIP2,
+    WG_ITEM_AMMO25,
+    WG_ITEM_SPEAR
 } wg_item_type_t;
 
 typedef struct wg_static_object
@@ -173,6 +175,7 @@ typedef struct wg_door
 
 typedef struct wg_level
 {
+    wg_game_variant_t variant;
     uint8_t tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     uint8_t areas[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     uint8_t area_by_player[WG_NUM_AREAS];
@@ -205,6 +208,10 @@ typedef struct wg_level
     uint8_t made_noise;
     uint16_t view_width;
     uint8_t victory_flag;
+    uint8_t spear_found;
+    int32_t spear_x;
+    int32_t spear_y;
+    uint16_t spear_angle;
     uint8_t level_completed;
     uint8_t secret_level;
     uint8_t shareware;
@@ -239,6 +246,8 @@ typedef struct wg_level
 int WG_LevelBuild(const wg_map_t *map, wg_level_t *level);
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level);
+int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
+                            wg_game_variant_t variant, wg_level_t *level);
 int WG_QueueSound(wg_level_t *level, wg_sound_t sound);
 unsigned WG_NextMapNumber(unsigned map_number, int secret_level);
 void WG_CampaignCapture(wg_campaign_state_t *state,

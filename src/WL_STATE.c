@@ -73,21 +73,44 @@ static int WL_IsDeathState(wg_actor_state_t state)
     return state >= WG_STATE_DIE1 && state <= WG_STATE_DIE9;
 }
 
-static uint16_t WL_PainShape(wg_actor_class_t actor_class, int second)
+static int WL_UsesSpearOrdinaryShapes(wg_game_variant_t variant,
+                                      wg_actor_class_t actor_class)
 {
+    if (WG_DataVariantFamily(variant) != WG_GAME_FAMILY_SPEAR)
+    {
+        return 0;
+    }
+    return actor_class == WG_ACTOR_GUARD
+           || actor_class == WG_ACTOR_OFFICER
+           || actor_class == WG_ACTOR_MUTANT
+           || actor_class == WG_ACTOR_SS
+           || actor_class == WG_ACTOR_DOG;
+}
+
+static uint16_t WL_PainShape(wg_game_variant_t variant,
+                             wg_actor_class_t actor_class, int second)
+{
+    uint16_t shape;
+
     switch (actor_class)
     {
     case WG_ACTOR_GUARD:
-        return (uint16_t)(second ? 94U : 90U);
+        shape = (uint16_t)(second ? 94U : 90U);
+        break;
     case WG_ACTOR_OFFICER:
-        return (uint16_t)(second ? 282U : 278U);
+        shape = (uint16_t)(second ? 282U : 278U);
+        break;
     case WG_ACTOR_MUTANT:
-        return (uint16_t)(second ? 231U : 227U);
+        shape = (uint16_t)(second ? 231U : 227U);
+        break;
     case WG_ACTOR_SS:
-        return (uint16_t)(second ? 182U : 178U);
+        shape = (uint16_t)(second ? 182U : 178U);
+        break;
     default:
         return 0U;
     }
+    return (uint16_t)(shape
+        + (WL_UsesSpearOrdinaryShapes(variant, actor_class) ? 4U : 0U));
 }
 
 static unsigned WL_DeathTimedFrames(wg_actor_class_t actor_class)
@@ -139,7 +162,8 @@ static int32_t WL_DeathFrameDuration(wg_actor_class_t actor_class,
     }
 }
 
-static uint16_t WL_DeathShape(wg_actor_class_t actor_class, unsigned frame)
+static uint16_t WL_DeathShape(wg_game_variant_t variant,
+                              wg_actor_class_t actor_class, unsigned frame)
 {
     static const uint16_t guard[] = {91U, 92U, 93U, 95U};
     static const uint16_t officer[] = {279U, 280U, 281U, 283U, 284U};
@@ -156,37 +180,54 @@ static uint16_t WL_DeathShape(wg_actor_class_t actor_class, unsigned frame)
     static const uint16_t gretel[] = {393U, 394U, 395U, 392U};
     static const uint16_t fat[] = {396U, 396U, 404U, 405U, 406U, 407U};
 
+    const uint16_t *shapes;
+
     switch (actor_class)
     {
     case WG_ACTOR_GUARD:
-        return guard[frame];
+        shapes = guard;
+        break;
     case WG_ACTOR_OFFICER:
-        return officer[frame];
+        shapes = officer;
+        break;
     case WG_ACTOR_MUTANT:
-        return mutant[frame];
+        shapes = mutant;
+        break;
     case WG_ACTOR_SS:
-        return ss[frame];
+        shapes = ss;
+        break;
     case WG_ACTOR_DOG:
-        return dog[frame];
+        shapes = dog;
+        break;
     case WG_ACTOR_BOSS:
-        return boss[frame];
+        shapes = boss;
+        break;
     case WG_ACTOR_SCHABBS:
-        return schabbs[frame];
+        shapes = schabbs;
+        break;
     case WG_ACTOR_FAKE:
-        return fake[frame];
+        shapes = fake;
+        break;
     case WG_ACTOR_MECHA_HITLER:
-        return mecha[frame];
+        shapes = mecha;
+        break;
     case WG_ACTOR_REAL_HITLER:
-        return hitler[frame];
+        shapes = hitler;
+        break;
     case WG_ACTOR_GIFT:
-        return gift[frame];
+        shapes = gift;
+        break;
     case WG_ACTOR_GRETEL:
-        return gretel[frame];
+        shapes = gretel;
+        break;
     case WG_ACTOR_FAT:
-        return fat[frame];
+        shapes = fat;
+        break;
     default:
         return 0U;
     }
+    return (uint16_t)(shapes[frame]
+        + (WL_UsesSpearOrdinaryShapes(variant, actor_class) ? 4U : 0U));
 }
 
 static int32_t WL_DeathTerminalDuration(wg_actor_class_t actor_class)
@@ -427,7 +468,7 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     actor->hit_points = 0;
     actor->state = WG_STATE_DIE1;
     actor->tic_count = WL_DeathFrameDuration(actor->actor_class, 0U);
-    actor->shape = WL_DeathShape(actor->actor_class, 0U);
+    actor->shape = WL_DeathShape(level->variant, actor->actor_class, 0U);
     actor->rotate = 0U;
     actor->flags = (uint16_t)(actor->flags & ~WG_ACTOR_FLAG_SHOOTABLE);
     actor->flags |= WG_ACTOR_FLAG_NONMARK;
@@ -471,12 +512,14 @@ static int WL_TickPainOrDeath(wg_level_t *level, wg_actor_t *actor,
                 return 0;
             }
             actor->state = WG_STATE_DEAD;
-            actor->shape = WL_DeathShape(actor->actor_class, frame);
+            actor->shape = WL_DeathShape(level->variant,
+                                         actor->actor_class, frame);
             actor->tic_count = WL_DeathTerminalDuration(actor->actor_class);
             return 1;
         }
         actor->state = (wg_actor_state_t)(actor->state + 1);
-        actor->shape = WL_DeathShape(actor->actor_class, frame);
+        actor->shape = WL_DeathShape(level->variant,
+                                     actor->actor_class, frame);
         actor->tic_count += WL_DeathFrameDuration(actor->actor_class, frame);
     }
     return 1;
@@ -2632,7 +2675,7 @@ int WL_DamageActor(wg_level_t *level, size_t actor_index, unsigned damage)
     {
         WL_FirstSighting(level, actor);
     }
-    pain_shape = WL_PainShape(actor->actor_class,
+    pain_shape = WL_PainShape(level->variant, actor->actor_class,
                               (actor->hit_points & 1) == 0);
     if (pain_shape != 0U)
     {

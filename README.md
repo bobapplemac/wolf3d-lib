@@ -10,9 +10,11 @@ The project deliberately does not add modern gameplay or rendering features.
 It requires separately supplied original game data and does not include any
 Wolfenstein 3D assets.
 
-The supported scope includes the Apogee shareware (`WL1`) and
-GT/ID/Activision full (`WL6`) v1.4 data sets. Spear of Destiny and Disney Sound
-Source output remain outside the current Wolf3D release scope. See
+The released scope includes the Apogee shareware (`WL1`) and
+GT/ID/Activision full (`WL6`) v1.4 data sets. Runtime profiles for Spear of
+Destiny (`SOD`), its demo (`SDM`), and the three mission data extensions
+(`SD1`, `SD2`, and `SD3`) are under development. Disney Sound Source output
+remains outside the project scope. See
 [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) for the completed staged plan.
 [`docs/source-layout.md`](docs/source-layout.md) maps each
 portable translation unit to its original Wolfenstein 3D source owner, and the
@@ -42,6 +44,23 @@ To run the interactive Win32 host:
 ```text
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
 ```
+
+When a directory contains more than one supported data set, select its data
+extension explicitly. The value is case-insensitive and may include its leading
+dot:
+
+```text
+wolf3dgeneric-win32 --data "C:\path\to\games" --game WL6
+```
+
+Accepted selectors are `WL1`, `WL6`, `SOD`, `SDM`, `SD1`, `SD2`, `SD3`, and
+`auto`. Without `--game`, an executable basename beginning with `wolf` prefers
+Wolf3D data, while one beginning with `spear` or `sod` prefers Spear data. An
+unrecognized basename, or `--game auto`, performs unqualified automatic
+detection. An explicit extension is strict: missing or invalid data produces an
+error rather than silently starting another edition. Mission-disk map and page
+archives retain their `.SD1`/`.SD2`/`.SD3` names while sharing the original
+`.SOD` graphics and audio archives, matching the original source behavior.
 
 Press a key on the title screen to open the original control-panel main menu.
 The arrow keys move its gun cursor; Enter selects an item and Escape returns to

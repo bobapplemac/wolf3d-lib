@@ -1343,6 +1343,36 @@ static void TestActorDamageAndDeath(void)
     CHECK(level.score == 2400U);
 }
 
+static void TestSpearActorShapes(void)
+{
+    wg_level_t level;
+    wg_actor_t *actor;
+
+    memset(&level, 0, sizeof(level));
+    level.variant = WG_GAME_SPEAR_FULL_SOD;
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.player_best_weapon = 1U;
+
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 10U, 10U, 0U));
+    actor = &level.actors[0];
+    CHECK(actor->shape == 54U);
+    CHECK(actor->base_shape == 62U);
+    CHECK(actor->attack_shape == 100U);
+    CHECK(WL_DamageActor(&level, 0U, 4U));
+    CHECK(actor->shape == 94U);
+    CHECK(WL_DamageActor(&level, 0U, 17U));
+    CHECK(actor->shape == 95U);
+    CHECK(WL_TickActors(&level, 45U));
+    CHECK(actor->state == WG_STATE_DEAD && actor->shape == 99U);
+
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_DOG, 11U, 10U, 0U));
+    actor = &level.actors[1];
+    CHECK(actor->shape == 103U);
+    CHECK(WL_DamageActor(&level, 1U, 1U));
+    CHECK(WL_TickActors(&level, 45U));
+    CHECK(actor->state == WG_STATE_DEAD && actor->shape == 138U);
+}
+
 static void TestBossDamageAndDeath(void)
 {
     static const struct boss_death_case
@@ -1651,6 +1681,19 @@ static void TestBonusPickups(void)
     SetBonus(&level, WG_ITEM_CLIP);
     level.player_ammo = 99U;
     CHECK(!WL_GetBonus(&level, 0U));
+    SetBonus(&level, WG_ITEM_AMMO25);
+    level.player_ammo = 70U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.player_ammo == 95U);
+
+    SetBonus(&level, WG_ITEM_SPEAR);
+    level.player_x = 12 * WG_FIXED_ONE;
+    level.player_y = 34 * WG_FIXED_ONE;
+    level.player_angle = 270U;
+    CHECK(WL_GetBonus(&level, 0U));
+    CHECK(level.spear_found == 1U && level.victory_flag == 1U);
+    CHECK(level.spear_x == level.player_x && level.spear_y == level.player_y);
+    CHECK(level.spear_angle == 270U);
 
     SetBonus(&level, WG_ITEM_MACHINEGUN);
     CHECK(WL_GetBonus(&level, 0U));
@@ -3602,6 +3645,115 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     WG_DataClose(&data_set);
 }
 
+static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
+                             size_t expected_pages,
+                             size_t expected_present_maps)
+{
+    wg_data_set_t data_set;
+    wg_graphics_t graphics;
+    wg_audio_t audio;
+    wg_pages_t pages;
+    wg_maps_t maps;
+    uint8_t framebuffer[320U * 200U];
+    uint8_t palette[256U * 3U];
+    uint64_t frame_hash = 1469598103934665603ULL;
+    uint64_t palette_hash = 1469598103934665603ULL;
+    size_t present_maps = 0U;
+    size_t ammo_boxes = 0U;
+    size_t spears = 0U;
+    size_t index;
+
+    memset(&data_set, 0, sizeof(data_set));
+    memset(&graphics, 0, sizeof(graphics));
+    memset(&audio, 0, sizeof(audio));
+    memset(&pages, 0, sizeof(pages));
+    memset(&maps, 0, sizeof(maps));
+
+    CHECK(WG_DataOpenSelected(&data_set, path, variant,
+                              WG_GAME_FAMILY_SPEAR));
+    if (data_set.variant == WG_GAME_UNKNOWN)
+    {
+        return;
+    }
+    CHECK(data_set.variant == variant);
+    CHECK(data_set.page_count == expected_pages);
+    CHECK(data_set.sprite_start == 134U);
+    CHECK(data_set.sound_start == 555U);
+    CHECK(data_set.rlew_tag == 0xabcdU);
+    CHECK(data_set.graphics_offset_count == 170U);
+    CHECK(data_set.audio_offset_count == 268U);
+
+    CHECK(WG_GraphicsOpen(&graphics, &data_set));
+    CHECK(graphics.picture_count == 147U);
+    CHECK(WG_GraphicsDecodeTitleWithPalette(&graphics, variant, framebuffer,
+                                            palette));
+    for (index = 0U; index < sizeof(framebuffer); ++index)
+    {
+        frame_hash ^= framebuffer[index];
+        frame_hash *= 1099511628211ULL;
+    }
+    for (index = 0U; index < sizeof(palette); ++index)
+    {
+        palette_hash ^= palette[index];
+        palette_hash *= 1099511628211ULL;
+    }
+    CHECK(frame_hash == 0x7aa653c3de8139c6ULL);
+    CHECK(palette_hash == 0xe2a15174c649db6aULL);
+
+    CHECK(WG_AudioOpen(&audio, &data_set));
+    CHECK(audio.offset_count == 268U);
+    CHECK(WG_PagesOpen(&pages, &data_set));
+    CHECK(WG_MapsOpen(&maps, &data_set));
+    if (maps.header_offsets != NULL)
+    {
+        for (index = 0U; index < maps.header_offset_count; ++index)
+        {
+            wg_map_t map;
+
+            memset(&map, 0, sizeof(map));
+            if (WG_MapsLoad(&maps, index, &map))
+            {
+                wg_level_t level;
+                size_t object_index;
+
+                CHECK(map.width == 64U);
+                CHECK(map.height == 64U);
+                CHECK(WG_LevelBuildForVariant(&map, WG_DIFFICULTY_MEDIUM,
+                                              variant, &level));
+                for (object_index = 0U; object_index < level.static_count;
+                     ++object_index)
+                {
+                    const wg_static_object_t *object =
+                        &level.statics[object_index];
+
+                    CHECK(object->item <= WG_ITEM_SPEAR);
+                    CHECK((size_t)data_set.sprite_start + object->shape
+                          < data_set.sound_start);
+                    if (object->item == WG_ITEM_AMMO25)
+                    {
+                        ++ammo_boxes;
+                    }
+                    else if (object->item == WG_ITEM_SPEAR)
+                    {
+                        ++spears;
+                    }
+                }
+                ++present_maps;
+                WG_MapFree(&map);
+            }
+        }
+    }
+    CHECK(present_maps == expected_present_maps);
+    CHECK(ammo_boxes != 0U);
+    CHECK(spears == 1U);
+
+    WG_MapsClose(&maps);
+    WG_PagesClose(&pages);
+    WG_AudioClose(&audio);
+    WG_GraphicsClose(&graphics);
+    WG_DataClose(&data_set);
+}
+
 static void TestPortableSave(void)
 {
     uint8_t encoded[WG_SAVE_BUFFER_SIZE];
@@ -3802,6 +3954,50 @@ static void TestPortableConfig(void)
     CHECK(decoded.gamepad_enabled == 0U);
 }
 
+static void TestGameSelection(void)
+{
+    wg_game_variant_t variant = WG_GAME_UNKNOWN;
+
+    CHECK(WG_DataVariantFromExtension("WL1")
+          == WG_GAME_WOLF3D_SHAREWARE_14);
+    CHECK(WG_DataVariantFromExtension(".wl6")
+          == WG_GAME_WOLF3D_FULL_GT_14);
+    CHECK(WG_DataVariantFromExtension("sOd") == WG_GAME_SPEAR_FULL_SOD);
+    CHECK(WG_DataVariantFromExtension("SDM") == WG_GAME_SPEAR_DEMO_SDM);
+    CHECK(WG_DataVariantFromExtension("sd1")
+          == WG_GAME_SPEAR_MISSION_1_SD1);
+    CHECK(WG_DataVariantFromExtension("SD2")
+          == WG_GAME_SPEAR_MISSION_2_SD2);
+    CHECK(WG_DataVariantFromExtension("SD3")
+          == WG_GAME_SPEAR_MISSION_3_SD3);
+    CHECK(WG_DataVariantFromExtension("WL3") == WG_GAME_UNKNOWN);
+
+    CHECK(WG_DataParseGame("auto", &variant));
+    CHECK(variant == WG_GAME_UNKNOWN);
+    CHECK(WG_DataParseGame(".SDM", &variant));
+    CHECK(variant == WG_GAME_SPEAR_DEMO_SDM);
+    CHECK(!WG_DataParseGame("unknown", &variant));
+    CHECK(!WG_DataParseGame(NULL, &variant));
+
+    CHECK(WG_DataExecutableFamily("wolf3dgeneric")
+          == WG_GAME_FAMILY_WOLF3D);
+    CHECK(WG_DataExecutableFamily("C:\\games\\WOLFPORT.EXE")
+          == WG_GAME_FAMILY_WOLF3D);
+    CHECK(WG_DataExecutableFamily("/games/spear-port")
+          == WG_GAME_FAMILY_SPEAR);
+    CHECK(WG_DataExecutableFamily("SODGENERIC.EXE")
+          == WG_GAME_FAMILY_SPEAR);
+    CHECK(WG_DataExecutableFamily("game") == WG_GAME_FAMILY_UNKNOWN);
+
+    CHECK(WG_DataVariantFamily(WG_GAME_WOLF3D_FULL_GT_14)
+          == WG_GAME_FAMILY_WOLF3D);
+    CHECK(WG_DataVariantFamily(WG_GAME_SPEAR_MISSION_3_SD3)
+          == WG_GAME_FAMILY_SPEAR);
+    CHECK(strcmp(WG_DataVariantExtension(WG_GAME_SPEAR_DEMO_SDM),
+                 "SDM") == 0);
+    CHECK(WG_DataVariantExtension(WG_GAME_UNKNOWN) == NULL);
+}
+
 int main(int argc, char **argv)
 {
     TestIMFSequencer();
@@ -3825,6 +4021,7 @@ int main(int argc, char **argv)
     TestRocketBossAttacks();
     TestFakeHitlerFlames();
     TestActorDamageAndDeath();
+    TestSpearActorShapes();
     TestBossDamageAndDeath();
     TestPlayerWeapons();
     TestBonusPickups();
@@ -3836,6 +4033,7 @@ int main(int argc, char **argv)
     TestMenuMovement();
     TestPortableSave();
     TestPortableConfig();
+    TestGameSelection();
     TestPaletteShifts();
     TestPlayerDeathCamera();
     TestViewMath();
@@ -3844,7 +4042,14 @@ int main(int argc, char **argv)
     TestPushWalls();
     TestStaticRenderer();
 
-    if (argc == 4 && strcmp(argv[1], "--data") == 0)
+    if (argc == 6 && strcmp(argv[1], "--spear-data") == 0)
+    {
+        wg_game_variant_t variant = WG_DataVariantFromExtension(argv[2]);
+        TestSpearDataSet(argv[5], variant,
+                         (size_t)strtoul(argv[3], NULL, 10),
+                         (size_t)strtoul(argv[4], NULL, 10));
+    }
+    else if (argc == 4 && strcmp(argv[1], "--data") == 0)
     {
         if (strcmp(argv[2], "wl1") == 0)
         {
@@ -3862,7 +4067,8 @@ int main(int argc, char **argv)
     }
     else if (argc != 1)
     {
-        fprintf(stderr, "usage: wg-tests [--data wl1|wl6 PATH]\n");
+        fprintf(stderr, "usage: wg-tests [--data wl1|wl6 PATH | "
+                        "--spear-data EXT PAGES MAPS PATH]\n");
         return 2;
     }
 
