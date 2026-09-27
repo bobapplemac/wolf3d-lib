@@ -6,7 +6,9 @@ The original Wolfenstein 3D and Spear of Destiny scope is complete. The Apogee
 shareware (`WL1`), GT/ID/Activision full (`WL6`), Spear (`SOD`), Spear demo
 (`SDM`), and all three mission profiles (`SD1`/`SD2`/`SD3`) pass the
 deterministic regression suite. Release 1.1 restored portable joystick support;
-release 1.2 added the runtime-selected Spear family without forking the engine.
+release 1.2 added the runtime-selected Spear family without forking the engine;
+release 1.3 completed the source-parity audit, original variable-tic batching,
+and deterministic fixed-point/view-math pass.
 
 ## Project intent
 

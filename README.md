@@ -49,7 +49,7 @@ cmake --preset windows-release-x64
 cmake --build --preset windows-release-x64
 ```
 
-The result is under `dist/wolf3dgeneric-1.2.0-win32-x86` or `-x64`.
+The result is under `dist/wolf3dgeneric-1.3.0-win32-x86` or `-x64`.
 It contains the small Win32 executable, `wolf3dgeneric.dll`, replaceable
 `Nuked-OPL3.dll`, license notices, and a short usage guide, but no tests, object
 files, or headless tools. Copy the original game data files into that folder

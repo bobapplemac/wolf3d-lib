@@ -1,4 +1,4 @@
-# Release 1.2 verification
+# Release 1.3 verification
 
 - [x] Apogee shareware v1.4 (`WL1`) resource corpus validated.
 - [x] GT/ID/Activision full v1.4 (`WL6`) resource corpus validated.
@@ -9,7 +9,11 @@
 - [x] Renderer, gameplay, control-panel, save/config, and audio fixtures pass.
 - [x] Portable two-device joystick scaling, controls, menus, and persistence
   are covered by deterministic tests.
-- [x] MSVC x86 and x64 strict-warning builds pass all 130 tests.
+- [x] MSVC x86 and x64 strict-warning builds pass all 147 tests.
+- [x] Live gameplay preserves original 1--10 `CalcTics` batching, while demos
+  preserve their authored four-tic command cadence.
+- [x] Runtime renderer and gameplay angle math is deterministic and independent
+  of host floating-point libraries.
 - [x] Static-analyzer findings reviewed and actionable findings corrected.
 - [x] Official Nuked-OPL3 source and LGPL terms retained separately.
 - [x] Win32 release staging produces a minimal x86/x64 folder with a

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 - 2026-09-27
 
 - Restored DOS `CalcTics` batching for live play: each rendered gameplay frame
   now performs one update with the elapsed 1--10 tic value, while demos retain
