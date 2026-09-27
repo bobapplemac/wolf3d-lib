@@ -1,0 +1,41 @@
+# Repository layout
+
+The source tree separates the portable engine, host wrappers, public API,
+tests, documentation, packaging metadata, and vendored dependencies. Generated
+files live under `build/` or `dist/` and are ignored by Git.
+
+| Path | Contents |
+| --- | --- |
+| `src/` | Portable engine implementation. It remains deliberately flat so original `WL_*` and `ID_*` filenames can be compared directly with the DOS source; genuinely new modules use `WG_*`. |
+| `include/` | Public shared-library API. |
+| `platforms/` | Thin platform hosts and their callback implementations. |
+| `tests/` | Deterministic unit and archive regression suite. |
+| `third_party/` | Vendored, independently licensed dependencies. |
+| `packaging/` | Templates copied into staged runtime and library packages. |
+| `docs/` | Architecture, porting, provenance, development, and release notes. |
+| `build/` | All local compiler output and generated diagnostic artifacts. |
+| `dist/` | Clean folders produced by `win32-release` and `library-release`. |
+
+## Preset build trees
+
+`CMakePresets.json` gives each supported configuration one stable directory:
+
+| Preset | Build directory | Purpose |
+| --- | --- | --- |
+| `windows-dev-x64` | `build/windows-dev-x64` | Full 64-bit hosts and tests. |
+| `windows-dev-x86` | `build/windows-dev-x86` | Full 32-bit hosts and tests. |
+| `windows-release-x64` | `build/windows-release-x64` | Minimal 64-bit Win32 runtime package. |
+| `windows-release-x86` | `build/windows-release-x86` | Minimal 32-bit Win32 runtime package. |
+| `windows-library-x64` | `build/windows-library-x64` | Host-free 64-bit engine package. |
+| `windows-library-x86` | `build/windows-library-x86` | Host-free 32-bit engine package. |
+| `linux-dev` | `build/linux-dev` | Native Linux engine, headless host, and tests. |
+| `linux-library` | `build/linux-library` | Host-free Linux shared-library package. |
+
+Generated milestone frames, raw PPM captures, and WAV diagnostics live in
+`build/artifacts/`. They can contain copyrighted original-game imagery or
+audio, so they remain local and are never committed or distributed. The
+development log links to those local files for rendered milestone inspection.
+
+Staged packages are written directly to architecture-labelled folders under
+`dist/`; compiler objects, tests, caches, and diagnostic captures never enter
+those folders.

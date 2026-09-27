@@ -1,0 +1,165 @@
+{
+  "version": 2,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "generator": "Visual Studio 16 2019",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "windows-dev-x64",
+      "displayName": "Windows development (x64)",
+      "inherits": "windows-base",
+      "binaryDir": "${sourceDir}/build/windows-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-dev-x86",
+      "displayName": "Windows development (x86)",
+      "inherits": "windows-base",
+      "binaryDir": "${sourceDir}/build/windows-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-release-x64",
+      "displayName": "Windows host release (x64)",
+      "inherits": "windows-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-release-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-release-x86",
+      "displayName": "Windows host release (x86)",
+      "inherits": "windows-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-release-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-library-x64",
+      "displayName": "Windows engine library (x64)",
+      "inherits": "windows-release-x64",
+      "binaryDir": "${sourceDir}/build/windows-library-x64",
+      "cacheVariables": {
+        "WG_BUILD_WIN32": "OFF"
+      }
+    },
+    {
+      "name": "windows-library-x86",
+      "displayName": "Windows engine library (x86)",
+      "inherits": "windows-release-x86",
+      "binaryDir": "${sourceDir}/build/windows-library-x86",
+      "cacheVariables": {
+        "WG_BUILD_WIN32": "OFF"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "WG_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "linux-dev",
+      "displayName": "Linux development",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-dev"
+    },
+    {
+      "name": "linux-library",
+      "displayName": "Linux engine library",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-library",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-dev-x64",
+      "configurePreset": "windows-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-dev-x86",
+      "configurePreset": "windows-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-release-x64",
+      "configurePreset": "windows-release-x64",
+      "configuration": "Release",
+      "targets": ["win32-release"]
+    },
+    {
+      "name": "windows-release-x86",
+      "configurePreset": "windows-release-x86",
+      "configuration": "Release",
+      "targets": ["win32-release"]
+    },
+    {
+      "name": "windows-library-x64",
+      "configurePreset": "windows-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-library-x86",
+      "configurePreset": "windows-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev"
+    },
+    {
+      "name": "linux-library",
+      "configurePreset": "linux-library",
+      "targets": ["library-release"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-dev-x64",
+      "configurePreset": "windows-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-dev-x86",
+      "configurePreset": "windows-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

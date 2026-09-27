@@ -27,25 +27,29 @@ gates are recorded in [`CHANGELOG.md`](CHANGELOG.md) and the
 
 ## Build on Windows
 
-Configure with a Visual Studio developer command prompt:
+The checked-in CMake presets keep every configuration under `build/`. Configure,
+build, and test the 64-bit development tree with:
 
 ```text
-cmake -S . -B build -G Ninja
-cmake --build build
-ctest --test-dir build --output-on-failure
+cmake --preset windows-dev-x64
+cmake --build --preset windows-dev-x64
+ctest --preset windows-dev-x64
 ```
 
-The same CMake project supports Linux builds with GCC or Clang; the Win32 host
-is automatically omitted there.
+Replace `x64` with `x86` for the 32-bit build. The presets use Visual Studio
+2019 so architecture selection does not depend on which developer prompt is
+open. On Linux, use the corresponding `linux-dev` configure, build, and test
+presets; the Win32 host is automatically omitted there.
 
 Create a minimal redistributable folder from a Release-configured x86 or x64
 build with:
 
 ```text
-cmake --build build --config Release --target win32-release
+cmake --preset windows-release-x64
+cmake --build --preset windows-release-x64
 ```
 
-The result is under `build/release/wolf3dgeneric-1.2.0-win32-x86` or `-x64`.
+The result is under `dist/wolf3dgeneric-1.2.0-win32-x86` or `-x64`.
 It contains the small Win32 executable, `wolf3dgeneric.dll`, replaceable
 `Nuked-OPL3.dll`, license notices, and a short usage guide, but no tests, object
 files, or headless tools. Copy the original game data files into that folder
@@ -58,14 +62,16 @@ The engine itself is a shared library, independent of either supplied host.
 Create its clean developer/runtime package with:
 
 ```text
-cmake -S . -B build-library -G Ninja -DCMAKE_BUILD_TYPE=Release -DWG_BUILD_HEADLESS=OFF -DWG_BUILD_WIN32=OFF -DBUILD_TESTING=OFF
-cmake --build build-library --config Release --target library-release
+cmake --preset windows-library-x64
+cmake --build --preset windows-library-x64
 ```
 
 That folder contains `wolf3dgeneric.dll` and its import library on Windows (or
 `libwolf3dgeneric.so` on Linux), `Nuked-OPL3` as a separate shared dependency,
 the public `WOLF3DGENERIC.h`, and the applicable notices. Hosts register the
 versioned `wg_platform_api_t` callback table before creating the engine.
+[`docs/repository-layout.md`](docs/repository-layout.md) explains the complete
+source, build, artifact, and distribution layout.
 
 To run the interactive Win32 host:
 

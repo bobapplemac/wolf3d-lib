@@ -18,6 +18,8 @@ option(WG_BUILD_WIN32 "Build the dependency-free Win32 host" ON)
 option(WG_WARNINGS_AS_ERRORS "Treat project warnings as errors" ON)
 option(WG_STATIC_MSVC_RUNTIME
     "Link the MSVC runtime statically for self-contained Windows releases" ON)
+set(WG_DIST_ROOT "${CMAKE_SOURCE_DIR}/dist" CACHE PATH
+    "Directory used by release staging targets")
 
 if(MSVC AND WG_STATIC_MSVC_RUNTIME)
     set(CMAKE_MSVC_RUNTIME_LIBRARY
@@ -125,7 +127,7 @@ else()
 endif()
 string(TOLOWER "${CMAKE_SYSTEM_NAME}" WG_RELEASE_SYSTEM)
 set(WG_LIBRARY_RELEASE_DIR
-    "${CMAKE_BINARY_DIR}/release/wolf3dgeneric-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}")
+    "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}")
 
 set(WG_LIBRARY_RELEASE_COMMANDS
     COMMAND ${CMAKE_COMMAND} -E remove_directory
@@ -207,7 +209,7 @@ if(WG_BUILD_WIN32)
     target_link_libraries(wolf3dgeneric-win32 PRIVATE user32 gdi32 winmm shell32)
 
     set(WG_WIN32_RELEASE_DIR
-        "${CMAKE_BINARY_DIR}/release/wolf3dgeneric-${PROJECT_VERSION}-win32-${WG_RELEASE_ARCH}")
+        "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-win32-${WG_RELEASE_ARCH}")
     add_custom_target(win32-release
         COMMAND ${CMAKE_COMMAND} -E remove_directory
             "${WG_WIN32_RELEASE_DIR}"

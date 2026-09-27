@@ -1,6 +1,6 @@
 /build/
-/build-*/
-/out/
+/dist/
+/CMakeUserPresets.json
 /.vs/
 /CMakeSettings.json
 *.user
