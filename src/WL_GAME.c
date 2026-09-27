@@ -57,7 +57,9 @@ int WL_DrawGetPsyched(uint8_t framebuffer[320 * 200],
     switch (graphics->variant)
     {
     case WG_GAME_WOLF3D_SHAREWARE_14:
-        picture = 138U;
+        /* The released v1.4 shareware data uses GFXE_WL1.H.  Chunk 138 is
+           FACE8APIC (the bloody BJ face); GETPSYCHEDPIC is chunk 141. */
+        picture = 141U;
         break;
     case WG_GAME_WOLF3D_FULL_GT_14:
         picture = 134U;

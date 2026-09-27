@@ -1,5 +1,15 @@
 # Development log
 
+## 2026-09-27: WL1 Get Psyched resource correction
+
+- Corrected the v1.4 shareware `GETPSYCHEDPIC` mapping from chunk 138 to
+  chunk 141, matching the released `GFXE_WL1.H` layout. Chunk 138 is
+  `FACE8APIC`, which caused the loading screen to display BJ's bloody status
+  face instead of the original Get Psyched artwork.
+- Added deterministic framebuffer checks for both WL1 and WL6 loading screens
+  so a valid but semantically wrong graphics chunk can no longer pass the
+  real-data tests merely because it decodes successfully.
+
 ## 2026-09-27: WL1 fixed-point and demo-parity pass
 
 - Replaced the remaining generalized 16.16 multiplies in original gameplay,

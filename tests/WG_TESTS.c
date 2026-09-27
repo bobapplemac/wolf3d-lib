@@ -3429,6 +3429,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint16_t picture_width;
     uint16_t picture_height;
     uint64_t frame_hash = 1469598103934665603ULL;
+    uint64_t psyched_hash = 1469598103934665603ULL;
     uint64_t map_hash = 1469598103934665603ULL;
     uint64_t view_hash = 1469598103934665603ULL;
     uint64_t scenery_hash = 1469598103934665603ULL;
@@ -3492,6 +3493,18 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         psyched_level.player_weapon = WG_WEAPON_PISTOL;
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawGetPsyched(framebuffer, &graphics, &psyched_level));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            psyched_hash ^= framebuffer[index];
+            psyched_hash *= 1099511628211ULL;
+        }
+        printf("%s Get Psyched framebuffer FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)psyched_hash);
+        CHECK(psyched_hash
+              == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                      ? 0x6e1049fc4fdb653bULL
+                      : 0x73c5ee973872697eULL));
 
         CHECK(graphics.picture_count == (expected_variant
               == WG_GAME_WOLF3D_SHAREWARE_14 ? 144U : 132U));
