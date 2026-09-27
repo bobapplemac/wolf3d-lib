@@ -1,0 +1,34 @@
+wolf3dgeneric @PROJECT_VERSION@ - Linux direct-console host
+=========================================================
+
+This package runs directly on a Linux virtual console. It does not require
+X11, Wayland, SDL, or a desktop environment. Video uses DRM/KMS dumb buffers,
+input uses evdev, and audio uses ALSA.
+
+Copy the original game data files beside the executable, or point to them:
+
+  ./wolf3dgeneric --data /path/to/WL1
+
+Run it from an active virtual console. The user needs permission to access the
+DRM card, evdev input devices, and ALSA playback device; root normally has all
+three. Typical non-root installations grant this through the distribution's
+video, input, and audio groups or through seat/session device ACLs.
+
+Host-specific options:
+
+  --drm-device /dev/dri/card0
+  --input-device /dev/input/event3    (repeatable)
+  --alsa-device default
+  --no-audio
+  --linux-console-help
+
+Without explicit device options, the host selects the first connected DRM
+display, opens usable evdev devices, and uses the ALSA "default" PCM. Missing
+or unavailable audio produces a warning and the game continues silently.
+
+The host preserves the engine's 320x200 indexed framebuffer and displays it
+at the original monitor-intended 4:3 aspect ratio with letterboxing as needed.
+
+libwolf3dgeneric.so is the generic engine library. libNuked-OPL3.so is kept
+separate and replaceable under the LGPL-2.1 license. System libdrm, ALSA, libc,
+and their dependencies must be supplied by the target Linux installation.

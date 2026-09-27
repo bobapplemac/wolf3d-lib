@@ -12,7 +12,7 @@ CMAKE ?= cmake
 CMAKE_ARGS ?=
 CMAKE_COMPILER_ARG := -DCMAKE_C_COMPILER="$(CC)"
 
-.PHONY: all configure build test library-release clean
+.PHONY: all configure build test library-release linux-console-release clean
 
 all: build
 
@@ -30,6 +30,9 @@ test: build
 
 library-release: configure
 	$(CMAKE) --build "$(BUILD_DIR)" --target library-release --parallel
+
+linux-console-release: configure
+	$(CMAKE) --build "$(BUILD_DIR)" --target linux-console-release --parallel
 
 clean:
 	@if [ -f "$(BUILD_DIR)/CMakeCache.txt" ]; then \

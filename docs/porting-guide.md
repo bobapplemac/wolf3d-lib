@@ -5,8 +5,10 @@ The engine is a shared C99 library (`wolf3dgeneric.dll` on Windows and
 `wg_platform_api_t` callback table from `WOLF3DGENERIC.h` and passes it to
 `wolf3dgeneric_SetPlatform` before creating the engine. The library therefore
 has no unresolved dependency on symbols supplied by its executable.
-`platforms/headless/WG_HEADLESS.c` is the smallest implementation and
-`platforms/win32/WG_WIN32.c` is the complete interactive reference.
+`platforms/headless/WG_HEADLESS.c` is the smallest implementation. The Win32
+host is the desktop reference, while `platforms/linux-console/` demonstrates
+a complete interactive host without a window system: DRM/KMS dumb-buffer
+video, raw evdev input, monotonic POSIX timing, and ALSA PCM.
 
 ## Required boundary
 

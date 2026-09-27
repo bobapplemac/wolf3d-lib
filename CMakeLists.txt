@@ -34,9 +34,13 @@ configure_file(packaging/WIN32-README.txt.in
                ${CMAKE_CURRENT_BINARY_DIR}/WIN32-README.txt @ONLY)
 configure_file(packaging/LIBRARY-README.txt.in
                ${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt @ONLY)
+configure_file(packaging/LINUX-CONSOLE-README.txt.in
+               ${CMAKE_CURRENT_BINARY_DIR}/LINUX-CONSOLE-README.txt @ONLY)
 
 option(WG_BUILD_HEADLESS "Build the deterministic headless host" ON)
 option(WG_BUILD_WIN32 "Build the dependency-free Win32 host" ON)
+option(WG_BUILD_LINUX_CONSOLE
+    "Build the direct DRM/evdev/ALSA Linux console host" ON)
 option(WG_WARNINGS_AS_ERRORS "Treat project warnings as errors" ON)
 option(WG_STATIC_MSVC_RUNTIME
     "Link the MSVC runtime statically for self-contained Windows releases" ON)
@@ -50,6 +54,10 @@ endif()
 
 if(NOT WIN32)
     set(WG_BUILD_WIN32 OFF CACHE BOOL "Win32 is only available on Windows" FORCE)
+endif()
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(WG_BUILD_LINUX_CONSOLE OFF CACHE BOOL
+        "The Linux console host is only available on Linux" FORCE)
 endif()
 
 # Keep the LGPL component independently replaceable on every platform.
@@ -267,6 +275,64 @@ if(WG_BUILD_WIN32)
         COMMENT "Staging ${WG_RELEASE_ARCH} Win32 release folder"
         VERBATIM
     )
+endif()
+
+if(WG_BUILD_LINUX_CONSOLE)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBDRM REQUIRED IMPORTED_TARGET libdrm)
+    pkg_check_modules(ALSA REQUIRED IMPORTED_TARGET alsa)
+
+    add_executable(wolf3dgeneric-linux-console
+        platforms/linux-console/MAIN.c
+        platforms/linux-console/WG_LINUX_CONSOLE.c
+    )
+    wg_configure_host(wolf3dgeneric-linux-console wolf3dgeneric)
+    target_link_libraries(wolf3dgeneric-linux-console PRIVATE
+        PkgConfig::LIBDRM
+        PkgConfig::ALSA
+    )
+    set_target_properties(wolf3dgeneric-linux-console PROPERTIES
+        BUILD_WITH_INSTALL_RPATH ON
+        INSTALL_RPATH "$ORIGIN"
+    )
+
+    set(WG_LINUX_CONSOLE_RELEASE_DIR
+        "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-linux-console-${WG_RELEASE_ARCH}")
+    add_custom_target(linux-console-release
+        COMMAND ${CMAKE_COMMAND} -E remove_directory
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wolf3dgeneric-linux-console>"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/wolf3dgeneric"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wolf3dgeneric>"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3dgeneric>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:nuked-opl3>"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/LICENSE"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/COPYING.txt"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/COPYING.Nuked-OPL3.txt"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/THIRD_PARTY.md"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/THIRD_PARTY.md"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_BINARY_DIR}/LINUX-CONSOLE-README.txt"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/README.txt"
+        DEPENDS wolf3dgeneric-linux-console wolf3dgeneric nuked-opl3
+        COMMENT "Staging ${WG_RELEASE_ARCH} Linux console release folder"
+        VERBATIM
+    )
+
+    if(BUILD_TESTING)
+        add_test(NAME linux-console-help
+            COMMAND wolf3dgeneric-linux-console --linux-console-help)
+    endif()
 endif()
 
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)

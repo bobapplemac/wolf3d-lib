@@ -89,6 +89,17 @@
       "binaryDir": "${sourceDir}/build/linux-library",
       "cacheVariables": {
         "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF",
+        "WG_BUILD_LINUX_CONSOLE": "OFF"
+      }
+    },
+    {
+      "name": "linux-console",
+      "displayName": "Linux direct-console release",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-console",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
         "WG_BUILD_HEADLESS": "OFF"
       }
     }
@@ -136,6 +147,11 @@
       "name": "linux-library",
       "configurePreset": "linux-library",
       "targets": ["library-release"]
+    },
+    {
+      "name": "linux-console",
+      "configurePreset": "linux-console",
+      "targets": ["linux-console-release"]
     }
   ],
   "testPresets": [

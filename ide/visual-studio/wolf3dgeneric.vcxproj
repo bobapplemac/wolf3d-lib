@@ -120,11 +120,14 @@
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)src\*.c" />
     <ClCompile Include="$(SolutionDir)platforms\headless\*.c" />
+    <ClCompile Include="$(SolutionDir)platforms\linux-console\*.c" />
     <ClCompile Include="$(SolutionDir)platforms\win32\*.c" />
     <ClCompile Include="$(SolutionDir)tests\*.c" />
     <ClCompile Include="$(SolutionDir)third_party\Nuked-OPL3\*.c" />
     <ClInclude Include="$(SolutionDir)include\*.h" />
     <ClInclude Include="$(SolutionDir)src\*.h" />
+    <ClInclude Include="$(SolutionDir)platforms\*.h" />
+    <ClInclude Include="$(SolutionDir)platforms\linux-console\*.h" />
     <ClInclude Include="$(SolutionDir)third_party\Nuked-OPL3\*.h" />
     <None Include="$(SolutionDir)CMakeLists.txt" />
     <None Include="$(SolutionDir)CMakePresets.json" />

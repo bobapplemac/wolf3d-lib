@@ -15,7 +15,9 @@ packages belong under `dist/`. Both directories are ignored by Git.
   or a newer Visual Studio installation capable of using/upgrading v142
   projects.
 - Linux: GNU Make plus GCC or Clang. Ninja is additionally required when using
-  the Linux CMake presets directly.
+  the Linux CMake presets directly. The direct-console host requires pkg-config,
+  libdrm headers, and ALSA headers (`pkgconf libdrm-dev libasound2-dev` on
+  Debian-family systems).
 - Original Wolfenstein 3D data is optional for compilation and required only
   for the asset-backed regression tests or normal gameplay.
 
@@ -155,6 +157,17 @@ than the tool used to produce it.
 
 `make clean` cleans the selected compiler tree without deleting the tree.
 
+Create the Linux direct-console runtime package with:
+
+```text
+make linux-console-release
+```
+
+This stages `wolf3dgeneric`, `libwolf3dgeneric.so`, the replaceable
+`libNuked-OPL3.so`, notices, and runtime instructions under
+`dist/wolf3dgeneric-<version>-linux-console-<architecture>`. libdrm, ALSA,
+libc, and their transitive dependencies remain system-provided.
+
 ## Linux with CMake and Ninja
 
 The direct preset workflow remains available:
@@ -175,6 +188,20 @@ The host-free package preset is:
 cmake --preset linux-library
 cmake --build --preset linux-library
 ```
+
+The direct-console package preset is:
+
+```text
+cmake --preset linux-console
+cmake --build --preset linux-console
+```
+
+The console host runs directly from an active Linux virtual terminal. It does
+not use X11, Wayland, or SDL. By default it discovers a connected
+`/dev/dri/card*`, usable `/dev/input/event*` devices, and the ALSA `default`
+PCM. Run `wolf3dgeneric-linux-console --linux-console-help` for explicit DRM,
+input, and ALSA selection. Missing audio degrades to silent operation; missing
+DRM output or a keyboard is a startup error.
 
 ## Asset-backed tests
 
@@ -211,6 +238,7 @@ The game data remains external and must never be committed or packaged.
 | --- | --- | --- |
 | `WG_BUILD_HEADLESS` | `ON` | Build the deterministic headless host and test support. |
 | `WG_BUILD_WIN32` | `ON` on Windows | Build the native Win32 wrapper. Forced off elsewhere. |
+| `WG_BUILD_LINUX_CONSOLE` | `ON` on Linux | Build the DRM/evdev/ALSA console wrapper. Forced off elsewhere. |
 | `WG_WARNINGS_AS_ERRORS` | `ON` in presets/Makefile | Treat the maintained warning set as errors. |
 | `WG_STATIC_MSVC_RUNTIME` | `ON` | Use `/MT` instead of the Redistributable-backed `/MD`; Windows/MSVC only. |
 | `BUILD_TESTING` | `ON` | Generate the CTest suite. |

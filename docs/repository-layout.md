@@ -18,7 +18,7 @@ files live under `build/` or `dist/` and are ignored by Git.
 | `ide/visual-studio/` | Maintained Visual Studio project metadata; compilation delegates to CMake. |
 | `docs/` | Architecture, porting, provenance, development, and release notes. |
 | `build/` | All local compiler output and generated diagnostic artifacts. |
-| `dist/` | Clean folders produced by `win32-release` and `library-release`. |
+| `dist/` | Clean folders produced by `win32-release`, `linux-console-release`, and `library-release`. |
 
 ## Preset build trees
 
@@ -34,6 +34,7 @@ files live under `build/` or `dist/` and are ignored by Git.
 | `windows-library-x86` | `build/windows-library-x86` | Host-free 32-bit engine package. |
 | `linux-dev` | `build/linux-dev` | Native Linux engine, headless host, and tests. |
 | `linux-library` | `build/linux-library` | Host-free Linux shared-library package. |
+| `linux-console` | `build/linux-console` | Minimal DRM/evdev/ALSA console-host package. |
 | GNU Make with GCC | `build/linux-gcc` | Native GCC engine, headless host, and tests. |
 | GNU Make with Clang | `build/linux-clang` | Native Clang engine, headless host, and tests. |
 

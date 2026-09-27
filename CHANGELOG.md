@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a Linux virtual-console host with direct DRM/KMS dumb-buffer video,
+  evdev keyboard/mouse/gamepad input, ALSA audio with silent fallback, 4:3
+  presentation, device overrides, and a minimal staged runtime package.
 - Added a GNU Make entry point for native Linux configure, build, test, clean,
   and library-package workflows while retaining CMake as the sole build graph.
 - Added a checked-in Visual Studio solution supporting Debug/Release and

@@ -74,7 +74,10 @@ make library-release
 Override `BUILD_DIR`, `BUILD_TYPE`, or append configuration settings through
 `CMAKE_ARGS` when needed. For example, an asset-backed validation build can use
 `make test CMAKE_ARGS="-DWG_TEST_WL1_PATH=/path/to/WL1"`. The Win32 host is
-automatically omitted on non-Windows systems.
+automatically omitted on non-Windows systems. Linux builds also include a
+direct-console host using DRM/KMS, evdev, and ALSA. On Debian and Ubuntu, its
+development dependencies are supplied by `pkgconf`, `libdrm-dev`, and
+`libasound2-dev`.
 
 GCC and Clang are both supported and tested. Select a compiler before the
 first configure of a build directory using the conventional `CC` variable;
@@ -89,6 +92,24 @@ make test CC=clang BUILD_DIR=build/linux-clang
 The portable core targets ISO C99 and does not contain compiler-specific game
 logic. Other CMake-supported C compilers may work, but GCC, Clang, and MSVC are
 the maintained validation set.
+
+Run the console host from an active virtual console, normally as root or as a
+user with permission for the DRM, input, and audio devices:
+
+```text
+./build/linux-gcc/wolf3dgeneric-linux-console --data /path/to/WL1
+```
+
+It presents the native 320x200 framebuffer in a letterboxed 4:3 viewport using
+a KMS dumb buffer, reads keyboards, mice, and up to two gamepads directly from
+evdev, and sends PCM to ALSA. It has no X11, Wayland, SDL, or desktop-session
+dependency. Use `--linux-console-help` for device overrides; audio failure is
+non-fatal and `--no-audio` disables ALSA explicitly.
+
+Create a minimal console runtime folder with `make linux-console-release`, or
+use `cmake --preset linux-console` followed by
+`cmake --build --preset linux-console`. The result is staged under
+`dist/wolf3dgeneric-1.3.0-linux-console-<architecture>`.
 
 Create a minimal redistributable folder from a Release-configured x86 or x64
 build with:
@@ -107,7 +128,7 @@ and run `wolf3dgeneric.exe`; the interactive host uses its own directory when
 prefer Spear data, or use `--game` when the folder contains multiple editions.
 The game data itself is never included by this project.
 
-The engine itself is always a shared library, independent of either supplied
+The engine itself is always a shared library, independent of any supplied
 host, preserving the clean, replaceable engine/host boundary.
 Create its clean developer/runtime package with:
 
