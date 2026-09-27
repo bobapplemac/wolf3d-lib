@@ -3285,6 +3285,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     {
         1469598103934665603ULL, 1469598103934665603ULL
     };
+    uint64_t intermission_initial_hash = 1469598103934665603ULL;
+    uint64_t intermission_final_hash = 1469598103934665603ULL;
     size_t index;
     size_t actor_index;
     size_t decoded_graphics = 0;
@@ -3337,6 +3339,31 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         }
         CHECK(intermission_bj_hash[0] != intermission_bj_hash[1]);
         CHECK(!WL_DrawIntermissionBJ(framebuffer, &graphics, 2U));
+        {
+            wl_intermission_t intermission =
+            {
+                75U, 37500U, 90U, 100U, 100U, 100U, 0U
+            };
+
+            memset(framebuffer, 0, sizeof(framebuffer));
+            CHECK(WL_DrawLevelCompletedProgress(
+                framebuffer, &graphics, &psyched_level, 0U,
+                &intermission, 0U, 0U, UINT_MAX, UINT_MAX, UINT_MAX));
+            for (index = 0U; index < sizeof(framebuffer); ++index)
+            {
+                intermission_initial_hash ^= framebuffer[index];
+                intermission_initial_hash *= 1099511628211ULL;
+            }
+            CHECK(WL_DrawLevelCompleted(framebuffer, &graphics,
+                                        &psyched_level, 0U,
+                                        &intermission));
+            for (index = 0U; index < sizeof(framebuffer); ++index)
+            {
+                intermission_final_hash ^= framebuffer[index];
+                intermission_final_hash *= 1099511628211ULL;
+            }
+            CHECK(intermission_initial_hash != intermission_final_hash);
+        }
         CHECK(WG_GraphicsDecodeTitle(&graphics, data_set.variant, framebuffer));
         for (index = 0; index < sizeof(framebuffer); ++index)
         {

@@ -150,6 +150,22 @@ typedef enum wg_death_phase
     WG_DEATH_HOLD
 } wg_death_phase_t;
 
+typedef enum wg_intermission_phase
+{
+    WG_INTERMISSION_TIME = 0,
+    WG_INTERMISSION_KILL_START,
+    WG_INTERMISSION_KILL,
+    WG_INTERMISSION_KILL_PAUSE,
+    WG_INTERMISSION_SECRET_START,
+    WG_INTERMISSION_SECRET,
+    WG_INTERMISSION_SECRET_PAUSE,
+    WG_INTERMISSION_TREASURE_START,
+    WG_INTERMISSION_TREASURE,
+    WG_INTERMISSION_TREASURE_PAUSE,
+    WG_INTERMISSION_FINAL_SOUND,
+    WG_INTERMISSION_WAIT
+} wg_intermission_phase_t;
+
 typedef struct wg_game_session
 {
     int active;
@@ -176,6 +192,13 @@ typedef struct wg_game_session
     uint8_t intermission;
     uint8_t intermission_breathe_frame;
     uint16_t intermission_breathe_tics;
+    wg_intermission_phase_t intermission_phase;
+    uint16_t intermission_pause_tics;
+    uint32_t intermission_shown_bonus;
+    uint8_t intermission_shown_kill;
+    uint8_t intermission_shown_secret;
+    uint8_t intermission_shown_treasure;
+    uint8_t intermission_score_awarded;
     uint8_t demo_conclusion;
     uint8_t victory;
     uint8_t victory_collapse_phase;
@@ -225,6 +248,7 @@ static int WG_GameSessionBeginPreload(void);
 static int WG_GameSessionOpen(unsigned map_number,
                               wg_difficulty_t difficulty);
 static int WG_GameSessionReload(unsigned map_number, int died);
+static int WG_GameSessionFinishIntermission(void);
 
 static void WG_CloseFrontHelp(void)
 {
@@ -2117,6 +2141,7 @@ static int WG_GameSessionBeginIntermission(void)
 {
     const uint8_t *music_data;
     size_t music_size;
+    int drawn;
 
     if (!WL_IntermissionCalculate(&wg_game.level, wg_game.map_number,
                                   &wg_game.intermission_state))
@@ -2137,6 +2162,13 @@ static int WG_GameSessionBeginIntermission(void)
     wg_game.intermission = 1U;
     wg_game.intermission_breathe_frame = 0U;
     wg_game.intermission_breathe_tics = 11U;
+    wg_game.intermission_phase = WG_INTERMISSION_TIME;
+    wg_game.intermission_pause_tics = 0U;
+    wg_game.intermission_shown_bonus = 0U;
+    wg_game.intermission_shown_kill = UINT8_MAX;
+    wg_game.intermission_shown_secret = UINT8_MAX;
+    wg_game.intermission_shown_treasure = UINT8_MAX;
+    wg_game.intermission_score_awarded = 0U;
     memset(wg_game.keys, 0, sizeof(wg_game.keys));
     wg_game.mouse_buttons = 0U;
     wg_game.mouse_x = 0;
@@ -2149,26 +2181,266 @@ static int WG_GameSessionBeginIntermission(void)
     {
         (void)ID_SD_MusicStart(wg_game.music, music_data, music_size);
     }
-    if (!WL_DrawLevelCompleted(WG_ScreenBuffer, &wg_game.graphics,
-                               &wg_game.level, wg_game.map_number,
-                               &wg_game.intermission_state))
+    if (wg_game.intermission_state.special_floor)
     {
-        return 0;
+        wg_game.intermission_shown_bonus = wg_game.intermission_state.bonus;
+        wg_game.intermission_phase = WG_INTERMISSION_WAIT;
     }
-    wg_game.level.score += wg_game.intermission_state.bonus;
-    return 1;
+    else
+    {
+        WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_1);
+    }
+    drawn = WL_DrawLevelCompletedProgress(
+                WG_ScreenBuffer, &wg_game.graphics, &wg_game.level,
+                wg_game.map_number, &wg_game.intermission_state,
+                wg_game.intermission_shown_bonus,
+                wg_game.intermission_phase == WG_INTERMISSION_WAIT
+                    ? wg_game.intermission_state.bonus : 0U,
+                wg_game.intermission_shown_kill,
+                wg_game.intermission_shown_secret,
+                wg_game.intermission_shown_treasure)
+        && WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
+                                 wg_game.intermission_breathe_frame);
+    if (drawn && wg_game.intermission_state.special_floor)
+    {
+        wg_game.level.score += wg_game.intermission_state.bonus;
+        wg_game.intermission_score_awarded = 1U;
+    }
+    return drawn;
+}
+
+static int WG_GameSessionDrawIntermission(void)
+{
+    return WL_DrawLevelCompletedProgress(
+               WG_ScreenBuffer, &wg_game.graphics, &wg_game.level,
+               wg_game.map_number, &wg_game.intermission_state,
+               wg_game.intermission_shown_bonus,
+               wg_game.intermission_phase == WG_INTERMISSION_WAIT
+                   ? wg_game.intermission_state.bonus : 0U,
+               wg_game.intermission_shown_kill,
+               wg_game.intermission_shown_secret,
+               wg_game.intermission_shown_treasure)
+        && WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
+                                 wg_game.intermission_breathe_frame);
+}
+
+static int WG_GameSessionFinalizeIntermission(void)
+{
+    int drawn;
+
+    wg_game.intermission_shown_bonus = wg_game.intermission_state.bonus;
+    wg_game.intermission_shown_kill =
+        wg_game.intermission_state.kill_ratio;
+    wg_game.intermission_shown_secret =
+        wg_game.intermission_state.secret_ratio;
+    wg_game.intermission_shown_treasure =
+        wg_game.intermission_state.treasure_ratio;
+    wg_game.intermission_phase = WG_INTERMISSION_WAIT;
+    memset(wg_game.keys, 0, sizeof(wg_game.keys));
+    wg_game.mouse_buttons = 0U;
+    drawn = WG_GameSessionDrawIntermission();
+    if (drawn && !wg_game.intermission_score_awarded)
+    {
+        wg_game.level.score += wg_game.intermission_state.bonus;
+        wg_game.intermission_score_awarded = 1U;
+    }
+    return drawn;
 }
 
 static int WG_GameSessionAdvanceIntermission(void)
 {
-    if (--wg_game.intermission_breathe_tics != 0U)
+    uint32_t time_bonus =
+        wg_game.intermission_state.seconds
+                < wg_game.intermission_state.par_seconds
+            ? (wg_game.intermission_state.par_seconds
+               - wg_game.intermission_state.seconds) * 500U
+            : 0U;
+    int redraw = 0;
+
+    if (--wg_game.intermission_breathe_tics == 0U)
     {
-        return 1;
+        wg_game.intermission_breathe_tics = 36U;
+        wg_game.intermission_breathe_frame ^= 1U;
+        redraw = 1;
     }
-    wg_game.intermission_breathe_tics = 36U;
-    wg_game.intermission_breathe_frame ^= 1U;
-    return WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
-                                 wg_game.intermission_breathe_frame);
+    if (wg_game.intermission_phase == WG_INTERMISSION_WAIT)
+    {
+        return !redraw
+            || WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
+                                     wg_game.intermission_breathe_frame);
+    }
+    if (WG_GameSessionSoundPlaying())
+    {
+        return !redraw
+            || WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
+                                     wg_game.intermission_breathe_frame);
+    }
+
+    switch (wg_game.intermission_phase)
+    {
+    case WG_INTERMISSION_TIME:
+        if (wg_game.intermission_shown_bonus < time_bonus)
+        {
+            unsigned step;
+            wg_game.intermission_shown_bonus += 500U;
+            step = (unsigned)(wg_game.intermission_shown_bonus / 500U);
+            if (step % 50U == 0U)
+            {
+                WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_1);
+            }
+            redraw = 1;
+        }
+        else
+        {
+            WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_2);
+            wg_game.intermission_phase = WG_INTERMISSION_KILL_START;
+        }
+        break;
+
+    case WG_INTERMISSION_KILL_START:
+        wg_game.intermission_shown_kill = 0U;
+        WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_1);
+        wg_game.intermission_phase = WG_INTERMISSION_KILL;
+        redraw = 1;
+        break;
+    case WG_INTERMISSION_KILL:
+        if (wg_game.intermission_shown_kill
+            < wg_game.intermission_state.kill_ratio)
+        {
+            ++wg_game.intermission_shown_kill;
+            if (wg_game.intermission_shown_kill % 10U == 0U)
+            {
+                WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_1);
+            }
+            redraw = 1;
+        }
+        else if (wg_game.intermission_state.kill_ratio == 0U
+                 || wg_game.intermission_state.kill_ratio == 100U)
+        {
+            wg_game.intermission_pause_tics = 30U;
+            wg_game.intermission_phase = WG_INTERMISSION_KILL_PAUSE;
+        }
+        else
+        {
+            WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_2);
+            wg_game.intermission_phase = WG_INTERMISSION_SECRET_START;
+        }
+        break;
+    case WG_INTERMISSION_KILL_PAUSE:
+        if (--wg_game.intermission_pause_tics == 0U)
+        {
+            if (wg_game.intermission_state.kill_ratio == 100U)
+            {
+                wg_game.intermission_shown_bonus += 10000U;
+                WG_FrontSoundPreviewNumber(WG_SOUND_PERCENT_100);
+                redraw = 1;
+            }
+            else
+            {
+                WG_FrontSoundPreviewNumber(WG_SOUND_NO_BONUS);
+            }
+            wg_game.intermission_phase = WG_INTERMISSION_SECRET_START;
+        }
+        break;
+
+    case WG_INTERMISSION_SECRET_START:
+        wg_game.intermission_shown_secret = 0U;
+        WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_1);
+        wg_game.intermission_phase = WG_INTERMISSION_SECRET;
+        redraw = 1;
+        break;
+    case WG_INTERMISSION_SECRET:
+        if (wg_game.intermission_shown_secret
+            < wg_game.intermission_state.secret_ratio)
+        {
+            ++wg_game.intermission_shown_secret;
+            if (wg_game.intermission_shown_secret % 10U == 0U)
+            {
+                WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_1);
+            }
+            redraw = 1;
+        }
+        else if (wg_game.intermission_state.secret_ratio == 0U
+                 || wg_game.intermission_state.secret_ratio == 100U)
+        {
+            wg_game.intermission_pause_tics = 30U;
+            wg_game.intermission_phase = WG_INTERMISSION_SECRET_PAUSE;
+        }
+        else
+        {
+            WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_2);
+            wg_game.intermission_phase = WG_INTERMISSION_TREASURE_START;
+        }
+        break;
+    case WG_INTERMISSION_SECRET_PAUSE:
+        if (--wg_game.intermission_pause_tics == 0U)
+        {
+            if (wg_game.intermission_state.secret_ratio == 100U)
+            {
+                wg_game.intermission_shown_bonus += 10000U;
+                WG_FrontSoundPreviewNumber(WG_SOUND_PERCENT_100);
+                redraw = 1;
+            }
+            else
+            {
+                WG_FrontSoundPreviewNumber(WG_SOUND_NO_BONUS);
+            }
+            wg_game.intermission_phase = WG_INTERMISSION_TREASURE_START;
+        }
+        break;
+
+    case WG_INTERMISSION_TREASURE_START:
+        wg_game.intermission_shown_treasure = 0U;
+        WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_1);
+        wg_game.intermission_phase = WG_INTERMISSION_TREASURE;
+        redraw = 1;
+        break;
+    case WG_INTERMISSION_TREASURE:
+        if (wg_game.intermission_shown_treasure
+            < wg_game.intermission_state.treasure_ratio)
+        {
+            ++wg_game.intermission_shown_treasure;
+            if (wg_game.intermission_shown_treasure % 10U == 0U)
+            {
+                WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_1);
+            }
+            redraw = 1;
+        }
+        else if (wg_game.intermission_state.treasure_ratio == 0U
+                 || wg_game.intermission_state.treasure_ratio == 100U)
+        {
+            wg_game.intermission_pause_tics = 30U;
+            wg_game.intermission_phase = WG_INTERMISSION_TREASURE_PAUSE;
+        }
+        else
+        {
+            WG_FrontSoundPreviewNumber(WG_SOUND_END_BONUS_2);
+            wg_game.intermission_phase = WG_INTERMISSION_FINAL_SOUND;
+        }
+        break;
+    case WG_INTERMISSION_TREASURE_PAUSE:
+        if (--wg_game.intermission_pause_tics == 0U)
+        {
+            if (wg_game.intermission_state.treasure_ratio == 100U)
+            {
+                wg_game.intermission_shown_bonus += 10000U;
+                WG_FrontSoundPreviewNumber(WG_SOUND_PERCENT_100);
+                redraw = 1;
+            }
+            else
+            {
+                WG_FrontSoundPreviewNumber(WG_SOUND_NO_BONUS);
+            }
+            wg_game.intermission_phase = WG_INTERMISSION_FINAL_SOUND;
+        }
+        break;
+    case WG_INTERMISSION_FINAL_SOUND:
+        return WG_GameSessionFinalizeIntermission();
+    case WG_INTERMISSION_WAIT:
+    default:
+        break;
+    }
+    return !redraw || WG_GameSessionDrawIntermission();
 }
 
 static int WG_GameSessionBeginVictory(void)
@@ -2366,6 +2638,15 @@ static int WG_GameSessionFinishIntermission(void)
         return WG_GameSessionBeginHighScores();
     }
     return WG_GameSessionReload(wg_game.next_map_number, 0);
+}
+
+static int WG_GameSessionAcknowledgeIntermission(void)
+{
+    if (wg_game.intermission_phase != WG_INTERMISSION_WAIT)
+    {
+        return WG_GameSessionFinalizeIntermission();
+    }
+    return WG_GameSessionFinishIntermission();
 }
 
 static int WG_GameSessionHighScoreKey(uint16_t scan_code, int pressed)
@@ -4772,7 +5053,7 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.active && wg_game.intermission && event.pressed)
                 {
-                    if (!WG_GameSessionFinishIntermission())
+                    if (!WG_GameSessionAcknowledgeIntermission())
                     {
                         return WG_RESULT_PLATFORM_ERROR;
                     }
@@ -5839,7 +6120,7 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (wg_game.intermission && event.pressed)
                 {
-                    if (!WG_GameSessionFinishIntermission())
+                    if (!WG_GameSessionAcknowledgeIntermission())
                     {
                         return WG_RESULT_PLATFORM_ERROR;
                     }

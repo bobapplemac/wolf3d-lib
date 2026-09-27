@@ -48,6 +48,17 @@ int WL_DrawLevelCompleted(uint8_t *framebuffer,
                           const wg_level_t *level,
                           unsigned map_number,
                           const wl_intermission_t *intermission);
+int WL_DrawLevelCompletedProgress(
+    uint8_t *framebuffer,
+    const wg_graphics_t *graphics,
+    const wg_level_t *level,
+    unsigned map_number,
+    const wl_intermission_t *intermission,
+    uint32_t shown_bonus,
+    uint32_t shown_score_bonus,
+    unsigned shown_kill_ratio,
+    unsigned shown_secret_ratio,
+    unsigned shown_treasure_ratio);
 int WL_DrawIntermissionBJ(uint8_t *framebuffer,
                           const wg_graphics_t *graphics,
                           unsigned frame);

@@ -312,11 +312,17 @@ int WL_IntermissionCalculate(const wg_level_t *level,
     return 1;
 }
 
-int WL_DrawLevelCompleted(uint8_t *framebuffer,
-                          const wg_graphics_t *graphics,
-                          const wg_level_t *level,
-                          unsigned map_number,
-                          const wl_intermission_t *intermission)
+int WL_DrawLevelCompletedProgress(
+    uint8_t *framebuffer,
+    const wg_graphics_t *graphics,
+    const wg_level_t *level,
+    unsigned map_number,
+    const wl_intermission_t *intermission,
+    uint32_t shown_bonus,
+    uint32_t shown_score_bonus,
+    unsigned shown_kill_ratio,
+    unsigned shown_secret_ratio,
+    unsigned shown_treasure_ratio)
 {
     wl_intermission_chunks_t chunks;
     wl_status_t status;
@@ -334,7 +340,7 @@ int WL_DrawLevelCompleted(uint8_t *framebuffer,
     }
 
     WL_StatusDefaults(&status);
-    status.score = level->score + intermission->bonus;
+    status.score = level->score + shown_score_bonus;
     status.health = level->player_health;
     status.ammo = level->player_ammo;
     status.weapon = level->player_weapon;
@@ -436,32 +442,57 @@ int WL_DrawLevelCompleted(uint8_t *framebuffer,
         return 0;
     }
 
-    (void)snprintf(text, sizeof(text), "%u", intermission->kill_ratio);
-    length = strlen(text);
-    if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
-                              37 - (int)length * 2, 14, text))
+    if (shown_kill_ratio <= 100U)
     {
-        return 0;
+        (void)snprintf(text, sizeof(text), "%u", shown_kill_ratio);
+        length = strlen(text);
+        if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                  37 - (int)length * 2, 14, text))
+        {
+            return 0;
+        }
     }
-    (void)snprintf(text, sizeof(text), "%u", intermission->secret_ratio);
-    length = strlen(text);
-    if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
-                              37 - (int)length * 2, 16, text))
+    if (shown_secret_ratio <= 100U)
     {
-        return 0;
+        (void)snprintf(text, sizeof(text), "%u", shown_secret_ratio);
+        length = strlen(text);
+        if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                  37 - (int)length * 2, 16, text))
+        {
+            return 0;
+        }
     }
-    (void)snprintf(text, sizeof(text), "%u", intermission->treasure_ratio);
-    length = strlen(text);
-    if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
-                              37 - (int)length * 2, 18, text))
+    if (shown_treasure_ratio <= 100U)
     {
-        return 0;
+        (void)snprintf(text, sizeof(text), "%u", shown_treasure_ratio);
+        length = strlen(text);
+        if (!WL_IntermissionWrite(framebuffer, graphics, &chunks,
+                                  37 - (int)length * 2, 18, text))
+        {
+            return 0;
+        }
     }
     (void)snprintf(text, sizeof(text), "%lu",
-                   (unsigned long)intermission->bonus);
+                   (unsigned long)shown_bonus);
     length = strlen(text);
     return WL_IntermissionWrite(framebuffer, graphics, &chunks,
                                 36 - (int)length * 2, 7, text);
+}
+
+int WL_DrawLevelCompleted(uint8_t *framebuffer,
+                          const wg_graphics_t *graphics,
+                          const wg_level_t *level,
+                          unsigned map_number,
+                          const wl_intermission_t *intermission)
+{
+    if (intermission == NULL)
+    {
+        return 0;
+    }
+    return WL_DrawLevelCompletedProgress(
+        framebuffer, graphics, level, map_number, intermission,
+        intermission->bonus, intermission->bonus, intermission->kill_ratio,
+        intermission->secret_ratio, intermission->treasure_ratio);
 }
 
 int WL_VictoryCalculate(const wl_intermission_t ratios[8],

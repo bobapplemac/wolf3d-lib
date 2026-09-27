@@ -101,7 +101,7 @@
     {
       "caller": "LevelCompleted",
       "callee": "GivePoints",
-      "reason": "BeginIntermission applies the original ratio bonus directly to the campaign score."
+      "reason": "The non-blocking intermission state machine awards the completed ratio bonus when counting finishes or the player skips it."
     },
     {
       "caller": "PlayLoop",

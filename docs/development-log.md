@@ -1678,3 +1678,21 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Added real-data validation of the WL1, WL6, SDM, and SOD Get Psyched graphic
   mappings and recorded the scheduler-separated render/fizzle edges in the
   call-graph audit.
+
+## 2026-09-27: Intermission timing and acknowledgment parity
+
+- Replaced the portable intermission's immediate final-value screen with a
+  non-blocking translation of the original `LevelCompleted` sequence. The
+  time bonus and all three completion ratios now count up in order at the
+  70 Hz presentation rate, including the original 30-tic pauses and perfect,
+  zero, and ordinary completion sound cues.
+- Bonus points are now awarded only after the count finishes or is skipped.
+  During the count, the bonus field advances while the status-bar score stays
+  unchanged; the score updates only when the completed bonus is awarded.
+- Restored the original two-stage acknowledgment: the first press during the
+  sequence fills in the final values, while a subsequent press advances to
+  the next map. Secret and boss-floor summaries retain their immediate bonus
+  and single acknowledgment.
+- Kept BJ's breathing animation active while counting and while sound effects
+  finish, and added real-data rendering coverage for distinct initial and
+  completed intermission frames.
