@@ -79,6 +79,10 @@ To run the interactive Win32 host:
 wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
 ```
 
+The Win32 host displays the library's native 320x200 framebuffer in a 4:3
+viewport, reproducing the non-square-pixel proportions of the original VGA
+display. Resizing keeps the image centered at 4:3 with black bars as needed.
+
 When a directory contains more than one supported data set, select its data
 extension explicitly. The value is case-insensitive and may include its leading
 dot:

@@ -8,6 +8,8 @@
 - Added minimal x86/x64 `win32-release` folders with adjacent-data discovery,
   a replaceable Nuked-OPL3 DLL, license notices, and no external MSVC runtime
   dependency.
+- Aspect-corrected the Win32 host's native 320x200 VGA output to a centered
+  4:3 viewport while leaving the generic framebuffer contract unchanged.
 - Added one runtime-selectable engine for Spear of Destiny (`SOD`), its
   two-floor demo (`SDM`), and the `SD1`, `SD2`, and `SD3` mission profiles.
 - Added executable-name family preference plus strict `--game` extension

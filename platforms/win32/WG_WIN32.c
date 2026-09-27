@@ -27,6 +27,9 @@ static uint8_t wg_joystick_connected[WG_MAX_JOYSTICKS];
 
 #define WG_PCM_BUFFER_COUNT 4U
 #define WG_PCM_BUFFER_FRAMES 512U
+#define WG_DISPLAY_ASPECT_WIDTH 4
+#define WG_DISPLAY_ASPECT_HEIGHT 3
+#define WG_INITIAL_SCALE 3
 static HWAVEOUT wg_wave_out;
 static WAVEHDR wg_wave_headers[WG_PCM_BUFFER_COUNT];
 static int16_t wg_wave_samples[WG_PCM_BUFFER_COUNT]
@@ -34,6 +37,45 @@ static int16_t wg_wave_samples[WG_PCM_BUFFER_COUNT]
 static uint8_t wg_wave_used[WG_PCM_BUFFER_COUNT];
 
 static void WG_Win32PCMShutdown(void);
+
+static RECT wg_presentation_rectangle(const RECT *client)
+{
+    RECT presentation = { 0, 0, 0, 0 };
+    LONG client_width;
+    LONG client_height;
+    LONG width;
+    LONG height;
+
+    if (client == NULL)
+    {
+        return presentation;
+    }
+    client_width = client->right - client->left;
+    client_height = client->bottom - client->top;
+    if (client_width <= 0 || client_height <= 0)
+    {
+        return presentation;
+    }
+
+    if ((int64_t)client_width * WG_DISPLAY_ASPECT_HEIGHT
+        > (int64_t)client_height * WG_DISPLAY_ASPECT_WIDTH)
+    {
+        height = client_height;
+        width = (height * WG_DISPLAY_ASPECT_WIDTH)
+              / WG_DISPLAY_ASPECT_HEIGHT;
+    }
+    else
+    {
+        width = client_width;
+        height = (width * WG_DISPLAY_ASPECT_HEIGHT)
+               / WG_DISPLAY_ASPECT_WIDTH;
+    }
+    presentation.left = client->left + (client_width - width) / 2;
+    presentation.top = client->top + (client_height - height) / 2;
+    presentation.right = presentation.left + width;
+    presentation.bottom = presentation.top + height;
+    return presentation;
+}
 
 #define WG_EVENT_QUEUE_CAPACITY 64U
 static wg_event_t wg_event_queue[WG_EVENT_QUEUE_CAPACITY];
@@ -266,6 +308,7 @@ static int WG_Win32Init(void)
     window_class.lpfnWndProc = wg_window_proc;
     window_class.hInstance = instance;
     window_class.hCursor = LoadCursorW(NULL, IDC_ARROW);
+    window_class.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
     window_class.lpszClassName = wg_window_class;
 
     if (!RegisterClassW(&window_class) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
@@ -275,8 +318,9 @@ static int WG_Win32Init(void)
 
     rectangle.left = 0;
     rectangle.top = 0;
-    rectangle.right = WG_SCREEN_WIDTH * 3;
-    rectangle.bottom = WG_SCREEN_HEIGHT * 3;
+    rectangle.right = WG_SCREEN_WIDTH * WG_INITIAL_SCALE;
+    rectangle.bottom = (WG_SCREEN_WIDTH * WG_DISPLAY_ASPECT_HEIGHT
+                        / WG_DISPLAY_ASPECT_WIDTH) * WG_INITIAL_SCALE;
     AdjustWindowRect(&rectangle, WS_OVERLAPPEDWINDOW, FALSE);
 
     wg_window = CreateWindowExW(0, wg_window_class, L"wolf3dgeneric",
@@ -335,6 +379,7 @@ static void WG_Win32Present(const uint8_t *pixels, const uint8_t *palette)
 {
     BITMAPINFO bitmap_info;
     RECT client;
+    RECT presentation;
     HDC device_context;
     size_t index;
 
@@ -360,9 +405,24 @@ static void WG_Win32Present(const uint8_t *pixels, const uint8_t *palette)
     bitmap_info.bmiHeader.biCompression = BI_RGB;
 
     GetClientRect(wg_window, &client);
+    presentation = wg_presentation_rectangle(&client);
     device_context = GetDC(wg_window);
+    PatBlt(device_context, client.left, client.top,
+           client.right - client.left, presentation.top - client.top,
+           BLACKNESS);
+    PatBlt(device_context, client.left, presentation.bottom,
+           client.right - client.left, client.bottom - presentation.bottom,
+           BLACKNESS);
+    PatBlt(device_context, client.left, presentation.top,
+           presentation.left - client.left,
+           presentation.bottom - presentation.top, BLACKNESS);
+    PatBlt(device_context, presentation.right, presentation.top,
+           client.right - presentation.right,
+           presentation.bottom - presentation.top, BLACKNESS);
     SetStretchBltMode(device_context, COLORONCOLOR);
-    StretchDIBits(device_context, 0, 0, client.right, client.bottom,
+    StretchDIBits(device_context, presentation.left, presentation.top,
+                  presentation.right - presentation.left,
+                  presentation.bottom - presentation.top,
                   0, 0, WG_SCREEN_WIDTH, WG_SCREEN_HEIGHT, wg_pixels,
                   &bitmap_info, DIB_RGB_COLORS, SRCCOPY);
     ReleaseDC(wg_window, device_context);

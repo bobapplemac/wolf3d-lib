@@ -5,6 +5,15 @@ and remain under the Git-ignored `build/artifacts/` directory. They are never di
 with the source repository. Each entry records a deterministic indexed-frame
 hash so the milestone remains verifiable even when the screenshot is absent.
 
+## 2026-09-26: Win32 4:3 VGA presentation
+
+- Kept the generic library's canonical output at its original 320x200 indexed
+  resolution.
+- Changed only the Win32 host to present that framebuffer in a centered 4:3
+  viewport, matching the non-square pixel geometry of a contemporary VGA CRT.
+- Made the default client area 960x720 and preserve 4:3 with black
+  letterbox/pillarbox bars when the window is resized.
+
 ## 2026-09-26: Original startup presentation restored
 
 - Restored the original startup order for interactive hosts: hardware SIGNON,

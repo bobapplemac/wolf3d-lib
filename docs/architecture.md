@@ -45,6 +45,11 @@ palette. A host presents that pair, reports input events, supplies monotonic
 time and sleeping, and reports fatal errors. The Win32 reference host uses GDI;
 the headless host supplies deterministic virtual time for tests.
 
+The Win32 host treats the framebuffer as original VGA output rather than as
+square pixels. It scales the complete 320x200 image into a centered 4:3
+viewport and owns any letterboxing required by the client area. The portable
+library performs no aspect correction.
+
 The portable video layer implements clipped plots, bars, picture blits,
 proportional bitmap fonts, VGA-precision palette interpolation, and the
 original 17-bit fizzle LFSR. The logical operations are tested without a host;
