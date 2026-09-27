@@ -28,6 +28,12 @@ hash so the milestone remains verifiable even when the screenshot is absent.
 
 ![Embedded Spear SIGNON with restored detection overlays](../build/artifacts/signon-spear-filled.png)
 
+- Added `--adlib` as a hardware-profile override: OPL music and AdLib effects
+  remain active, digitized Sound Blaster effects are disabled, and SIGNON uses
+  the original mutually exclusive AdLib marker instead of Sound Blaster.
+
+![AdLib-only SIGNON hardware marker](../build/artifacts/signon-gt-adlib.png)
+
 ## 2026-09-26: Original status faces and Spear F1 behavior
 
 - Restored the original animated status-face timing instead of leaving BJ on

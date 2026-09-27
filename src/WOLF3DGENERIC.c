@@ -134,6 +134,7 @@ typedef enum wg_attract_phase
 static wg_attract_phase_t wg_attract_phase;
 static uint32_t wg_attract_deadline;
 static wg_game_family_t wg_signon_family;
+static uint8_t wg_signon_sound_blaster;
 static wg_audio_t wg_front_audio;
 static id_sd_music_t *wg_front_music;
 static uint8_t wg_front_audio_active;
@@ -1105,7 +1106,8 @@ static int WG_ParseSignonPalette(const char *value,
 }
 
 static int WG_LoadSignonScreen(const char *path,
-                               wg_game_family_t palette_family)
+                               wg_game_family_t palette_family,
+                               int sound_blaster_present)
 {
     wg_file_buffer_t file;
 
@@ -1127,8 +1129,10 @@ static int WG_LoadSignonScreen(const char *path,
     WG_FreeFile(&file);
     WG_SignonDrawIndicators(WG_ScreenBuffer, palette_family,
                             ID_IN_JoystickPresent(0U)
-                                || ID_IN_JoystickPresent(1U));
+                                || ID_IN_JoystickPresent(1U),
+                            sound_blaster_present);
     wg_signon_family = palette_family;
+    wg_signon_sound_blaster = (uint8_t)sound_blaster_present;
     WG_GamePalette(palette_family == WG_GAME_FAMILY_SPEAR
                        ? WG_GAME_SPEAR_FULL_SOD
                        : WG_GAME_WOLF3D_FULL_GT_14,
@@ -1147,7 +1151,8 @@ static int WG_LoadSignonScreen(const char *path,
 }
 
 static int WG_DrawEmbeddedSignon(const char *name,
-                                 wg_game_family_t palette_override)
+                                 wg_game_family_t palette_override,
+                                 int sound_blaster_present)
 {
     wg_game_family_t asset_family;
     wg_game_family_t palette_family;
@@ -1155,6 +1160,7 @@ static int WG_DrawEmbeddedSignon(const char *name,
     if (!WG_SignonDraw(WG_ScreenBuffer, wg_data_set.variant, name,
                        ID_IN_JoystickPresent(0U)
                            || ID_IN_JoystickPresent(1U),
+                       sound_blaster_present,
                        &asset_family))
     {
         return 0;
@@ -1162,6 +1168,7 @@ static int WG_DrawEmbeddedSignon(const char *name,
     palette_family = palette_override == WG_GAME_FAMILY_UNKNOWN
                          ? asset_family : palette_override;
     wg_signon_family = asset_family;
+    wg_signon_sound_blaster = (uint8_t)sound_blaster_present;
     WG_GamePalette(palette_family == WG_GAME_FAMILY_SPEAR
                        ? WG_GAME_SPEAR_FULL_SOD
                        : WG_GAME_WOLF3D_FULL_GT_14,
@@ -3660,7 +3667,9 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
                                     &end_page)
         || !WG_FindUnsignedArgument(argc, argv, "--collapse-frame", 0U,
                                     3U, &collapse_frame)
-        || view_size < WL_VIEW_SIZE_MIN)
+        || view_size < WL_VIEW_SIZE_MIN
+        || (WG_HasArgument(argc, argv, "--adlib")
+            && WG_HasArgument(argc, argv, "--pc-speaker")))
     {
         return WG_RESULT_INVALID_ARGUMENT;
     }
@@ -3701,14 +3710,20 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     }
     if (data_path != NULL && signon_path != NULL
         && !(WG_SignonIsEmbeddedName(signon_path)
-                 ? WG_DrawEmbeddedSignon(signon_path, signon_palette_family)
-                 : WG_LoadSignonScreen(signon_path, signon_palette_family)))
+                 ? WG_DrawEmbeddedSignon(
+                       signon_path, signon_palette_family,
+                       !WG_HasArgument(argc, argv, "--adlib"))
+                 : WG_LoadSignonScreen(
+                       signon_path, signon_palette_family,
+                       !WG_HasArgument(argc, argv, "--adlib"))))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
     }
     if (data_path != NULL && signon_path == NULL && WG_IsInteractive()
-        && !WG_DrawEmbeddedSignon(NULL, signon_palette_family))
+        && !WG_DrawEmbeddedSignon(
+            NULL, signon_palette_family,
+            !WG_HasArgument(argc, argv, "--adlib")))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
@@ -3725,6 +3740,12 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     if (WG_HasArgument(argc, argv, "--pc-speaker"))
     {
         wg_sound_mode = 1U;
+    }
+    else if (WG_HasArgument(argc, argv, "--adlib"))
+    {
+        wg_sound_mode = 2U;
+        wg_digitized_effects = 0U;
+        wg_music_enabled = 1U;
     }
     if (WG_HasArgument(argc, argv, "--view-size"))
     {
@@ -4249,7 +4270,8 @@ wg_result_t wolf3dgeneric_Run(void)
                 if (wg_attract_phase == WG_ATTRACT_SIGNON && event.connected)
                 {
                     WG_SignonDrawIndicators(WG_ScreenBuffer,
-                                            wg_signon_family, 1);
+                                            wg_signon_family, 1,
+                                            wg_signon_sound_blaster);
                 }
                 ID_IN_GetJoyDelta(event.joystick, &new_x, &new_y);
                 pressed_buttons = (uint8_t)(ID_IN_JoyButtons(event.joystick)

@@ -19,6 +19,8 @@ embedded in the engine as it was in the DOS executable: WL1 selects Apogee,
 WL6 selects GT, and Spear selects its own screen. Use --signon apogee, gt, id,
 activision, or spear to override that choice. Its memory and hardware markers
 are filled at runtime using the original screen coordinates and color ramps.
+Use --adlib to retain OPL music and AdLib effects while disabling digitized
+Sound Blaster effects; SIGNON then marks AdLib instead of Sound Blaster.
 
 If this folder contains more than one game, open a terminal here and select the
 desired extension explicitly:

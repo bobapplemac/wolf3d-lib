@@ -4450,7 +4450,7 @@ static void TestSignonAssets(void)
     CHECK(!WG_SignonIsEmbeddedName("SIGNON.BIN"));
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_SHAREWARE_14,
-                        "auto", 0, &family));
+                        "auto", 0, 1, &family));
     CHECK(family == WG_GAME_FAMILY_WOLF3D);
     for (index = 0U; index < 10U; ++index)
     {
@@ -4467,13 +4467,18 @@ static void TestSignonAssets(void)
     CHECK(framebuffer[151U * 320U + 164U] == 14U);
     CHECK(framebuffer[174U * 320U + 164U] != 14U);
 
+    CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
+                        "gt", 0, 0, &family));
+    CHECK(framebuffer[128U * 320U + 164U] == 14U);
+    CHECK(framebuffer[151U * 320U + 164U] != 14U);
+
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_SPEAR_FULL_SOD,
-                        NULL, 1, &family));
+                        NULL, 1, 1, &family));
     CHECK(family == WG_GAME_FAMILY_SPEAR);
     CHECK(framebuffer[163U * 320U + 49U] == 0x4fU);
     CHECK(framebuffer[105U * 320U + 164U] == 14U);
     CHECK(!WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
-                         "unknown", 0, &family));
+                         "unknown", 0, 1, &family));
     free(framebuffer);
 }
 

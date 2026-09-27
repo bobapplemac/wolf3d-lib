@@ -501,6 +501,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash --palette-hash)
         set_tests_properties(signon-auto-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "fa8a46047d53d714.*1e14f48394b7e6fd")
+        add_test(NAME signon-adlib-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --game WL6 --signon auto --adlib
+            --frame-hash --palette-hash)
+        set_tests_properties(signon-adlib-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "86d9cf58323f0f44.*1e14f48394b7e6fd")
         add_test(NAME rating-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --game WL6 --rating-view
             --frame-hash --palette-hash)

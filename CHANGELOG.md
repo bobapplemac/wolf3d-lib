@@ -19,6 +19,8 @@
 - Embedded all five runtime-selectable original SIGNON screens, restored their
   memory/hardware overlays, and added automatic edition-based selection plus
   explicit Wolf/Spear palette overrides.
+- Added an `--adlib` hardware profile for OPL music and effects without
+  digitized Sound Blaster playback, including the original SIGNON indication.
 - Kept configuration and save files isolated by logical game profile even when
   a GOG mission directory physically names every archive `.SOD`.
 - Validated every map and asset reference in SOD, SDM, and all three mission

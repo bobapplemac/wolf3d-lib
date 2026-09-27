@@ -434,6 +434,13 @@ rate produced by the original integer DSP time constant for its nominal 7 kHz
 configuration. Missing sample pages in the shareware archive fall back to the
 corresponding AdLib effect at runtime.
 
+The default hardware profile exposes both Sound Blaster digitized playback and
+its AdLib-compatible OPL synthesis. `--adlib` models an AdLib-only machine by
+disabling the digitized path while retaining music and synthesized effects.
+This also follows original `IntroScreen`: `SoundBlasterPresent` selects only
+the Sound Blaster indicator, whereas AdLib is marked only when no Sound Blaster
+is present.
+
 World sounds retain the original `WL_GAME.C` spatial transform and its exact
 15-by-30 left-ear attenuation table (the right ear is its mirrored axis).
 Events distinguish centered player/interface sounds from positioned actors and

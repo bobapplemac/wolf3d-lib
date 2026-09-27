@@ -123,6 +123,19 @@ Blaster services. It marks joystick only when one is detected; AdLib remains
 unmarked when Sound Blaster takes precedence, and the intentionally unsupported
 Disney Sound Source remains unmarked.
 
+Use `--adlib` to emulate a machine with AdLib hardware but no Sound Blaster.
+This keeps OPL music and AdLib sound effects, disables digitized VSWAP effects,
+and marks AdLib rather than Sound Blaster on SIGNON:
+
+```text
+wolf3dgeneric-win32 --adlib
+```
+
+The original detection screen treats those markers as mutually exclusive: a
+Sound Blaster marks only `SOUND BLASTER`, even when its OPL chip provides
+AdLib-compatible synthesis. `--adlib` and `--pc-speaker` are mutually
+exclusive startup overrides.
+
 Press a key on the title screen to open the original control-panel main menu.
 The arrow keys move its gun cursor; Enter selects an item and Escape returns to
 the title. `New Game` opens the original episode and difficulty panels, then
