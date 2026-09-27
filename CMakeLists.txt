@@ -259,6 +259,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     set(WG_TEST_SIGNON_PATH "" CACHE PATH "Path to external original SIGNON screens")
     if(WG_TEST_WL1_PATH)
         add_test(NAME data-wl1 COMMAND wg-tests --data wl1 "${WG_TEST_WL1_PATH}")
+        add_test(NAME rating-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --game WL1 --rating-view
+            --frame-hash --palette-hash)
+        set_tests_properties(rating-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "f49d01316c7fdd4c.*1e14f48394b7e6fd")
         add_test(NAME boss-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --map 8 --boss-view
             --frame-hash)
@@ -486,6 +491,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
+        add_test(NAME rating-view-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --game WL6 --rating-view
+            --frame-hash --palette-hash)
+        set_tests_properties(rating-view-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "f49d01316c7fdd4c.*1e14f48394b7e6fd")
         add_test(NAME boss-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --map 8 --boss-view
             --frame-hash)
@@ -727,6 +737,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             PASS_REGULAR_EXPRESSION "3b75e429fe454ad8")
     endif()
     if(WG_TEST_SOD_PATH)
+        add_test(NAME rating-view-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --rating-view
+            --frame-hash --palette-hash)
+        set_tests_properties(rating-view-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "f49d01316c7fdd4c.*eba126e8df00d1cb")
         add_test(NAME data-sod COMMAND wg-tests --spear-data SOD 666 21
             "${WG_TEST_SOD_PATH}")
         add_test(NAME title-view-sod COMMAND wolf3dgeneric-headless
@@ -803,6 +818,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             PASS_REGULAR_EXPRESSION "9a2558b3b98c49d0.*eba126e8df00d1cb")
     endif()
     if(WG_TEST_SDM_PATH)
+        add_test(NAME rating-view-sdm COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SDM_PATH}" --game SDM --rating-view
+            --frame-hash --palette-hash)
+        set_tests_properties(rating-view-sdm PROPERTIES
+            PASS_REGULAR_EXPRESSION "f49d01316c7fdd4c.*eba126e8df00d1cb")
         add_test(NAME data-sdm COMMAND wg-tests --spear-data SDM 666 2
             "${WG_TEST_SDM_PATH}")
         add_test(NAME title-view-sdm COMMAND wolf3dgeneric-headless

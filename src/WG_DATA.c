@@ -536,3 +536,24 @@ size_t WG_DataCreditsChunk(wg_game_variant_t variant)
     }
     return SIZE_MAX;
 }
+
+size_t WG_DataRatingChunk(wg_game_variant_t variant)
+{
+    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    {
+        return 100U;
+    }
+    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        return 88U;
+    }
+    if (variant == WG_GAME_SPEAR_DEMO_SDM)
+    {
+        return 77U;
+    }
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        return 91U;
+    }
+    return SIZE_MAX;
+}

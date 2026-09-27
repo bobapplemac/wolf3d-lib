@@ -100,9 +100,12 @@ explicitly, the engine accepts that mission's isolated directory with all of
 its archives renamed to `.SOD`. Automatic detection cannot distinguish those
 three identically named layouts, so select the corresponding `SDn` profile.
 
-The original executable-linked 320x200 SIGNON screen is optional and remains
-an external asset. Select any publisher/version screen at runtime rather than
-baking one into the library:
+The original executable-linked 320x200 SIGNON screen remains an external
+asset. Put it beside the selected game data as `SIGNON.BIN` to show it during
+normal startup. The engine also automatically recognizes the supplied archive
+names `SIGNON_APOGEE.BIN` for WL1, `SIGNON_GT.BIN` for WL6, and
+`SIGNON_SPEAR.BIN` for Spear. Select any other publisher/version screen at
+runtime rather than baking one into the library:
 
 ```text
 wolf3dgeneric-win32 --data "C:\path\to\game" --game WL6 --signon "C:\path\to\SIGNON_GT.BIN"
@@ -114,6 +117,13 @@ Spear's palette. `--signon-palette wolf` or `--signon-palette spear` provides
 an explicit override. This keeps the executable generic, permits Apogee, GT,
 id, Activision, and Spear artwork to be chosen without rebuilding, and avoids
 distributing any copyrighted screen with the source port.
+
+Interactive startup follows the original presentation order: the hardware
+detection SIGNON (when present), the seven-second PC-13 rating screen stored in
+the game graphics, and then the title/attract loop. A key, mouse button, or
+joystick button advances each startup screen. The preserved SIGNON assets
+already show the generic port's effective maximum DOS-era memory and detected
+mouse, joystick, AdLib, Sound Blaster, and Sound Source capabilities.
 
 Press a key on the title screen to open the original control-panel main menu.
 The arrow keys move its gun cursor; Enter selects an item and Escape returns to

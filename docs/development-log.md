@@ -5,6 +5,20 @@ and remain under the Git-ignored `build/artifacts/` directory. They are never di
 with the source repository. Each entry records a deterministic indexed-frame
 hash so the milestone remains verifiable even when the screenshot is absent.
 
+## 2026-09-26: Original startup presentation restored
+
+- Restored the original startup order for interactive hosts: hardware SIGNON,
+  seven-second PC-13 rating screen, then the title and attract loop.
+- Added automatic external SIGNON discovery beside the game data while
+  retaining `--signon` as the explicit publisher-art override.
+- Startup input now advances SIGNON or PC-13 instead of jumping directly to
+  the control panel.
+- The PC-13 indexed framebuffer is identical across all four base archives
+  (`f49d01316c7fdd4c`); palette hashes distinguish Wolf3D
+  (`1e14f48394b7e6fd`) from Spear (`eba126e8df00d1cb`).
+
+![Restored original PC-13 startup screen](../build/artifacts/pc13-wl6.png)
+
 ## 2026-09-26: Original status faces and Spear F1 behavior
 
 - Restored the original animated status-face timing instead of leaving BJ on

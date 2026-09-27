@@ -61,5 +61,6 @@ size_t WG_DataMusicBase(wg_game_variant_t variant);
 size_t WG_DataDemoChunk(wg_game_variant_t variant, unsigned demo_number);
 unsigned WG_DataDemoCount(wg_game_variant_t variant);
 size_t WG_DataCreditsChunk(wg_game_variant_t variant);
+size_t WG_DataRatingChunk(wg_game_variant_t variant);
 
 #endif
