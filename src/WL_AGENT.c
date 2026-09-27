@@ -449,31 +449,6 @@ unsigned WL_CollectPlayerTileBonuses(struct wg_level *level)
     return collected;
 }
 
-static int WL_TileBlocksPlayer(const wg_level_t *level, int tile_x,
-                               int tile_y)
-{
-    uint8_t tile;
-
-    if (tile_x < 0 || tile_x >= WG_LEVEL_SIZE
-        || tile_y < 0 || tile_y >= WG_LEVEL_SIZE)
-    {
-        return 1;
-    }
-    tile = level->tiles[(size_t)tile_y * WG_LEVEL_SIZE + (size_t)tile_x];
-    if (tile == 0U)
-    {
-        return 0;
-    }
-    if ((tile & 0x80U) != 0U)
-    {
-        size_t door_index = tile & 0x3fU;
-
-        return door_index >= level->door_count
-               || level->doors[door_index].position != 0xffffU;
-    }
-    return 1;
-}
-
 static int WL_FixedTile(int32_t value)
 {
     if (value >= 0)
@@ -505,7 +480,14 @@ int WL_TryMove(const struct wg_level *level, int32_t x, int32_t y)
     {
         for (tile_x = low_x; tile_x <= high_x; ++tile_x)
         {
-            if (WL_TileBlocksPlayer(level, tile_x, tile_y))
+            /* actorat[] stores either a low-valued wall/door token or an
+               object pointer.  A non-shootable actor pointer can therefore
+               replace a door token, an original quirk used by the demos. */
+            if (level->actor_at[(size_t)tile_y * WG_LEVEL_SIZE
+                                + (size_t)tile_x] != 0U
+                && level->actor_at[(size_t)tile_y * WG_LEVEL_SIZE
+                                   + (size_t)tile_x]
+                       < WG_ACTOR_AT_ACTOR_BASE)
             {
                 return 0;
             }
@@ -522,25 +504,51 @@ int WL_TryMove(const struct wg_level *level, int32_t x, int32_t y)
             return 0;
         }
     }
-    for (index = 0U; index < level->actor_count; ++index)
+    if (low_y > 0)
     {
-        const wg_actor_t *actor = &level->actors[index];
-        int32_t delta_x;
-        int32_t delta_y;
+        --low_y;
+    }
+    if (high_y < WG_LEVEL_SIZE - 1)
+    {
+        ++high_y;
+    }
+    if (low_x > 0)
+    {
+        --low_x;
+    }
+    if (high_x < WG_LEVEL_SIZE - 1)
+    {
+        ++high_x;
+    }
+    for (tile_y = low_y; tile_y <= high_y; ++tile_y)
+    {
+        for (tile_x = low_x; tile_x <= high_x; ++tile_x)
+        {
+            uint16_t occupant = level->actor_at[(size_t)tile_y
+                                                * WG_LEVEL_SIZE + tile_x];
+            const wg_actor_t *actor;
+            int32_t delta_x;
+            int32_t delta_y;
 
-        if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U
-            || (actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
-        {
-            continue;
-        }
-        delta_x = x - actor->x;
-        delta_y = y - actor->y;
-        if (delta_x >= -WL_MIN_ACTOR_DISTANCE
-            && delta_x <= WL_MIN_ACTOR_DISTANCE
-            && delta_y >= -WL_MIN_ACTOR_DISTANCE
-            && delta_y <= WL_MIN_ACTOR_DISTANCE)
-        {
-            return 0;
+            if (occupant < WG_ACTOR_AT_ACTOR_BASE
+                || occupant >= WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
+            {
+                continue;
+            }
+            actor = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U)
+            {
+                continue;
+            }
+            delta_x = x - actor->x;
+            delta_y = y - actor->y;
+            if (delta_x >= -WL_MIN_ACTOR_DISTANCE
+                && delta_x <= WL_MIN_ACTOR_DISTANCE
+                && delta_y >= -WL_MIN_ACTOR_DISTANCE
+                && delta_y <= WL_MIN_ACTOR_DISTANCE)
+            {
+                return 0;
+            }
         }
     }
     return 1;
@@ -600,8 +608,8 @@ int WL_Thrust(struct wg_level *level, const struct wg_view_tables *tables,
     move_speed = speed >= WG_MIN_DISTANCE * 2
                      ? WG_MIN_DISTANCE * 2 - 1 : speed;
     cosine = WG_ViewCosineTable(tables);
-    x_move = WG_FixedMul(move_speed, cosine[angle]);
-    y_move = -WG_FixedMul(move_speed, tables->sine[angle]);
+    x_move = WG_FixedByFrac(move_speed, cosine[angle]);
+    y_move = -WG_FixedByFrac(move_speed, tables->sine[angle]);
     if (!WL_ClipMove(level, x_move, y_move))
     {
         return 0;

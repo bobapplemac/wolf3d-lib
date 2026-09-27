@@ -22,8 +22,15 @@ static int WL_DoorSoundConnected(const wg_level_t *level,
 static int WL_DoorIsObstructed(const wg_level_t *level,
                                const wg_door_t *door)
 {
-    size_t index;
+    uint16_t occupant;
+    const wg_actor_t *check;
 
+    occupant = level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE
+                               + door->tile_x];
+    if (occupant != 0U)
+    {
+        return 1;
+    }
     if (level->player_tile_x == door->tile_x
         && level->player_tile_y == door->tile_y)
     {
@@ -45,37 +52,77 @@ static int WL_DoorIsObstructed(const wg_level_t *level,
     {
         return 1;
     }
-    for (index = 0U; index < level->actor_count; ++index)
+    if (door->vertical != 0U)
     {
-        const wg_actor_t *actor = &level->actors[index];
-
-        if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U
-            || (actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        occupant = level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE
+                                   + door->tile_x - 1U];
+        if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+            && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
         {
-            continue;
+            check = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((check->x + WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_x)
+            {
+                return 1;
+            }
         }
-        if (actor->tile_x == door->tile_x && actor->tile_y == door->tile_y)
+        occupant = level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE
+                                   + door->tile_x + 1U];
+        if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+            && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
         {
-            return 1;
+            check = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((check->x - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_x)
+            {
+                return 1;
+            }
         }
-        if (door->vertical != 0U && actor->tile_y == door->tile_y
-            && (((actor->x + WG_MIN_DISTANCE) / WG_FIXED_ONE
-                 == door->tile_x)
-                || ((actor->x - WG_MIN_DISTANCE) / WG_FIXED_ONE
-                    == door->tile_x)))
+    }
+    else
+    {
+        occupant = level->actor_at[((size_t)door->tile_y - 1U)
+                                   * WG_LEVEL_SIZE + door->tile_x];
+        if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+            && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
         {
-            return 1;
+            check = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((check->y + WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_y)
+            {
+                return 1;
+            }
         }
-        if (door->vertical == 0U && actor->tile_x == door->tile_x
-            && (((actor->y + WG_MIN_DISTANCE) / WG_FIXED_ONE
-                 == door->tile_y)
-                || ((actor->y - WG_MIN_DISTANCE) / WG_FIXED_ONE
-                    == door->tile_y)))
+        occupant = level->actor_at[((size_t)door->tile_y + 1U)
+                                   * WG_LEVEL_SIZE + door->tile_x];
+        if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+            && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
         {
-            return 1;
+            check = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((check->y - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_y)
+            {
+                return 1;
+            }
         }
     }
     return 0;
+}
+
+static int WL_ClosingDoorIsObstructed(const wg_level_t *level,
+                                      const wg_door_t *door,
+                                      size_t door_index)
+{
+    size_t spot = (size_t)door->tile_y * WG_LEVEL_SIZE + door->tile_x;
+
+    /* DoorClosing in the DOS source deliberately performs a narrower test
+       than CloseDoor: once closing has begun, only an object that replaced
+       the door token in actorat[] or the player standing in the door tile
+       makes it reopen.  Repeating CloseDoor's adjacent-overlap test here
+       keeps doors open when a guard merely brushes their threshold. */
+    return level->actor_at[spot] != (uint16_t)(0x80U | door_index)
+           || (level->player_tile_x == door->tile_x
+               && level->player_tile_y == door->tile_y);
 }
 
 int WL_OpenDoor(struct wg_level *level, size_t door_index)
@@ -119,6 +166,8 @@ int WL_CloseDoor(struct wg_level *level, size_t door_index)
             door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
     }
     door->action = WG_DOOR_CLOSING;
+    level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE + door->tile_x]
+        = (uint16_t)(0x80U | door_index);
     return 1;
 }
 
@@ -184,6 +233,8 @@ int WL_MoveDoors(struct wg_level *level, unsigned tics)
                 door->position = 0xffffU;
                 door->tic_count = 0U;
                 door->action = WG_DOOR_OPEN;
+                level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE
+                                + door->tile_x] = 0U;
             }
             else
             {
@@ -204,7 +255,7 @@ int WL_MoveDoors(struct wg_level *level, unsigned tics)
             uint32_t movement = tics >= 64U ? 0xffffU
                                             : (uint32_t)tics << 10;
 
-            if (WL_DoorIsObstructed(level, door))
+            if (WL_ClosingDoorIsObstructed(level, door, index))
             {
                 (void)WL_OpenDoor(level, index);
             }
@@ -321,6 +372,7 @@ int WL_PushWall(struct wg_level *level, uint8_t tile_x, uint8_t tile_y,
     destination = (size_t)destination_y * WG_LEVEL_SIZE
                   + (size_t)destination_x;
     level->tiles[destination] = old_tile;
+    level->actor_at[destination] = old_tile;
     ++level->secret_count;
     level->pushwall_x = tile_x;
     level->pushwall_y = tile_y;
@@ -370,6 +422,7 @@ int WL_MovePushWalls(struct wg_level *level, unsigned tics)
                   + level->pushwall_x;
         old_tile = (uint8_t)(level->tiles[current] & 63U);
         level->tiles[current] = 0U;
+        level->actor_at[current] = 0U;
         if (level->player_tile_x < WG_LEVEL_SIZE
             && level->player_tile_y < WG_LEVEL_SIZE)
         {
@@ -406,6 +459,7 @@ int WL_MovePushWalls(struct wg_level *level, unsigned tics)
         }
         next = (size_t)next_y * WG_LEVEL_SIZE + (size_t)next_x;
         level->tiles[next] = old_tile;
+        level->actor_at[next] = old_tile;
         current = (size_t)level->pushwall_y * WG_LEVEL_SIZE
                   + level->pushwall_x;
         level->tiles[current] = (uint8_t)(old_tile | 0xc0U);

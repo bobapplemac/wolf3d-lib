@@ -310,6 +310,17 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
     level->player_chosen_weapon = 1U;
     level->player_best_weapon = 1U;
     WG_RandomSeed(&level->random, 0U);
+    /* The DOS actorat array begins as a copy of every solid map tile.  Actor
+       pointers later overwrite these small integer tokens. */
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        uint16_t tile = map->planes[0][index];
+
+        if (tile < WG_AREA_TILE)
+        {
+            level->actor_at[index] = tile;
+        }
+    }
     for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
     {
         uint16_t tile = map->planes[0][index];
@@ -626,6 +637,15 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
         }
     }
 
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        if (map->planes[0][index] == WG_AMBUSH_TILE
+            && level->actor_at[index] == WG_AMBUSH_TILE)
+        {
+            level->actor_at[index] = 0U;
+        }
+    }
+
     for (index = 0; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
     {
         uint16_t tile = map->planes[0][index];
@@ -648,6 +668,7 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
                                           / 2U);
             door->action = WG_DOOR_CLOSED;
             level->tiles[index] = (uint8_t)(0x80U | level->door_count);
+            level->actor_at[index] = (uint16_t)(0x80U | level->door_count);
             if (door->vertical)
             {
                 if (x == 0U || x + 1U >= WG_LEVEL_SIZE
@@ -939,15 +960,15 @@ int WG_SoundPosition(const wg_level_t *level,
     view_cosine = cosine[level->player_angle];
     view_sine = tables->sine[level->player_angle];
     view_x = level->player_x
-             - WG_FixedMul(tables->focal_length, view_cosine);
+             - WG_FixedByFrac(tables->focal_length, view_cosine);
     view_y = level->player_y
-             + WG_FixedMul(tables->focal_length, view_sine);
+             + WG_FixedByFrac(tables->focal_length, view_sine);
     sound_x -= view_x;
     sound_y -= view_y;
-    relative_x = WG_FixedMul(sound_x, view_cosine)
-                 - WG_FixedMul(sound_y, view_sine);
-    relative_y = WG_FixedMul(sound_x, view_sine)
-                 + WG_FixedMul(sound_y, view_cosine);
+    relative_x = WG_FixedByFrac(sound_x, view_cosine)
+                 - WG_FixedByFrac(sound_y, view_sine);
+    relative_y = WG_FixedByFrac(sound_x, view_sine)
+                 + WG_FixedByFrac(sound_y, view_cosine);
     distance_x = WG_SoundTile(relative_x);
     distance_y = WG_SoundTile(relative_y);
     if (distance_y >= 15)

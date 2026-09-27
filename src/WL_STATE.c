@@ -625,6 +625,11 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     }
     actor->tile_x = (uint8_t)(actor->x / WG_FIXED_ONE);
     actor->tile_y = (uint8_t)(actor->y / WG_FIXED_ONE);
+    /* KillActor clears the actor's physical tile after replacing tilex/tiley.
+       If it was still marked at an old destination, that stale actorat entry
+       intentionally survives just as it did in the DOS engine. */
+    level->actor_at[(size_t)actor->tile_y * WG_LEVEL_SIZE + actor->tile_x]
+        = 0U;
     if (WL_UsesDeathCam(actor->actor_class))
     {
         level->kill_x = level->player_x;
@@ -642,7 +647,14 @@ int WL_KillActor(wg_level_t *level, size_t actor_index)
     actor->rotate = 0U;
     actor->flags = (uint16_t)(actor->flags & ~WG_ACTOR_FLAG_SHOOTABLE);
     actor->flags |= WG_ACTOR_FLAG_NONMARK;
-    WL_QueueDeathSound(level, actor);
+    /* A_DeathScream is the action attached to the first death state in the
+       original state table.  DoActor invokes it when that state expires,
+       not when KillActor enters it.  Schabbs is the one deliberate exception:
+       KillActor also calls A_DeathScream immediately for him. */
+    if (actor->actor_class == WG_ACTOR_SCHABBS)
+    {
+        WL_QueueDeathSound(level, actor);
+    }
     WL_GivePoints(level, points);
     ++level->kill_count;
     return 1;
@@ -668,12 +680,21 @@ static int WL_TickPainOrDeath(wg_level_t *level, wg_actor_t *actor,
             }
             WL_SetChaseShape(actor);
             actor->rotate = 1U;
+            /* DoActor immediately executes the think callback of the state
+               reached by a timed transition.  Tell the caller that pain
+               ended in chase1 so it can run T_Chase in this same frame. */
+            return 2;
         }
         return 1;
     }
     while (actor->tic_count <= 0 && WL_IsDeathState(actor->state))
     {
         unsigned frame = (unsigned)(actor->state - WG_STATE_DIE1) + 1U;
+
+        if (actor->state == WG_STATE_DIE1)
+        {
+            WL_QueueDeathSound(level, actor);
+        }
 
         if (frame >= WL_DeathTimedFrames(actor->actor_class))
         {
@@ -877,17 +898,31 @@ static int WL_ActorBlocksSpot(const wg_level_t *level, size_t actor_index,
                               int tile_x, int tile_y)
 {
     size_t index;
+    uint16_t occupant;
 
-    for (index = 0; index < level->actor_count; ++index)
+    /* Blocking statics share actorat[] with actors in the DOS engine.  They
+       therefore participate in both cardinal and diagonal TryWalk tests. */
+    for (index = 0; index < level->static_count; ++index)
     {
-        const wg_actor_t *other = &level->actors[index];
+        const wg_static_object_t *object = &level->statics[index];
 
-        if (index != actor_index && WL_IsBlockingActor(other)
-            && other->tile_x == (uint8_t)tile_x
-            && other->tile_y == (uint8_t)tile_y)
+        if (object->removed == 0U && object->blocking != 0U
+            && object->tile_x == (uint8_t)tile_x
+            && object->tile_y == (uint8_t)tile_y)
         {
             return 1;
         }
+    }
+
+    occupant = level->actor_at[(size_t)tile_y * WG_LEVEL_SIZE
+                               + (size_t)tile_x];
+    if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+        && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count
+        && occupant != WG_ACTOR_AT_ACTOR_BASE + actor_index
+        && WL_IsBlockingActor(&level->actors[
+               occupant - WG_ACTOR_AT_ACTOR_BASE]))
+    {
+        return 1;
     }
     return 0;
 }
@@ -952,8 +987,17 @@ static int WL_TryWalk(wg_level_t *level, size_t actor_index)
         {
             return 0;
         }
-        actor->distance = level->doors[door].position == 0xffffU
-                              ? WG_FIXED_ONE : -(int32_t)door - 1;
+        if (level->doors[door].position != 0xffffU)
+        {
+            /* Original TryWalk changes the destination tile, opens the door
+               immediately, and returns before changing the actor's area. */
+            actor->distance = -(int32_t)door - 1;
+            actor->tile_x = (uint8_t)destination_x;
+            actor->tile_y = (uint8_t)destination_y;
+            (void)WL_OpenDoor(level, door);
+            return 1;
+        }
+        actor->distance = WG_FIXED_ONE;
     }
     else
     {
@@ -1666,7 +1710,7 @@ static wg_actor_t *WL_AllocateTransientActor(wg_level_t *level)
         {
             memset(&level->actors[index], 0, sizeof(level->actors[index]));
             actor = &level->actors[index];
-            actor->flags = WG_ACTOR_FLAG_ACTIVE;
+            actor->flags = WG_ACTOR_FLAG_ACTIVE | WG_ACTOR_FLAG_NEVERMARK;
             return actor;
         }
     }
@@ -1677,7 +1721,7 @@ static wg_actor_t *WL_AllocateTransientActor(wg_level_t *level)
     memset(&level->actors[level->actor_count], 0,
            sizeof(level->actors[level->actor_count]));
     actor = &level->actors[level->actor_count++];
-    actor->flags = WG_ACTOR_FLAG_ACTIVE;
+    actor->flags = WG_ACTOR_FLAG_ACTIVE | WG_ACTOR_FLAG_NEVERMARK;
     return actor;
 }
 
@@ -1705,8 +1749,8 @@ static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
     const wg_view_tables_t *tables = WL_ProjectileTrigTables();
     const int32_t *cosine = WG_ViewCosineTable(tables);
     int32_t speed = actor->speed * tics;
-    int32_t delta_x = WG_FixedMul(speed, cosine[actor->angle]);
-    int32_t delta_y = -WG_FixedMul(speed, tables->sine[actor->angle]);
+    int32_t delta_x = WG_FixedByFrac(speed, cosine[actor->angle]);
+    int32_t delta_y = -WG_FixedByFrac(speed, tables->sine[actor->angle]);
 
     if (delta_x > WG_FIXED_ONE)
     {
@@ -2409,10 +2453,30 @@ static void WL_T_Path(wg_level_t *level, size_t actor_index, int32_t tics)
     }
 }
 
+static void WL_MarkActorAt(wg_level_t *level, size_t actor_index)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    size_t spot;
+
+    if ((actor->flags & (WG_ACTOR_FLAG_REMOVED
+                         | WG_ACTOR_FLAG_NEVERMARK)) != 0U)
+    {
+        return;
+    }
+    spot = (size_t)actor->tile_y * WG_LEVEL_SIZE + actor->tile_x;
+    if ((actor->flags & WG_ACTOR_FLAG_NONMARK) != 0U
+        && level->actor_at[spot] != 0U)
+    {
+        return;
+    }
+    level->actor_at[spot] = (uint16_t)(WG_ACTOR_AT_ACTOR_BASE + actor_index);
+}
+
 int WL_TickActors(wg_level_t *level, unsigned tics)
 {
     size_t index;
     int connectivity_ready = 0;
+    int previous_processed = 0;
 
     if (level == NULL || tics > (unsigned)(INT32_MAX / 10000))
     {
@@ -2421,6 +2485,12 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
     for (index = 0; index < level->actor_count; ++index)
     {
         wg_actor_t *actor = &level->actors[index];
+
+        if (previous_processed)
+        {
+            WL_MarkActorAt(level, index - 1U);
+            previous_processed = 0;
+        }
 
         if ((actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
         {
@@ -2445,6 +2515,13 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 continue;
             }
         }
+        if ((actor->flags & (WG_ACTOR_FLAG_NONMARK
+                             | WG_ACTOR_FLAG_NEVERMARK)) == 0U)
+        {
+            level->actor_at[(size_t)actor->tile_y * WG_LEVEL_SIZE
+                            + actor->tile_x] = 0U;
+        }
+        previous_processed = 1;
         if (actor->actor_class == WG_ACTOR_BJ)
         {
             WL_TickBJVictory(level, index, (int32_t)tics);
@@ -2466,9 +2543,23 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
         }
         if (WL_IsPainState(actor->state) || WL_IsDeathState(actor->state))
         {
-            if (!WL_TickPainOrDeath(level, actor, tics))
+            int transition = WL_TickPainOrDeath(level, actor, tics);
+
+            if (!transition)
             {
                 return 0;
+            }
+            if (transition == 2)
+            {
+                if (!connectivity_ready)
+                {
+                    if (!WL_UpdateAreaConnectivity(level))
+                    {
+                        return 0;
+                    }
+                    connectivity_ready = 1;
+                }
+                WL_T_Chase(level, index, (int32_t)tics);
             }
             continue;
         }
@@ -2976,6 +3067,10 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             }
         }
     }
+    if (previous_processed)
+    {
+        WL_MarkActorAt(level, level->actor_count - 1U);
+    }
     return 1;
 }
 
@@ -3073,7 +3168,7 @@ int WL_UpdateAreaConnectivity(wg_level_t *level)
 }
 
 static int WL_LineTileClear(const wg_level_t *level, int x, int y,
-                            uint32_t intercept)
+                            uint16_t intercept)
 {
     uint8_t tile;
     size_t door;
@@ -3156,16 +3251,20 @@ int WL_CheckLine(const wg_level_t *level, const wg_actor_t *actor)
         {
             fraction_step = (int32_t)long_step;
         }
-        fraction = y1 + fraction_step * partial / 256;
+        /* The DOS expression used a signed long arithmetic right shift.
+           Division would round negative products toward zero instead. */
+        fraction = y1 + (fraction_step * partial >> 8);
         x = xt1 + step;
         xt2 += step;
         do
         {
-            uint32_t intercept;
+            uint16_t intercept;
 
             y = fraction >> 8;
             fraction += fraction_step;
-            intercept = (uint32_t)(fraction - fraction_step / 2);
+            /* The DOS local is a 16-bit unsigned.  Only the fractional
+               word is compared with the door's 16-bit position. */
+            intercept = (uint16_t)(fraction - fraction_step / 2);
             if (!WL_LineTileClear(level, x, y, intercept))
             {
                 return 0;
@@ -3201,16 +3300,16 @@ int WL_CheckLine(const wg_level_t *level, const wg_actor_t *actor)
         {
             fraction_step = (int32_t)long_step;
         }
-        fraction = x1 + fraction_step * partial / 256;
+        fraction = x1 + (fraction_step * partial >> 8);
         y = yt1 + step;
         yt2 += step;
         do
         {
-            uint32_t intercept;
+            uint16_t intercept;
 
             x = fraction >> 8;
             fraction += fraction_step;
-            intercept = (uint32_t)(fraction - fraction_step / 2);
+            intercept = (uint16_t)(fraction - fraction_step / 2);
             if (!WL_LineTileClear(level, x, y, intercept))
             {
                 return 0;

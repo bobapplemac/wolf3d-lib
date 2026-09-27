@@ -3219,6 +3219,14 @@ static int WG_GameSessionTick(void)
     WL_UpdatePaletteShiftsForTics(
         &wg_game.level, WG_Palette,
         wg_game.demo_playback ? WL_DEMO_TICS : 1U);
+    /* DOS PlayLoop calls ThreeDRefresh once for every PollControls result.
+       That is simulation-significant: DrawScaleds activates visible actors
+       and collects reachable bonuses.  Preserve the one-render-per-command
+       contract even when the host's 70 Hz scheduler is catching up. */
+    if (wg_game.demo_playback && !WG_GameSessionRender())
+    {
+        return 0;
+    }
     if (wg_game.audio_active)
     {
         if (wg_game.sound_positioned
@@ -3780,14 +3788,41 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         wl_play_state_t play;
         wl_demo_command_t command;
         unsigned command_number;
+        unsigned demo_face_count = 0U;
 
         WL_PlayStateReset(&play);
         WG_ViewBuildTrigTables(&view);
+        if (!WG_ViewCalculateProjection(&view,
+                                        (uint16_t)(view_size * 16U),
+                                        WG_FOCAL_LENGTH))
+        {
+            goto cleanup;
+        }
         for (command_number = 0U;
              command_number < demo_commands && WL_DemoNext(&demo, &command);
              ++command_number)
         {
-            if (!WL_PlayDemoCommand(&level, &view, &play, &command))
+            uint8_t face_random;
+
+            /* UpdateFace runs at the start of T_Player/T_Attack and shares
+               US_RndT with combat and actor AI.  Reproduce its RNG traffic
+               even though this headless diagnostic does not draw the face. */
+            demo_face_count += WL_DEMO_TICS;
+            face_random = WG_RandomNext(&level.random);
+            if (demo_face_count > face_random)
+            {
+                (void)WG_RandomNext(&level.random);
+                demo_face_count = 0U;
+            }
+            if (!WL_PlayDemoCommand(&level, &view, &play, &command)
+                || !WG_RenderStaticView(
+                    WG_ScreenBuffer, &level, &view, &walls, 0, 0,
+                    level.player_x, level.player_y, level.player_angle,
+                    hits, visible_tiles)
+                || !WL_DrawScaleds(
+                    WG_ScreenBuffer, &pages, &level, &view, hits,
+                    visible_tiles, level.player_x, level.player_y,
+                    level.player_angle))
             {
                 goto cleanup;
             }

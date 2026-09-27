@@ -1,5 +1,40 @@
 # Development log
 
+## 2026-09-27: WL1 fixed-point and demo-parity pass
+
+- Replaced the remaining generalized 16.16 multiplies in original gameplay,
+  raycasting, projection, and positional-audio paths with a readable C form of
+  `WL_DRAW.C`'s signed-magnitude `FixedByFrac`. Perspective multiplication now
+  also reproduces Borland's 32-bit `long` wrap and the original
+  `centerx = viewwidth / 2 - 1` convention.
+- Restored the original combined `actorat` model. Low values are wall/door
+  tokens and higher values identify actors; patrol destination marking, stale
+  dead-actor marks, non-marking objects, player collision, actor pathing,
+  pushwalls, and doors now observe that one shared occupancy grid.
+- Corrected `DoorClosing` to use its narrower original obstruction test. The
+  earlier port repeated `CloseDoor`'s adjacent-overlap check every tic, which
+  reopened a door brushed by a guard, kept areas connected, and eventually
+  desynchronized WL1 demo 1's actor and RNG state.
+- Restored render-side simulation effects during headless demo playback:
+  visibility activation, reachable bonus collection, and status-face RNG now
+  occur once per recorded four-tic command in their original order.
+- Bumped portable saves to version 3 to retain `actorat` exactly. Versions 1
+  and 2 remain readable and reconstruct walls, doors, and live actor marks
+  where their older format lacks stale occupancy information.
+- Added focused regressions for the complete RNG table, signed-magnitude fixed
+  math, stale visibility, blocking-static path selection, combined occupancy,
+  and the closing-door threshold case. The complete WL1 matrix passes 51/51,
+  including all four full embedded demo streams.
+- Re-baselined only the frames affected by restored DOS projection math, then
+  verified the full WL6, SOD, SDM, SD1, SD2, and SD3 matrix. The complete
+  configured suite passes 141/141, including every embedded WL1, WL6, SOD,
+  and SDM demo from beginning to end.
+- Chocolate Wolfenstein 3D was used as a traceable secondary oracle. Demo 1's
+  scalar trace matches it for all 1,284 commands. The remaining Chocolate
+  differences in demos 0, 2, and 3 occur at sprite projection/pickup or
+  hitscan-edge thresholds where Chocolate uses modern `FixedMul`; the released
+  DOS source specifies the `FixedByFrac` behavior retained here.
+
 ## 2026-09-27: three-way source-parity call-graph audit
 
 Added a tolerant static analyzer for the original Borland-era sources,

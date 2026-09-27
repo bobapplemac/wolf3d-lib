@@ -5,6 +5,6 @@
 
 #define WG_FIXED_ONE INT32_C(65536)
 
-int32_t WG_FixedMul(int32_t a, int32_t b);
+int32_t WG_FixedByFrac(int32_t a, int32_t b);
 
 #endif

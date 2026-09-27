@@ -7,7 +7,7 @@
 #include "WG_ENDIAN.h"
 #include "WG_FILE.h"
 
-#define WG_SAVE_VERSION 2U
+#define WG_SAVE_VERSION 3U
 
 static const uint8_t WG_SaveMagic[8] =
     { 'W', '3', 'D', 'G', 'S', 'A', 'V', 'E' };
@@ -250,10 +250,15 @@ static void WG_SaveLevel(wg_save_writer_t *writer, const wg_level_t *level)
         WG_SaveU8(writer, (uint8_t)actor->state);
         WG_SaveU8(writer, (uint8_t)actor->actor_class);
     }
+    for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+    {
+        WG_SaveU16(writer, level->actor_at[index]);
+    }
     WG_SaveU8(writer, level->random.index);
 }
 
-static void WG_LoadLevel(wg_save_reader_t *reader, wg_level_t *level)
+static void WG_LoadLevel(wg_save_reader_t *reader, wg_level_t *level,
+                         uint16_t version)
 {
     size_t index;
 
@@ -377,6 +382,57 @@ static void WG_LoadLevel(wg_save_reader_t *reader, wg_level_t *level)
         actor->state = (wg_actor_state_t)WG_LoadU8(reader);
         actor->actor_class = (wg_actor_class_t)WG_LoadU8(reader);
     }
+    if (version >= 3U)
+    {
+        for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+        {
+            level->actor_at[index] = WG_LoadU16(reader);
+        }
+    }
+    else
+    {
+        /* Older portable saves did not retain actorat[]'s stale entries.
+           Exact stale pointers cannot be recovered, but reconstruct the
+           original wall/door tokens and live actor marks so collision and
+           pathing remain correct after loading them. */
+        for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
+        {
+            uint8_t tile = level->tiles[index];
+
+            if ((tile & 0x80U) != 0U)
+            {
+                size_t door_index = tile & 0x3fU;
+
+                if (door_index < level->door_count
+                    && level->doors[door_index].action != WG_DOOR_OPEN)
+                {
+                    level->actor_at[index] = tile;
+                }
+            }
+            else if (tile != 0U)
+            {
+                level->actor_at[index] = (uint16_t)(tile & 0x3fU);
+            }
+        }
+        for (index = 0U; index < level->actor_count; ++index)
+        {
+            const wg_actor_t *actor = &level->actors[index];
+            size_t spot;
+
+            if ((actor->flags & (WG_ACTOR_FLAG_REMOVED
+                                 | WG_ACTOR_FLAG_NEVERMARK)) == 0U)
+            {
+                spot = (size_t)actor->tile_y * WG_LEVEL_SIZE
+                       + actor->tile_x;
+                if ((actor->flags & WG_ACTOR_FLAG_NONMARK) == 0U
+                    || level->actor_at[spot] == 0U)
+                {
+                    level->actor_at[spot]
+                        = (uint16_t)(WG_ACTOR_AT_ACTOR_BASE + index);
+                }
+            }
+        }
+    }
     level->random.index = WG_LoadU8(reader);
     level->sound_event_count = 0U;
 }
@@ -445,7 +501,7 @@ int WG_SaveReadName(const uint8_t *data, size_t size,
     if (name == NULL
         || memcmp(data + WG_SAVE_NAME_BYTES, WG_SaveMagic,
                   sizeof(WG_SaveMagic)) != 0
-        || (version != 1U && version != WG_SAVE_VERSION)
+        || (version < 1U || version > WG_SAVE_VERSION)
         || data[WG_SAVE_NAME_BYTES + sizeof(WG_SaveMagic) + 2U]
                != (uint8_t)variant)
     {
@@ -495,7 +551,7 @@ int WG_SaveDecode(const uint8_t *data, size_t size,
     state->map_number = WG_LoadU8(&reader);
     state->level_start_score = WG_LoadU32(&reader);
     if (!reader.valid || memcmp(magic, WG_SaveMagic, sizeof(magic)) != 0
-        || (version != 1U && version != WG_SAVE_VERSION)
+        || (version < 1U || version > WG_SAVE_VERSION)
         || stored_variant != (uint8_t)variant)
     {
         return 0;
@@ -505,7 +561,7 @@ int WG_SaveDecode(const uint8_t *data, size_t size,
     {
         WG_LoadIntermission(&reader, &state->level_ratios[index]);
     }
-    WG_LoadLevel(&reader, &state->level);
+    WG_LoadLevel(&reader, &state->level, version);
     return reader.valid && reader.position == reader.size
         && state->level.map_number == state->map_number
         && state->level.difficulty <= WG_DIFFICULTY_HARD;

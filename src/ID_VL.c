@@ -164,6 +164,8 @@ void WG_FizzleStart(wg_fizzle_t *fizzle)
 {
     if (fizzle != NULL)
     {
+        /* Original FizzleFade's 17-bit LFSR starts at one.  This generator is
+           intentionally independent of the table-driven gameplay RNG. */
         fizzle->value = 1U;
     }
 }

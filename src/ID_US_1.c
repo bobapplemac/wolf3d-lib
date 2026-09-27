@@ -1,6 +1,9 @@
 /* Portable US_RndT state and US_LineInput scan translation. */
 #include "ID_US_1.h"
 
+/* This is the original ID_US_A.ASM rndtable, byte for byte.  Gameplay uses
+   this deliberately repeating table rather than an LFSR.  US_RndT increments
+   its 8-bit index before fetching, which WG_RandomNext preserves below. */
 static const uint8_t wg_random_table[256] =
 {
     0,8,109,220,222,241,149,107,75,248,254,140,16,66,74,21,

@@ -39,6 +39,13 @@
 #define WG_SPR_FAT_SHOOT1 400U
 #define WG_SPR_BJ_W1 408U
 
+static void WL_MarkSpawnTile(struct wg_level *level, size_t actor_index,
+                             uint8_t tile_x, uint8_t tile_y)
+{
+    level->actor_at[(size_t)tile_y * WG_LEVEL_SIZE + tile_x]
+        = (uint16_t)(WG_ACTOR_AT_ACTOR_BASE + actor_index);
+}
+
 /* Spear of Destiny's conditional sprite enum, from WL_DEF.H. */
 #define WG_SPR_TRANS_W1 326U
 #define WG_SPR_TRANS_SHOOT1 330U
@@ -288,6 +295,10 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
     actor->hit_points = WL_StartHitPoints(level->difficulty, actor_class);
     actor->state = patrol ? WG_STATE_PATH1 : WG_STATE_STAND;
     actor->actor_class = actor_class;
+    /* SpawnPatrol explicitly clears the physical spawn tile and marks its
+       first logical destination after changing tilex/tiley. */
+    WL_MarkSpawnTile(level, level->actor_count - 1U,
+                     actor->tile_x, actor->tile_y);
     return 1;
 }
 
@@ -350,6 +361,7 @@ int WL_SpawnDeadGuard(struct wg_level *level, uint8_t tile_x, uint8_t tile_y)
     actor->hit_points = 0;
     actor->state = WG_STATE_NONE;
     actor->actor_class = WG_ACTOR_INERT;
+    WL_MarkSpawnTile(level, level->actor_count - 1U, tile_x, tile_y);
     return 1;
 }
 
@@ -442,6 +454,7 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
     actor->hit_points = WL_StartHitPoints(level->difficulty, actor_class);
     actor->state = WG_STATE_STAND;
     actor->actor_class = actor_class;
+    WL_MarkSpawnTile(level, level->actor_count - 1U, tile_x, tile_y);
     return 1;
 }
 
@@ -483,6 +496,7 @@ int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
     actor->hit_points = WL_StartHitPoints(level->difficulty, WG_ACTOR_GHOST);
     actor->state = WG_STATE_GHOST1;
     actor->actor_class = WG_ACTOR_GHOST;
+    WL_MarkSpawnTile(level, level->actor_count - 1U, tile_x, tile_y);
     return 1;
 }
 
@@ -521,5 +535,7 @@ int WL_SpawnBJVictory(struct wg_level *level)
     actor->trans_x = 0;
     actor->state = WG_STATE_BJ_RUN1;
     actor->actor_class = WG_ACTOR_BJ;
+    WL_MarkSpawnTile(level, level->actor_count - 1U,
+                     level->player_tile_x, level->player_tile_y);
     return 1;
 }

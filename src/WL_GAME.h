@@ -264,6 +264,11 @@ typedef struct wg_level
     uint8_t door_count;
     wg_static_object_t statics[WG_MAX_STATICS];
     uint16_t static_count;
+    /* Original actorat[] values: wall/door tokens below
+       WG_ACTOR_AT_ACTOR_BASE, or that base plus an actor index.  Keeping this
+       separately from tiles/statics preserves the DOS engine's stale
+       occupancy entries without storing host pointers. */
+    uint16_t actor_at[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     wg_actor_t actors[WG_MAX_ACTORS];
     uint16_t actor_count;
     wg_random_t random;

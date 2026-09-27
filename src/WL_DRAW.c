@@ -71,8 +71,8 @@ static void WG_RecordDoorHit(const wg_view_tables_t *tables,
                              int32_t view_y, int32_t view_cosine,
                              int32_t view_sine)
 {
-    int32_t distance = WG_FixedMul(x_intercept - view_x, view_cosine)
-                       - WG_FixedMul(y_intercept - view_y, view_sine);
+    int32_t distance = WG_FixedByFrac(x_intercept - view_x, view_cosine)
+                       - WG_FixedByFrac(y_intercept - view_y, view_sine);
 
     if (distance < WG_MIN_DISTANCE)
     {
@@ -124,8 +124,8 @@ static void WG_RecordHit(const wg_view_tables_t *tables,
         hit->wall_page = (uint16_t)((tile - 1U) * 2U);
     }
 
-    distance = WG_FixedMul(x_intercept - view_x, view_cosine)
-               - WG_FixedMul(y_intercept - view_y, view_sine);
+    distance = WG_FixedByFrac(x_intercept - view_x, view_cosine)
+               - WG_FixedByFrac(y_intercept - view_y, view_sine);
     if (distance < WG_MIN_DISTANCE)
     {
         distance = WG_MIN_DISTANCE;
@@ -181,8 +181,8 @@ static void WG_RecordPushWallHit(const wg_level_t *level,
         }
         hit->wall_page = (uint16_t)(((tile & 63U) - 1U) * 2U);
     }
-    distance = WG_FixedMul(x_intercept - view_x, view_cosine)
-               - WG_FixedMul(y_intercept - view_y, view_sine);
+    distance = WG_FixedByFrac(x_intercept - view_x, view_cosine)
+               - WG_FixedByFrac(y_intercept - view_y, view_sine);
     if (distance < WG_MIN_DISTANCE)
     {
         distance = WG_MIN_DISTANCE;
@@ -239,8 +239,8 @@ static int WG_RaycastWallsInternal(
     cosine = WG_ViewCosineTable(tables);
     view_sine = tables->sine[player_angle];
     view_cosine = cosine[player_angle];
-    view_x = player_x - WG_FixedMul(tables->focal_length, view_cosine);
-    view_y = player_y + WG_FixedMul(tables->focal_length, view_sine);
+    view_x = player_x - WG_FixedByFrac(tables->focal_length, view_cosine);
+    view_y = player_y + WG_FixedByFrac(tables->focal_length, view_sine);
     focal_x = WG_FixedTile(view_x);
     focal_y = WG_FixedTile(view_y);
     if (focal_x < 0 || focal_x >= WG_LEVEL_SIZE
@@ -315,9 +315,9 @@ static int WG_RaycastWallsInternal(
             y_partial = y_partial_up;
         }
 
-        y_intercept = WG_FixedMul(y_step, x_partial) + view_y;
+        y_intercept = WG_FixedByFrac(y_step, x_partial) + view_y;
         x_tile = focal_x + x_tile_step;
-        x_intercept = WG_FixedMul(x_step, y_partial) + view_x;
+        x_intercept = WG_FixedByFrac(x_step, y_partial) + view_x;
         y_tile = focal_y + y_tile_step;
 
         for (iterations = 0; iterations < WG_LEVEL_SIZE * 2; ++iterations)
@@ -605,6 +605,18 @@ typedef struct wg_visible_object
     uint16_t shape;
 } wg_visible_object_t;
 
+static int32_t WG_MultiplyWrap32(int32_t left, int32_t right)
+{
+    uint32_t bits = (uint32_t)left * (uint32_t)right;
+
+    /* Borland's long multiplication wrapped to 32 bits before the following
+       perspective divide.  Spell out two's-complement interpretation without
+       relying on signed-overflow behavior in the host compiler. */
+    return bits <= INT32_MAX
+               ? (int32_t)bits
+               : (int32_t)((int64_t)bits - INT64_C(0x100000000));
+}
+
 static int WG_TransformTile(const wg_view_tables_t *tables,
                             uint8_t tile_x, uint8_t tile_y,
                             int32_t view_x, int32_t view_y,
@@ -614,8 +626,8 @@ static int WG_TransformTile(const wg_view_tables_t *tables,
 {
     int32_t gx = (int32_t)tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_x;
     int32_t gy = (int32_t)tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_y;
-    int32_t gxt = WG_FixedMul(gx, view_cosine);
-    int32_t gyt = WG_FixedMul(gy, view_sine);
+    int32_t gxt = WG_FixedByFrac(gx, view_cosine);
+    int32_t gyt = WG_FixedByFrac(gy, view_sine);
     int32_t nx = gxt - gyt - 0x2000;
     int32_t ny;
 
@@ -624,11 +636,11 @@ static int WG_TransformTile(const wg_view_tables_t *tables,
         *within_grab_distance = 0;
         return 0;
     }
-    gxt = WG_FixedMul(gx, view_sine);
-    gyt = WG_FixedMul(gy, view_cosine);
+    gxt = WG_FixedByFrac(gx, view_sine);
+    gyt = WG_FixedByFrac(gy, view_cosine);
     ny = gyt + gxt;
-    visible->view_x = tables->view_width / 2
-                      + (int)((int64_t)ny * tables->scale / nx);
+    visible->view_x = tables->view_width / 2 - 1
+                      + WG_MultiplyWrap32(ny, tables->scale) / nx;
     visible->view_height = tables->height_numerator / (nx / 256);
     visible->trans_x = nx;
     *within_grab_distance = nx < WG_FIXED_ONE
@@ -644,8 +656,8 @@ static int WG_TransformActor(const wg_view_tables_t *tables,
 {
     int32_t gx = actor->x - view_x;
     int32_t gy = actor->y - view_y;
-    int32_t gxt = WG_FixedMul(gx, view_cosine);
-    int32_t gyt = WG_FixedMul(gy, view_sine);
+    int32_t gxt = WG_FixedByFrac(gx, view_cosine);
+    int32_t gyt = WG_FixedByFrac(gy, view_sine);
     int32_t nx = gxt - gyt - 0x4000;
     int32_t ny;
 
@@ -653,11 +665,11 @@ static int WG_TransformActor(const wg_view_tables_t *tables,
     {
         return 0;
     }
-    gxt = WG_FixedMul(gx, view_sine);
-    gyt = WG_FixedMul(gy, view_cosine);
+    gxt = WG_FixedByFrac(gx, view_sine);
+    gyt = WG_FixedByFrac(gy, view_cosine);
     ny = gyt + gxt;
-    visible->view_x = tables->view_width / 2
-                      + (int)((int64_t)ny * tables->scale / nx);
+    visible->view_x = tables->view_width / 2 - 1
+                      + WG_MultiplyWrap32(ny, tables->scale) / nx;
     visible->view_height = tables->height_numerator / (nx / 256);
     visible->trans_x = nx;
     return visible->view_height > 0;
@@ -773,8 +785,8 @@ int WL_DrawScaleds(
     cosine = WG_ViewCosineTable(tables);
     view_cosine = cosine[player_angle];
     view_sine = tables->sine[player_angle];
-    view_x = player_x - WG_FixedMul(tables->focal_length, view_cosine);
-    view_y = player_y + WG_FixedMul(tables->focal_length, view_sine);
+    view_x = player_x - WG_FixedByFrac(tables->focal_length, view_cosine);
+    view_y = player_y + WG_FixedByFrac(tables->focal_length, view_sine);
     view_height = tables->view_width / 2;
     screen_x = (WG_VIDEO_WIDTH - tables->view_width) / 2;
     screen_y = (160 - view_height) / 2;
@@ -824,7 +836,6 @@ int WL_DrawScaleds(
         {
             continue;
         }
-        actor->flags = (uint16_t)(actor->flags & 0xfff7U);
         if (WG_ActorTileIsVisible(level, visible_tiles,
                                   actor->tile_x, actor->tile_y))
         {
@@ -846,6 +857,15 @@ int WL_DrawScaleds(
             {
                 visible[visible_count++] = candidate;
             }
+        }
+        else
+        {
+            /* Original DrawScaleds clears FL_VISABLE only in this branch.
+               If a visible-tile actor is rejected by TransformActor, its
+               prior visibility flag remains stale and still affects the
+               enemy shooting calculation on the following tic. */
+            actor->flags = (uint16_t)(actor->flags
+                                      & ~WG_ACTOR_FLAG_VISIBLE);
         }
     }
 

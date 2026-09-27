@@ -679,6 +679,48 @@ static void TestActorAwareness(void)
     CHECK(!WL_CheckSight(&level, actor));
 }
 
+static void TestBlockingStaticsAffectActorDodge(void)
+{
+    wg_level_t level;
+    wg_actor_t *actor;
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = 34 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = 17 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_tile_x = 34U;
+    level.player_tile_y = 17U;
+    level.player_health = 100U;
+    level.actor_count = 1U;
+    actor = &level.actors[0];
+    actor->x = 33 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->y = 9 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->tile_x = 33U;
+    actor->tile_y = 9U;
+    actor->area_number = 0U;
+    actor->actor_class = WG_ACTOR_GUARD;
+    actor->state = WG_STATE_CHASE1;
+    actor->tic_count = 10;
+    actor->speed = 1536;
+    actor->direction = 6U;
+    actor->flags = WG_ACTOR_FLAG_ACTIVE | WG_ACTOR_FLAG_SHOOTABLE
+                   | WG_ACTOR_FLAG_ATTACK_MODE | WG_ACTOR_FLAG_FIRST_ATTACK;
+    level.static_count = 1U;
+    level.statics[0].tile_x = 34U;
+    level.statics[0].tile_y = 9U;
+    level.statics[0].blocking = 1U;
+    WG_RandomSeed(&level.random, 0U);
+
+    /* The blocking static occupies actorat[] in DOS.  It rejects the
+       southeast diagonal, after which SelectDodgeDir chooses south. */
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(actor->direction == 6U);
+    CHECK(actor->tile_x == 33U);
+    CHECK(actor->tile_y == 10U);
+    CHECK(actor->x == 33 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(actor->y == 9 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 1536);
+    CHECK(level.random.index == 2U);
+}
+
 static void TestDoorAreaConnectivity(void)
 {
     uint16_t plane_zero[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
@@ -755,6 +797,46 @@ static void TestDoorAreaConnectivity(void)
     CHECK(level.actors[0].distance == WG_FIXED_ONE - 512);
     CHECK(level.actors[0].x
           == 4 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 512);
+}
+
+static void TestClosingDoorUsesCenterOccupancy(void)
+{
+    wg_level_t level;
+    wg_door_t *door;
+    wg_actor_t *actor;
+    size_t door_spot;
+    size_t actor_spot;
+
+    memset(&level, 0, sizeof(level));
+    level.player_tile_x = 2U;
+    level.player_tile_y = 2U;
+    level.door_count = 1U;
+    door = &level.doors[0];
+    door->tile_x = 10U;
+    door->tile_y = 10U;
+    door->vertical = 1U;
+    door->position = 0xffffU;
+    door->action = WG_DOOR_OPEN;
+    door_spot = 10U * WG_LEVEL_SIZE + 10U;
+
+    CHECK(WL_MoveDoors(&level, 300U));
+    CHECK(door->action == WG_DOOR_CLOSING);
+    CHECK(level.actor_at[door_spot] == 0x80U);
+
+    level.actor_count = 1U;
+    actor = &level.actors[0];
+    actor->tile_x = 9U;
+    actor->tile_y = 10U;
+    actor->x = 10 * WG_FIXED_ONE - WG_MIN_DISTANCE;
+    actor->y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor_spot = 10U * WG_LEVEL_SIZE + 9U;
+    level.actor_at[actor_spot] = WG_ACTOR_AT_ACTOR_BASE;
+
+    /* CloseDoor checks adjacent overlap before starting.  Once the door is
+       closing, DOS DoorClosing only watches the center actorat[] token. */
+    CHECK(WL_MoveDoors(&level, 1U));
+    CHECK(door->action == WG_DOOR_CLOSING);
+    CHECK(door->position == 0xffffU - 1024U);
 }
 
 static void TestOriginalActorActivation(void)
@@ -1061,7 +1143,7 @@ static void TestSchabbsNeedle(void)
     CHECK(needle->shape == 318U);
     CHECK(needle->angle == 0U);
     CHECK(needle->speed == 0x2000);
-    CHECK(needle->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x2000);
+    CHECK(needle->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x1fff);
     CHECK(needle->y == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
 
     needle->x = level.player_x - 0xc000;
@@ -1074,7 +1156,7 @@ static void TestSchabbsNeedle(void)
     CHECK((needle->flags & WG_ACTOR_FLAG_REMOVED) != 0U);
     CHECK(level.player_health == 79U);
 
-    needle->x = 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    needle->x = 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 1;
     needle->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
     needle->tile_x = 3U;
     needle->tile_y = 2U;
@@ -1137,7 +1219,7 @@ static void TestRocketBossAttacks(void)
     CHECK(rocket->rotate == 1U);
     CHECK(rocket->angle == 0U);
     CHECK(rocket->tic_count == 3);
-    CHECK(rocket->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x2000);
+    CHECK(rocket->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x1fff);
     CHECK(smoke->actor_class == WG_ACTOR_SMOKE);
     CHECK(smoke->state == WG_STATE_SMOKE1);
     CHECK(smoke->shape == 378U);
@@ -1156,7 +1238,7 @@ static void TestRocketBossAttacks(void)
     CHECK(level.player_health == 69U);
 
     memset(rocket, 0, sizeof(*rocket));
-    rocket->x = 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    rocket->x = 3 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 1;
     rocket->y = 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
     rocket->tile_x = 3U;
     rocket->tile_y = 2U;
@@ -1288,7 +1370,7 @@ static void TestFakeHitlerFlames(void)
     CHECK(fire->angle == 0U);
     CHECK(fire->speed == 0x1200);
     CHECK(fire->tic_count == 5);
-    CHECK(fire->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x9000);
+    CHECK(fire->x == 2 * WG_FIXED_ONE + WG_FIXED_ONE / 2 + 0x8fff);
 
     for (stage = 2U; stage <= 8U; ++stage)
     {
@@ -1404,9 +1486,11 @@ static void TestActorDamageAndDeath(void)
     CHECK(actor->shape == 90U);
     CHECK(actor->rotate == 2U);
     CHECK(WL_TickActors(&level, 10U));
-    CHECK(actor->state == WG_STATE_CHASE1);
-    CHECK(actor->shape == actor->base_shape);
-    CHECK(actor->rotate == 1U);
+    /* DoActor enters chase1 and immediately calls T_Chase.  With the seeded
+       first random value (8), this unobstructed guard begins shooting. */
+    CHECK(actor->state == WG_STATE_SHOOT1);
+    CHECK(actor->shape == actor->attack_shape);
+    CHECK(actor->rotate == 0U);
 
     CHECK(WL_DamageActor(&level, 0U, 17U));
     CHECK(actor->hit_points == 0);
@@ -1684,6 +1768,7 @@ static void TestSpearBossDamageAndDeath(void)
     {
         wg_level_t level;
         wg_actor_t *actor;
+        unsigned first_death_tics;
 
         memset(&level, 0, sizeof(level));
         level.variant = WG_GAME_SPEAR_FULL_SOD;
@@ -1697,12 +1782,21 @@ static void TestSpearBossDamageAndDeath(void)
                              (unsigned)cases[index].hit_points / 2U + 1U));
         CHECK(actor->state == WG_STATE_DIE1);
         CHECK(actor->shape == cases[index].first_shape);
-        CHECK(level.sound_event_count == 1U);
+        CHECK(level.sound_event_count == 0U);
+        first_death_tics = (unsigned)actor->tic_count;
+        CHECK(WL_TickActors(&level, first_death_tics));
+        CHECK(level.sound_event_count
+              == (cases[index].actor_class == WG_ACTOR_ANGEL ? 2U : 1U));
         CHECK(level.sound_events[0].sound == cases[index].death_sound);
+        if (cases[index].actor_class == WG_ACTOR_ANGEL)
+        {
+            CHECK(level.sound_events[1].sound == WG_SOUND_SLURPIE);
+        }
         CHECK(level.score == (cases[index].actor_class == WG_ACTOR_SPECTRE
                                   ? 200U : 5000U));
         CHECK(level.static_count == (uint16_t)cases[index].drops_key);
-        CHECK(WL_TickActors(&level, cases[index].death_tics));
+        CHECK(WL_TickActors(&level,
+                            cases[index].death_tics - first_death_tics));
         CHECK(actor->state == WG_STATE_DEAD);
         CHECK(actor->shape == cases[index].dead_shape);
         if (cases[index].actor_class == WG_ACTOR_SPECTRE)
@@ -1742,13 +1836,15 @@ static void TestPlayerWeapons(void)
     actor->trans_x = WG_FIXED_ONE;
     WG_RandomSeed(&level.random, 1U);
     CHECK(WL_GunAttack(&level));
-    CHECK(level.sound_event_count == 2U);
+    CHECK(level.sound_event_count == 1U);
     CHECK(level.sound_events[0].sound == WG_SOUND_ATTACK_PISTOL);
     CHECK(level.sound_events[0].positioned == 0U);
+    CHECK(WL_TickActors(&level, (unsigned)actor->tic_count));
+    CHECK(level.sound_event_count == 2U);
     CHECK(level.sound_events[1].sound == WG_SOUND_DEATH_SCREAM_5);
     CHECK(level.sound_events[1].positioned == 1U);
     CHECK(level.made_noise == 1U);
-    CHECK(actor->state == WG_STATE_DIE1);
+    CHECK(actor->state == WG_STATE_DIE2);
     CHECK(level.score == 100U);
 
     memset(&level, 0, sizeof(level));
@@ -1758,6 +1854,8 @@ static void TestPlayerWeapons(void)
     CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
     WG_RandomSeed(&level.random, 1U);
     CHECK(WL_KillActor(&level, 0U));
+    CHECK(level.sound_event_count == 0U);
+    CHECK(WL_TickActors(&level, (unsigned)level.actors[0].tic_count));
     CHECK(level.sound_event_count == 1U);
     CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_2);
 
@@ -1768,6 +1866,7 @@ static void TestPlayerWeapons(void)
     CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
     WG_RandomSeed(&level.random, 255U);
     CHECK(WL_KillActor(&level, 0U));
+    CHECK(WL_TickActors(&level, (unsigned)level.actors[0].tic_count));
     CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_1);
 
     memset(&level, 0, sizeof(level));
@@ -1777,6 +1876,7 @@ static void TestPlayerWeapons(void)
     CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
     WG_RandomSeed(&level.random, 255U);
     CHECK(WL_KillActor(&level, 0U));
+    CHECK(WL_TickActors(&level, (unsigned)level.actors[0].tic_count));
     CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_1);
 
     memset(&level, 0, sizeof(level));
@@ -1786,6 +1886,7 @@ static void TestPlayerWeapons(void)
     CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
     WG_RandomSeed(&level.random, 255U);
     CHECK(WL_KillActor(&level, 0U));
+    CHECK(WL_TickActors(&level, (unsigned)level.actors[0].tic_count));
     CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_6);
 
     memset(&level, 0, sizeof(level));
@@ -1795,6 +1896,7 @@ static void TestPlayerWeapons(void)
     CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
     WG_RandomSeed(&level.random, 255U);
     CHECK(WL_KillActor(&level, 0U));
+    CHECK(WL_TickActors(&level, (unsigned)level.actors[0].tic_count));
     CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_6);
 
     memset(&level, 0, sizeof(level));
@@ -2150,6 +2252,7 @@ static void TestPlayerMovementAndUse(void)
     start_x = level.player_x;
     start_y = level.player_y;
     level.tiles[10U * WG_LEVEL_SIZE + 11U] = 1U;
+    level.actor_at[10U * WG_LEVEL_SIZE + 11U] = 1U;
     CHECK(!WL_TryMove(&level, start_x + WG_MIN_DISTANCE * 2,
                       start_y));
     CHECK(WL_Thrust(&level, &tables, 0U, WG_MIN_DISTANCE * 2));
@@ -2160,6 +2263,7 @@ static void TestPlayerMovementAndUse(void)
     start_x = level.player_x;
     start_y = level.player_y;
     level.tiles[11U * WG_LEVEL_SIZE + 11U] = 1U;
+    level.actor_at[11U * WG_LEVEL_SIZE + 11U] = 1U;
     CHECK(WL_Thrust(&level, &tables, 315U, WG_MIN_DISTANCE * 2));
     CHECK(level.player_x > start_x);
     CHECK(level.player_y == start_y);
@@ -2265,6 +2369,7 @@ static void TestPlayerMovementAndUse(void)
     level.doors[0].lock = WG_DOOR_LOCK_1;
     level.doors[0].action = WG_DOOR_CLOSED;
     level.tiles[10U * WG_LEVEL_SIZE + 11U] = 0x80U;
+    level.actor_at[10U * WG_LEVEL_SIZE + 11U] = 0x80U;
     level.areas[10U * WG_LEVEL_SIZE + 10U] = 0U;
     level.areas[10U * WG_LEVEL_SIZE + 12U] = 1U;
     CHECK(!WL_CmdUse(&level));
@@ -2865,11 +2970,25 @@ static void TestVideo(void)
 static void TestRandom(void)
 {
     wg_random_t random;
+    uint32_t hash = 2166136261U;
+    unsigned index;
 
     WG_RandomSeed(&random, 0);
     CHECK(WG_RandomNext(&random) == 8U);
     CHECK(WG_RandomNext(&random) == 109U);
     WG_RandomSeed(&random, 255U);
+    CHECK(WG_RandomNext(&random) == 0U);
+
+    /* Lock down the complete original ID_US_A.ASM table and its pre-increment
+       convention without duplicating the 256 bytes in the test. */
+    WG_RandomSeed(&random, 255U);
+    for (index = 0U; index < 256U; ++index)
+    {
+        hash ^= WG_RandomNext(&random);
+        hash *= 16777619U;
+    }
+    CHECK(hash == 0xac34fbe5U);
+    CHECK(random.index == 255U);
     CHECK(WG_RandomNext(&random) == 0U);
 }
 
@@ -2897,10 +3016,14 @@ static void TestViewMath(void)
     const int32_t *cosine;
 
     memset(&tables, 0, sizeof(tables));
-    CHECK(WG_FixedMul(WG_FIXED_ONE, WG_FIXED_ONE / 2) ==
+    CHECK(WG_FixedByFrac(WG_FIXED_ONE, WG_FIXED_ONE / 2) ==
           WG_FIXED_ONE / 2);
-    CHECK(WG_FixedMul(-WG_FIXED_ONE, WG_FIXED_ONE / 2) ==
+    CHECK(WG_FixedByFrac(-WG_FIXED_ONE, WG_FIXED_ONE / 2) ==
           -WG_FIXED_ONE / 2);
+    CHECK(WG_FixedByFrac(WG_FIXED_ONE, WG_FIXED_ONE) ==
+          WG_FIXED_ONE - 1);
+    CHECK(WG_FixedByFrac(WG_FIXED_ONE, -WG_FIXED_ONE) ==
+          -(WG_FIXED_ONE - 1));
     WG_ViewBuildTrigTables(&tables);
     cosine = WG_ViewCosineTable(&tables);
     CHECK(cosine != NULL);
@@ -2926,6 +3049,51 @@ static void TestViewMath(void)
     CHECK(tables.min_height_divisor == 7);
     CHECK(tables.max_slope > 0);
     CHECK(!WG_ViewCalculateProjection(&tables, 319, WG_FOCAL_LENGTH));
+}
+
+static void TestActorVisibilitySemantics(void)
+{
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT];
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
+    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH];
+    wg_view_tables_t tables;
+    wg_pages_t pages;
+    wg_level_t level;
+    wg_actor_t *actor;
+
+    memset(framebuffer, 0, sizeof(framebuffer));
+    memset(visible_tiles, 0, sizeof(visible_tiles));
+    memset(hits, 0, sizeof(hits));
+    memset(&tables, 0, sizeof(tables));
+    memset(&pages, 0, sizeof(pages));
+    memset(&level, 0, sizeof(level));
+    WG_ViewBuildTrigTables(&tables);
+    CHECK(WG_ViewCalculateProjection(&tables, WG_MAX_VIEW_WIDTH,
+                                     WG_FOCAL_LENGTH));
+
+    level.actor_count = 1U;
+    actor = &level.actors[0];
+    actor->x = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    actor->tile_x = 10U;
+    actor->tile_y = 10U;
+    actor->actor_class = WG_ACTOR_GUARD;
+    actor->state = WG_STATE_CHASE1;
+    actor->shape = 86U;
+    actor->base_shape = 86U;
+    actor->flags = WG_ACTOR_FLAG_VISIBLE;
+    visible_tiles[10U * WG_LEVEL_SIZE + 10U] = 1U;
+
+    /* TransformActor rejects an actor on top of the player.  DOS leaves the
+       previous FL_VISABLE value untouched in this particular branch. */
+    CHECK(WL_DrawScaleds(framebuffer, &pages, &level, &tables, hits,
+                         visible_tiles, actor->x, actor->y, 0U));
+    CHECK((actor->flags & WG_ACTOR_FLAG_VISIBLE) != 0U);
+
+    visible_tiles[10U * WG_LEVEL_SIZE + 10U] = 0U;
+    CHECK(WL_DrawScaleds(framebuffer, &pages, &level, &tables, hits,
+                         visible_tiles, actor->x, actor->y, 0U));
+    CHECK((actor->flags & WG_ACTOR_FLAG_VISIBLE) == 0U);
 }
 
 static void TestWallScaler(void)
@@ -3111,7 +3279,7 @@ static void TestPushWalls(void)
         printf("pushwall ray hits: %u, FNV-1a: %016llx\n",
                pushwall_hits, (unsigned long long)pushwall_hash);
         CHECK(pushwall_hits == 95U);
-        CHECK(pushwall_hash == 0xf2347a1bd90b06f4ULL);
+        CHECK(pushwall_hash == 0xbc1408ba0d205429ULL);
     }
 
     CHECK(WL_MovePushWalls(&level, 64U));
@@ -3855,7 +4023,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s initial scenery view FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)scenery_hash);
-                CHECK(scenery_hash == 0x723ccdefbb003ac1ULL);
+                CHECK(scenery_hash == 0xadabe8afc27cb036ULL);
                 CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0,
                                           WG_VIDEO_WIDTH));
                 CHECK(WG_GraphicsOpen(&graphics, &data_set));
@@ -3869,7 +4037,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s initial HUD view FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)hud_hash);
-                CHECK(hud_hash == 0x0b077346cfd7b513ULL);
+                CHECK(hud_hash == 0x4d3ff0ec8c1bbe17ULL);
                 for (index = 0; index < level.door_count; ++index)
                 {
                     level.doors[index].position = 0xffffU;
@@ -3894,7 +4062,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s open-door scenery FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)open_view_hash);
-                CHECK(open_view_hash == 0xd2e29d9233c925ccULL);
+                CHECK(open_view_hash == 0x2baf9adc97513a5eULL);
                 for (index = 0; index < level.door_count; ++index)
                 {
                     level.doors[index].position = 0U;
@@ -3926,7 +4094,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s guard view FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)guard_view_hash);
-                CHECK(guard_view_hash == 0xa6db229142f7150bULL);
+                CHECK(guard_view_hash == 0xe75af3553b4eff8dULL);
                 {
                     const wg_actor_t *guard = FindLastLiveGuard(&level);
 
@@ -4635,7 +4803,7 @@ static void TestPortableSave(void)
     }
     printf("portable save FNV-1a: %016llx\n",
            (unsigned long long)encoded_hash);
-    CHECK(encoded_hash == 0x10e6e63fdd18f6b9ULL);
+    CHECK(encoded_hash == 0xa655a4d544f97618ULL);
     CHECK(WG_SaveReadName(encoded, encoded_size,
                           WG_GAME_WOLF3D_FULL_GT_14, decoded_name));
     CHECK(strcmp(decoded_name, name) == 0);
@@ -4650,13 +4818,19 @@ static void TestPortableSave(void)
     CHECK(memcmp(decoded.level_ratios, source.level_ratios,
                  sizeof(source.level_ratios)) == 0);
 
-    /* Version 1 stored eight 14-byte ratio records. Rebuild that layout from
-       the version-2 fixture and prove old saves retain their campaign state. */
+    /* Version 1 stored eight 14-byte ratio records, and versions 1/2 did not
+       serialize actorat[].  Remove both additions from the current fixture
+       and prove the oldest portable format remains loadable. */
     memcpy(legacy, encoded, encoded_size);
-    legacy_size = encoded_size - 12U * 14U;
+    legacy_size = encoded_size
+                  - sizeof(source.level.actor_at) - 12U * 14U;
+    memmove(legacy + encoded_size - 4U - 1U
+                         - sizeof(source.level.actor_at),
+            legacy + encoded_size - 4U - 1U,
+            1U + 4U);
     memmove(legacy + 48U + 8U * 14U,
             legacy + 48U + WL_MAX_LEVEL_RATIOS * 14U,
-            encoded_size - 4U
+            encoded_size - sizeof(source.level.actor_at) - 4U
                 - (48U + WL_MAX_LEVEL_RATIOS * 14U));
     legacy[40] = 1U;
     legacy[41] = 0U;
@@ -4673,6 +4847,9 @@ static void TestPortableSave(void)
     CHECK(WG_SaveDecode(legacy, legacy_size,
                         WG_GAME_WOLF3D_FULL_GT_14,
                         decoded_name, &decoded));
+    CHECK(decoded.level.actor_at[22U * WG_LEVEL_SIZE + 21U]
+          == WG_ACTOR_AT_ACTOR_BASE);
+    memset(decoded.level.actor_at, 0, sizeof(decoded.level.actor_at));
     CHECK(memcmp(&decoded.level, &source.level,
                  sizeof(source.level)) == 0);
     CHECK(memcmp(decoded.level_ratios, source.level_ratios,
@@ -4918,7 +5095,9 @@ int main(int argc, char **argv)
     TestSpearBossSetup();
     TestPatrolMovement();
     TestActorAwareness();
+    TestBlockingStaticsAffectActorDodge();
     TestDoorAreaConnectivity();
+    TestClosingDoorUsesCenterOccupancy();
     TestOriginalActorActivation();
     TestOrdinaryShootingStates();
     TestDogChaseAndBite();
@@ -4944,6 +5123,7 @@ int main(int argc, char **argv)
     TestPaletteShifts();
     TestPlayerDeathCamera();
     TestViewMath();
+    TestActorVisibilitySemantics();
     TestWallScaler();
     TestStaticRaycaster();
     TestPushWalls();
