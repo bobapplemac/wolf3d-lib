@@ -17,7 +17,19 @@ typedef struct wl_status
     uint8_t weapon;
     uint8_t keys;
     uint8_t face_frame;
+    uint8_t face;
 } wl_status_t;
+
+typedef enum wl_status_face
+{
+    WL_STATUS_FACE_NORMAL = 0,
+    WL_STATUS_FACE_DEAD,
+    WL_STATUS_FACE_GATLING,
+    WL_STATUS_FACE_GOD,
+    WL_STATUS_FACE_WAITING_1,
+    WL_STATUS_FACE_WAITING_2,
+    WL_STATUS_FACE_OUCH
+} wl_status_face_t;
 
 struct wg_level;
 struct wg_view_tables;

@@ -5,6 +5,23 @@ and remain under the Git-ignored `out/` directory. They are never distributed
 with the source repository. Each entry records a deterministic indexed-frame
 hash so the milestone remains verifiable even when the screenshot is absent.
 
+## 2026-09-26: Original status faces and Spear F1 behavior
+
+- Restored the original animated status-face timing instead of leaving BJ on
+  the first frame permanently. Face timing consumes the table-driven game RNG
+  in the original player-update position, including the demo-specific gatling
+  hold interval.
+- Corrected the zero-health portrait to use `FACE8APIC`; the earlier portable
+  renderer incorrectly selected the final wounded row.
+- Added archive-independent face states for the gatling pickup and Spear's
+  `BJOUCHPIC` and two 30-second idle portraits. Both full Spear and SDM map
+  those semantic states onto their different graphics chunk layouts.
+- Restored Spear's historical F1 behavior. Its `BossKey` body was guarded by
+  `NOTYET` in the released source, so F1 returns to play rather than opening
+  Wolf3D's `Read This` article.
+- Added data-backed coverage that decodes every special status portrait from
+  both the SOD and SDM graphics archives.
+
 ## 2026-09-23: Initial E1M1 walls and doors
 
 - Commit: `a3f6c09`

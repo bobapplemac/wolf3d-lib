@@ -32,6 +32,11 @@ typedef struct wl_status_chunks
     size_t blank_digit;
     size_t zero_digit;
     size_t face_1a;
+    size_t face_8a;
+    size_t got_gatling;
+    size_t spear_god_1;
+    size_t spear_waiting_1;
+    size_t spear_ouch;
 } wl_status_chunks_t;
 
 static int WL_StatusChunks(wg_game_variant_t variant,
@@ -83,6 +88,11 @@ static int WL_StatusChunks(wg_game_variant_t variant,
     {
         return 0;
     }
+    chunks->face_8a = chunks->face_1a + 21U;
+    chunks->got_gatling = chunks->face_8a + 1U;
+    chunks->spear_god_1 = chunks->got_gatling + 1U;
+    chunks->spear_waiting_1 = chunks->spear_god_1 + 3U;
+    chunks->spear_ouch = chunks->spear_waiting_1 + 2U;
     return 1;
 }
 
@@ -1018,7 +1028,7 @@ int WL_DrawStatusBar(
 
     if (framebuffer == NULL || graphics == NULL || status == NULL
         || status->health > 100U || status->weapon > 3U
-        || status->face_frame > 2U
+        || status->face_frame > 2U || status->face > WL_STATUS_FACE_OUCH
         || !WL_StatusChunks(graphics->variant, &chunks)
         || !WL_DrawPicture(framebuffer, graphics, chunks.status_bar,
                            0, WL_STATUS_Y))
@@ -1026,9 +1036,41 @@ int WL_DrawStatusBar(
         return 0;
     }
 
-    face = chunks.face_1a
-           + 3U * ((100U - status->health) / 16U)
-           + status->face_frame;
+    if (status->health == 0U || status->face == WL_STATUS_FACE_DEAD)
+    {
+        face = chunks.face_8a;
+    }
+    else if (status->face == WL_STATUS_FACE_GATLING)
+    {
+        face = chunks.got_gatling;
+    }
+    else if (status->face >= WL_STATUS_FACE_GOD)
+    {
+        if (WG_DataVariantFamily(graphics->variant) != WG_GAME_FAMILY_SPEAR)
+        {
+            return 0;
+        }
+        if (status->face == WL_STATUS_FACE_GOD)
+        {
+            face = chunks.spear_god_1 + status->face_frame;
+        }
+        else if (status->face == WL_STATUS_FACE_WAITING_1
+                 || status->face == WL_STATUS_FACE_WAITING_2)
+        {
+            face = chunks.spear_waiting_1
+                   + (status->face - WL_STATUS_FACE_WAITING_1);
+        }
+        else
+        {
+            face = chunks.spear_ouch;
+        }
+    }
+    else
+    {
+        face = chunks.face_1a
+               + 3U * ((100U - status->health) / 16U)
+               + status->face_frame;
+    }
     return WL_StatusDrawPicture(framebuffer, graphics, face, 17, 4)
            && WL_DrawNumber(framebuffer, graphics, &chunks,
                             21, 16, 3, status->health)

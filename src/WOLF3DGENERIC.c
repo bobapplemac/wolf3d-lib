@@ -198,6 +198,11 @@ typedef struct wg_game_session
     uint8_t demo_finished;
     uint8_t *demo_data;
     wl_demo_t demo;
+    uint8_t face_frame;
+    uint8_t face;
+    uint16_t face_count;
+    uint16_t face_times;
+    uint32_t funny_count;
 } wg_game_session_t;
 
 static wg_game_session_t wg_game;
@@ -1802,7 +1807,58 @@ static int WG_GameSessionRender(void)
     status.weapon = wg_game.level.player_weapon;
     status.lives = wg_game.level.player_lives;
     status.keys = wg_game.level.player_keys;
+    status.face_frame = wg_game.face_frame;
+    status.face = wg_game.face;
     return WL_DrawStatusBar(WG_ScreenBuffer, &wg_game.graphics, &status);
+}
+
+static void WG_GameSessionUpdateFace(unsigned tics)
+{
+    uint8_t random;
+
+    if (wg_game.face_times != 0U)
+    {
+        unsigned step = wg_game.demo_playback ? 1U : tics;
+
+        wg_game.face_times = (uint16_t)(wg_game.face_times > step
+                                           ? wg_game.face_times - step : 0U);
+        return;
+    }
+    wg_game.face_count = (uint16_t)(wg_game.face_count + tics);
+    random = WG_RandomNext(&wg_game.level.random);
+    if (wg_game.face_count > random)
+    {
+        wg_game.face_frame = (uint8_t)(WG_RandomNext(
+                                           &wg_game.level.random) >> 6U);
+        if (wg_game.face_frame == 3U)
+        {
+            wg_game.face_frame = 1U;
+        }
+        wg_game.face = WL_STATUS_FACE_NORMAL;
+        wg_game.face_count = 0U;
+    }
+}
+
+static void WG_GameSessionUpdateSpearIdle(unsigned tics, int moved)
+{
+    if (WG_DataVariantFamily(wg_data_set.variant) != WG_GAME_FAMILY_SPEAR)
+    {
+        return;
+    }
+    if (moved)
+    {
+        wg_game.funny_count = 0U;
+        return;
+    }
+    wg_game.funny_count += tics;
+    if (wg_game.funny_count > 30U * 70U)
+    {
+        wg_game.funny_count = 0U;
+        wg_game.face = (WG_RandomNext(&wg_game.level.random) & 1U) != 0U
+                           ? WL_STATUS_FACE_WAITING_2
+                           : WL_STATUS_FACE_WAITING_1;
+        wg_game.face_count = 0U;
+    }
 }
 
 static int WG_GameSessionSetPaused(int paused)
@@ -2447,6 +2503,11 @@ static int WG_GameSessionTick(void)
     wl_demo_command_t demo_command;
     size_t sound;
     int demo_last_command = 0;
+    int32_t old_player_x;
+    int32_t old_player_y;
+    uint16_t old_health;
+    uint8_t old_best_weapon;
+    unsigned simulation_tics;
 
     if (wg_game.game_over)
     {
@@ -2508,6 +2569,7 @@ static int WG_GameSessionTick(void)
         return 1;
     }
 
+    simulation_tics = wg_game.demo_playback ? WL_DEMO_TICS : 1U;
     if (wg_game.demo_playback)
     {
         ++wg_game.demo_tick_phase;
@@ -2523,6 +2585,14 @@ static int WG_GameSessionTick(void)
         }
         demo_last_command =
             wg_game.demo.position == wg_game.demo.command_count;
+    }
+    WG_GameSessionUpdateFace(simulation_tics);
+    old_player_x = wg_game.level.player_x;
+    old_player_y = wg_game.level.player_y;
+    old_health = wg_game.level.player_health;
+    old_best_weapon = wg_game.level.player_best_weapon;
+    if (wg_game.demo_playback)
+    {
         if (!WL_PlayDemoCommand(&wg_game.level, &wg_game.view,
                                 &wg_game.play, &demo_command))
         {
@@ -2538,6 +2608,25 @@ static int WG_GameSessionTick(void)
             return 0;
         }
     }
+    if (wg_game.level.player_best_weapon == WG_WEAPON_CHAINGUN
+        && old_best_weapon != WG_WEAPON_CHAINGUN)
+    {
+        wg_game.face = WL_STATUS_FACE_GATLING;
+        wg_game.face_count = 0U;
+        wg_game.face_times = 38U;
+    }
+    if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR
+        && old_health > wg_game.level.player_health
+        && old_health - wg_game.level.player_health > 30U
+        && wg_game.level.player_health != 0U)
+    {
+        wg_game.face = WL_STATUS_FACE_OUCH;
+        wg_game.face_count = 0U;
+    }
+    WG_GameSessionUpdateSpearIdle(
+        simulation_tics,
+        old_player_x != wg_game.level.player_x
+            || old_player_y != wg_game.level.player_y);
     WL_UpdatePaletteShiftsForTics(
         &wg_game.level, WG_Palette,
         wg_game.demo_playback ? WL_DEMO_TICS : 1U);
@@ -3725,6 +3814,13 @@ static wg_result_t WG_GameQuickKey(uint16_t key)
     switch (key)
     {
         case WG_KEY_F1:
+            if (WG_DataVariantFamily(wg_data_set.variant)
+                == WG_GAME_FAMILY_SPEAR)
+            {
+                /* SPEAR's DOS boss-key body was compiled out under NOTYET. */
+                return WG_GameSessionLeaveControlPanel()
+                           ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
+            }
             wg_help_page = 0U;
             return WG_DrawHelpScreen()
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;

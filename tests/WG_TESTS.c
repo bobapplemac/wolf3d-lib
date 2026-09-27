@@ -3877,6 +3877,7 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     const uint8_t *chunk_data;
     size_t chunk_size;
     size_t index;
+    wl_status_t status;
 
     memset(&data_set, 0, sizeof(data_set));
     memset(&graphics, 0, sizeof(graphics));
@@ -3918,6 +3919,13 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
                              ? 0x25bdc19785db9240ULL
                              : 0x7aa653c3de8139c6ULL));
     CHECK(palette_hash == 0xe2a15174c649db6aULL);
+    WL_StatusDefaults(&status);
+    for (status.face = WL_STATUS_FACE_DEAD;
+         status.face <= WL_STATUS_FACE_OUCH; ++status.face)
+    {
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawStatusBar(framebuffer, &graphics, &status));
+    }
 
     CHECK(WG_AudioOpen(&audio, &data_set));
     CHECK(audio.offset_count == 268U);
