@@ -32,6 +32,8 @@
 
 static int WL_BeginAttack(wg_actor_t *actor);
 static void WL_FirstSighting(wg_level_t *level, wg_actor_t *actor);
+static int WL_SightPlayer(wg_level_t *level, wg_actor_t *actor,
+                          unsigned tics, int made_noise);
 static int32_t WL_ChaseStateDuration(const wg_actor_t *actor,
                                      wg_actor_state_t state);
 static wg_actor_state_t WL_NextChaseState(wg_actor_state_t state);
@@ -800,6 +802,7 @@ static void WL_SetPathShape(wg_actor_t *actor)
 {
     unsigned frame;
 
+    actor->rotate = 1U;
     switch (actor->state)
     {
     case WG_STATE_PATH2:
@@ -822,7 +825,14 @@ static void WL_SetPathShape(wg_actor_t *actor)
 static void WL_SetChaseShape(wg_actor_t *actor)
 {
     unsigned frame;
-    unsigned spacing = actor->rotate ? 8U : 1U;
+    unsigned spacing;
+
+    actor->rotate = actor->actor_class == WG_ACTOR_GUARD
+                    || actor->actor_class == WG_ACTOR_OFFICER
+                    || actor->actor_class == WG_ACTOR_MUTANT
+                    || actor->actor_class == WG_ACTOR_SS
+                    || actor->actor_class == WG_ACTOR_DOG;
+    spacing = actor->rotate ? 8U : 1U;
 
     switch (actor->state)
     {
@@ -1347,10 +1357,12 @@ static void WL_BeginDogJump(wg_actor_t *actor)
     actor->state = WG_STATE_DOG_JUMP1;
     actor->tic_count = 10;
     actor->shape = actor->attack_shape;
+    actor->rotate = 0U;
 }
 
 static void WL_SetDogJumpShape(wg_actor_t *actor)
 {
+    actor->rotate = 0U;
     switch (actor->state)
     {
     case WG_STATE_DOG_JUMP2:
@@ -1503,13 +1515,16 @@ static void WL_RemoveProjectile(wg_actor_t *actor)
 static wg_actor_t *WL_AllocateTransientActor(wg_level_t *level)
 {
     size_t index;
+    wg_actor_t *actor;
 
     for (index = 0U; index < level->actor_count; ++index)
     {
         if ((level->actors[index].flags & WG_ACTOR_FLAG_REMOVED) != 0U)
         {
             memset(&level->actors[index], 0, sizeof(level->actors[index]));
-            return &level->actors[index];
+            actor = &level->actors[index];
+            actor->flags = WG_ACTOR_FLAG_ACTIVE;
+            return actor;
         }
     }
     if (level->actor_count >= WG_MAX_ACTORS)
@@ -1518,7 +1533,9 @@ static wg_actor_t *WL_AllocateTransientActor(wg_level_t *level)
     }
     memset(&level->actors[level->actor_count], 0,
            sizeof(level->actors[level->actor_count]));
-    return &level->actors[level->actor_count++];
+    actor = &level->actors[level->actor_count++];
+    actor->flags = WG_ACTOR_FLAG_ACTIVE;
+    return actor;
 }
 
 static void WL_BeginRocketExplosion(wg_actor_t *actor)
@@ -2080,6 +2097,7 @@ static void WL_SetShootShape(wg_actor_t *actor)
 {
     actor->shape = (uint16_t)(actor->attack_shape
                               + WL_ShootShapeFrame(actor));
+    actor->rotate = 0U;
 }
 
 static int WL_BeginAttack(wg_actor_t *actor)
@@ -2098,6 +2116,7 @@ static int WL_BeginAttack(wg_actor_t *actor)
     }
     actor->tic_count = WL_ShootStateDuration(actor, actor->state);
     actor->shape = actor->attack_shape;
+    actor->rotate = 0U;
     actor->flags = (uint16_t)(actor->flags & 0xfeffU);
     return 1;
 }
@@ -2173,6 +2192,10 @@ static void WL_T_Chase(wg_level_t *level, size_t actor_index, int32_t tics)
     wg_actor_t *actor = &level->actors[actor_index];
     int dodge = 0;
 
+    if (level->victory_flag != 0U)
+    {
+        return;
+    }
     if (WL_CheckLine(level, actor))
     {
         int delta_x = (int)actor->tile_x - WL_PlayerTileX(level);
@@ -2260,6 +2283,25 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
         {
             continue;
         }
+        /* Original DoActor leaves an inactive object completely frozen while
+           its area is disconnected.  Patrols/projectiles start active, and
+           rendering an object makes activation permanent. */
+        if ((actor->flags & WG_ACTOR_FLAG_ACTIVE) == 0U)
+        {
+            if (!connectivity_ready)
+            {
+                if (!WL_UpdateAreaConnectivity(level))
+                {
+                    return 0;
+                }
+                connectivity_ready = 1;
+            }
+            if (actor->area_number >= WG_NUM_AREAS
+                || !level->area_by_player[actor->area_number])
+            {
+                continue;
+            }
+        }
         if (WL_IsPainState(actor->state) || WL_IsDeathState(actor->state))
         {
             if (!WL_TickPainOrDeath(level, actor, tics))
@@ -2337,6 +2379,36 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 actor->shape = (uint16_t)(actor->base_shape
                               + (actor->shape - actor->base_shape + 1U) % 4U);
                 actor->tic_count += 10;
+            }
+            if (tics != 0U)
+            {
+                if (!connectivity_ready)
+                {
+                    if (!WL_UpdateAreaConnectivity(level))
+                    {
+                        return 0;
+                    }
+                    connectivity_ready = 1;
+                }
+                (void)WL_SightPlayer(level, actor, tics,
+                                     level->made_noise != 0U);
+            }
+            continue;
+        }
+        if (actor->state == WG_STATE_STAND)
+        {
+            if (tics != 0U)
+            {
+                if (!connectivity_ready)
+                {
+                    if (!WL_UpdateAreaConnectivity(level))
+                    {
+                        return 0;
+                    }
+                    connectivity_ready = 1;
+                }
+                (void)WL_SightPlayer(level, actor, tics,
+                                     level->made_noise != 0U);
             }
             continue;
         }
@@ -2463,6 +2535,22 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             }
             if (WL_PathHasThink(actor->state))
             {
+                if (tics != 0U)
+                {
+                    if (!connectivity_ready)
+                    {
+                        if (!WL_UpdateAreaConnectivity(level))
+                        {
+                            return 0;
+                        }
+                        connectivity_ready = 1;
+                    }
+                    if (WL_SightPlayer(level, actor, tics,
+                                       level->made_noise != 0U))
+                    {
+                        continue;
+                    }
+                }
                 WL_T_Path(level, index, (int32_t)tics);
             }
             continue;
@@ -2765,8 +2853,10 @@ int WL_UpdateAreaConnectivity(wg_level_t *level)
         uint8_t first_area;
         uint8_t second_area;
 
-        if (door->action == WG_DOOR_CLOSED
-            && door->position != 0xffffU)
+        if ((door->action == WG_DOOR_CLOSED
+             && door->position != 0xffffU)
+            || (door->action == WG_DOOR_OPENING
+                && door->position == 0U))
         {
             continue;
         }
@@ -3177,6 +3267,49 @@ static int32_t WL_ReactionTime(wg_level_t *level,
     }
 }
 
+/* Portable form of the original SightPlayer routine.  It is called from the
+   same actor think states as T_Stand and T_Path, rather than as a separate
+   blanket pass, so patrol pause states retain their original timing. */
+static int WL_SightPlayer(wg_level_t *level, wg_actor_t *actor,
+                          unsigned tics, int made_noise)
+{
+    if ((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) != 0U)
+    {
+        return 0;
+    }
+    if (actor->reaction_time > 0)
+    {
+        actor->reaction_time -= (int32_t)tics;
+        if (actor->reaction_time > 0)
+        {
+            return 0;
+        }
+        actor->reaction_time = 0;
+        WL_FirstSighting(level, actor);
+        return 1;
+    }
+    if (actor->area_number >= WG_NUM_AREAS
+        || !level->area_by_player[actor->area_number])
+    {
+        return 0;
+    }
+    if ((actor->flags & WG_ACTOR_FLAG_AMBUSH) != 0U)
+    {
+        if (!WL_CheckSight(level, actor))
+        {
+            return 0;
+        }
+        actor->flags = (uint16_t)(actor->flags
+                                  & ~WG_ACTOR_FLAG_AMBUSH);
+    }
+    else if (!made_noise && !WL_CheckSight(level, actor))
+    {
+        return 0;
+    }
+    actor->reaction_time = WL_ReactionTime(level, actor->actor_class);
+    return 0;
+}
+
 int WL_TickAwareness(wg_level_t *level, unsigned tics, int made_noise)
 {
     size_t index;
@@ -3190,37 +3323,15 @@ int WL_TickAwareness(wg_level_t *level, unsigned tics, int made_noise)
     {
         wg_actor_t *actor = &level->actors[index];
         int can_notice = actor->state == WG_STATE_STAND
-                         || WL_IsPathState(actor->state);
+                         || (WL_IsPathState(actor->state)
+                             && WL_PathHasThink(actor->state));
 
         if (!can_notice || (actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) != 0U
-            || actor->area_number >= WG_NUM_AREAS
-            || !level->area_by_player[actor->area_number])
+            || (actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
         {
             continue;
         }
-        if (actor->reaction_time > 0)
-        {
-            actor->reaction_time -= (int32_t)tics;
-            if (actor->reaction_time > 0)
-            {
-                continue;
-            }
-            WL_FirstSighting(level, actor);
-            continue;
-        }
-        if ((actor->flags & WG_ACTOR_FLAG_AMBUSH) != 0U)
-        {
-            if (!WL_CheckSight(level, actor))
-            {
-                continue;
-            }
-            actor->flags = (uint16_t)(actor->flags & 0xffbfU);
-        }
-        else if (!made_noise && !WL_CheckSight(level, actor))
-        {
-            continue;
-        }
-        actor->reaction_time = WL_ReactionTime(level, actor->actor_class);
+        (void)WL_SightPlayer(level, actor, tics, made_noise);
     }
     return 1;
 }

@@ -709,6 +709,10 @@ static uint16_t WG_ActorShape(const wg_actor_t *actor, int projected_x,
        from a save made during a transition) cannot index into the following
        actor's sprite range. */
     if (actor->rotate == 0U
+        || (actor->state >= WG_STATE_SHOOT1
+            && actor->state <= WG_STATE_SHOOT9)
+        || (actor->state >= WG_STATE_DOG_JUMP1
+            && actor->state <= WG_STATE_DOG_JUMP5)
         || (actor->state >= WG_STATE_DIE1
             && actor->state <= WG_STATE_DEAD))
     {
@@ -809,10 +813,16 @@ int WL_DrawScaleds(
         }
         actor->flags = (uint16_t)(actor->flags & 0xfff7U);
         if (WG_ActorTileIsVisible(level, visible_tiles,
-                                  actor->tile_x, actor->tile_y)
-            && WG_TransformActor(tables, actor, view_x, view_y,
-                                 view_cosine, view_sine, &candidate))
+                                  actor->tile_x, actor->tile_y))
         {
+            /* DOS ThreeDRefresh permanently activates an actor the first
+               time its tile (or a clear neighbor) enters spotvis. */
+            actor->flags |= WG_ACTOR_FLAG_ACTIVE;
+            if (!WG_TransformActor(tables, actor, view_x, view_y,
+                                   view_cosine, view_sine, &candidate))
+            {
+                continue;
+            }
             actor->flags |= WG_ACTOR_FLAG_VISIBLE;
             actor->view_x = candidate.view_x;
             actor->trans_x = candidate.trans_x;

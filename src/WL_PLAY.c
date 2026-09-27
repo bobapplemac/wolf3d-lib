@@ -223,6 +223,10 @@ static int WL_PlayFrame(struct wg_level *level,
         return 0;
     }
 
+    /* The original PlayLoop clears this once per simulation frame before the
+       player and actors think.  A gunshot or successful knife hit then alerts
+       every non-ambush actor in an area connected during that same frame. */
+    level->made_noise = 0U;
     level->time_count += tics;
 
     attack_pressed = input->attack && !state->attack_held;

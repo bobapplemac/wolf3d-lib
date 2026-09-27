@@ -595,13 +595,13 @@ static void TestActorAwareness(void)
     CHECK(level.area_by_player[0] != 0U);
     CHECK(WL_CheckLine(&level, actor));
     CHECK(WL_CheckSight(&level, actor));
-    CHECK(WL_TickAwareness(&level, 1U, 0));
+    CHECK(WL_TickActors(&level, 1U));
     CHECK((actor->flags & WG_ACTOR_FLAG_AMBUSH) == 0U);
     CHECK(actor->reaction_time == 3);
     CHECK(actor->state == WG_STATE_STAND);
-    CHECK(WL_TickAwareness(&level, 2U, 0));
+    CHECK(WL_TickActors(&level, 2U));
     CHECK(actor->reaction_time == 1);
-    CHECK(WL_TickAwareness(&level, 1U, 0));
+    CHECK(WL_TickActors(&level, 1U));
     CHECK(actor->state == WG_STATE_CHASE1);
     CHECK(actor->tic_count == 10);
     CHECK(actor->shape == 58U);
@@ -640,6 +640,7 @@ static void TestActorAwareness(void)
     CHECK(actor->state == WG_STATE_SHOOT1);
     CHECK(actor->tic_count == 20);
     CHECK(actor->shape == 96U);
+    CHECK(actor->rotate == 0U);
     actor->flags |= WG_ACTOR_FLAG_VISIBLE;
     CHECK(WL_TickActors(&level, 20U));
     CHECK(actor->state == WG_STATE_SHOOT2);
@@ -712,9 +713,30 @@ static void TestDoorAreaConnectivity(void)
     CHECK(level.area_by_player[0] != 0U);
     CHECK(level.area_by_player[1] == 0U);
     CHECK(!WL_CheckLine(&level, &level.actors[0]));
+    level.made_noise = 1U;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actors[0].reaction_time == 0);
+    CHECK(WL_OpenDoor(&level, 0U));
+    CHECK(level.doors[0].position == 0U);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actors[0].reaction_time == 0);
+    CHECK(WL_MoveDoors(&level, 1U));
+    CHECK(level.doors[0].position == 1024U);
+    CHECK(level.area_by_player[1] != 0U);
+    level.actors[0].direction = 0U;
+    level.made_noise = 0U;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actors[0].reaction_time == 0);
+    level.made_noise = 1U;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actors[0].reaction_time > 0);
+
+    CHECK(WG_LevelBuild(&map, &level));
+    CHECK(level.door_count == 1U);
     level.actors[0].state = WG_STATE_CHASE1;
     level.actors[0].tic_count = 10;
-    level.actors[0].flags |= WG_ACTOR_FLAG_ATTACK_MODE;
+    level.actors[0].flags |= WG_ACTOR_FLAG_ATTACK_MODE
+                             | WG_ACTOR_FLAG_ACTIVE;
     level.actors[0].distance = 0;
     CHECK(WL_TickActors(&level, 1U));
     CHECK(level.actors[0].tile_x == 3U);
@@ -731,6 +753,28 @@ static void TestDoorAreaConnectivity(void)
     CHECK(level.actors[0].distance == WG_FIXED_ONE - 512);
     CHECK(level.actors[0].x
           == 4 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 512);
+}
+
+static void TestOriginalActorActivation(void)
+{
+    wg_level_t level;
+    wg_actor_t *actor;
+
+    memset(&level, 0, sizeof(level));
+    level.player_x = WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.player_y = WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    level.areas[WG_LEVEL_SIZE + 1U] = 0U;
+    level.actor_count = 1U;
+    actor = &level.actors[0];
+    actor->area_number = 1U;
+    actor->state = WG_STATE_PAIN1;
+    actor->tic_count = 10;
+
+    CHECK(WL_TickActors(&level, 3U));
+    CHECK(actor->tic_count == 10);
+    actor->flags |= WG_ACTOR_FLAG_ACTIVE;
+    CHECK(WL_TickActors(&level, 3U));
+    CHECK(actor->tic_count == 7);
 }
 
 static void TestOrdinaryShootingStates(void)
@@ -849,9 +893,9 @@ static void TestDogChaseAndBite(void)
     dog = &level.actors[0];
     CHECK(dog->actor_class == WG_ACTOR_DOG);
     CHECK(dog->attack_shape == 135U);
-    CHECK(WL_TickAwareness(&level, 1U, 0));
+    CHECK(WL_TickActors(&level, 1U));
     CHECK(dog->reaction_time == 2);
-    CHECK(WL_TickAwareness(&level, 2U, 0));
+    CHECK(WL_TickActors(&level, 2U));
     CHECK(dog->state == WG_STATE_CHASE1);
     CHECK(dog->speed == 3000);
     CHECK(level.sound_event_count == 1U);
@@ -877,6 +921,7 @@ static void TestDogChaseAndBite(void)
     CHECK(dog->state == WG_STATE_DOG_JUMP1);
     CHECK(dog->tic_count == 10);
     CHECK(dog->shape == 135U);
+    CHECK(dog->rotate == 0U);
     CHECK(WL_TickActors(&level, 10U));
     CHECK(dog->state == WG_STATE_DOG_JUMP2);
     CHECK(dog->shape == 136U);
@@ -4634,6 +4679,7 @@ int main(int argc, char **argv)
     TestPatrolMovement();
     TestActorAwareness();
     TestDoorAreaConnectivity();
+    TestOriginalActorActivation();
     TestOrdinaryShootingStates();
     TestDogChaseAndBite();
     TestBossShootingStates();

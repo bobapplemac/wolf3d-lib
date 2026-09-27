@@ -13,6 +13,7 @@
 #define WG_ACTOR_FLAG_NONMARK 0x0080U
 #define WG_ACTOR_FLAG_ATTACK_PENDING 0x0100U
 #define WG_ACTOR_FLAG_REMOVED 0x0200U
+#define WG_ACTOR_FLAG_ACTIVE 0x0400U
 
 typedef enum wg_actor_class
 {

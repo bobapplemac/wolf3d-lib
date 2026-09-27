@@ -19,6 +19,12 @@
 - Prevented stale actor rotation metadata from rotating non-rotating death
   states into the following sprite range, which could make a dying WL1 guard
   flash as a dog.
+- Restored the original per-state `SightPlayer` calls in normal gameplay, so
+  connected-area sight and weapon noise now wake standing and patrolling
+  enemies after their class-specific reaction delay.
+- Restored persistent actor activation, once-per-frame noise lifetime, exact
+  door-area connection timing, victory-time chase suspension, and the original
+  non-rotating shooting and dog-jump states.
 - Added one runtime-selectable engine for Spear of Destiny (`SOD`), its
   two-floor demo (`SDM`), and the `SD1`, `SD2`, and `SD3` mission profiles.
 - Added executable-name family preference plus strict `--game` extension

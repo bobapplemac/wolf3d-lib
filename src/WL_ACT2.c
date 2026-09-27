@@ -267,6 +267,12 @@ static int WL_SpawnActor(struct wg_level *level, uint8_t tile_x,
     actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE + tile_x];
     actor->angle = 0U;
     actor->flags = WG_ACTOR_FLAG_SHOOTABLE;
+    if (patrol)
+    {
+        /* Original SpawnPatrol actors are active from creation.  Standing
+           actors remain dormant until their area connects or they are seen. */
+        actor->flags |= WG_ACTOR_FLAG_ACTIVE;
+    }
     if (!patrol
         && level->ambush_tiles[(size_t)tile_y * WG_LEVEL_SIZE + tile_x])
     {

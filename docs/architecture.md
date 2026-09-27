@@ -191,6 +191,21 @@ trace and door-position test, while `CheckSight`, `SightPlayer`, and
 noise rules, class-specific randomized reaction delays, chase speeds, and the
 first chase frame.
 
+As in the original `PlayLoop`, `madenoise` is cleared once before player and
+actor thinking. A gunshot, or a knife strike that actually damages an actor,
+sets it for the remainder of that frame. This is not a distance calculation:
+every non-ambush actor in an area connected to the player through opening or
+open doors may react. Door operation itself does not set `madenoise`; the first
+`MoveDoors` opening step connects the adjacent areas. Standing actors call
+`SightPlayer` every tic, while patrol actors call it only from the four
+`T_Path` states and not from the two short pause states.
+
+The original `objtype.active` scheduling bit is represented by
+`WG_ACTOR_FLAG_ACTIVE`. Patrols and transient actors begin active; otherwise an
+actor is frozen while its area is disconnected until rendering it makes the
+activation permanent. This preserves `DoActor` behavior without exposing DOS
+object-layout details in the portable structure.
+
 The first chase slice adds the original six-state `10/3/8/10/3/8` animation,
 `SelectChaseDir`, `SelectDodgeDir`, `TryWalk` destination reservation, and the
 movement portion of `T_Chase` for guards, officers, mutants, SS, Hans, Gretel,

@@ -1542,3 +1542,32 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Extended the actor test through all 45 individual death tics and added visual
   gates for the first and terminal frames. The WL1 checkpoints hash to
   `71b19599a4c9bc49` and `fb94e191f92153c3`, respectively.
+
+## 2026-09-26: Original actor awareness in the live play loop
+
+- Audited `PlayLoop`, `DoActor`, `T_Stand`, `T_Path`, `SightPlayer`,
+  `CheckSight`, `CheckLine`, `FirstSighting`, and the door-area graph directly
+  against the original sources. The portable routines were present, but the
+  interactive actor loop had never called awareness from standing or path
+  states; ordinary guards therefore noticed the player only when damaged.
+- Restored awareness at the original state-thinker boundaries. Standing actors
+  check every simulation tic; patrols check only on `T_Path` states, preserving
+  the original `path1s`/`path3s` pauses and reaction countdown timing.
+- Restored `madenoise` as a one-frame event. Gunfire and successful knife hits
+  alert all non-ambush actors in player-connected areas with no distance
+  attenuation. Ambush actors still require line of sight. Opening a door does
+  not itself alert enemies, but its first movement step joins the adjacent
+  areas so subsequent sight and noise can cross it.
+- Restored `objtype.active` scheduling semantics: patrols and transient actors
+  start active, rendering permanently activates an actor, and other actors are
+  frozen while their area remains disconnected. Chase movement also stops
+  during the victory sequence as in `T_Chase`.
+- The newly exercised firing path exposed a stale rotation flag on attack and
+  dog-jump states. Original state tables mark both as non-rotating; retaining
+  the walking rotation could add a view-direction offset into the next sprite
+  group, making a firing guard briefly appear as a dog. State transitions and
+  renderer invariants now both enforce the original rotation property.
+- Added focused tests for connected-area noise, closed and just-commanded door
+  isolation, door sound not acting as an alert, reaction delays, inactive-area
+  freezing, and attack/jump rotation. Refreshed all real-data demo hashes after
+  the actors began responding during normal playback.

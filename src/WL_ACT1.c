@@ -85,7 +85,6 @@ int WL_OpenDoor(struct wg_level *level, size_t door_index)
     else
     {
         door->action = WG_DOOR_OPENING;
-        (void)WL_UpdateAreaConnectivity(level);
     }
     return 1;
 }
@@ -183,6 +182,7 @@ int WL_MoveDoors(struct wg_level *level, unsigned tics)
                 door->position = (uint16_t)(door->position
                                              + ((uint32_t)tics << 10));
             }
+            (void)WL_UpdateAreaConnectivity(level);
         }
         else if (door->action == WG_DOOR_CLOSING)
         {
