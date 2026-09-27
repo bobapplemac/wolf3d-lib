@@ -43,6 +43,63 @@ int WL_DrawPlayBorder(uint8_t framebuffer[320 * 200],
     return 1;
 }
 
+int WL_DrawGetPsyched(uint8_t framebuffer[320 * 200],
+                      const struct wg_graphics *graphics,
+                      const wg_level_t *level)
+{
+    wl_status_t status;
+    size_t picture;
+
+    if (framebuffer == NULL || graphics == NULL || level == NULL)
+    {
+        return 0;
+    }
+    switch (graphics->variant)
+    {
+    case WG_GAME_WOLF3D_SHAREWARE_14:
+        picture = 138U;
+        break;
+    case WG_GAME_WOLF3D_FULL_GT_14:
+        picture = 134U;
+        break;
+    case WG_GAME_SPEAR_DEMO_SDM:
+        picture = 127U;
+        break;
+    case WG_GAME_SPEAR_FULL_SOD:
+    case WG_GAME_SPEAR_MISSION_1_SD1:
+    case WG_GAME_SPEAR_MISSION_2_SD2:
+    case WG_GAME_SPEAR_MISSION_3_SD3:
+        picture = 149U;
+        break;
+    default:
+        return 0;
+    }
+
+    WL_StatusDefaults(&status);
+    status.score = level->score;
+    status.health = level->player_health;
+    status.ammo = level->player_ammo;
+    status.weapon = level->player_weapon;
+    status.lives = level->player_lives;
+    status.keys = level->player_keys;
+    status.map = level->map_number;
+    if (!WL_DrawStatusBar(framebuffer, graphics, &status))
+    {
+        return 0;
+    }
+    WG_VideoBar(framebuffer, 0, 0, 320, 160, 127U);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, picture, 48, 56))
+    {
+        return 0;
+    }
+    /* PM_Preload leaves its progress bar full before the original one-second
+       IN_UserInput hold.  Resource decoding is synchronous here, so draw that
+       final state directly. */
+    WG_VideoBar(framebuffer, 53, 101, 214, 2, 0x37U);
+    WG_VideoBar(framebuffer, 53, 101, 213, 1, 0x32U);
+    return 1;
+}
+
 uint16_t WL_DeathTargetAngle(const wg_level_t *level)
 {
     double angle;

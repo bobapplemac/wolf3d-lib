@@ -10,18 +10,15 @@ Original source: `WOLFSRC`
 
 | Profile | Original functions | Original states | Chocolate functions | Mapped functions | Reviewed edge translations | Unmapped state callbacks | Bridge-confirmed missing | Bridge-confirmed path gaps |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| WL1 | 528 | 305 | 461 | 107 | 11 | 0 | 197 | 1 |
-| WL6 | 529 | 305 | 462 | 107 | 11 | 0 | 198 | 1 |
-| SDM | 514 | 264 | 434 | 99 | 11 | 0 | 176 | 1 |
-| SOD | 519 | 264 | 439 | 99 | 11 | 0 | 181 | 1 |
+| WL1 | 528 | 305 | 461 | 109 | 13 | 0 | 195 | 0 |
+| WL6 | 529 | 305 | 462 | 109 | 13 | 0 | 196 | 0 |
+| SDM | 514 | 264 | 434 | 101 | 13 | 0 | 174 | 0 |
+| SOD | 519 | 264 | 439 | 101 | 13 | 0 | 179 | 0 |
 
 ## Chocolate-corroborated audit leads
 
 ### WL1
 
-Call paths present in both original and Chocolate but absent from the portable graph:
-
-- `ThreeDRefresh` → `FizzleFade` maps to `WG_GameSessionRender` → `WG_FizzleStepRegion`.
 
 Routines reachable in both original and Chocolate without a portable mapping or classification:
 
@@ -108,9 +105,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 
 ### WL6
 
-Call paths present in both original and Chocolate but absent from the portable graph:
-
-- `ThreeDRefresh` → `FizzleFade` maps to `WG_GameSessionRender` → `WG_FizzleStepRegion`.
 
 Routines reachable in both original and Chocolate without a portable mapping or classification:
 
@@ -197,9 +191,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 
 ### SDM
 
-Call paths present in both original and Chocolate but absent from the portable graph:
-
-- `ThreeDRefresh` → `FizzleFade` maps to `WG_GameSessionRender` → `WG_FizzleStepRegion`.
 
 Routines reachable in both original and Chocolate without a portable mapping or classification:
 
@@ -286,9 +277,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 
 ### SOD
 
-Call paths present in both original and Chocolate but absent from the portable graph:
-
-- `ThreeDRefresh` → `FizzleFade` maps to `WG_GameSessionRender` → `WG_FizzleStepRegion`.
 
 Routines reachable in both original and Chocolate without a portable mapping or classification:
 

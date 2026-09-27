@@ -193,6 +193,10 @@ typedef struct wg_game_session
     uint8_t death_acknowledged;
     wg_fizzle_t death_fizzle;
     uint8_t death_source[WG_SCREEN_WIDTH * WG_PLAY_VIEW_HEIGHT];
+    uint8_t entry_fizzle_active;
+    wg_fizzle_t entry_fizzle;
+    uint8_t entry_source[WG_SCREEN_WIDTH * WG_PLAY_VIEW_HEIGHT];
+    uint16_t preload_tics;
     unsigned map_number;
     unsigned next_map_number;
     uint32_t level_start_score;
@@ -216,6 +220,8 @@ static wg_game_session_t wg_game;
 
 static unsigned WG_GameSessionNextMap(void);
 static int WG_GameSessionRender(void);
+static int WG_GameSessionBeginEntryFizzle(void);
+static int WG_GameSessionBeginPreload(void);
 static int WG_GameSessionOpen(unsigned map_number,
                               wg_difficulty_t difficulty);
 static int WG_GameSessionReload(unsigned map_number, int died);
@@ -1909,7 +1915,7 @@ static int WG_GameSessionLoad(unsigned slot)
     wg_game.mouse_y = 0;
     wg_save_selection = slot;
     wg_quick_slot_valid = 1U;
-    return WG_GameSessionRender();
+    return WG_GameSessionBeginPreload();
 }
 
 static int WG_GameSessionPumpAudio(void)
@@ -1991,6 +1997,55 @@ static int WG_GameSessionRender(void)
     status.face_frame = wg_game.face_frame;
     status.face = wg_game.face;
     return WL_DrawStatusBar(WG_ScreenBuffer, &wg_game.graphics, &status);
+}
+
+static int WG_GameSessionBeginEntryFizzle(void)
+{
+    size_t view_width = wg_game.view.view_width;
+    size_t view_height = view_width / 2U;
+    size_t view_x = (WG_SCREEN_WIDTH - view_width) / 2U;
+    size_t view_y = (WG_PLAY_VIEW_HEIGHT - view_height) / 2U;
+    size_t y;
+
+    if (!wg_game.active || view_width == 0U
+        || view_width > WG_SCREEN_WIDTH
+        || view_height > WG_PLAY_VIEW_HEIGHT)
+    {
+        return 0;
+    }
+    for (y = 0U; y < view_height; ++y)
+    {
+        memcpy(wg_game.entry_source + y * view_width,
+               WG_ScreenBuffer + (view_y + y) * WG_SCREEN_WIDTH + view_x,
+               view_width);
+    }
+    if (!WL_DrawPlayBorder(WG_ScreenBuffer, (unsigned)view_width))
+    {
+        return 0;
+    }
+    WG_FizzleStart(&wg_game.entry_fizzle);
+    wg_game.entry_fizzle_active = 1U;
+    memset(wg_game.keys, 0, sizeof(wg_game.keys));
+    wg_game.mouse_buttons = 0U;
+    wg_game.mouse_x = 0;
+    wg_game.mouse_y = 0;
+    return 1;
+}
+
+static int WG_GameSessionBeginPreload(void)
+{
+    if (!WL_DrawGetPsyched(WG_ScreenBuffer, &wg_game.graphics,
+                           &wg_game.level))
+    {
+        return 0;
+    }
+    wg_game.preload_tics = 70U;
+    wg_game.entry_fizzle_active = 0U;
+    memset(wg_game.keys, 0, sizeof(wg_game.keys));
+    wg_game.mouse_buttons = 0U;
+    wg_game.mouse_x = 0;
+    wg_game.mouse_y = 0;
+    return 1;
 }
 
 static void WG_GameSessionUpdateFace(unsigned tics)
@@ -2460,7 +2515,7 @@ static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty)
     }
     WL_PlayStateReset(&wg_game.play);
     wg_game.active = 1;
-    if (!WG_GameSessionRender())
+    if (!WG_GameSessionBeginPreload())
     {
         goto cleanup;
     }
@@ -2661,7 +2716,12 @@ static int WG_GameSessionReload(unsigned map_number, int died)
     }
     memcpy(wg_game.level_ratios, level_ratios, sizeof(level_ratios));
     wg_game.level_start_score = start_score;
-    return WG_GameSessionRender();
+    if (!died)
+    {
+        return WG_GameSessionBeginPreload();
+    }
+    wg_game.preload_tics = 0U;
+    return WG_GameSessionRender() && WG_GameSessionBeginEntryFizzle();
 }
 
 static int WG_GameSessionEnterSpearMap(void)
@@ -2690,7 +2750,15 @@ static int WG_GameSessionEnterSpearMap(void)
     wg_game.level.player_angle = spear_angle;
     wg_game.level.player_keys |= 1U;
     wg_game.level_start_score = score;
-    return WG_GameSessionRender();
+    wg_game.preload_tics = 0U;
+    if (!WG_GameSessionRender())
+    {
+        return 0;
+    }
+    /* The original spear pickup jumps directly back into PlayLoop on map 20;
+       unlike ordinary level loads, it does not set fizzlein. */
+    wg_game.entry_fizzle_active = 0U;
+    return 1;
 }
 
 static int WG_GameSessionTick(void)
@@ -2704,6 +2772,36 @@ static int WG_GameSessionTick(void)
 
     if (wg_game.game_over)
     {
+        return 1;
+    }
+    if (wg_game.preload_tics != 0U)
+    {
+        --wg_game.preload_tics;
+        if (wg_game.preload_tics == 0U)
+        {
+            if (!WG_GameSessionRender()
+                || !WG_GameSessionBeginEntryFizzle())
+            {
+                return 0;
+            }
+        }
+        return 1;
+    }
+    if (wg_game.entry_fizzle_active)
+    {
+        size_t view_width = wg_game.view.view_width;
+        size_t view_height = view_width / 2U;
+        size_t view_x = (WG_SCREEN_WIDTH - view_width) / 2U;
+        size_t view_y = (WG_PLAY_VIEW_HEIGHT - view_height) / 2U;
+
+        if (WG_FizzleStepRegion(
+                &wg_game.entry_fizzle, wg_game.entry_source, view_width,
+                WG_ScreenBuffer, WG_SCREEN_WIDTH, view_x, view_y,
+                view_width, view_height,
+                (WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT) / 20U))
+        {
+            wg_game.entry_fizzle_active = 0U;
+        }
         return 1;
     }
     if (wg_game.victory)
@@ -4402,6 +4500,12 @@ wg_result_t wolf3dgeneric_Run(void)
                 ID_IN_GetJoyDelta(event.joystick, &new_x, &new_y);
                 pressed_buttons = (uint8_t)(ID_IN_JoyButtons(event.joystick)
                                             & (uint8_t)~old_buttons);
+                if (wg_game.active && wg_game.preload_tics != 0U
+                    && pressed_buttons != 0U)
+                {
+                    wg_game.preload_tics = 1U;
+                    continue;
+                }
                 if (wg_control_screen
                     && was_present
                            != ID_IN_JoystickPresent(event.joystick))
@@ -4529,6 +4633,14 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 last_ticks = WG_GetTicksMs();
                 accumulator = 0U;
+                continue;
+            }
+            if (wg_game.active && wg_game.preload_tics != 0U
+                && event.pressed
+                && (event.type == WG_EVENT_KEY
+                    || event.type == WG_EVENT_MOUSE_BUTTON))
+            {
+                wg_game.preload_tics = 1U;
                 continue;
             }
             if (event.type == WG_EVENT_KEY)
@@ -5818,6 +5930,8 @@ wg_result_t wolf3dgeneric_Run(void)
             if (wg_game.active && ticks_run != 0U
                 && !wg_game.intermission && !wg_game.victory
                 && !wg_game.high_scores
+                && wg_game.preload_tics == 0U
+                && !wg_game.entry_fizzle_active
                 && wg_game.death_phase < WG_DEATH_FIZZLE
                 && !WG_GameSessionRender())
             {

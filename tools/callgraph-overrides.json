@@ -39,6 +39,8 @@
     "Died": "WG_GameSessionTick",
     "GameLoop": "WG_GameSessionTick",
     "DoActor": "WL_TickActors",
+    "PreloadGraphics": "WG_GameSessionBeginPreload",
+    "PreloadUpdate": "WL_DrawGetPsyched",
     "ConnectAreas": "WL_UpdateAreaConnectivity",
     "RecursiveConnect": "WL_UpdateAreaConnectivity",
     "InitAreas": "WG_LevelBuildForVariant",
@@ -145,6 +147,16 @@
       "caller": "T_Player",
       "callee": "UpdateFace",
       "reason": "The session scheduler invokes WG_GameSessionUpdateFace immediately before WL_PlayFrame dispatches the translated normal-player branch."
+    },
+    {
+      "caller": "ThreeDRefresh",
+      "callee": "FizzleFade",
+      "reason": "The non-blocking session scheduler runs WG_FizzleStepRegion after WG_GameSessionRender has prepared the source view, rather than blocking inside the renderer."
+    },
+    {
+      "caller": "PreloadGraphics",
+      "callee": "DrawPlayBorder",
+      "reason": "When the preload timer expires, the session renders the first view and WG_GameSessionBeginEntryFizzle calls WL_DrawPlayBorder before revealing it."
     }
   ],
   "classifications": [

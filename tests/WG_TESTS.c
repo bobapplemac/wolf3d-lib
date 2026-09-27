@@ -3253,6 +3253,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     wg_maps_t maps;
     wg_map_t map;
     wg_level_t level;
+    wg_level_t psyched_level;
     const uint8_t *page_data;
     size_t page_size;
     uint8_t framebuffer[320 * 200];
@@ -3313,6 +3314,14 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     if (graphics.offsets != NULL)
     {
         unsigned frame;
+
+        memset(&psyched_level, 0, sizeof(psyched_level));
+        psyched_level.player_health = 100U;
+        psyched_level.player_ammo = 8U;
+        psyched_level.player_lives = 3U;
+        psyched_level.player_weapon = WG_WEAPON_PISTOL;
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawGetPsyched(framebuffer, &graphics, &psyched_level));
 
         CHECK(graphics.picture_count == (expected_variant
               == WG_GAME_WOLF3D_SHAREWARE_14 ? 144U : 132U));
@@ -4257,6 +4266,7 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     wg_audio_t audio;
     wg_pages_t pages;
     wg_maps_t maps;
+    wg_level_t psyched_level;
     uint8_t framebuffer[320U * 200U];
     uint8_t palette[256U * 3U];
     uint64_t frame_hash = 1469598103934665603ULL;
@@ -4296,6 +4306,13 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     CHECK(data_set.audio_offset_count == 268U);
 
     CHECK(WG_GraphicsOpen(&graphics, &data_set));
+    memset(&psyched_level, 0, sizeof(psyched_level));
+    psyched_level.player_health = 100U;
+    psyched_level.player_ammo = 8U;
+    psyched_level.player_lives = 3U;
+    psyched_level.player_weapon = WG_WEAPON_PISTOL;
+    memset(framebuffer, 0, sizeof(framebuffer));
+    CHECK(WL_DrawGetPsyched(framebuffer, &graphics, &psyched_level));
     CHECK(graphics.picture_count
           == (variant == WG_GAME_SPEAR_DEMO_SDM ? 125U : 147U));
     for (index = 0U; index < 2U; ++index)

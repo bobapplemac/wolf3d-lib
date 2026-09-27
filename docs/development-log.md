@@ -1661,3 +1661,20 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Extended the call-graph mappings through the reviewed player movement,
   pickup, render, death, and game-loop translations, and added regression
   coverage for fizzling into a subregion of a larger framebuffer.
+
+## 2026-09-27: Original level-entry presentation
+
+- Restored `PreloadGraphics` as a non-blocking session phase. Ordinary new
+  levels, loaded saves, and demos now display the edition-correct embedded
+  `GETPSYCHEDPIC`, the original status bar and completed preload bar, followed
+  by the source-defined one-second input-skippable hold.
+- Preserved the original `GameLoop` exceptions: restarting after a death skips
+  “Get Psyched!” but still fuzzles into the new life, while taking the Spear
+  jumps directly to map 20 without either preload presentation or entry
+  fizzle.
+- Restored the first-view 20-frame fizzle as an offset-aware, non-blocking
+  transition for every configured viewport size. Simulation remains frozen
+  until the transition completes.
+- Added real-data validation of the WL1, WL6, SDM, and SOD Get Psyched graphic
+  mappings and recorded the scheduler-separated render/fizzle edges in the
+  call-graph audit.

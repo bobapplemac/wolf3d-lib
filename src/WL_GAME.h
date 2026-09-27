@@ -17,6 +17,7 @@
 #define WG_MAX_SOUND_EVENTS 16
 
 struct wg_view_tables;
+struct wg_graphics;
 
 typedef enum wg_sound
 {
@@ -291,6 +292,9 @@ int WG_SoundPosition(const wg_level_t *level,
 void WG_ClearSoundEvents(wg_level_t *level);
 int WL_DrawPlayBorder(uint8_t framebuffer[320 * 200],
                       unsigned view_width);
+int WL_DrawGetPsyched(uint8_t framebuffer[320 * 200],
+                      const struct wg_graphics *graphics,
+                      const wg_level_t *level);
 uint16_t WL_DeathTargetAngle(const wg_level_t *level);
 int WL_DeathRotateStep(wg_level_t *level, uint16_t target_angle,
                        unsigned degrees);
