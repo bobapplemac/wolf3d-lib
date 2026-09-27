@@ -5,6 +5,20 @@ and remain under the Git-ignored `build/artifacts/` directory. They are never di
 with the source repository. Each entry records a deterministic indexed-frame
 hash so the milestone remains verifiable even when the screenshot is absent.
 
+## 2026-09-26: Opt-in mouse control
+
+- Made mouse hardware absent unless `--mouse` is present, matching the original
+  input manager's distinction between undetected hardware and disabled use.
+- Without the switch, SIGNON leaves Mouse unmarked, mouse events are ignored,
+  and mouse-specific Controls and Customize Controls entries are inactive.
+- Corrected the WL1 menu-art chunk mapping after its extra Spear advertisement
+  shifts the remaining menu graphics by one chunk. Control and Sound menus now
+  use the intended radio boxes and title art instead of weapon/disk graphics.
+- The corrected WL1 Sound menu hashes to `bd51c51cceb48736`; the no-mouse
+  Control menu hashes to `59ee44f4e7ffa03d`. WL6 SIGNON hashes to
+  `7f78b83ef22e6fbc` without mouse hardware and `f83e3e048c4550f4` with
+  `--mouse`.
+
 ## 2026-09-26: Win32 4:3 VGA presentation
 
 - Kept the generic library's canonical output at its original 320x200 indexed

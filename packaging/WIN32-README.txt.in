@@ -26,6 +26,8 @@ Wolf3D displays the original Press a key/Working prompts; Spear holds SIGNON
 for three seconds automatically.
 Use --adlib to retain OPL music and AdLib effects while disabling digitized
 Sound Blaster effects; SIGNON then marks AdLib instead of Sound Blaster.
+Mouse hardware is absent unless --mouse is supplied. Without it, SIGNON leaves
+Mouse unmarked, mouse events are ignored, and mouse menu entries are disabled.
 
 If this folder contains more than one game, open a terminal here and select the
 desired extension explicitly:

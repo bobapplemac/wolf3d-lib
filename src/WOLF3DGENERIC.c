@@ -61,7 +61,8 @@ static unsigned wg_sound_selection;
 static unsigned wg_control_selection;
 static unsigned wg_mouse_adjustment = 5U;
 static unsigned wg_saved_mouse_adjustment = 5U;
-static uint8_t wg_mouse_enabled = 1U;
+static uint8_t wg_mouse_present;
+static uint8_t wg_mouse_enabled;
 static unsigned wg_customize_selection;
 static int wg_customize_edit_column = -1;
 static uint8_t wg_customize_capture;
@@ -1147,6 +1148,7 @@ static int WG_LoadSignonScreen(const char *path,
     memcpy(WG_ScreenBuffer, file.data, file.size);
     WG_FreeFile(&file);
     WG_SignonDrawIndicators(WG_ScreenBuffer, palette_family,
+                            wg_mouse_present,
                             ID_IN_JoystickPresent(0U)
                                 || ID_IN_JoystickPresent(1U),
                             sound_blaster_present);
@@ -1183,6 +1185,7 @@ static int WG_DrawEmbeddedSignon(const char *name,
     wg_game_family_t palette_family;
 
     if (!WG_SignonDraw(WG_ScreenBuffer, wg_data_set.variant, name,
+                       wg_mouse_present,
                        ID_IN_JoystickPresent(0U)
                            || ID_IN_JoystickPresent(1U),
                        sound_blaster_present,
@@ -1532,8 +1535,15 @@ static int WG_DrawControlMenuScreen(void)
     {
         return 0;
     }
+    if (!wg_mouse_present
+        && (wg_control_selection == 0U || wg_control_selection == 4U))
+    {
+        wg_control_selection = ID_IN_JoystickPresent(0U)
+                                   || ID_IN_JoystickPresent(1U) ? 1U : 5U;
+    }
     result = WL_DrawControlMenu(WG_ScreenBuffer, &graphics,
-                                wg_control_selection, wg_mouse_enabled,
+                                wg_control_selection, wg_mouse_present,
+                                wg_mouse_enabled,
                                 ID_IN_JoystickPresent(0U)
                                     || ID_IN_JoystickPresent(1U),
                                 wg_joystick_enabled, wg_joystick_port,
@@ -3485,7 +3495,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     if (control_menu_view
         && !WL_DrawControlMenu(
             WG_ScreenBuffer, &graphics,
-            control_menu_view == 2 ? 1U : 0U, 1,
+            control_menu_view == 2 ? 1U : (wg_mouse_present ? 0U : 5U),
+            wg_mouse_present, wg_mouse_enabled,
             control_menu_view == 2, control_menu_view == 2,
             0U, control_menu_view == 2))
     {
@@ -3498,7 +3509,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     }
     if (customize_controls_view
         && !WL_DrawCustomizeMenu(
-            WG_ScreenBuffer, &graphics, 0U, 1, 0,
+            WG_ScreenBuffer, &graphics, wg_mouse_present ? 0U : 6U,
+            wg_mouse_enabled, 0,
             wg_mouse_bindings, wg_joystick_bindings,
             wg_action_keys, wg_movement_keys, -1, 0))
     {
@@ -3725,6 +3737,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     WG_SetWindowTitle("wolf3dgeneric");
     wg_initialized = 1;
     wg_next_demo = 0U;
+    wg_mouse_present = (uint8_t)WG_HasArgument(argc, argv, "--mouse");
     data_path = WG_FindDataPath(argc, argv);
     if (data_path == NULL && WG_IsInteractive() && argc > 0
         && WG_FindExecutableDirectory(argv[0], default_data_path,
@@ -3768,6 +3781,9 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     }
     wg_start_map = map_number;
     WG_LoadConfig();
+    /* Retain the serialized field for format compatibility and in-session
+       menu changes, but make mouse control opt-in at each startup. */
+    wg_mouse_enabled = wg_mouse_present;
     if (WG_HasArgument(argc, argv, "--pc-speaker"))
     {
         wg_sound_mode = 1U;
@@ -4099,6 +4115,10 @@ static int WG_ControlMenuActivate(void)
     switch (wg_control_selection)
     {
         case 0U:
+            if (!wg_mouse_present)
+            {
+                return 1;
+            }
             wg_mouse_enabled = (uint8_t)!wg_mouse_enabled;
             if (!WG_DrawControlMenuScreen())
             {
@@ -4140,6 +4160,10 @@ static int WG_ControlMenuActivate(void)
             WG_FrontSoundPreview();
             return 1;
         case 4U:
+            if (!wg_mouse_present || !wg_mouse_enabled)
+            {
+                return 1;
+            }
             wg_saved_mouse_adjustment = wg_mouse_adjustment;
             return WG_DrawMouseSensitivityScreen();
         case 5U:
@@ -4280,6 +4304,12 @@ wg_result_t wolf3dgeneric_Run(void)
             {
                 return WG_RESULT_QUIT;
             }
+            if (!wg_mouse_present
+                && (event.type == WG_EVENT_MOUSE_MOTION
+                    || event.type == WG_EVENT_MOUSE_BUTTON))
+            {
+                continue;
+            }
             if (event.type == WG_EVENT_JOYSTICK)
             {
                 uint8_t old_buttons;
@@ -4306,7 +4336,8 @@ wg_result_t wolf3dgeneric_Run(void)
                 if (wg_attract_phase == WG_ATTRACT_SIGNON && event.connected)
                 {
                     WG_SignonDrawIndicators(WG_ScreenBuffer,
-                                            wg_signon_family, 1,
+                                            wg_signon_family,
+                                            wg_mouse_present, 1,
                                             wg_signon_sound_blaster);
                 }
                 ID_IN_GetJoyDelta(event.joystick, &new_x, &new_y);
@@ -5004,7 +5035,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             wg_control_selection = WL_ControlMenuMove(
                                 wg_control_selection, -1,
-                                wg_mouse_enabled,
+                                wg_mouse_present, wg_mouse_enabled,
                                 ID_IN_JoystickPresent(0U)
                                     || ID_IN_JoystickPresent(1U),
                                 wg_joystick_enabled);
@@ -5017,7 +5048,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             wg_control_selection = WL_ControlMenuMove(
                                 wg_control_selection, 1,
-                                wg_mouse_enabled,
+                                wg_mouse_present, wg_mouse_enabled,
                                 ID_IN_JoystickPresent(0U)
                                     || ID_IN_JoystickPresent(1U),
                                 wg_joystick_enabled);
@@ -5768,6 +5799,8 @@ void wolf3dgeneric_Shutdown(void)
     wg_attract_phase = WG_ATTRACT_NONE;
     wg_attract_deadline = 0U;
     wg_config_ready = 0U;
+    wg_mouse_present = 0U;
+    wg_mouse_enabled = 0U;
     wg_confirm_action = WG_CONFIRM_NONE;
     wg_quick_slot_valid = 0U;
     ID_IN_ResetJoysticks();

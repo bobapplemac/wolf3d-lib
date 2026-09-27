@@ -93,7 +93,7 @@ static void WG_SignonBar(uint8_t *framebuffer, unsigned x, unsigned y,
 
 void WG_SignonDrawIndicators(uint8_t framebuffer[WG_SIGNON_SIZE],
                              wg_game_family_t family,
-                             int joystick_present,
+                             int mouse_present, int joystick_present,
                              int sound_blaster_present)
 {
     uint8_t memory_color;
@@ -112,11 +112,13 @@ void WG_SignonDrawIndicators(uint8_t framebuffer[WG_SIGNON_SIZE],
         WG_SignonBar(framebuffer, 129U, 163U - 8U * index, 6U, 5U, color);
     }
 
-    /* The generic host always supplies a mouse. As in the original
-       IntroScreen, Sound Blaster takes precedence over its AdLib-compatible
-       OPL hardware, so the two sound-card markers are mutually exclusive.
-       Disney Sound Source support is intentionally absent. */
-    WG_SignonBar(framebuffer, 164U, 82U, 12U, 2U, 14U);
+    /* As in the original IntroScreen, these markers report hardware that the
+       input/audio startup accepted. Sound Blaster takes precedence over its
+       AdLib-compatible OPL hardware. Disney Sound Source is absent. */
+    if (mouse_present)
+    {
+        WG_SignonBar(framebuffer, 164U, 82U, 12U, 2U, 14U);
+    }
     if (joystick_present)
     {
         WG_SignonBar(framebuffer, 164U, 105U, 12U, 2U, 14U);
@@ -133,7 +135,8 @@ int WG_SignonIsEmbeddedName(const char *name)
 
 int WG_SignonDraw(uint8_t framebuffer[WG_SIGNON_SIZE],
                   wg_game_variant_t game_variant, const char *name,
-                  int joystick_present, int sound_blaster_present,
+                  int mouse_present, int joystick_present,
+                  int sound_blaster_present,
                   wg_game_family_t *palette_family)
 {
     const wg_signon_asset_t *asset;
@@ -149,8 +152,8 @@ int WG_SignonDraw(uint8_t framebuffer[WG_SIGNON_SIZE],
         return 0;
     }
     memcpy(framebuffer, asset->pixels, WG_SIGNON_SIZE);
-    WG_SignonDrawIndicators(framebuffer, asset->family, joystick_present,
-                            sound_blaster_present);
+    WG_SignonDrawIndicators(framebuffer, asset->family, mouse_present,
+                            joystick_present, sound_blaster_present);
     *palette_family = asset->family;
     return 1;
 }

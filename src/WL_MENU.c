@@ -103,15 +103,15 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->mouse_back = 30U;
         chunks->baby_mode = 31U;
         chunks->episode_one = 42U;
-        chunks->not_selected = 24U;
-        chunks->selected = 25U;
-        chunks->effects_title = 26U;
-        chunks->digitized_title = 27U;
-        chunks->music_title = 28U;
-        chunks->control_title = 37U;
-        chunks->customize_title = 38U;
-        chunks->load_title = 39U;
-        chunks->save_title = 40U;
+        chunks->not_selected = 25U;
+        chunks->selected = 26U;
+        chunks->effects_title = 27U;
+        chunks->digitized_title = 28U;
+        chunks->music_title = 29U;
+        chunks->control_title = 38U;
+        chunks->customize_title = 39U;
+        chunks->load_title = 40U;
+        chunks->save_title = 41U;
         return 1;
     }
     if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
@@ -644,19 +644,21 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                                WL_SOUND_Y1 - 2 + (int)selected * 13);
 }
 
-static int WL_ControlMenuActive(unsigned item, int mouse_enabled,
-                                int joystick_present,
-                                int joystick_enabled)
+static int WL_ControlMenuActive(unsigned item, int mouse_present,
+                                 int mouse_enabled,
+                                 int joystick_present,
+                                 int joystick_enabled)
 {
-    return item == 0U || item == 5U
+    return item == 5U || (item == 0U && mouse_present)
         || (item == 1U && joystick_present)
         || ((item == 2U || item == 3U) && joystick_enabled)
-        || (item == 4U && mouse_enabled);
+        || (item == 4U && mouse_present && mouse_enabled);
 }
 
 unsigned WL_ControlMenuMove(unsigned selected, int direction,
-                            int mouse_enabled, int joystick_present,
-                            int joystick_enabled)
+                             int mouse_present, int mouse_enabled,
+                             int joystick_present,
+                             int joystick_enabled)
 {
     unsigned candidate;
 
@@ -677,14 +679,15 @@ unsigned WL_ControlMenuMove(unsigned selected, int direction,
             candidate = candidate + 1U == WL_CONTROL_MENU_ITEMS
                             ? 0U : candidate + 1U;
         }
-    } while (!WL_ControlMenuActive(candidate, mouse_enabled,
+    } while (!WL_ControlMenuActive(candidate, mouse_present, mouse_enabled,
                                    joystick_present, joystick_enabled));
     return candidate;
 }
 
 int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned selected,
-                       int mouse_enabled, int joystick_present,
+                       int mouse_present, int mouse_enabled,
+                       int joystick_present,
                        int joystick_enabled, unsigned joystick_port,
                        int gamepad_enabled)
 {
@@ -700,7 +703,7 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
     if (framebuffer == NULL || graphics == NULL
         || selected >= WL_CONTROL_MENU_ITEMS
         || joystick_port > 1U
-        || !WL_ControlMenuActive(selected, mouse_enabled,
+        || !WL_ControlMenuActive(selected, mouse_present, mouse_enabled,
                                  joystick_present, joystick_enabled)
         || !WL_MenuChunks(graphics->variant, &chunks)
         || !WG_FontOpen(&font, graphics, 1U))
@@ -725,8 +728,9 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                    WL_CONTROL_WIDTH, WL_CONTROL_HEIGHT);
     for (index = 0U; index < WL_CONTROL_MENU_ITEMS; ++index)
     {
-        uint8_t color = WL_ControlMenuActive(index, mouse_enabled,
-                                             joystick_present,
+        uint8_t color = WL_ControlMenuActive(index, mouse_present,
+                                              mouse_enabled,
+                                              joystick_present,
                                              joystick_enabled)
                             ? (index == selected
                                    ? WL_MENU_HIGHLIGHT_COLOR

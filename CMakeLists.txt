@@ -263,7 +263,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --game WL1 --signon auto
             --frame-hash --palette-hash)
         set_tests_properties(signon-auto-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "f49eb4e91666264d.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "c4439e1ef4a9b8f5.*1e14f48394b7e6fd")
         add_test(NAME rating-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --game WL1 --rating-view
             --frame-hash --palette-hash)
@@ -393,27 +393,27 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --load-game-view
             --frame-hash)
         set_tests_properties(load-game-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "a0188da801550518")
+            PASS_REGULAR_EXPRESSION "d81cecaa1eef0887")
         add_test(NAME save-game-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --save-game-view
             --frame-hash)
         set_tests_properties(save-game-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "d81cecaa1eef0887")
+            PASS_REGULAR_EXPRESSION "55f762913ddab4c7")
         add_test(NAME sound-menu-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --sound-menu-view
             --frame-hash)
         set_tests_properties(sound-menu-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "f46530fbaa7a0775")
+            PASS_REGULAR_EXPRESSION "bd51c51cceb48736")
         add_test(NAME control-menu-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --control-menu-view
             --frame-hash)
         set_tests_properties(control-menu-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "6b0f54c32a663fa5")
+            PASS_REGULAR_EXPRESSION "59ee44f4e7ffa03d")
         add_test(NAME joystick-menu-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --joystick-menu-view
             --frame-hash)
         set_tests_properties(joystick-menu-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "6a7611870fce1ab5")
+            PASS_REGULAR_EXPRESSION "1800366abc1456d1")
         add_test(NAME mouse-sensitivity-view-wl1
             COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view
@@ -425,7 +425,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view
             --customize-controls-view --frame-hash)
         set_tests_properties(customize-controls-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "f94ac3381beb5e83")
+            PASS_REGULAR_EXPRESSION "b6579550b7d1e9be")
         add_test(NAME change-view-wl1
             COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view
@@ -500,12 +500,17 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --game WL6 --signon auto
             --frame-hash --palette-hash)
         set_tests_properties(signon-auto-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "7f78b83ef22e6fbc.*1e14f48394b7e6fd")
+        add_test(NAME signon-mouse-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --game WL6 --signon auto --mouse
+            --frame-hash --palette-hash)
+        set_tests_properties(signon-mouse-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "f83e3e048c4550f4.*1e14f48394b7e6fd")
         add_test(NAME signon-adlib-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --game WL6 --signon auto --adlib
             --frame-hash --palette-hash)
         set_tests_properties(signon-adlib-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "fc2f73588a0316a4.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "d20c9b30e730b7ac.*1e14f48394b7e6fd")
         add_test(NAME rating-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --game WL6 --rating-view
             --frame-hash --palette-hash)
@@ -665,12 +670,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --control-menu-view
             --frame-hash)
         set_tests_properties(control-menu-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "466d386e2915c931")
+            PASS_REGULAR_EXPRESSION "59ee44f4e7ffa03d")
         add_test(NAME joystick-menu-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --joystick-menu-view
             --frame-hash)
         set_tests_properties(joystick-menu-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "07dc46006dc97b99")
+            PASS_REGULAR_EXPRESSION "1800366abc1456d1")
         add_test(NAME mouse-sensitivity-view-wl6
             COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view
@@ -682,7 +687,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view
             --customize-controls-view --frame-hash)
         set_tests_properties(customize-controls-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "2ac0b2270dc20b66")
+            PASS_REGULAR_EXPRESSION "b6579550b7d1e9be")
         add_test(NAME change-view-wl6
             COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view
@@ -756,7 +761,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_SOD_PATH}" --game SOD --signon auto
             --frame-hash --palette-hash)
         set_tests_properties(signon-auto-sod PROPERTIES
-            PASS_REGULAR_EXPRESSION "9e9b215a63203250.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "7e8d5e435a9f23a8.*eba126e8df00d1cb")
         add_test(NAME rating-view-sod COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD --rating-view
             --frame-hash --palette-hash)
@@ -905,26 +910,26 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_SOD_PATH}" --game SOD
             --signon apogee --frame-hash --palette-hash)
         set_tests_properties(signon-apogee PROPERTIES
-            PASS_REGULAR_EXPRESSION "88648019bc43feb5.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "3fb3317e1326c57d.*1e14f48394b7e6fd")
         add_test(NAME signon-gt COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
             --signon gt --frame-hash --palette-hash)
         set_tests_properties(signon-gt PROPERTIES
-            PASS_REGULAR_EXPRESSION "fa8a46047d53d714.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "731879e4b4fee85c.*1e14f48394b7e6fd")
         add_test(NAME signon-id COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
             --signon id --frame-hash --palette-hash)
         set_tests_properties(signon-id PROPERTIES
-            PASS_REGULAR_EXPRESSION "ae7cd1709e0f8718.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "b8ce2d3bb335efa0.*1e14f48394b7e6fd")
         add_test(NAME signon-activision COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
             --signon activision --frame-hash --palette-hash)
         set_tests_properties(signon-activision PROPERTIES
-            PASS_REGULAR_EXPRESSION "138525e53eec7ed8.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "d58d3a1e8c4c2d60.*1e14f48394b7e6fd")
         add_test(NAME signon-spear COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
             --signon spear --frame-hash --palette-hash)
         set_tests_properties(signon-spear PROPERTIES
-            PASS_REGULAR_EXPRESSION "9e9b215a63203250.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "7e8d5e435a9f23a8.*eba126e8df00d1cb")
     endif()
 endif()

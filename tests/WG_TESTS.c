@@ -3234,9 +3234,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         printf("%s sound menu FNV-1a: %016llx\n",
                WG_DataVariantName(data_set.variant),
                (unsigned long long)sound_menu_hash);
-        CHECK(sound_menu_hash == (expected_variant
-              == WG_GAME_WOLF3D_SHAREWARE_14
-              ? 0xf46530fbaa7a0775ULL : 0xbd51c51cceb48736ULL));
+        CHECK(sound_menu_hash == 0xbd51c51cceb48736ULL);
         CHECK(WL_SoundMenuMove(0U, -1) == 11U);
         CHECK(WL_SoundMenuMove(0U, 1) == 1U);
         CHECK(WL_SoundMenuMove(1U, 1) == 2U);
@@ -3246,7 +3244,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(WL_SoundMenuMove(10U, 1) == 11U);
         CHECK(WL_SoundMenuMove(11U, 1) == 0U);
         memset(framebuffer, 0, sizeof(framebuffer));
-        CHECK(WL_DrawControlMenu(framebuffer, &graphics, 0U, 1,
+        CHECK(WL_DrawControlMenu(framebuffer, &graphics, 0U, 1, 1,
                                  0, 0, 0U, 0));
         for (index = 0U; index < sizeof(framebuffer); ++index)
         {
@@ -3256,17 +3254,18 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         printf("%s control menu FNV-1a: %016llx\n",
                WG_DataVariantName(data_set.variant),
                (unsigned long long)control_menu_hash);
-        CHECK(control_menu_hash == (expected_variant
-              == WG_GAME_WOLF3D_SHAREWARE_14
-              ? 0x6b0f54c32a663fa5ULL : 0x466d386e2915c931ULL));
-        CHECK(WL_ControlMenuMove(0U, 1, 1, 0, 0) == 4U);
-        CHECK(WL_ControlMenuMove(4U, 1, 1, 0, 0) == 5U);
-        CHECK(WL_ControlMenuMove(5U, 1, 1, 0, 0) == 0U);
-        CHECK(WL_ControlMenuMove(0U, -1, 1, 0, 0) == 5U);
-        CHECK(WL_ControlMenuMove(0U, 1, 0, 0, 0) == 5U);
-        CHECK(WL_ControlMenuMove(0U, 1, 1, 1, 0) == 1U);
-        CHECK(WL_ControlMenuMove(1U, 1, 1, 1, 1) == 2U);
-        CHECK(WL_ControlMenuMove(2U, 1, 1, 1, 1) == 3U);
+        CHECK(control_menu_hash == 0x466d386e2915c931ULL);
+        CHECK(!WL_DrawControlMenu(framebuffer, &graphics, 0U, 0, 0,
+                                  0, 0, 0U, 0));
+        CHECK(WL_ControlMenuMove(0U, 1, 1, 1, 0, 0) == 4U);
+        CHECK(WL_ControlMenuMove(4U, 1, 1, 1, 0, 0) == 5U);
+        CHECK(WL_ControlMenuMove(5U, 1, 1, 1, 0, 0) == 0U);
+        CHECK(WL_ControlMenuMove(0U, -1, 1, 1, 0, 0) == 5U);
+        CHECK(WL_ControlMenuMove(0U, 1, 1, 0, 0, 0) == 5U);
+        CHECK(WL_ControlMenuMove(5U, 1, 0, 0, 0, 0) == 5U);
+        CHECK(WL_ControlMenuMove(0U, 1, 1, 1, 1, 0) == 1U);
+        CHECK(WL_ControlMenuMove(1U, 1, 1, 1, 1, 1) == 2U);
+        CHECK(WL_ControlMenuMove(2U, 1, 1, 1, 1, 1) == 3U);
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawMouseSensitivity(framebuffer, &graphics, 5U));
         for (index = 0U; index < sizeof(framebuffer); ++index)
@@ -3303,9 +3302,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s customize controls FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)customize_hash);
-            CHECK(customize_hash == (expected_variant
-                  == WG_GAME_WOLF3D_SHAREWARE_14
-                  ? 0xf94ac3381beb5e83ULL : 0x2ac0b2270dc20b66ULL));
+            CHECK(customize_hash == 0x2ac0b2270dc20b66ULL);
             CHECK(WL_CustomMenuMove(0U, 1, 1, 0) == 6U);
             CHECK(WL_CustomMenuMove(6U, 1, 1, 0) == 8U);
             CHECK(WL_CustomMenuMove(8U, 1, 1, 0) == 0U);
@@ -4294,6 +4291,8 @@ static void TestPortableConfig(void)
     size_t legacy_size;
 
     WG_ConfigDefaults(&source);
+    WG_ConfigDefaults(&defaults);
+    CHECK(defaults.mouse_enabled == 0U);
     source.high_scores[0].score = 123456U;
     source.high_scores[0].completed = 8U;
     source.high_scores[0].episode = 2U;
@@ -4450,7 +4449,7 @@ static void TestSignonAssets(void)
     CHECK(!WG_SignonIsEmbeddedName("SIGNON.BIN"));
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_SHAREWARE_14,
-                        "auto", 0, 1, &family));
+                        "auto", 1, 0, 1, &family));
     CHECK(family == WG_GAME_FAMILY_WOLF3D);
     for (index = 0U; index < 10U; ++index)
     {
@@ -4468,17 +4467,18 @@ static void TestSignonAssets(void)
     CHECK(framebuffer[174U * 320U + 164U] != 14U);
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
-                        "gt", 0, 0, &family));
+                        "gt", 0, 0, 0, &family));
+    CHECK(framebuffer[82U * 320U + 164U] != 14U);
     CHECK(framebuffer[128U * 320U + 164U] == 14U);
     CHECK(framebuffer[151U * 320U + 164U] != 14U);
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_SPEAR_FULL_SOD,
-                        NULL, 1, 1, &family));
+                        NULL, 1, 1, 1, &family));
     CHECK(family == WG_GAME_FAMILY_SPEAR);
     CHECK(framebuffer[163U * 320U + 49U] == 0x4fU);
     CHECK(framebuffer[105U * 320U + 164U] == 14U);
     CHECK(!WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
-                         "unknown", 0, 1, &family));
+                         "unknown", 0, 0, 1, &family));
     free(framebuffer);
 }
 

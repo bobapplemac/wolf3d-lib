@@ -171,6 +171,15 @@ dialogs. After a slot has been chosen, quick save/load reuse it as in the DOS
 game.
 Raw mouse motion turns and moves with the original default sensitivity; left
 button attacks, right button strafes, and middle button uses.
+Mouse hardware is absent unless `--mouse` is supplied. Without it, SIGNON
+leaves the Mouse indicator blank, mouse events are discarded, and mouse rows
+in the Controls and Customize Controls menus are unavailable. With it, the
+mouse is present and enabled at startup:
+
+```text
+wolf3dgeneric-win32 --mouse
+```
+
 The Pause key displays the original pause plaque, freezes game tics, and
 temporarily silences the IMF sequencer until the next key or mouse-button press.
 The game simulation advances at the original 70 Hz while the host remains free

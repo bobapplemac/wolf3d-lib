@@ -38,11 +38,13 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
 unsigned WL_SoundMenuMove(unsigned selected, int direction);
 int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned selected,
-                       int mouse_enabled, int joystick_present,
+                       int mouse_present, int mouse_enabled,
+                       int joystick_present,
                        int joystick_enabled, unsigned joystick_port,
                        int gamepad_enabled);
 unsigned WL_ControlMenuMove(unsigned selected, int direction,
-                            int mouse_enabled, int joystick_present,
+                            int mouse_present, int mouse_enabled,
+                            int joystick_present,
                             int joystick_enabled);
 int WL_DrawMouseSensitivity(uint8_t framebuffer[320 * 200],
                             const wg_graphics_t *graphics,

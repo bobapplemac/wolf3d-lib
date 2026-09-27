@@ -107,7 +107,7 @@ void WG_ConfigDefaults(wg_config_t *config)
     config->sound_mode = 2U;
     config->digitized_effects = 1U;
     config->music_enabled = 1U;
-    config->mouse_enabled = 1U;
+    config->mouse_enabled = 0U;
     config->mouse_adjustment = 5U;
     config->view_size = WL_VIEW_SIZE_DEFAULT;
 }
