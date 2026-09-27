@@ -1,15 +1,12 @@
 /* Portable SetupGameLevel, ScanInfoPlane, SpawnDoor, and SpawnStatic state. */
 #include "WL_GAME.h"
 
-#include <math.h>
 #include <string.h>
 
 #include "ID_VL.h"
 #include "WG_FIXED.h"
 #include "WL_AGENT.h"
 #include "WL_MAIN.h"
-
-#define WL_PI 3.14159265358979323846
 
 int WL_DrawPlayBorder(uint8_t framebuffer[320 * 200],
                       unsigned view_width)
@@ -105,19 +102,12 @@ int WL_DrawGetPsyched(uint8_t framebuffer[320 * 200],
 
 uint16_t WL_DeathTargetAngle(const wg_level_t *level)
 {
-    double angle;
-
     if (level == NULL)
     {
         return 0U;
     }
-    angle = atan2((double)level->player_y - (double)level->killer_y,
-                  (double)level->killer_x - (double)level->player_x);
-    if (angle < 0.0)
-    {
-        angle += WL_PI * 2.0;
-    }
-    return (uint16_t)(angle * 360.0 / (WL_PI * 2.0));
+    return WG_PointToAngle(level->killer_x - level->player_x,
+                           level->player_y - level->killer_y);
 }
 
 int WL_DeathRotateStep(wg_level_t *level, uint16_t target_angle,

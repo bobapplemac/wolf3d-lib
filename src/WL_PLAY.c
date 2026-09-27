@@ -377,5 +377,17 @@ int WL_PlayTick(struct wg_level *level,
                 const struct wg_view_tables *tables,
                 wl_play_state_t *state, const wl_input_t *input)
 {
-    return WL_PlayFrame(level, tables, state, input, 1U, 0, 0, 0);
+    return WL_PlayTicks(level, tables, state, input, 1U);
+}
+
+int WL_PlayTicks(struct wg_level *level,
+                 const struct wg_view_tables *tables,
+                 wl_play_state_t *state, const wl_input_t *input,
+                 unsigned tics)
+{
+    if (tics == 0U || tics > WL_MAX_TICS)
+    {
+        return 0;
+    }
+    return WL_PlayFrame(level, tables, state, input, tics, 0, 0, 0);
 }

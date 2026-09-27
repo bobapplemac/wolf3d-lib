@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define WL_MAX_TICS 10U
+
 #include "WG_DATA.h"
 
 struct wg_level;
@@ -71,5 +73,9 @@ void WL_UpdatePaletteShiftsForTics(struct wg_level *level,
 int WL_PlayTick(struct wg_level *level,
                 const struct wg_view_tables *tables,
                 wl_play_state_t *state, const wl_input_t *input);
+int WL_PlayTicks(struct wg_level *level,
+                 const struct wg_view_tables *tables,
+                 wl_play_state_t *state, const wl_input_t *input,
+                 unsigned tics);
 
 #endif

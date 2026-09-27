@@ -30,6 +30,7 @@ void WG_ViewBuildTrigTables(wg_view_tables_t *tables);
 int WG_ViewCalculateProjection(wg_view_tables_t *tables, uint16_t view_width,
                                int32_t focal_length);
 const int32_t *WG_ViewCosineTable(const wg_view_tables_t *tables);
+uint16_t WG_PointToAngle(int32_t x, int32_t y);
 int WL_DrawSignonPrompt(uint8_t framebuffer[320 * 200],
                         const wg_graphics_t *graphics, const char *text,
                         uint8_t color);

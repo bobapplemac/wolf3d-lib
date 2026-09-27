@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Restored DOS `CalcTics` batching for live play: each rendered gameplay frame
+  now performs one update with the elapsed 1--10 tic value, while demos retain
+  their authored four-tic commands and presentation phases retain one-tic
+  service updates.
+- Removed runtime floating-point trigonometry. Verified renderer/projection
+  tables are frozen for every legal view width, and projectile/death-camera
+  angles use a deterministic integer quantizer matching the original
+  single-precision truncation.
+- Added full-table hashes, sensitive angle-boundary checks, and live-play tests
+  across every supported `tics` value; complete x86 and x64 data/demo suites
+  remain identical.
+
 ## 1.2.0 - 2026-09-26
 
 - Restored BJ's original two-frame breathing animation on the level-completed

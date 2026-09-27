@@ -621,17 +621,17 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --map 18
             --needle-view --frame-hash)
         set_tests_properties(needle-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "ec0fe774ac95c683")
+            PASS_REGULAR_EXPRESSION "388a3470b93bc069")
         add_test(NAME rocket-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --map 38
             --rocket-view --frame-hash)
         set_tests_properties(rocket-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "8e7f22d99a215d63")
+            PASS_REGULAR_EXPRESSION "0c30161c05898ce1")
         add_test(NAME flame-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --map 28
             --flame-view --frame-hash)
         set_tests_properties(flame-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "87de7a43bf55a82e")
+            PASS_REGULAR_EXPRESSION "58979ff8971b4b53")
         add_test(NAME pushwall-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --pushwall-view
             --frame-hash)

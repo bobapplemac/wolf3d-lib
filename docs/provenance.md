@@ -36,10 +36,14 @@ increment-before-lookup behavior follow original `US_InitRndT`/`US_RndT` in
 index behavior.
 
 The fixed-point and view-table implementation follows original `BuildTables`,
-`CalcProjection`, and `FixedByFrac` in `WL_MAIN.C` and `WL_DRAW.C`. Wolf4SDL's
-corresponding routines were used to identify the safe cardinal-angle assignments
-and the conversion from the DOS assembly routine's sign-magnitude fraction to
-ordinary signed fixed-point values.
+`CalcProjection`, `FixedByFrac`, and the `atan2` angle conversions in
+`WL_MAIN.C`, `WL_DRAW.C`, `WL_GAME.C`, and `WL_ACT2.C`. The verified
+single-precision table results and Q32 integer angle boundaries are frozen in
+`WG_VIEW_TABLES.inc`, removing runtime `libm` variation while preserving the
+source's degree truncation. Wolf4SDL's corresponding routines were used to
+identify the safe cardinal-angle assignments and the conversion from the DOS
+assembly routine's sign-magnitude fraction to ordinary signed fixed-point
+values.
 
 The portable wall-post scaler follows the original `ScalePost` sampling contract
 in `WL_DRAW.C`. Wolf4SDL's C replacement was consulted to translate the compiled

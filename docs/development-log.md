@@ -1772,3 +1772,25 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   now select the same edition-appropriate track.
 - Added the high-score transition to the reviewed original-to-portable call
   graph mappings.
+
+## 2026-09-27: Variable-tic and deterministic-math parity
+
+- Restored the original live `CalcTics` contract. Normal gameplay now samples
+  controls once, advances the complete play loop once with an elapsed value
+  from 1 through `MAXTICS` (10), and renders once. A delayed host frame drops
+  time beyond ten tics as the DOS code did; demos remain one authored four-tic
+  command per frame and presentation-only sequences retain one-tic service.
+- Exercised every legal live `tics` value against time accounting, movement,
+  and fractional turning. The complete WL1, WL6, SOD, and SDM demo and visual
+  suites pass in both 32-bit and 64-bit builds.
+- Replaced runtime `sin`, `tan`, `atan`, and `atan2` calls with frozen verified
+  tables and integer lookup. Full renderer-table hashes cover every legal view
+  width; Q32 unit-circle comparisons reproduce the original single-precision
+  projectile and death-camera angle conversion.
+- A temporary exhaustive audit compared 1,050,624 nonzero coordinate pairs
+  from -512 through 512 against the original float expression with zero
+  mismatches. Only compact boundary cases remain in the permanent test suite.
+- Reviewed the variable-tic multiplication paths under the restored 1--10
+  bound and verified matching results on x86 and x64. Gameplay coordinates,
+  fixed-point products, tic counters, and serialized values retain explicit
+  fixed-width types; no gameplay or renderer floating-point expression remains.

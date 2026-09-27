@@ -2444,6 +2444,7 @@ static void TestPlayLoop(void)
     wl_play_state_t play;
     wl_input_t input;
     int32_t start_x;
+    unsigned tics;
 
     memset(&tables, 0, sizeof(tables));
     memset(&input, 0, sizeof(input));
@@ -2576,6 +2577,28 @@ static void TestPlayLoop(void)
     CHECK(level.player_x == start_x);
     CHECK(level.player_angle == 253U);
     CHECK(level.player_y == 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 4096);
+
+    CHECK(!WL_PlayTicks(&level, &tables, &play, &input, 0U));
+    CHECK(!WL_PlayTicks(&level, &tables, &play, &input, 11U));
+    for (tics = 1U; tics <= WL_MAX_TICS; ++tics)
+    {
+        WL_PlayStateReset(&play);
+        SetPlayerMovementLevel(&level);
+        memset(&input, 0, sizeof(input));
+        input.up = 1U;
+        CHECK(WL_PlayTicks(&level, &tables, &play, &input, tics));
+        CHECK(level.time_count == tics);
+        CHECK(level.player_thrust_speed == (int32_t)(35U * 150U * tics));
+
+        WL_PlayStateReset(&play);
+        SetPlayerMovementLevel(&level);
+        memset(&input, 0, sizeof(input));
+        input.left = 1U;
+        CHECK(WL_PlayTicks(&level, &tables, &play, &input, tics));
+        CHECK(level.player_angle == (35U * tics) / 20U);
+        CHECK(level.player_angle_fraction
+              == -(int32_t)((35U * tics) % 20U));
+    }
 }
 
 static void TestJoystickInput(void)
@@ -3020,6 +3043,10 @@ static void TestViewMath(void)
 {
     wg_view_tables_t tables;
     const int32_t *cosine;
+    uint64_t trig_hash = 1469598103934665603ULL;
+    uint64_t projection_hash = 1469598103934665603ULL;
+    unsigned index;
+    unsigned width;
 
     memset(&tables, 0, sizeof(tables));
     CHECK(WG_FixedByFrac(WG_FIXED_ONE, WG_FIXED_ONE / 2) ==
@@ -3055,6 +3082,63 @@ static void TestViewMath(void)
     CHECK(tables.min_height_divisor == 7);
     CHECK(tables.max_slope > 0);
     CHECK(!WG_ViewCalculateProjection(&tables, 319, WG_FOCAL_LENGTH));
+    for (index = 0U; index < WG_FINE_ANGLES / 4; ++index)
+    {
+        uint32_t value = (uint32_t)tables.fine_tangent[index];
+        unsigned byte;
+
+        for (byte = 0U; byte < 4U; ++byte)
+        {
+            trig_hash ^= (value >> (byte * 8U)) & 0xffU;
+            trig_hash *= 1099511628211ULL;
+        }
+    }
+    for (index = 0U; index < WG_ANGLES + WG_ANGLE_QUADRANT; ++index)
+    {
+        uint32_t value = (uint32_t)tables.sine[index];
+        unsigned byte;
+
+        for (byte = 0U; byte < 4U; ++byte)
+        {
+            trig_hash ^= (value >> (byte * 8U)) & 0xffU;
+            trig_hash *= 1099511628211ULL;
+        }
+    }
+    for (width = 64U; width <= WG_MAX_VIEW_WIDTH; width += 16U)
+    {
+        CHECK(WG_ViewCalculateProjection(&tables, (uint16_t)width,
+                                         WG_FOCAL_LENGTH));
+        for (index = 0U; index < width; ++index)
+        {
+            uint16_t value = (uint16_t)tables.pixel_angle[index];
+            unsigned byte;
+
+            for (byte = 0U; byte < 2U; ++byte)
+            {
+                projection_hash ^= (value >> (byte * 8U)) & 0xffU;
+                projection_hash *= 1099511628211ULL;
+            }
+        }
+    }
+    printf("view trig FNV-1a: %016llx\n",
+           (unsigned long long)trig_hash);
+    printf("view projection FNV-1a: %016llx\n",
+           (unsigned long long)projection_hash);
+    CHECK(trig_hash == 0x0503e83d209dc721ULL);
+    CHECK(projection_hash == 0x141846b8cbc83c0cULL);
+
+    CHECK(WG_PointToAngle(1, 0) == 0U);
+    CHECK(WG_PointToAngle(1, 1) == 45U);
+    CHECK(WG_PointToAngle(0, 1) == 90U);
+    CHECK(WG_PointToAngle(-1, 1) == 135U);
+    CHECK(WG_PointToAngle(-1, 0) == 180U);
+    CHECK(WG_PointToAngle(-1, -1) == 224U);
+    CHECK(WG_PointToAngle(0, -1) == 270U);
+    CHECK(WG_PointToAngle(1, -1) == 314U);
+    CHECK(WG_PointToAngle(128, -1) == 359U);
+    CHECK(WG_PointToAngle(-128, 1) == 179U);
+    CHECK(WG_PointToAngle(-344, -510) == 235U);
+    CHECK(WG_PointToAngle(344, -510) == 304U);
 }
 
 static void TestActorVisibilitySemantics(void)

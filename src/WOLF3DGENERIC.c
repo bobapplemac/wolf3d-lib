@@ -3053,7 +3053,7 @@ static int WG_GameSessionEnterSpearMap(void)
     return 1;
 }
 
-static int WG_GameSessionTick(void)
+static int WG_GameSessionTick(unsigned live_tics)
 {
     wl_input_t input;
     wl_demo_command_t demo_command;
@@ -3171,7 +3171,11 @@ static int WG_GameSessionTick(void)
         return 1;
     }
 
-    simulation_tics = wg_game.demo_playback ? WL_DEMO_TICS : 1U;
+    if (live_tics == 0U || live_tics > WL_MAX_TICS)
+    {
+        return 0;
+    }
+    simulation_tics = wg_game.demo_playback ? WL_DEMO_TICS : live_tics;
     if (wg_game.demo_playback)
     {
         ++wg_game.demo_tick_phase;
@@ -3204,8 +3208,8 @@ static int WG_GameSessionTick(void)
     else
     {
         WG_GameSessionInput(&input);
-        if (!WL_PlayTick(&wg_game.level, &wg_game.view,
-                         &wg_game.play, &input))
+        if (!WL_PlayTicks(&wg_game.level, &wg_game.view,
+                          &wg_game.play, &input, simulation_tics))
         {
             return 0;
         }
@@ -3223,7 +3227,7 @@ static int WG_GameSessionTick(void)
         wg_game.level.player_thrust_speed != 0);
     WL_UpdatePaletteShiftsForTics(
         &wg_game.level, WG_Palette,
-        wg_game.demo_playback ? WL_DEMO_TICS : 1U);
+        simulation_tics);
     /* DOS PlayLoop calls ThreeDRefresh once for every PollControls result.
        That is simulation-significant: DrawScaleds activates visible actors
        and collects reachable bonuses.  Preserve the one-render-per-command
@@ -3367,6 +3371,16 @@ static int WG_GameSessionTick(void)
         wg_game.mouse_y = 0;
     }
     return 1;
+}
+
+static int WG_GameSessionUsesAdaptiveTics(void)
+{
+    return wg_game.active && !wg_game.demo_playback && !wg_game.game_over
+        && wg_game.preload_tics == 0U && !wg_game.entry_fizzle_active
+        && !wg_game.victory && !wg_game.intermission && !wg_game.high_scores
+        && !wg_game.level.player_dead
+        && !(wg_game.level.level_completed
+             && !wg_game.level.victory_flag);
 }
 
 static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
@@ -6225,6 +6239,23 @@ wg_result_t wolf3dgeneric_Run(void)
             while (accumulator >= 1000U && ticks_run < 18U)
             {
                 int was_intermission = wg_game.intermission;
+                unsigned step_tics = 1U;
+
+                if (WG_GameSessionUsesAdaptiveTics())
+                {
+                    unsigned available_tics = accumulator / 1000U;
+
+                    step_tics = available_tics > WL_MAX_TICS
+                                    ? WL_MAX_TICS : available_tics;
+                    if (available_tics > WL_MAX_TICS)
+                    {
+                        /* CalcTics backs excess time out of TimeCount when
+                           MAXTICS is exceeded. Retain only the sub-tic host
+                           fraction and the ten tics that will be simulated. */
+                        accumulator = step_tics * 1000U
+                                      + accumulator % 1000U;
+                    }
+                }
 
                 if (was_intermission)
                 {
@@ -6235,13 +6266,13 @@ wg_result_t wolf3dgeneric_Run(void)
                         return WG_RESULT_PLATFORM_ERROR;
                     }
                 }
-                else if (!WG_GameSessionTick())
+                else if (!WG_GameSessionTick(step_tics))
                 {
                     WG_ReportError("The Wolf3D game simulation failed.");
                     return WG_RESULT_PLATFORM_ERROR;
                 }
-                accumulator -= 1000U;
-                ++ticks_run;
+                accumulator -= step_tics * 1000U;
+                ticks_run += step_tics;
                 if (!was_intermission && wg_game.intermission)
                 {
                     /* LevelCompleted starts with a fresh presentation clock. */

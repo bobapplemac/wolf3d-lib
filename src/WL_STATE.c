@@ -2,7 +2,6 @@
 #include "WL_STATE.h"
 
 #include <limits.h>
-#include <math.h>
 #include <string.h>
 
 #include "WG_FIXED.h"
@@ -25,7 +24,6 @@
 #define WG_SPR_SPEAR_HSMOKE1 315U
 #define WG_SPR_SPEAR_HBOOM1 319U
 #define WG_SPR_SPEAR_SPARK1 322U
-#define WG_TWO_PI 6.283185314
 #define WG_SPR_STAT_KEY1 22U
 #define WG_SPR_STAT_CLIP2 28U
 #define WG_SPR_STAT_MACHINEGUN 29U
@@ -1815,17 +1813,10 @@ static wg_actor_t *WL_SpawnAimedProjectile(wg_level_t *level,
                                            wg_actor_class_t projectile_class)
 {
     wg_actor_t *projectile = WL_AllocateTransientActor(level);
-    double angle;
 
     if (projectile == NULL)
     {
         return NULL;
-    }
-    angle = atan2((double)(actor->y - level->player_y),
-                  (double)(level->player_x - actor->x));
-    if (angle < 0.0)
-    {
-        angle += WG_TWO_PI;
     }
     projectile->x = actor->x;
     projectile->y = actor->y;
@@ -1851,7 +1842,8 @@ static wg_actor_t *WL_SpawnAimedProjectile(wg_level_t *level,
     projectile->tile_y = actor->tile_y;
     projectile->direction = WG_NO_DIRECTION;
     projectile->area_number = actor->area_number;
-    projectile->angle = (uint16_t)(angle / WG_TWO_PI * WG_ANGLES);
+    projectile->angle = WG_PointToAngle(level->player_x - actor->x,
+                                        actor->y - level->player_y);
     projectile->base_shape = projectile->shape;
     projectile->rotate = projectile_class == WG_ACTOR_ROCKET
                          || projectile_class == WG_ACTOR_HROCKET ? 1U : 0U;
@@ -1922,7 +1914,6 @@ static void WL_T_SpearLaunch(wg_level_t *level, const wg_actor_t *actor,
 static void WL_T_FakeFire(wg_level_t *level, const wg_actor_t *actor)
 {
     wg_actor_t *fire = WL_AllocateTransientActor(level);
-    double angle;
 
     (void)WG_QueueSoundAt(level, WG_SOUND_FLAMETHROWER,
                           actor->x, actor->y);
@@ -1931,12 +1922,6 @@ static void WL_T_FakeFire(wg_level_t *level, const wg_actor_t *actor)
     {
         return;
     }
-    angle = atan2((double)(actor->y - level->player_y),
-                  (double)(level->player_x - actor->x));
-    if (angle < 0.0)
-    {
-        angle += WG_TWO_PI;
-    }
     fire->x = actor->x;
     fire->y = actor->y;
     fire->shape = WG_SPR_FIRE1;
@@ -1944,7 +1929,8 @@ static void WL_T_FakeFire(wg_level_t *level, const wg_actor_t *actor)
     fire->tile_y = actor->tile_y;
     fire->direction = WG_NO_DIRECTION;
     fire->area_number = actor->area_number;
-    fire->angle = (uint16_t)(angle / WG_TWO_PI * WG_ANGLES);
+    fire->angle = WG_PointToAngle(level->player_x - actor->x,
+                                  actor->y - level->player_y);
     fire->base_shape = WG_SPR_FIRE1;
     fire->tic_count = 1;
     fire->speed = 0x1200;

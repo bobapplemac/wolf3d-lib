@@ -6,7 +6,7 @@ files live under `build/` or `dist/` and are ignored by Git.
 
 | Path | Contents |
 | --- | --- |
-| `src/` | Portable engine implementation. It remains deliberately flat so original `WL_*` and `ID_*` filenames can be compared directly with the DOS source; genuinely new modules use `WG_*`. The generated `WG_SIGNON_ASSETS.inc` embeds the original executable-linked startup templates. |
+| `src/` | Portable engine implementation. It remains deliberately flat so original `WL_*` and `ID_*` filenames can be compared directly with the DOS source; genuinely new modules use `WG_*`. `WG_SIGNON_ASSETS.inc` embeds the original executable-linked startup templates, while `WG_VIEW_TABLES.inc` freezes verified renderer and angle tables. |
 | `include/` | Public shared-library API. |
 | `platforms/` | Thin platform hosts and their callback implementations. |
 | `tests/` | Deterministic unit and archive regression suite. |

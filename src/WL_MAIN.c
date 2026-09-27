@@ -1,14 +1,14 @@
 /* Portable BuildTables, CalcProjection, and FinishSignon from WL_MAIN.C. */
 #include "WL_MAIN.h"
 
-#include <math.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "WG_FIXED.h"
 #include "ID_VH.h"
 #include "ID_VL.h"
 
-#define WG_PI 3.141592657
+#include "WG_VIEW_TABLES.inc"
 
 int WL_DrawSignonPrompt(uint8_t framebuffer[320 * 200],
                         const wg_graphics_t *graphics, const char *text,
@@ -38,50 +38,25 @@ int WL_DrawSignonPrompt(uint8_t framebuffer[320 * 200],
 
 void WG_ViewBuildTrigTables(wg_view_tables_t *tables)
 {
-    const float radians_to_fine = (float)(WG_FINE_ANGLES / 2 / WG_PI);
-    const float angle_step = (float)(WG_PI / 2 / WG_ANGLE_QUADRANT);
-    float angle = 0.0F;
-    int i;
-
     if (tables == NULL)
     {
         return;
     }
-
-    for (i = 0; i < WG_FINE_ANGLES / 8; ++i)
-    {
-        double tangent = tan((i + 0.5) / radians_to_fine);
-
-        tables->fine_tangent[i] = (int32_t)(tangent * WG_FIXED_ONE);
-        tables->fine_tangent[WG_FINE_ANGLES / 4 - 1 - i] =
-            (int32_t)((1.0 / tangent) * WG_FIXED_ONE);
-    }
-
-    for (i = 0; i < WG_ANGLE_QUADRANT; ++i)
-    {
-        int32_t value = (int32_t)(WG_FIXED_ONE * sin((double)angle));
-
-        tables->sine[i] = value;
-        tables->sine[i + WG_ANGLES] = value;
-        tables->sine[WG_ANGLES / 2 - i] = value;
-        tables->sine[WG_ANGLES - i] = -value;
-        tables->sine[WG_ANGLES / 2 + i] = -value;
-        angle += angle_step;
-    }
-    tables->sine[WG_ANGLE_QUADRANT] = WG_FIXED_ONE;
-    tables->sine[3 * WG_ANGLE_QUADRANT] = -WG_FIXED_ONE;
+    memcpy(tables->fine_tangent, wg_fine_tangent,
+           sizeof(tables->fine_tangent));
+    memcpy(tables->sine, wg_sine, sizeof(tables->sine));
 }
 
 int WG_ViewCalculateProjection(wg_view_tables_t *tables, uint16_t view_width,
                                int32_t focal_length)
 {
-    const float radians_to_fine = (float)(WG_FINE_ANGLES / 2 / WG_PI);
-    double face_distance;
+    int32_t face_distance;
+    unsigned table_index;
+    size_t table_offset;
     int half_view;
-    int i;
 
-    if (tables == NULL || view_width < 2U
-        || view_width > WG_MAX_VIEW_WIDTH || (view_width & 1U) != 0U
+    if (tables == NULL || view_width < 64U
+        || view_width > WG_MAX_VIEW_WIDTH || (view_width & 15U) != 0U
         || focal_length <= 0)
     {
         return 0;
@@ -97,16 +72,10 @@ int WG_ViewCalculateProjection(wg_view_tables_t *tables, uint16_t view_width,
         (int32_t)(((int64_t)WG_FIXED_ONE * tables->scale) / 64);
     tables->min_height_divisor = tables->height_numerator / 0x7fff + 1;
 
-    for (i = 0; i < half_view; ++i)
-    {
-        double tangent = ((int32_t)i * WG_VIEW_GLOBAL / view_width)
-                         / face_distance;
-        float angle = (float)atan(tangent);
-        int angle_offset = (int)(angle * radians_to_fine);
-
-        tables->pixel_angle[half_view - 1 - i] = (int16_t)angle_offset;
-        tables->pixel_angle[half_view + i] = (int16_t)-angle_offset;
-    }
+    table_index = (view_width - 64U) / 16U;
+    table_offset = (size_t)8U * table_index * (table_index + 7U);
+    memcpy(tables->pixel_angle, wg_pixel_angles + table_offset,
+           (size_t)view_width * sizeof(tables->pixel_angle[0]));
     tables->max_slope = tables->fine_tangent[tables->pixel_angle[0]] / 256;
     return 1;
 }
@@ -114,4 +83,70 @@ int WG_ViewCalculateProjection(wg_view_tables_t *tables, uint16_t view_width,
 const int32_t *WG_ViewCosineTable(const wg_view_tables_t *tables)
 {
     return tables == NULL ? NULL : &tables->sine[WG_ANGLE_QUADRANT];
+}
+
+uint16_t WG_PointToAngle(int32_t x, int32_t y)
+{
+    uint64_t magnitude_x;
+    uint64_t magnitude_y;
+    unsigned acute = 0U;
+    unsigned acute_ceiling;
+    unsigned angle;
+    int on_boundary;
+
+    if (x == 0 && y == 0)
+    {
+        return 0U;
+    }
+    magnitude_x = x < 0 ? (uint64_t)(-(int64_t)x) : (uint64_t)x;
+    magnitude_y = y < 0 ? (uint64_t)(-(int64_t)y) : (uint64_t)y;
+    on_boundary = magnitude_y == 0U;
+    if (magnitude_x == 0U)
+    {
+        acute = WG_ANGLE_QUADRANT;
+    }
+    else
+    {
+        unsigned candidate;
+
+        for (candidate = 1U; candidate < WG_ANGLE_QUADRANT; ++candidate)
+        {
+            uint64_t left = magnitude_y
+                * wg_angle_sine_q32[WG_ANGLE_QUADRANT - candidate];
+            uint64_t right = magnitude_x * wg_angle_sine_q32[candidate];
+
+            if (left < right)
+            {
+                break;
+            }
+            acute = candidate;
+            on_boundary = left == right;
+        }
+    }
+    acute_ceiling = acute;
+    if (!on_boundary && acute_ceiling < WG_ANGLE_QUADRANT)
+    {
+        ++acute_ceiling;
+    }
+    if (x >= 0)
+    {
+        angle = y >= 0 ? acute
+                       : (WG_ANGLES - acute_ceiling) % WG_ANGLES;
+        if (y < 0 && on_boundary && acute != 0U
+            && acute != WG_ANGLE_QUADRANT)
+        {
+            --angle;
+        }
+    }
+    else
+    {
+        angle = y >= 0 ? WG_ANGLES / 2U - acute_ceiling
+                       : WG_ANGLES / 2U + acute;
+        if (y < 0 && on_boundary && acute != 0U
+            && acute != WG_ANGLE_QUADRANT)
+        {
+            --angle;
+        }
+    }
+    return (uint16_t)angle;
 }

@@ -183,8 +183,11 @@ wolf3dgeneric-win32 --mouse
 
 The Pause key displays the original pause plaque, freezes game tics, and
 temporarily silences the IMF sequencer until the next key or mouse-button press.
-The game simulation advances at the original 70 Hz while the host remains free
-to present frames independently. The Win32 host streams each map's original IMF
+The game simulation advances on the original 70 Hz logical clock. Live play
+samples input and runs one original-style update with the elapsed `tics` value
+(1 through `MAXTICS`, 10), then renders once; this preserves the DOS batching
+semantics without tying the library to PIT interrupts or CPU cycles. The Win32
+host streams each map's original IMF
 music through the official Nuked-OPL3 implementation at 48 kHz:
 
 ```text

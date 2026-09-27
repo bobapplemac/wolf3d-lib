@@ -133,9 +133,14 @@ headless captures.
 `WL_PLAY.c` also owns the original demo stream boundary. The four-byte header
 retains its map byte, 16-bit total length, and skipped fourth byte; every
 following record is the original button bitmap plus signed X/Y controls. Demo
-records advance as one four-tic frame, while ordinary host input continues to
-use independent 70 Hz tics. This distinction preserves the authored movement
-rounding without slowing or coarsening live input.
+records advance as one four-tic frame. Ordinary live play converts monotonic
+host time to the original 70 Hz logical clock and calls the player, doors,
+pushwalls, and actors once with the elapsed `tics` value before rendering once.
+The elapsed value is clamped to the original `MAXTICS` of 10, and excess time
+is discarded exactly as `CalcTics` backed it out of `TimeCount`. Presentation
+states that were explicit one-tic service loops remain one-tic updates. This
+distinction preserves both authored demo rounding and the original live
+frame-batching semantics without emulating PIT interrupt phase or CPU cycles.
 
 The runtime attract state follows `DemoLoop`'s original ordering and durations:
 15-second title, 10-second credits, 10-second high scores, then one rotating
@@ -294,16 +299,21 @@ an engine-owned object so tests and later demo playback can reset it exactly.
 
 The view layer retains the original 16.16 coordinate unit, 3,600 fine-angle
 tangent table, overlapping 360-degree sine/cosine table, focal length, minimum
-distance, and per-column ray-angle calculation. Table construction intentionally
-keeps the original single-precision angle accumulation and integer operation
-order. Negative trigonometric values use portable two's-complement integers;
-the DOS source's sign-magnitude encoding existed solely for its assembly
-`FixedByFrac` routine.
+distance, and per-column ray-angle calculation. The verified results of the
+original single-precision `BuildTables` and `CalcProjection` calculations are
+frozen in `WG_VIEW_TABLES.inc` for every legal view width. Runtime rendering
+therefore has no dependency on a host math library, and the complete table
+hashes are checked identically by the x86 and x64 test builds. Negative
+trigonometric values use portable two's-complement integers; the DOS source's
+sign-magnitude encoding existed solely for its assembly `FixedByFrac` routine.
 
-The original sine-table loop writes one element beyond its declared array when
-it reaches 90 degrees. The portable loop stops before that iteration and assigns
-the two exact cardinal values explicitly, matching the modern ports without the
-out-of-bounds write.
+Projectile aiming and death-camera rotation replace the source's runtime
+`atan2` calls with a deterministic integer degree quantizer. Frozen Q32
+unit-circle boundaries reproduce the source's assignment to single-precision
+`float`, including its truncation at negative exact diagonals. A dense
+maintainer audit over more than one million coordinate pairs found no mismatch
+against the original expression; the shipped suite retains compact cardinal,
+diagonal, near-axis, and near-boundary cases.
 
 Wall columns are scaled by ordinary bounded C into the indexed framebuffer. The
 source sampling order and the original three-bit fractional wall-height unit are
