@@ -8,6 +8,28 @@ project(wolf3dgeneric VERSION 1.2.0 LANGUAGES C)
 
 include(CTest)
 
+set(WG_ORIGINAL_SOURCE_PATH "" CACHE PATH
+    "Optional path to the original Wolf3D WOLFSRC directory")
+set(WG_CHOCOLATE_SOURCE_PATH "" CACHE PATH
+    "Optional path to the Chocolate-Wolfenstein-3D source directory")
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND
+   AND WG_ORIGINAL_SOURCE_PATH
+   AND WG_CHOCOLATE_SOURCE_PATH)
+    add_custom_target(callgraph-audit
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/CALLGRAPH_AUDIT.py
+            --original ${WG_ORIGINAL_SOURCE_PATH}
+            --bridge ${WG_CHOCOLATE_SOURCE_PATH}
+            --report ${CMAKE_BINARY_DIR}/callgraph-audit.md
+            --json ${CMAKE_BINARY_DIR}/callgraph-audit.json
+            --dot-dir ${CMAKE_BINARY_DIR}/callgraphs
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Comparing original, Chocolate, and wolf3dgeneric call graphs"
+        VERBATIM)
+endif()
+
 configure_file(packaging/WIN32-README.txt.in
                ${CMAKE_CURRENT_BINARY_DIR}/WIN32-README.txt @ONLY)
 configure_file(packaging/LIBRARY-README.txt.in

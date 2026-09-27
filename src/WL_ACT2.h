@@ -46,7 +46,8 @@ typedef enum wg_actor_class
     WG_ACTOR_HROCKET,
     WG_ACTOR_HSMOKE,
     WG_ACTOR_HEXPLOSION,
-    WG_ACTOR_SPARK
+    WG_ACTOR_SPARK,
+    WG_ACTOR_BJ
 } wg_actor_class_t;
 
 typedef enum wg_ghost_kind
@@ -122,7 +123,17 @@ typedef enum wg_actor_state
     WG_STATE_ANGEL_TIRED5,
     WG_STATE_ANGEL_TIRED6,
     WG_STATE_ANGEL_TIRED7,
-    WG_STATE_SPECTRE_DORMANT
+    WG_STATE_SPECTRE_DORMANT,
+    WG_STATE_BJ_RUN1,
+    WG_STATE_BJ_RUN1S,
+    WG_STATE_BJ_RUN2,
+    WG_STATE_BJ_RUN3,
+    WG_STATE_BJ_RUN3S,
+    WG_STATE_BJ_RUN4,
+    WG_STATE_BJ_JUMP1,
+    WG_STATE_BJ_JUMP2,
+    WG_STATE_BJ_JUMP3,
+    WG_STATE_BJ_JUMP4
 } wg_actor_state_t;
 
 typedef struct wg_actor
@@ -161,5 +172,6 @@ int WL_SpawnBoss(struct wg_level *level, wg_actor_class_t actor_class,
                  uint8_t tile_x, uint8_t tile_y);
 int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
                   uint8_t tile_x, uint8_t tile_y);
+int WL_SpawnBJVictory(struct wg_level *level);
 
 #endif

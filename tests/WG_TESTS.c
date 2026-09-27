@@ -1605,6 +1605,18 @@ static void TestBossDamageAndDeath(void)
         CHECK(WL_SpawnBoss(&level, WG_ACTOR_MECHA_HITLER, 10U, 10U));
         mecha = &level.actors[0];
         CHECK(mecha->hit_points == 800);
+        level.player_x = 30 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        level.player_y = 30 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        mecha->flags |= WG_ACTOR_FLAG_ACTIVE;
+        mecha->state = WG_STATE_CHASE1;
+        mecha->tic_count = 10;
+        CHECK(WL_UpdateAreaConnectivity(&level));
+        CHECK(WL_TickActors(&level, 10U));
+        CHECK(mecha->state == WG_STATE_CHASE1S);
+        CHECK(level.sound_event_count == 1U);
+        CHECK(level.sound_events[0].sound == WG_SOUND_MECHA_STEP);
+        CHECK(level.sound_events[0].positioned == 1U);
+        WG_ClearSoundEvents(&level);
         CHECK(WL_DamageActor(&level, 0U, 400U));
         CHECK(mecha->shape == 342U);
         CHECK(WL_TickActors(&level, 30U));
@@ -1618,6 +1630,7 @@ static void TestBossDamageAndDeath(void)
         CHECK(hitler->attack_shape == 349U);
         CHECK(hitler->speed == 2560);
         CHECK((hitler->flags & WG_ACTOR_FLAG_SHOOTABLE) != 0U);
+        WG_ClearSoundEvents(&level);
         CHECK(WL_DamageActor(&level, 1U, 250U));
         CHECK(level.score == 10000U);
         CHECK(level.kill_count == 2U);
@@ -1625,6 +1638,8 @@ static void TestBossDamageAndDeath(void)
         CHECK(hitler->state == WG_STATE_DEAD);
         CHECK(hitler->shape == 352U);
         CHECK(hitler->tic_count == 20);
+        CHECK(level.sound_event_count == 2U);
+        CHECK(level.sound_events[1].sound == WG_SOUND_SLURPIE);
         CHECK(WL_TickActors(&level, 20U));
         CHECK(level.victory_flag == 1U);
     }
@@ -2094,6 +2109,20 @@ static void TestPlayerMovementAndUse(void)
                                      WG_FOCAL_LENGTH));
 
     SetPlayerMovementLevel(&level);
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    CHECK(WL_SpawnGhost(&level, WG_GHOST_BLINKY, 12U, 10U));
+    level.actors[0].flags |= WG_ACTOR_FLAG_ACTIVE;
+    level.actors[0].direction = 4U;
+    level.actors[0].x = level.player_x + WG_FIXED_ONE + 1000;
+    level.actors[0].distance = WG_FIXED_ONE;
+    start_x = level.actors[0].x;
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.actors[0].x == start_x);
+    CHECK(level.player_health == 98U);
+    CHECK(level.damage_count == 2U);
+    CHECK(level.actors[0].state == WG_STATE_GHOST1);
+
+    SetPlayerMovementLevel(&level);
     CHECK(WG_SoundPosition(&level, &tables, level.player_x, level.player_y,
                            &left, &right));
     CHECK(left == 0U && right == 0U);
@@ -2150,8 +2179,46 @@ static void TestPlayerMovementAndUse(void)
 
     SetPlayerMovementLevel(&level);
     level.info[10U * WG_LEVEL_SIZE + 11U] = 99U;
+    level.info[11U * WG_LEVEL_SIZE + 11U] = 92U;
+    level.info[9U * WG_LEVEL_SIZE + 11U] = 92U;
+    level.info[8U * WG_LEVEL_SIZE + 11U] = 92U;
+    level.info[7U * WG_LEVEL_SIZE + 11U] = 92U;
+    level.info[6U * WG_LEVEL_SIZE + 11U] = 92U;
     CHECK(WL_Thrust(&level, &tables, 0U, WG_MIN_DISTANCE * 2));
     CHECK(level.victory_flag == 1U);
+    CHECK(level.actor_count == 1U);
+    CHECK(level.actors[0].actor_class == WG_ACTOR_BJ);
+    CHECK(level.actors[0].state == WG_STATE_BJ_RUN1);
+    CHECK(level.actors[0].shape == 408U);
+    {
+        unsigned victory_tics = 0U;
+
+        while (level.actors[0].state < WG_STATE_BJ_JUMP1
+               && victory_tics < 300U)
+        {
+            CHECK(WL_TickActors(&level, 1U));
+            ++victory_tics;
+        }
+        CHECK(victory_tics < 300U);
+        CHECK(level.actors[0].state == WG_STATE_BJ_JUMP1);
+        CHECK(level.actors[0].shape == 412U);
+        CHECK(level.actors[0].reaction_time == 0);
+    }
+    CHECK(WL_TickActors(&level, 14U));
+    CHECK(level.actors[0].state == WG_STATE_BJ_JUMP2);
+    CHECK(level.sound_event_count == 0U);
+    CHECK(WL_TickActors(&level, 14U));
+    CHECK(level.actors[0].state == WG_STATE_BJ_JUMP3);
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_YEAH);
+    CHECK(level.sound_events[0].positioned == 1U);
+    CHECK(WL_TickActors(&level, 14U));
+    CHECK(level.actors[0].state == WG_STATE_BJ_JUMP4);
+    CHECK(!level.level_completed);
+    CHECK(WL_TickActors(&level, 299U));
+    CHECK(!level.level_completed);
+    CHECK(WL_TickActors(&level, 1U));
+    CHECK(level.level_completed == 1U);
 
     SetPlayerMovementLevel(&level);
     CHECK(WL_ControlMovement(&level, &tables, 20, 0, 0));

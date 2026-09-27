@@ -1,5 +1,32 @@
 # Development log
 
+## 2026-09-27: three-way source-parity call-graph audit
+
+Added a tolerant static analyzer for the original Borland-era sources,
+Chocolate Wolfenstein 3D, and wolf3dgeneric. It evaluates the original as four
+separate build profiles, includes `statetype` callback and transition edges,
+tracks production reachability from the generic public API, emits Markdown,
+JSON, and Graphviz DOT output, and keeps reviewed mappings/classifications in a
+versioned override file. Chocolate is corroborating evidence only; the DOS
+source remains authoritative.
+
+The first state-machine review found and restored three omitted behavior
+chains:
+
+- Wolf3D's exit tile now spawns BJ and runs the original six-tile run,
+  four-frame jump, `YEAHSND`, and 300-tic completion sequence. Previously the
+  exit only set `victory_flag`, leaving no mechanism to finish the level.
+- Pac-Man ghosts now execute their original alternating two-frame chase and
+  movement logic. Ghost and Spear Spectre contact once again applies the
+  original `tics * 2` damage before the actor backs away from the player.
+- Mecha-Hitler's alternating chase footsteps and Hitler's mid-death slurpie
+  action are again dispatched at their original state transitions.
+
+Each restored chain has direct unit coverage. Reviewed structural translations
+(for example, behavior moved from renderer side effects into the simulation
+tick) are recorded with reasons in `tools/callgraph-overrides.json` so the audit
+does not repeatedly flag them as omissions.
+
 ## 2026-09-27: level-completed BJ breathing restored
 
 The original `BJ_Breathe` alternates `L_GUYPIC` and `L_GUY2PIC` while the

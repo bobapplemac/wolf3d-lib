@@ -615,6 +615,11 @@ int WL_Thrust(struct wg_level *level, const struct wg_view_tables *tables,
     }
     if (level->info[tile_index] == 99U)
     {
+        if (WG_DataVariantFamily(level->variant) != WG_GAME_FAMILY_SPEAR
+            && !WL_SpawnBJVictory(level))
+        {
+            return 0;
+        }
         level->victory_flag = 1U;
     }
     (void)WL_CollectPlayerTileBonuses(level);

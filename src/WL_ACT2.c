@@ -37,6 +37,7 @@
 #define WG_SPR_GRETEL_SHOOT1 389U
 #define WG_SPR_FAT_W1 396U
 #define WG_SPR_FAT_SHOOT1 400U
+#define WG_SPR_BJ_W1 408U
 
 /* Spear of Destiny's conditional sprite enum, from WL_DEF.H. */
 #define WG_SPR_TRANS_W1 326U
@@ -478,9 +479,47 @@ int WL_SpawnGhost(struct wg_level *level, wg_ghost_kind_t ghost_kind,
     actor->tic_count = WG_RandomNext(&level->random) % 10U;
     actor->reaction_time = 0;
     actor->speed = WG_SPEED_DOG;
-    actor->distance = 0;
+    actor->distance = WG_FIXED_ONE;
     actor->hit_points = WL_StartHitPoints(level->difficulty, WG_ACTOR_GHOST);
     actor->state = WG_STATE_GHOST1;
     actor->actor_class = WG_ACTOR_GHOST;
+    return 1;
+}
+
+int WL_SpawnBJVictory(struct wg_level *level)
+{
+    wg_actor_t *actor;
+    uint8_t tile_y;
+
+    if (level == NULL || level->actor_count >= WG_MAX_ACTORS
+        || level->player_tile_y >= WG_LEVEL_SIZE - 1U)
+    {
+        return 0;
+    }
+    tile_y = (uint8_t)(level->player_tile_y + 1U);
+    actor = &level->actors[level->actor_count++];
+    actor->x = level->player_x;
+    actor->y = level->player_y;
+    actor->tile_x = level->player_tile_x;
+    actor->tile_y = tile_y;
+    actor->direction = 2U;
+    actor->shape = WG_SPR_BJ_W1;
+    actor->base_shape = WG_SPR_BJ_W1;
+    actor->attack_shape = 0U;
+    actor->rotate = 0U;
+    actor->area_number = level->areas[(size_t)tile_y * WG_LEVEL_SIZE
+                                      + level->player_tile_x];
+    actor->angle = 0U;
+    actor->flags = WG_ACTOR_FLAG_ACTIVE;
+    actor->tic_count = 12;
+    /* The original stores the six remaining path tiles in temp1. */
+    actor->reaction_time = 6;
+    actor->speed = 2048;
+    actor->distance = WG_FIXED_ONE;
+    actor->hit_points = 0;
+    actor->view_x = 0;
+    actor->trans_x = 0;
+    actor->state = WG_STATE_BJ_RUN1;
+    actor->actor_class = WG_ACTOR_BJ;
     return 1;
 }

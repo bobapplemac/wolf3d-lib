@@ -1,5 +1,12 @@
 # Architecture
 
+The original-source parity audit is documented in
+[`tools/CALLGRAPH_AUDIT.md`](../tools/CALLGRAPH_AUDIT.md). It extracts separate
+WL1, WL6, SDM, and SOD call/state graphs from the DOS source, uses Chocolate
+Wolfenstein as corroborating evidence, and compares both with the production
+reachability graph of the generic library. Reviewed renames and structural
+substitutions live in `tools/callgraph-overrides.json`.
+
 wolf3dgeneric keeps the original game's indexed 320x200 presentation and game
 rules while replacing assumptions that only hold in 16-bit DOS. The portable
 core is C99 and communicates with a host through the deliberately small

@@ -416,6 +416,19 @@ static int WL_SpawnRealHitler(wg_level_t *level, const wg_actor_t *mecha)
     return 1;
 }
 
+static void WL_ChaseStateAction(wg_level_t *level, const wg_actor_t *actor)
+{
+    if (actor->actor_class == WG_ACTOR_MECHA_HITLER
+        && (actor->state == WG_STATE_CHASE1
+            || actor->state == WG_STATE_CHASE3)
+        && actor->area_number < WG_NUM_AREAS
+        && level->area_by_player[actor->area_number])
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_MECHA_STEP,
+                              actor->x, actor->y);
+    }
+}
+
 static void WL_QueueDeathSound(wg_level_t *level, const wg_actor_t *actor)
 {
     static const wg_sound_t guard_sounds[] =
@@ -648,6 +661,7 @@ static int WL_TickPainOrDeath(wg_level_t *level, wg_actor_t *actor,
                                                        actor->state);
             while (actor->tic_count <= 0)
             {
+                WL_ChaseStateAction(level, actor);
                 actor->state = WL_NextChaseState(actor->state);
                 actor->tic_count += WL_ChaseStateDuration(actor,
                                                            actor->state);
@@ -678,7 +692,8 @@ static int WL_TickPainOrDeath(wg_level_t *level, wg_actor_t *actor,
         actor->shape = WL_DeathShape(level->variant,
                                      actor->actor_class, frame);
         actor->tic_count += WL_DeathFrameDuration(actor->actor_class, frame);
-        if (actor->actor_class == WG_ACTOR_ANGEL && frame == 1U)
+        if ((actor->actor_class == WG_ACTOR_ANGEL && frame == 1U)
+            || (actor->actor_class == WG_ACTOR_REAL_HITLER && frame == 3U))
         {
             (void)WG_QueueSound(level, WG_SOUND_SLURPIE);
         }
@@ -982,6 +997,112 @@ static void WL_MoveObj(wg_actor_t *actor, int32_t move)
     actor->distance -= move;
 }
 
+static int WL_IsBJRunState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_BJ_RUN1 && state <= WG_STATE_BJ_RUN4;
+}
+
+static int WL_IsBJJumpState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_BJ_JUMP1 && state <= WG_STATE_BJ_JUMP4;
+}
+
+static int32_t WL_BJStateDuration(wg_actor_state_t state)
+{
+    static const int32_t run_durations[] = { 12, 3, 8, 12, 3, 8 };
+
+    if (WL_IsBJRunState(state))
+    {
+        return run_durations[state - WG_STATE_BJ_RUN1];
+    }
+    return state == WG_STATE_BJ_JUMP4 ? 300 : 14;
+}
+
+static void WL_SetBJShape(wg_actor_t *actor)
+{
+    static const uint8_t run_frames[] = { 0, 0, 1, 2, 2, 3 };
+
+    if (WL_IsBJRunState(actor->state))
+    {
+        actor->shape = (uint16_t)(actor->base_shape
+                       + run_frames[actor->state - WG_STATE_BJ_RUN1]);
+    }
+    else
+    {
+        actor->shape = (uint16_t)(actor->base_shape + 4U
+                       + actor->state - WG_STATE_BJ_JUMP1);
+    }
+}
+
+static void WL_T_BJRun(wg_level_t *level, size_t actor_index, int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int32_t move = 2048 * tics;
+
+    while (move > 0)
+    {
+        if (move < actor->distance)
+        {
+            WL_MoveObj(actor, move);
+            return;
+        }
+        move -= actor->distance;
+        actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        WL_SelectPathDir(level, actor_index);
+        --actor->reaction_time;
+        if (actor->reaction_time == 0)
+        {
+            actor->state = WG_STATE_BJ_JUMP1;
+            actor->tic_count = WL_BJStateDuration(actor->state);
+            WL_SetBJShape(actor);
+            return;
+        }
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+}
+
+static void WL_TickBJVictory(wg_level_t *level, size_t actor_index,
+                             int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+
+    actor->tic_count -= tics;
+    while (actor->tic_count <= 0)
+    {
+        if (actor->state == WG_STATE_BJ_JUMP2)
+        {
+            (void)WG_QueueSoundAt(level, WG_SOUND_YEAH, actor->x, actor->y);
+        }
+        if (actor->state == WG_STATE_BJ_JUMP4)
+        {
+            level->level_completed = 1U;
+            actor->tic_count += 300;
+            break;
+        }
+        actor->state = actor->state == WG_STATE_BJ_RUN4
+                           ? WG_STATE_BJ_RUN1
+                           : (wg_actor_state_t)(actor->state + 1);
+        actor->tic_count += WL_BJStateDuration(actor->state);
+        WL_SetBJShape(actor);
+    }
+    if (actor->state == WG_STATE_BJ_RUN1
+        || actor->state == WG_STATE_BJ_RUN2
+        || actor->state == WG_STATE_BJ_RUN3
+        || actor->state == WG_STATE_BJ_RUN4)
+    {
+        WL_T_BJRun(level, actor_index, tics);
+    }
+    else if (actor->state >= WG_STATE_BJ_JUMP1
+             && actor->state <= WG_STATE_BJ_JUMP3)
+    {
+        WL_MoveObj(actor, 680 * tics);
+    }
+}
+
 static uint8_t WL_OppositeDirection(uint8_t direction)
 {
     return direction < WG_NO_DIRECTION
@@ -1252,7 +1373,8 @@ static void WL_SelectRunDir(wg_level_t *level, size_t actor_index)
     actor->direction = WG_NO_DIRECTION;
 }
 
-static void WL_MoveChase(wg_level_t *level, wg_actor_t *actor, int32_t move)
+static void WL_MoveChase(wg_level_t *level, wg_actor_t *actor, int32_t move,
+                         int32_t tics)
 {
     int32_t old_x = actor->x;
     int32_t old_y = actor->y;
@@ -1270,6 +1392,12 @@ static void WL_MoveChase(wg_level_t *level, wg_actor_t *actor, int32_t move)
     if (delta_x >= -WG_FIXED_ONE && delta_x <= WG_FIXED_ONE
         && delta_y >= -WG_FIXED_ONE && delta_y <= WG_FIXED_ONE)
     {
+        if (actor->actor_class == WG_ACTOR_GHOST
+            || actor->actor_class == WG_ACTOR_SPECTRE)
+        {
+            WL_TakeDamageFrom(level, (unsigned)tics * 2U,
+                              actor->x, actor->y);
+        }
         actor->x = old_x;
         actor->y = old_y;
         actor->distance += move;
@@ -1317,7 +1445,7 @@ static void WL_MoveChasingActor(wg_level_t *level, size_t actor_index,
         }
         if (move < actor->distance)
         {
-            WL_MoveChase(level, actor, move);
+            WL_MoveChase(level, actor, move, tics);
             return;
         }
         move -= actor->distance;
@@ -1336,6 +1464,21 @@ static void WL_MoveChasingActor(wg_level_t *level, size_t actor_index,
             return;
         }
     }
+}
+
+static void WL_T_Ghosts(wg_level_t *level, size_t actor_index, int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+
+    actor->tic_count -= tics;
+    while (actor->tic_count <= 0)
+    {
+        actor->shape = actor->shape == actor->base_shape
+                           ? (uint16_t)(actor->base_shape + 1U)
+                           : actor->base_shape;
+        actor->tic_count += 10;
+    }
+    WL_MoveChasingActor(level, actor_index, tics, 0);
 }
 
 static int WL_UsesStandardChase(wg_actor_class_t actor_class)
@@ -1443,7 +1586,7 @@ static void WL_T_DogChase(wg_level_t *level, size_t actor_index,
         }
         if (move < actor->distance)
         {
-            WL_MoveChase(level, actor, move);
+            WL_MoveChase(level, actor, move, tics);
             return;
         }
         move -= actor->distance;
@@ -1832,7 +1975,7 @@ static void WL_MoveSpecialBoss(wg_level_t *level, size_t actor_index,
         }
         if (move < actor->distance)
         {
-            WL_MoveChase(level, actor, move);
+            WL_MoveChase(level, actor, move, tics);
             return;
         }
         move -= actor->distance;
@@ -2302,6 +2445,25 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 continue;
             }
         }
+        if (actor->actor_class == WG_ACTOR_BJ)
+        {
+            WL_TickBJVictory(level, index, (int32_t)tics);
+            continue;
+        }
+        if (actor->actor_class == WG_ACTOR_GHOST
+            && actor->state == WG_STATE_GHOST1)
+        {
+            if (!connectivity_ready)
+            {
+                if (!WL_UpdateAreaConnectivity(level))
+                {
+                    return 0;
+                }
+                connectivity_ready = 1;
+            }
+            WL_T_Ghosts(level, index, (int32_t)tics);
+            continue;
+        }
         if (WL_IsPainState(actor->state) || WL_IsDeathState(actor->state))
         {
             if (!WL_TickPainOrDeath(level, actor, tics))
@@ -2562,6 +2724,7 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
                 actor->tic_count -= (int32_t)tics;
                 while (actor->tic_count <= 0)
                 {
+                    WL_ChaseStateAction(level, actor);
                     actor->state = WL_NextChaseState(actor->state);
                     actor->tic_count += WL_ChaseStateDuration(actor,
                                                               actor->state);
@@ -2727,6 +2890,7 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             }
             while (actor->tic_count <= 0 && WL_IsChaseState(actor->state))
             {
+                WL_ChaseStateAction(level, actor);
                 actor->state = WL_NextChaseState(actor->state);
                 actor->tic_count += WL_ChaseStateDuration(actor,
                                                           actor->state);
@@ -2792,6 +2956,7 @@ int WL_TickActors(wg_level_t *level, unsigned tics)
             }
             while (actor->tic_count <= 0 && WL_IsChaseState(actor->state))
             {
+                WL_ChaseStateAction(level, actor);
                 actor->state = WL_NextChaseState(actor->state);
                 actor->tic_count += WL_ChaseStateDuration(actor,
                                                           actor->state);
