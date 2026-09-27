@@ -3,9 +3,10 @@
 ## 2026-09-27: WL1 Get Psyched resource correction
 
 - Corrected the v1.4 shareware `GETPSYCHEDPIC` mapping from chunk 138 to
-  chunk 141, matching the released `GFXE_WL1.H` layout. Chunk 138 is
-  `FACE8APIC`, which caused the loading screen to display BJ's bloody status
-  face instead of the original Get Psyched artwork.
+  chunk 146, matching both the installed archive's picture table and the
+  `GFXV_APO.H` layout for the released Apogee data. Chunks 138 and 141 are
+  both 24x32 status faces in this archive; chunk 146 is the final 224x48
+  Get Psyched artwork.
 - Added deterministic framebuffer checks for both WL1 and WL6 loading screens
   so a valid but semantically wrong graphics chunk can no longer pass the
   real-data tests merely because it decodes successfully.
