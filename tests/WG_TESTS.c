@@ -25,6 +25,7 @@
 #include "WL_TEXT.h"
 #include "WG_RENDERER.h"
 #include "WG_SAVE.h"
+#include "WG_SIGNON.h"
 #include "WL_SCALE.h"
 #include "WL_STATE.h"
 #include "ID_VL.h"
@@ -4428,9 +4429,58 @@ static void TestPlatformAPI(void)
           == WG_RESULT_INVALID_ARGUMENT);
 }
 
+static void TestSignonAssets(void)
+{
+    uint8_t *framebuffer = (uint8_t *)malloc(WG_SIGNON_SIZE);
+    wg_game_family_t family = WG_GAME_FAMILY_UNKNOWN;
+    unsigned index;
+
+    CHECK(framebuffer != NULL);
+    if (framebuffer == NULL)
+    {
+        return;
+    }
+    CHECK(WG_SignonIsEmbeddedName(NULL));
+    CHECK(WG_SignonIsEmbeddedName("AUTO"));
+    CHECK(WG_SignonIsEmbeddedName("apogee"));
+    CHECK(WG_SignonIsEmbeddedName("gt"));
+    CHECK(WG_SignonIsEmbeddedName("id"));
+    CHECK(WG_SignonIsEmbeddedName("activision"));
+    CHECK(WG_SignonIsEmbeddedName("spear"));
+    CHECK(!WG_SignonIsEmbeddedName("SIGNON.BIN"));
+
+    CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_SHAREWARE_14,
+                        "auto", 0, &family));
+    CHECK(family == WG_GAME_FAMILY_WOLF3D);
+    for (index = 0U; index < 10U; ++index)
+    {
+        CHECK(framebuffer[(163U - 8U * index) * 320U + 49U]
+              == (uint8_t)(0x6cU - index));
+        CHECK(framebuffer[(163U - 8U * index) * 320U + 89U]
+              == (uint8_t)(0x6cU - index));
+        CHECK(framebuffer[(163U - 8U * index) * 320U + 129U]
+              == (uint8_t)(0x6cU - index));
+    }
+    CHECK(framebuffer[82U * 320U + 164U] == 14U);
+    CHECK(framebuffer[105U * 320U + 164U] != 14U);
+    CHECK(framebuffer[128U * 320U + 164U] != 14U);
+    CHECK(framebuffer[151U * 320U + 164U] == 14U);
+    CHECK(framebuffer[174U * 320U + 164U] != 14U);
+
+    CHECK(WG_SignonDraw(framebuffer, WG_GAME_SPEAR_FULL_SOD,
+                        NULL, 1, &family));
+    CHECK(family == WG_GAME_FAMILY_SPEAR);
+    CHECK(framebuffer[163U * 320U + 49U] == 0x4fU);
+    CHECK(framebuffer[105U * 320U + 164U] == 14U);
+    CHECK(!WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
+                         "unknown", 0, &family));
+    free(framebuffer);
+}
+
 int main(int argc, char **argv)
 {
     TestPlatformAPI();
+    TestSignonAssets();
     TestIMFSequencer();
     TestHuffman();
     TestCarmack();

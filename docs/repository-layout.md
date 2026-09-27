@@ -6,12 +6,13 @@ files live under `build/` or `dist/` and are ignored by Git.
 
 | Path | Contents |
 | --- | --- |
-| `src/` | Portable engine implementation. It remains deliberately flat so original `WL_*` and `ID_*` filenames can be compared directly with the DOS source; genuinely new modules use `WG_*`. |
+| `src/` | Portable engine implementation. It remains deliberately flat so original `WL_*` and `ID_*` filenames can be compared directly with the DOS source; genuinely new modules use `WG_*`. The generated `WG_SIGNON_ASSETS.inc` embeds the original executable-linked startup templates. |
 | `include/` | Public shared-library API. |
 | `platforms/` | Thin platform hosts and their callback implementations. |
 | `tests/` | Deterministic unit and archive regression suite. |
 | `third_party/` | Vendored, independently licensed dependencies. |
 | `packaging/` | Templates copied into staged runtime and library packages. |
+| `tools/` | Maintainer-side source generators, including reproducible SIGNON embedding. |
 | `docs/` | Architecture, porting, provenance, development, and release notes. |
 | `build/` | All local compiler output and generated diagnostic artifacts. |
 | `dist/` | Clean folders produced by `win32-release` and `library-release`. |

@@ -79,5 +79,8 @@ direction mapping, and patrol destination adjustment follow `SpawnNewObj`,
 projection and eight-way standing-frame selection follow `TransformActor` and
 `CalcRotate` in original `WL_DRAW.C`.
 
-Wolfenstein 3D data and executables are external test inputs. No game assets are
-part of this repository or covered by its license.
+Wolfenstein 3D data archives and executables remain external test inputs. The
+sole embedded game-art exception is `src/WG_SIGNON_ASSETS.inc`, generated from
+the five original 64,000-byte executable-linked SIGNON templates by
+`tools/GENERATE_SIGNON_ASSETS.ps1`. Those images remain original game artwork
+and are not covered by the wolf3dgeneric source license.

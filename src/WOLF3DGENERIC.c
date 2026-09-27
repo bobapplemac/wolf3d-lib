@@ -25,6 +25,7 @@
 #include "WG_PLATFORM.h"
 #include "WG_RENDERER.h"
 #include "WG_SAVE.h"
+#include "WG_SIGNON.h"
 #include "WL_DRAW.h"
 #include "WL_INTER.h"
 #include "WL_TEXT.h"
@@ -132,6 +133,7 @@ typedef enum wg_attract_phase
 
 static wg_attract_phase_t wg_attract_phase;
 static uint32_t wg_attract_deadline;
+static wg_game_family_t wg_signon_family;
 static wg_audio_t wg_front_audio;
 static id_sd_music_t *wg_front_music;
 static uint8_t wg_front_audio_active;
@@ -224,7 +226,8 @@ static void WG_CloseFrontHelp(void)
 static void WG_AttractSet(wg_attract_phase_t phase, uint32_t duration_ms)
 {
     wg_attract_phase = phase;
-    wg_attract_deadline = WG_GetTicksMs() + duration_ms;
+    wg_attract_deadline = duration_ms == 0U
+                              ? 0U : WG_GetTicksMs() + duration_ms;
 }
 
 static void WG_FrontMusicClose(void)
@@ -1105,7 +1108,6 @@ static int WG_LoadSignonScreen(const char *path,
                                wg_game_family_t palette_family)
 {
     wg_file_buffer_t file;
-    wg_game_variant_t palette_variant;
 
     memset(&file, 0, sizeof(file));
     if (path == NULL || !WG_LoadFile(path, &file)
@@ -1121,12 +1123,16 @@ static int WG_LoadSignonScreen(const char *path,
                              ? WG_GAME_FAMILY_SPEAR
                              : WG_DataVariantFamily(wg_data_set.variant);
     }
-    palette_variant = palette_family == WG_GAME_FAMILY_SPEAR
-                          ? WG_GAME_SPEAR_FULL_SOD
-                          : WG_GAME_WOLF3D_FULL_GT_14;
     memcpy(WG_ScreenBuffer, file.data, file.size);
     WG_FreeFile(&file);
-    WG_GamePalette(palette_variant, WG_Palette);
+    WG_SignonDrawIndicators(WG_ScreenBuffer, palette_family,
+                            ID_IN_JoystickPresent(0U)
+                                || ID_IN_JoystickPresent(1U));
+    wg_signon_family = palette_family;
+    WG_GamePalette(palette_family == WG_GAME_FAMILY_SPEAR
+                       ? WG_GAME_SPEAR_FULL_SOD
+                       : WG_GAME_WOLF3D_FULL_GT_14,
+                   WG_Palette);
     WG_CloseFrontHelp();
     WG_FrontMusicClose();
     wg_menu_active = 0U;
@@ -1136,40 +1142,41 @@ static int WG_LoadSignonScreen(const char *path,
     wg_control_screen = 0U;
     wg_mouse_sensitivity_screen = 0U;
     wg_customize_screen = 0U;
-    WG_AttractSet(WG_ATTRACT_SIGNON, 3000U);
+    WG_AttractSet(WG_ATTRACT_SIGNON, 0U);
     return 1;
 }
 
-static int WG_FindAutomaticSignon(char *path, size_t path_size)
+static int WG_DrawEmbeddedSignon(const char *name,
+                                 wg_game_family_t palette_override)
 {
-    const char *specific;
-    const char *candidates[3];
-    size_t index;
+    wg_game_family_t asset_family;
+    wg_game_family_t palette_family;
 
-    if (path == NULL || path_size == 0U || wg_data_set.root[0] == '\0')
+    if (!WG_SignonDraw(WG_ScreenBuffer, wg_data_set.variant, name,
+                       ID_IN_JoystickPresent(0U)
+                           || ID_IN_JoystickPresent(1U),
+                       &asset_family))
     {
         return 0;
     }
-    specific = WG_DataVariantFamily(wg_data_set.variant)
-                   == WG_GAME_FAMILY_SPEAR
-               ? "SIGNON_SPEAR.BIN"
-               : wg_data_set.variant == WG_GAME_WOLF3D_SHAREWARE_14
-                     ? "SIGNON_APOGEE.BIN"
-                     : "SIGNON_GT.BIN";
-    candidates[0] = "SIGNON.BIN";
-    candidates[1] = specific;
-    candidates[2] = NULL;
-    for (index = 0U; candidates[index] != NULL; ++index)
-    {
-        int length = snprintf(path, path_size, "%s/%s", wg_data_set.root,
-                              candidates[index]);
-        if (length >= 0 && (size_t)length < path_size && WG_FileExists(path))
-        {
-            return 1;
-        }
-    }
-    path[0] = '\0';
-    return 0;
+    palette_family = palette_override == WG_GAME_FAMILY_UNKNOWN
+                         ? asset_family : palette_override;
+    wg_signon_family = asset_family;
+    WG_GamePalette(palette_family == WG_GAME_FAMILY_SPEAR
+                       ? WG_GAME_SPEAR_FULL_SOD
+                       : WG_GAME_WOLF3D_FULL_GT_14,
+                   WG_Palette);
+    WG_CloseFrontHelp();
+    WG_FrontMusicClose();
+    wg_menu_active = 0U;
+    wg_front_scores = 0U;
+    wg_new_game_screen = 0U;
+    wg_sound_screen = 0U;
+    wg_control_screen = 0U;
+    wg_mouse_sensitivity_screen = 0U;
+    wg_customize_screen = 0U;
+    WG_AttractSet(WG_ATTRACT_SIGNON, 0U);
+    return 1;
 }
 
 static int WG_DrawMainMenuScreen(void)
@@ -3616,7 +3623,6 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     wg_game_family_t signon_palette_family;
     const char *signon_path;
     const char *signon_palette;
-    char automatic_signon_path[1200];
     int argument_index;
 
     if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL))
@@ -3693,22 +3699,22 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
     }
-    automatic_signon_path[0] = '\0';
-    if (signon_path == NULL && data_path != NULL && WG_IsInteractive()
-        && WG_FindAutomaticSignon(automatic_signon_path,
-                                  sizeof(automatic_signon_path)))
+    if (data_path != NULL && signon_path != NULL
+        && !(WG_SignonIsEmbeddedName(signon_path)
+                 ? WG_DrawEmbeddedSignon(signon_path, signon_palette_family)
+                 : WG_LoadSignonScreen(signon_path, signon_palette_family)))
     {
-        signon_path = automatic_signon_path;
+        wolf3dgeneric_Shutdown();
+        return WG_RESULT_PLATFORM_ERROR;
     }
-    if (signon_path != NULL
-        && !WG_LoadSignonScreen(signon_path, signon_palette_family))
+    if (data_path != NULL && signon_path == NULL && WG_IsInteractive()
+        && !WG_DrawEmbeddedSignon(NULL, signon_palette_family))
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
     }
     if (data_path != NULL
-        && ((signon_path == NULL && WG_IsInteractive())
-            || WG_HasArgument(argc, argv, "--rating-view"))
+        && WG_HasArgument(argc, argv, "--rating-view")
         && !WG_DrawRatingScreen())
     {
         wolf3dgeneric_Shutdown();
@@ -4239,6 +4245,11 @@ wg_result_t wolf3dgeneric_Run(void)
                                        event.x, event.y, event.buttons))
                 {
                     continue;
+                }
+                if (wg_attract_phase == WG_ATTRACT_SIGNON && event.connected)
+                {
+                    WG_SignonDrawIndicators(WG_ScreenBuffer,
+                                            wg_signon_family, 1);
                 }
                 ID_IN_GetJoyDelta(event.joystick, &new_x, &new_y);
                 pressed_buttons = (uint8_t)(ID_IN_JoyButtons(event.joystick)
@@ -5586,6 +5597,7 @@ wg_result_t wolf3dgeneric_Run(void)
             }
         }
         if (!wg_game.active && wg_attract_phase != WG_ATTRACT_NONE
+            && wg_attract_deadline != 0U
             && (int32_t)(WG_GetTicksMs() - wg_attract_deadline) >= 0)
         {
             if (!WG_AttractAdvance())

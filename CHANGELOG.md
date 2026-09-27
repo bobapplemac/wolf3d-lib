@@ -16,8 +16,9 @@
   faces, actors, bosses, projectiles, items, sound mapping, music, secret-floor
   routing, Spear pickup transition, intermissions, victory collapse, ending,
   high scores, attract demos, and SDM conclusion.
-- Added runtime-selectable original SIGNON screens and explicit Wolf/Spear
-  palette selection without embedding copyrighted assets.
+- Embedded all five runtime-selectable original SIGNON screens, restored their
+  memory/hardware overlays, and added automatic edition-based selection plus
+  explicit Wolf/Spear palette overrides.
 - Kept configuration and save files isolated by logical game profile even when
   a GOG mission directory physically names every archive `.SOD`.
 - Validated every map and asset reference in SOD, SDM, and all three mission

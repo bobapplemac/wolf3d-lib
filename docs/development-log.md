@@ -9,8 +9,13 @@ hash so the milestone remains verifiable even when the screenshot is absent.
 
 - Restored the original startup order for interactive hosts: hardware SIGNON,
   seven-second PC-13 rating screen, then the title and attract loop.
-- Added automatic external SIGNON discovery beside the game data while
-  retaining `--signon` as the explicit publisher-art override.
+- Embedded all five original SIGNON templates in the generic engine. WL1,
+  WL6, and Spear automatically select Apogee, GT, and Spear respectively;
+  `--signon apogee|gt|id|activision|spear` remains a runtime override.
+- Ported the original `IntroScreen` overlay coordinates and Wolf/Spear color
+  ramps. MAIN, EMS, and XMS display their maximum values; mouse and Sound
+  Blaster are marked, joystick follows actual detection, and the excluded
+  Disney Sound Source remains unmarked.
 - Startup input now advances SIGNON or PC-13 instead of jumping directly to
   the control panel.
 - The PC-13 indexed framebuffer is identical across all four base archives
@@ -18,6 +23,10 @@ hash so the milestone remains verifiable even when the screenshot is absent.
   (`1e14f48394b7e6fd`) from Spear (`eba126e8df00d1cb`).
 
 ![Restored original PC-13 startup screen](../build/artifacts/pc13-wl6.png)
+
+![Embedded GT SIGNON with restored detection overlays](../build/artifacts/signon-gt-filled.png)
+
+![Embedded Spear SIGNON with restored detection overlays](../build/artifacts/signon-spear-filled.png)
 
 ## 2026-09-26: Original status faces and Spear F1 behavior
 

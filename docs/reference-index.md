@@ -57,8 +57,9 @@ Additional original visual references:
   greens.
 - `wolf3d sources\SIGNON\SIGNON_APOGEE.BIN`, `SIGNON_GT.BIN`,
   `SIGNON_ID.BIN`, `SIGNON_ACTIVISION.BIN`, and `SIGNON_SPEAR.BIN` are the
-  five raw 320x200 publisher/game startup screens. They are runtime reference
-  assets and are not vendored.
+  five raw 320x200 publisher/game startup screens. They are embedded in the
+  generated `src\\WG_SIGNON_ASSETS.inc`; `tools\\GENERATE_SIGNON_ASSETS.ps1`
+  reproduces that source representation from these canonical inputs.
 - `game files\SDM` is a complete two-map Spear demo installation. Its eight
   required archives, original executable/configuration, launch batch file,
   documentation, icon, release identification, and historical FAQ were

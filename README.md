@@ -100,30 +100,28 @@ explicitly, the engine accepts that mission's isolated directory with all of
 its archives renamed to `.SOD`. Automatic detection cannot distinguish those
 three identically named layouts, so select the corresponding `SDn` profile.
 
-The original executable-linked 320x200 SIGNON screen remains an external
-asset. Put it beside the selected game data as `SIGNON.BIN` to show it during
-normal startup. The engine also automatically recognizes the supplied archive
-names `SIGNON_APOGEE.BIN` for WL1, `SIGNON_GT.BIN` for WL6, and
-`SIGNON_SPEAR.BIN` for Spear. Select any other publisher/version screen at
-runtime rather than baking one into the library:
+All five original executable-linked 320x200 SIGNON screens are embedded in the
+engine, just as the active screen was embedded in the DOS executable. WL1
+selects the Apogee screen, WL6 selects the GT screen, and every Spear profile
+selects the Spear screen automatically. Override the publisher artwork at
+runtime with `apogee`, `gt`, `id`, `activision`, or `spear`:
 
 ```text
-wolf3dgeneric-win32 --data "C:\path\to\game" --game WL6 --signon "C:\path\to\SIGNON_GT.BIN"
+wolf3dgeneric-win32 --data "C:\path\to\game" --game WL6 --signon id
 ```
 
-`--signon` accepts an original raw 64,000-byte screen. Its palette defaults to
-the selected game, except a filename containing `SPEAR` automatically selects
-Spear's palette. `--signon-palette wolf` or `--signon-palette spear` provides
-an explicit override. This keeps the executable generic, permits Apogee, GT,
-id, Activision, and Spear artwork to be chosen without rebuilding, and avoids
-distributing any copyrighted screen with the source port.
+For development and comparison, `--signon` still accepts an external raw
+64,000-byte screen path. `--signon-palette wolf` or `--signon-palette spear`
+provides an explicit palette override.
 
 Interactive startup follows the original presentation order: the hardware
-detection SIGNON (when present), the seven-second PC-13 rating screen stored in
+detection SIGNON, the seven-second PC-13 rating screen stored in
 the game graphics, and then the title/attract loop. A key, mouse button, or
-joystick button advances each startup screen. The preserved SIGNON assets
-already show the generic port's effective maximum DOS-era memory and detected
-mouse, joystick, AdLib, Sound Blaster, and Sound Source capabilities.
+joystick button advances each startup screen. The original `IntroScreen` logic
+fills all ten MAIN, EMS, and XMS bars and marks the generic mouse and Sound
+Blaster services. It marks joystick only when one is detected; AdLib remains
+unmarked when Sound Blaster takes precedence, and the intentionally unsupported
+Disney Sound Source remains unmarked.
 
 Press a key on the title screen to open the original control-panel main menu.
 The arrow keys move its gun cursor; Enter selects an item and Escape returns to

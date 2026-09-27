@@ -67,6 +67,7 @@ set(WG_CORE_SOURCES
     src/WL_TEXT.c
     src/WG_RENDERER.c
     src/WG_SAVE.c
+    src/WG_SIGNON.c
     src/WL_SCALE.c
     src/ID_VL.c
     src/WL_MAIN.c
@@ -256,9 +257,13 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     set(WG_TEST_SD1_PATH "" CACHE PATH "Path to external Spear mission 1 data")
     set(WG_TEST_SD2_PATH "" CACHE PATH "Path to external Spear mission 2 data")
     set(WG_TEST_SD3_PATH "" CACHE PATH "Path to external Spear mission 3 data")
-    set(WG_TEST_SIGNON_PATH "" CACHE PATH "Path to external original SIGNON screens")
     if(WG_TEST_WL1_PATH)
         add_test(NAME data-wl1 COMMAND wg-tests --data wl1 "${WG_TEST_WL1_PATH}")
+        add_test(NAME signon-auto-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --game WL1 --signon auto
+            --frame-hash --palette-hash)
+        set_tests_properties(signon-auto-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "88648019bc43feb5.*1e14f48394b7e6fd")
         add_test(NAME rating-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --game WL1 --rating-view
             --frame-hash --palette-hash)
@@ -491,6 +496,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
+        add_test(NAME signon-auto-wl6 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_PATH}" --game WL6 --signon auto
+            --frame-hash --palette-hash)
+        set_tests_properties(signon-auto-wl6 PROPERTIES
+            PASS_REGULAR_EXPRESSION "fa8a46047d53d714.*1e14f48394b7e6fd")
         add_test(NAME rating-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --game WL6 --rating-view
             --frame-hash --palette-hash)
@@ -737,6 +747,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             PASS_REGULAR_EXPRESSION "3b75e429fe454ad8")
     endif()
     if(WG_TEST_SOD_PATH)
+        add_test(NAME signon-auto-sod COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SOD_PATH}" --game SOD --signon auto
+            --frame-hash --palette-hash)
+        set_tests_properties(signon-auto-sod PROPERTIES
+            PASS_REGULAR_EXPRESSION "9e9b215a63203250.*eba126e8df00d1cb")
         add_test(NAME rating-view-sod COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD --rating-view
             --frame-hash --palette-hash)
@@ -880,36 +895,31 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
                     --game SD${_wg_mission} --frame-hash)
         endif()
     endforeach()
-    if(WG_TEST_SIGNON_PATH AND WG_TEST_SOD_PATH)
+    if(WG_TEST_SOD_PATH)
         add_test(NAME signon-apogee COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
-            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_APOGEE.BIN"
-            --signon-palette wolf --frame-hash --palette-hash)
+            --signon apogee --frame-hash --palette-hash)
         set_tests_properties(signon-apogee PROPERTIES
-            PASS_REGULAR_EXPRESSION "68c40c19462b3fdf.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "88648019bc43feb5.*1e14f48394b7e6fd")
         add_test(NAME signon-gt COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
-            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_GT.BIN"
-            --signon-palette wolf --frame-hash --palette-hash)
+            --signon gt --frame-hash --palette-hash)
         set_tests_properties(signon-gt PROPERTIES
-            PASS_REGULAR_EXPRESSION "cc98de2689561776.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "fa8a46047d53d714.*1e14f48394b7e6fd")
         add_test(NAME signon-id COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
-            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_ID.BIN"
-            --signon-palette wolf --frame-hash --palette-hash)
+            --signon id --frame-hash --palette-hash)
         set_tests_properties(signon-id PROPERTIES
-            PASS_REGULAR_EXPRESSION "4201fae01f451b4a.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "ae7cd1709e0f8718.*1e14f48394b7e6fd")
         add_test(NAME signon-activision COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
-            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_ACTIVISION.BIN"
-            --signon-palette wolf --frame-hash --palette-hash)
+            --signon activision --frame-hash --palette-hash)
         set_tests_properties(signon-activision PROPERTIES
-            PASS_REGULAR_EXPRESSION "f5922c0c1ee9b90a.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "138525e53eec7ed8.*1e14f48394b7e6fd")
         add_test(NAME signon-spear COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD
-            --signon "${WG_TEST_SIGNON_PATH}/SIGNON_SPEAR.BIN"
-            --frame-hash --palette-hash)
+            --signon spear --frame-hash --palette-hash)
         set_tests_properties(signon-spear PROPERTIES
-            PASS_REGULAR_EXPRESSION "6a68bf2c73aa7ce6.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "9e9b215a63203250.*eba126e8df00d1cb")
     endif()
 endif()
