@@ -1637,3 +1637,27 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Added deterministic regression coverage for victory camera movement,
   victory damage immunity, use/elevator sounds, held-use pushwalls, attack
   press carry-through, and extra-life audio.
+
+## 2026-09-27: Transition, pickup, and HUD timing parity
+
+- Restored the original elevator exit pause without introducing a blocking
+  DOS-style service loop. Gameplay now freezes after the switch is activated,
+  lets the level-done effect finish through the portable audio stream, and
+  enters the intermission only afterward.
+- Made all sound-completion waits account for PC-speaker playback as well as
+  AdLib and digitized effects. In particular, a PC-speaker death sound can no
+  longer be cut short by the level reload.
+- Added an offset/stride-aware fizzle primitive and used it for player death.
+  The red death fizzle is once again confined to the selected 3D viewport;
+  smaller view sizes preserve their original surrounding border.
+- Restored `DrawScaleds` bonus acquisition. Pickups now use the original
+  visibility and projection-distance test (less than one tile ahead and half
+  a tile laterally) instead of waiting for the player's center to enter the
+  object's tile.
+- Reconnected the render-time chaingun pickup to the status face and replaced
+  its fixed-duration approximation with the original sound-driven hold. The
+  face remains fixed while the actual pickup sound is pending or playing and
+  resumes its normal random sequence when that sound ends.
+- Extended the call-graph mappings through the reviewed player movement,
+  pickup, render, death, and game-loop translations, and added regression
+  coverage for fizzling into a subregion of a larger framebuffer.

@@ -623,7 +623,6 @@ int WL_Thrust(struct wg_level *level, const struct wg_view_tables *tables,
         }
         level->victory_flag = 1U;
     }
-    (void)WL_CollectPlayerTileBonuses(level);
     return 1;
 }
 

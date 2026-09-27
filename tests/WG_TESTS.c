@@ -2187,8 +2187,10 @@ static void TestPlayerMovementAndUse(void)
     level.statics[0].item = WG_ITEM_CROSS;
     CHECK(WL_Thrust(&level, &tables, 0U, WG_MIN_DISTANCE * 2));
     CHECK(level.player_tile_x == 11U);
-    CHECK(level.statics[0].removed == 1U);
-    CHECK(level.score == 100U);
+    /* The original collects bonuses from DrawScaleds after its visibility
+       and projection-distance checks, not merely on entering their tile. */
+    CHECK(level.statics[0].removed == 0U);
+    CHECK(level.score == 0U);
 
     SetPlayerMovementLevel(&level);
     level.info[10U * WG_LEVEL_SIZE + 11U] = 99U;
@@ -2842,6 +2844,22 @@ static void TestVideo(void)
         CHECK(++iterations < 1000U);
     }
     CHECK(memcmp(source, destination, sizeof(source)) == 0);
+
+    memset(source, 23, 80U * 40U);
+    memset(destination, 7, sizeof(destination));
+    WG_FizzleStart(&fizzle);
+    iterations = 0U;
+    while (!WG_FizzleStepRegion(&fizzle, source, 80U, destination,
+                                WG_VIDEO_WIDTH, 120U, 60U, 80U, 40U,
+                                1000U))
+    {
+        CHECK(++iterations < 1000U);
+    }
+    CHECK(destination[60U * WG_VIDEO_WIDTH + 119U] == 7U);
+    CHECK(destination[60U * WG_VIDEO_WIDTH + 120U] == 23U);
+    CHECK(destination[99U * WG_VIDEO_WIDTH + 199U] == 23U);
+    CHECK(destination[99U * WG_VIDEO_WIDTH + 200U] == 7U);
+    CHECK(destination[100U * WG_VIDEO_WIDTH + 120U] == 7U);
 }
 
 static void TestRandom(void)

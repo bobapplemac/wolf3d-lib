@@ -6,6 +6,7 @@
 
 #include "WG_FIXED.h"
 #include "WG_ASSETS.h"
+#include "WL_AGENT.h"
 #include "WL_SCALE.h"
 
 static int WG_FixedTile(int32_t value)
@@ -608,7 +609,8 @@ static int WG_TransformTile(const wg_view_tables_t *tables,
                             uint8_t tile_x, uint8_t tile_y,
                             int32_t view_x, int32_t view_y,
                             int32_t view_cosine, int32_t view_sine,
-                            wg_visible_object_t *visible)
+                            wg_visible_object_t *visible,
+                            int *within_grab_distance)
 {
     int32_t gx = (int32_t)tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_x;
     int32_t gy = (int32_t)tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_y;
@@ -619,6 +621,7 @@ static int WG_TransformTile(const wg_view_tables_t *tables,
 
     if (nx < WG_MIN_DISTANCE)
     {
+        *within_grab_distance = 0;
         return 0;
     }
     gxt = WG_FixedMul(gx, view_sine);
@@ -628,6 +631,8 @@ static int WG_TransformTile(const wg_view_tables_t *tables,
                       + (int)((int64_t)ny * tables->scale / nx);
     visible->view_height = tables->height_numerator / (nx / 256);
     visible->trans_x = nx;
+    *within_grab_distance = nx < WG_FIXED_ONE
+        && ny > -WG_FIXED_ONE / 2 && ny < WG_FIXED_ONE / 2;
     return visible->view_height > 0;
 }
 
@@ -782,6 +787,7 @@ int WL_DrawScaleds(
     {
         wg_visible_object_t candidate;
         size_t tile_index;
+        int within_grab_distance = 0;
 
         if (level->statics[index].removed != 0U)
         {
@@ -793,8 +799,15 @@ int WL_DrawScaleds(
         if (visible_tiles[tile_index] != 0U
             && WG_TransformTile(tables, level->statics[index].tile_x,
                                 level->statics[index].tile_y, view_x, view_y,
-                                view_cosine, view_sine, &candidate))
+                                view_cosine, view_sine, &candidate,
+                                &within_grab_distance))
         {
+            if (within_grab_distance
+                && level->statics[index].item != WG_ITEM_NONE)
+            {
+                (void)WL_GetBonus(level, index);
+                continue;
+            }
             candidate.shape = level->statics[index].shape;
             if (visible_count < sizeof(visible) / sizeof(visible[0]))
             {

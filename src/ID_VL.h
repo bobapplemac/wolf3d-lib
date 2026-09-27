@@ -33,5 +33,10 @@ void WG_FizzleStart(wg_fizzle_t *fizzle);
 int WG_FizzleStep(wg_fizzle_t *fizzle, const uint8_t *source,
                   uint8_t *destination, size_t width, size_t height,
                   size_t pixels);
+int WG_FizzleStepRegion(wg_fizzle_t *fizzle, const uint8_t *source,
+                        size_t source_stride, uint8_t *destination,
+                        size_t destination_stride, size_t destination_x,
+                        size_t destination_y, size_t width, size_t height,
+                        size_t pixels);
 
 #endif

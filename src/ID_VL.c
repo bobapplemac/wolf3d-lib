@@ -172,10 +172,23 @@ int WG_FizzleStep(wg_fizzle_t *fizzle, const uint8_t *source,
                   uint8_t *destination, size_t width, size_t height,
                   size_t pixels)
 {
+    return WG_FizzleStepRegion(fizzle, source, width, destination, width,
+                               0U, 0U, width, height, pixels);
+}
+
+int WG_FizzleStepRegion(wg_fizzle_t *fizzle, const uint8_t *source,
+                        size_t source_stride, uint8_t *destination,
+                        size_t destination_stride, size_t destination_x,
+                        size_t destination_y, size_t width, size_t height,
+                        size_t pixels)
+{
     size_t pixel;
 
     if (fizzle == NULL || source == NULL || destination == NULL
-        || width == 0 || height == 0 || pixels == 0)
+        || width == 0 || height == 0 || pixels == 0
+        || source_stride < width
+        || destination_x > destination_stride
+        || width > destination_stride - destination_x)
     {
         return 0;
     }
@@ -193,7 +206,8 @@ int WG_FizzleStep(wg_fizzle_t *fizzle, const uint8_t *source,
         }
         if (x < width && y < height)
         {
-            destination[y * width + x] = source[y * width + x];
+            destination[(destination_y + y) * destination_stride
+                        + destination_x + x] = source[y * source_stride + x];
         }
         if (fizzle->value == 1U)
         {

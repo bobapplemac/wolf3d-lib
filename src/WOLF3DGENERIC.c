@@ -208,7 +208,7 @@ typedef struct wg_game_session
     uint8_t face_frame;
     uint8_t face;
     uint16_t face_count;
-    uint16_t face_times;
+    uint8_t gatling_face_sound;
     uint32_t funny_count;
 } wg_game_session_t;
 
@@ -1936,9 +1936,18 @@ static int WG_GameSessionPumpAudio(void)
     return 1;
 }
 
+static int WG_GameSessionSoundPlaying(void)
+{
+    return wg_game.audio_active
+        && (ID_SD_PCPlaying(wg_game.music)
+            || ID_SD_EffectPlaying(wg_game.music)
+            || ID_SD_DigitalPlaying(wg_game.music));
+}
+
 static int WG_GameSessionRender(void)
 {
     wl_status_t status;
+    uint8_t old_best_weapon = wg_game.level.player_best_weapon;
 
     if (!wg_game.active
         || !WG_RenderStaticView(WG_ScreenBuffer, &wg_game.level,
@@ -1954,6 +1963,15 @@ static int WG_GameSessionRender(void)
                            wg_game.level.player_angle))
     {
         return 0;
+    }
+    if (old_best_weapon != WG_WEAPON_CHAINGUN
+        && wg_game.level.player_best_weapon == WG_WEAPON_CHAINGUN)
+    {
+        wg_game.face = WL_STATUS_FACE_GATLING;
+        wg_game.face_count = 0U;
+        /* The pickup sound is queued by DrawScaleds and starts on the next
+           session tick.  Keep the face fixed across that short handoff. */
+        wg_game.gatling_face_sound = 1U;
     }
     if (wg_game.death_phase == WG_DEATH_NONE
         && !WL_DrawPlayerWeapon(WG_ScreenBuffer, &wg_game.pages,
@@ -1979,13 +1997,14 @@ static void WG_GameSessionUpdateFace(unsigned tics)
 {
     uint8_t random;
 
-    if (wg_game.face_times != 0U)
+    if (wg_game.gatling_face_sound != 0U)
     {
-        unsigned step = wg_game.demo_playback ? 1U : tics;
-
-        wg_game.face_times = (uint16_t)(wg_game.face_times > step
-                                           ? wg_game.face_times - step : 0U);
-        return;
+        if (wg_game.gatling_face_sound == 1U
+            || WG_GameSessionSoundPlaying())
+        {
+            return;
+        }
+        wg_game.gatling_face_sound = 0U;
     }
     wg_game.face_count = (uint16_t)(wg_game.face_count + tics);
     random = WG_RandomNext(&wg_game.level.random);
@@ -2681,7 +2700,6 @@ static int WG_GameSessionTick(void)
     size_t sound;
     int demo_last_command = 0;
     uint16_t old_health;
-    uint8_t old_best_weapon;
     unsigned simulation_tics;
 
     if (wg_game.game_over)
@@ -2691,6 +2709,15 @@ static int WG_GameSessionTick(void)
     if (wg_game.victory)
     {
         return WG_GameSessionAdvanceVictory();
+    }
+    if (!wg_game.demo_playback && wg_game.level.level_completed
+        && !wg_game.level.victory_flag)
+    {
+        if (WG_GameSessionSoundPlaying())
+        {
+            return 1;
+        }
+        return WG_GameSessionBeginIntermission();
     }
     if (!wg_game.demo_playback && wg_game.level.player_dead)
     {
@@ -2715,10 +2742,16 @@ static int WG_GameSessionTick(void)
         }
         else if (wg_game.death_phase == WG_DEATH_FIZZLE)
         {
-            if (WG_FizzleStep(&wg_game.death_fizzle,
-                              wg_game.death_source, WG_ScreenBuffer,
-                              WG_SCREEN_WIDTH, WG_PLAY_VIEW_HEIGHT,
-                              (WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT) / 70U))
+            size_t view_width = wg_game.view.view_width;
+            size_t view_height = view_width / 2U;
+            size_t view_x = (WG_SCREEN_WIDTH - view_width) / 2U;
+            size_t view_y = (WG_PLAY_VIEW_HEIGHT - view_height) / 2U;
+
+            if (WG_FizzleStepRegion(
+                    &wg_game.death_fizzle, wg_game.death_source, view_width,
+                    WG_ScreenBuffer, WG_SCREEN_WIDTH, view_x, view_y,
+                    view_width, view_height,
+                    (WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT) / 70U))
             {
                 wg_game.death_phase = WG_DEATH_HOLD;
                 wg_game.death_hold_tics = 0U;
@@ -2726,9 +2759,7 @@ static int WG_GameSessionTick(void)
         }
         else if (wg_game.death_phase == WG_DEATH_HOLD)
         {
-            int sound_playing = wg_game.audio_active
-                && (ID_SD_EffectPlaying(wg_game.music)
-                    || ID_SD_DigitalPlaying(wg_game.music));
+            int sound_playing = WG_GameSessionSoundPlaying();
 
             if (wg_game.death_hold_tics < 100U)
             {
@@ -2766,7 +2797,6 @@ static int WG_GameSessionTick(void)
         WG_GameSessionUpdateFace(simulation_tics);
     }
     old_health = wg_game.level.player_health;
-    old_best_weapon = wg_game.level.player_best_weapon;
     if (wg_game.demo_playback)
     {
         if (!WL_PlayDemoCommand(&wg_game.level, &wg_game.view,
@@ -2783,13 +2813,6 @@ static int WG_GameSessionTick(void)
         {
             return 0;
         }
-    }
-    if (wg_game.level.player_best_weapon == WG_WEAPON_CHAINGUN
-        && old_best_weapon != WG_WEAPON_CHAINGUN)
-    {
-        wg_game.face = WL_STATUS_FACE_GATLING;
-        wg_game.face_count = 0U;
-        wg_game.face_times = 38U;
     }
     if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR
         && old_health > wg_game.level.player_health
@@ -2878,14 +2901,31 @@ static int WG_GameSessionTick(void)
                 }
                 if (!played && wg_sound_mode == 1U)
                 {
-                    (void)ID_SD_PCStart(wg_game.music, data, size);
+                    played = ID_SD_PCStart(wg_game.music, data, size);
                 }
                 else if (!played && wg_sound_mode == 2U)
                 {
-                    (void)ID_SD_EffectStart(wg_game.music, data, size);
+                    played = ID_SD_EffectStart(wg_game.music, data, size);
+                }
+                if (played)
+                {
+                    wg_game.gatling_face_sound =
+                        event->sound == WG_SOUND_GET_GATLING ? 2U : 0U;
+                }
+                else if (event->sound == WG_SOUND_GET_GATLING)
+                {
+                    wg_game.gatling_face_sound = 0U;
                 }
             }
+            else if (event->sound == WG_SOUND_GET_GATLING)
+            {
+                wg_game.gatling_face_sound = 0U;
+            }
         }
+    }
+    else if (wg_game.gatling_face_sound == 1U)
+    {
+        wg_game.gatling_face_sound = 0U;
     }
     WG_ClearSoundEvents(&wg_game.level);
     if (wg_game.demo_playback)
@@ -2906,6 +2946,10 @@ static int WG_GameSessionTick(void)
         if (wg_game.level.victory_flag)
         {
             return WG_GameSessionBeginVictory();
+        }
+        if (WG_GameSessionSoundPlaying())
+        {
+            return 1;
         }
         return WG_GameSessionBeginIntermission();
     }

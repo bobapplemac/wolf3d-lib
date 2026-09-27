@@ -23,6 +23,22 @@
     "CheckWeaponChange": "WL_SelectWeapon",
     "Cmd_Fire": "WL_StartAttack",
     "Cmd_Use": "WL_CmdUseHeld",
+    "ControlMovement": "WL_ControlMovement",
+    "Thrust": "WL_Thrust",
+    "ClipMove": "WL_ClipMove",
+    "TryMove": "WL_TryMove",
+    "PollControls": "WL_PlayFrame",
+    "GetBonus": "WL_GetBonus",
+    "GiveAmmo": "WL_GiveAmmo",
+    "GiveWeapon": "WL_GiveWeapon",
+    "HealSelf": "WL_HealSelf",
+    "DrawScaleds": "WL_DrawScaleds",
+    "TransformTile": "WG_TransformTile",
+    "UpdateFace": "WG_GameSessionUpdateFace",
+    "FizzleFade": "WG_FizzleStepRegion",
+    "Died": "WG_GameSessionTick",
+    "GameLoop": "WG_GameSessionTick",
+    "DoActor": "WL_TickActors",
     "ConnectAreas": "WL_UpdateAreaConnectivity",
     "RecursiveConnect": "WL_UpdateAreaConnectivity",
     "InitAreas": "WG_LevelBuildForVariant",
@@ -69,11 +85,6 @@
       "caller": "T_Attack",
       "callee": "ControlMovement",
       "reason": "WL_PlayFrame calls WL_ControlMovement and WL_TickPlayerAttack as sibling services for the same player tick."
-    },
-    {
-      "caller": "DrawScaleds",
-      "callee": "GetBonus",
-      "reason": "Bonus collection is performed in the simulation tick before rendering, rather than as a renderer side effect."
     },
     {
       "caller": "LevelCompleted",
@@ -124,6 +135,16 @@
       "caller": "T_Attack",
       "callee": "VictorySpin",
       "reason": "WL_PlayFrame invokes WL_VictorySpin before its translated attack/player branches when victory is active."
+    },
+    {
+      "caller": "T_Attack",
+      "callee": "UpdateFace",
+      "reason": "The session scheduler invokes WG_GameSessionUpdateFace immediately before WL_PlayFrame dispatches the translated attacking-player branch."
+    },
+    {
+      "caller": "T_Player",
+      "callee": "UpdateFace",
+      "reason": "The session scheduler invokes WG_GameSessionUpdateFace immediately before WL_PlayFrame dispatches the translated normal-player branch."
     }
   ],
   "classifications": [
