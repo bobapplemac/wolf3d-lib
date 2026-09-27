@@ -18,6 +18,10 @@ hash so the milestone remains verifiable even when the screenshot is absent.
 
 - Restored the original startup order for interactive hosts: hardware SIGNON,
   seven-second PC-13 rating screen, then the title and attract loop.
+- Restored `FinishSignon`'s bottom strip behavior for Wolf3D: erase the dark
+  embedded placeholder, center yellow `Press a key`, and replace it with green
+  `Working...` after acknowledgement while preserving the version text at the
+  lower right. Spear retains its original automatic three-second SIGNON hold.
 - Embedded all five original SIGNON templates in the generic engine. WL1,
   WL6, and Spear automatically select Apogee, GT, and Spear respectively;
   `--signon apogee|gt|id|activision|spear` remains a runtime override.

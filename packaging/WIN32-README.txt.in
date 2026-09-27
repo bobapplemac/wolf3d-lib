@@ -22,6 +22,8 @@ embedded in the engine as it was in the DOS executable: WL1 selects Apogee,
 WL6 selects GT, and Spear selects its own screen. Use --signon apogee, gt, id,
 activision, or spear to override that choice. Its memory and hardware markers
 are filled at runtime using the original screen coordinates and color ramps.
+Wolf3D displays the original Press a key/Working prompts; Spear holds SIGNON
+for three seconds automatically.
 Use --adlib to retain OPL music and AdLib effects while disabling digitized
 Sound Blaster effects; SIGNON then marks AdLib instead of Sound Blaster.
 

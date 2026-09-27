@@ -263,7 +263,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --game WL1 --signon auto
             --frame-hash --palette-hash)
         set_tests_properties(signon-auto-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "88648019bc43feb5.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "f49eb4e91666264d.*1e14f48394b7e6fd")
         add_test(NAME rating-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --game WL1 --rating-view
             --frame-hash --palette-hash)
@@ -500,12 +500,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --game WL6 --signon auto
             --frame-hash --palette-hash)
         set_tests_properties(signon-auto-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "fa8a46047d53d714.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "f83e3e048c4550f4.*1e14f48394b7e6fd")
         add_test(NAME signon-adlib-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --game WL6 --signon auto --adlib
             --frame-hash --palette-hash)
         set_tests_properties(signon-adlib-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "86d9cf58323f0f44.*1e14f48394b7e6fd")
+            PASS_REGULAR_EXPRESSION "fc2f73588a0316a4.*1e14f48394b7e6fd")
         add_test(NAME rating-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --game WL6 --rating-view
             --frame-hash --palette-hash)

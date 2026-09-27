@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "WG_GRAPHICS.h"
+
 #define WG_ANGLES 360
 #define WG_ANGLE_QUADRANT (WG_ANGLES / 4)
 #define WG_FINE_ANGLES 3600
@@ -28,5 +30,8 @@ void WG_ViewBuildTrigTables(wg_view_tables_t *tables);
 int WG_ViewCalculateProjection(wg_view_tables_t *tables, uint16_t view_width,
                                int32_t focal_length);
 const int32_t *WG_ViewCosineTable(const wg_view_tables_t *tables);
+int WL_DrawSignonPrompt(uint8_t framebuffer[320 * 200],
+                        const wg_graphics_t *graphics, const char *text,
+                        uint8_t color);
 
 #endif

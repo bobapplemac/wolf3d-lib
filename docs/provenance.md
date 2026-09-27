@@ -17,6 +17,10 @@ used.
 portable initializer format used by Chocolate Wolfenstein 3D. Its 6-bit channel
 values are converted to 8-bit values at compile time.
 
+The SIGNON bottom-strip prompt follows original `FinishSignon` in `WL_MAIN.C`,
+including its 300-pixel clear, centered font-zero text, yellow acknowledgement
+prompt, green working prompt, and separate timed Spear behavior.
+
 The resource readers follow the original `ID_CA.C`, `ID_PM.C`, and generated
 graphics/audio headers. Wolf4SDL's `id_ca.cpp` and `id_pm.cpp` were used to
 cross-check intended behavior after removing segmented-memory and stdio

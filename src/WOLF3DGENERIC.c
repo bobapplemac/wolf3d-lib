@@ -1105,6 +1105,25 @@ static int WG_ParseSignonPalette(const char *value,
     return 0;
 }
 
+static int WG_DrawSignonPrompt(const char *text, uint8_t color)
+{
+    wg_graphics_t graphics;
+    int result = 0;
+
+    if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        return 1;
+    }
+    memset(&graphics, 0, sizeof(graphics));
+    if (WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        result = WL_DrawSignonPrompt(WG_ScreenBuffer, &graphics,
+                                     text, color);
+    }
+    WG_GraphicsClose(&graphics);
+    return result;
+}
+
 static int WG_LoadSignonScreen(const char *path,
                                wg_game_family_t palette_family,
                                int sound_blaster_present)
@@ -1137,6 +1156,10 @@ static int WG_LoadSignonScreen(const char *path,
                        ? WG_GAME_SPEAR_FULL_SOD
                        : WG_GAME_WOLF3D_FULL_GT_14,
                    WG_Palette);
+    if (!WG_DrawSignonPrompt("Press a key", 14U))
+    {
+        return 0;
+    }
     WG_CloseFrontHelp();
     WG_FrontMusicClose();
     wg_menu_active = 0U;
@@ -1146,7 +1169,9 @@ static int WG_LoadSignonScreen(const char *path,
     wg_control_screen = 0U;
     wg_mouse_sensitivity_screen = 0U;
     wg_customize_screen = 0U;
-    WG_AttractSet(WG_ATTRACT_SIGNON, 0U);
+    WG_AttractSet(WG_ATTRACT_SIGNON,
+                  WG_DataVariantFamily(wg_data_set.variant)
+                          == WG_GAME_FAMILY_SPEAR ? 3000U : 0U);
     return 1;
 }
 
@@ -1173,6 +1198,10 @@ static int WG_DrawEmbeddedSignon(const char *name,
                        ? WG_GAME_SPEAR_FULL_SOD
                        : WG_GAME_WOLF3D_FULL_GT_14,
                    WG_Palette);
+    if (!WG_DrawSignonPrompt("Press a key", 14U))
+    {
+        return 0;
+    }
     WG_CloseFrontHelp();
     WG_FrontMusicClose();
     wg_menu_active = 0U;
@@ -1182,7 +1211,9 @@ static int WG_DrawEmbeddedSignon(const char *name,
     wg_control_screen = 0U;
     wg_mouse_sensitivity_screen = 0U;
     wg_customize_screen = 0U;
-    WG_AttractSet(WG_ATTRACT_SIGNON, 0U);
+    WG_AttractSet(WG_ATTRACT_SIGNON,
+                  WG_DataVariantFamily(wg_data_set.variant)
+                          == WG_GAME_FAMILY_SPEAR ? 3000U : 0U);
     return 1;
 }
 
@@ -4198,6 +4229,11 @@ static int WG_AttractAdvance(void)
     switch (wg_attract_phase)
     {
         case WG_ATTRACT_SIGNON:
+            if (!WG_DrawSignonPrompt("Working...", 10U))
+            {
+                return 0;
+            }
+            WG_Present(WG_ScreenBuffer, WG_Palette);
             return WG_DrawRatingScreen();
         case WG_ATTRACT_RATING:
             return WG_DrawTitleScreen();
@@ -4391,8 +4427,10 @@ wg_result_t wolf3dgeneric_Run(void)
             if (!wg_game.active && event.pressed
                 && (event.type == WG_EVENT_KEY
                     || event.type == WG_EVENT_MOUSE_BUTTON)
-                && (wg_attract_phase == WG_ATTRACT_SIGNON
-                    || wg_attract_phase == WG_ATTRACT_RATING))
+                && (wg_attract_phase == WG_ATTRACT_RATING
+                    || (wg_attract_phase == WG_ATTRACT_SIGNON
+                        && WG_DataVariantFamily(wg_data_set.variant)
+                               != WG_GAME_FAMILY_SPEAR)))
             {
                 if (!WG_AttractAdvance())
                 {

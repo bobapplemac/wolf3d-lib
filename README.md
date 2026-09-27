@@ -120,8 +120,11 @@ provides an explicit palette override.
 
 Interactive startup follows the original presentation order: the hardware
 detection SIGNON, the seven-second PC-13 rating screen stored in
-the game graphics, and then the title/attract loop. A key, mouse button, or
-joystick button advances each startup screen. The original `IntroScreen` logic
+the game graphics, and then the title/attract loop. Wolf3D replaces SIGNON's
+dark bottom placeholder with yellow `Press a key`, then briefly displays green
+`Working...` after acknowledgement. Spear instead holds SIGNON for its original
+three seconds. A key, mouse button, or joystick button advances the PC-13
+screen. The original `IntroScreen` logic
 fills all ten MAIN, EMS, and XMS bars and marks the generic mouse and Sound
 Blaster services. It marks joystick only when one is detected; AdLib remains
 unmarked when Sound Blaster takes precedence, and the intentionally unsupported

@@ -21,6 +21,8 @@
 - Embedded all five runtime-selectable original SIGNON screens, restored their
   memory/hardware overlays, and added automatic edition-based selection plus
   explicit Wolf/Spear palette overrides.
+- Restored Wolf3D's yellow `Press a key` and green `Working...` SIGNON prompts
+  plus Spear's original timed three-second SIGNON hold.
 - Added an `--adlib` hardware profile for OPL music and effects without
   digitized Sound Blaster playback, including the original SIGNON indication.
 - Kept configuration and save files isolated by logical game profile even when

@@ -1,12 +1,40 @@
-/* Portable BuildTables and CalcProjection from the original WL_MAIN.C. */
+/* Portable BuildTables, CalcProjection, and FinishSignon from WL_MAIN.C. */
 #include "WL_MAIN.h"
 
 #include <math.h>
 #include <stddef.h>
 
 #include "WG_FIXED.h"
+#include "ID_VH.h"
+#include "ID_VL.h"
 
 #define WG_PI 3.141592657
+
+int WL_DrawSignonPrompt(uint8_t framebuffer[320 * 200],
+                        const wg_graphics_t *graphics, const char *text,
+                        uint8_t color)
+{
+    wg_font_t font;
+    size_t width;
+
+    if (framebuffer == NULL || graphics == NULL || text == NULL)
+    {
+        return 0;
+    }
+    if (!WG_FontOpen(&font, graphics, 0U))
+    {
+        return 0;
+    }
+
+    /* The original clears only the first 300 pixels, retaining the version
+       text at the lower right. Its fill color is the upper-left pixel. */
+    WG_VideoBar(framebuffer, 0, 189, 300, 11, framebuffer[0]);
+    width = WG_FontMeasure(&font, text);
+    WG_FontDraw(&font, framebuffer, (320 - (int)width) / 2, 190,
+                text, color);
+    WG_FontClose(&font);
+    return 1;
+}
 
 void WG_ViewBuildTrigTables(wg_view_tables_t *tables)
 {
