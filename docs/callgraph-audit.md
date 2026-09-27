@@ -10,10 +10,10 @@ Original source: `WOLFSRC`
 
 | Profile | Original functions | Original states | Chocolate functions | Mapped functions | Reviewed edge translations | Unmapped state callbacks | Bridge-confirmed missing | Bridge-confirmed path gaps |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| WL1 | 528 | 305 | 461 | 83 | 8 | 0 | 217 | 0 |
-| WL6 | 529 | 305 | 462 | 83 | 8 | 0 | 218 | 0 |
-| SDM | 514 | 264 | 434 | 75 | 8 | 0 | 196 | 0 |
-| SOD | 519 | 264 | 439 | 75 | 8 | 0 | 201 | 0 |
+| WL1 | 528 | 305 | 461 | 101 | 10 | 0 | 202 | 0 |
+| WL6 | 529 | 305 | 462 | 101 | 10 | 0 | 203 | 0 |
+| SDM | 514 | 264 | 434 | 93 | 10 | 0 | 181 | 0 |
+| SOD | 519 | 264 | 439 | 93 | 10 | 0 | 186 | 0 |
 
 ## Chocolate-corroborated audit leads
 
@@ -65,16 +65,12 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `ClearPaletteShifts` (WL_PLAY.C:1129; incoming edges: 1).
 - `ClearSplitVWB` (WL_INTER.C:17; incoming edges: 4).
 - `Confirm` (WL_MENU.C:3592; incoming edges: 5).
-- `ConnectAreas` (WL_ACT1.C:308; incoming edges: 2).
 - `DemoLoop` (WL_MAIN.C:1411; incoming edges: 1).
 - `Died` (WL_GAME.C:1114; incoming edges: 1).
 - `DiskFlopAnim` (WL_MAIN.C:293; incoming edges: 2).
 - `DoActor` (WL_PLAY.C:1260; incoming edges: 1).
 - `DoChecksum` (WL_MAIN.C:304; incoming edges: 2).
 - `DoJukebox` (WL_MAIN.C:1015; incoming edges: 1).
-- `DoorClosing` (WL_ACT1.C:617; incoming edges: 1).
-- `DoorOpen` (WL_ACT1.C:538; incoming edges: 1).
-- `DoorOpening` (WL_ACT1.C:554; incoming edges: 1).
 - `DrawAmmo` (WL_AGENT.C:603; incoming edges: 7).
 - `DrawCtlScreen` (WL_MENU.C:1962; incoming edges: 1).
 - `DrawFace` (WL_AGENT.C:270; incoming edges: 6).
@@ -102,6 +98,10 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `FizzleFade` (ID_VH.C:471; incoming edges: 3).
 - `FreeMusic` (WL_MENU.C:3789; incoming edges: 2).
 - `GRFILEPOS` (ID_CA.C:132; incoming edges: 4).
+- `GameLoop` (WL_GAME.C:1238; incoming edges: 1).
+- `GetNewActor` (WL_PLAY.C:919; incoming edges: 7).
+- `HandleCommand` (WL_TEXT.C:186; incoming edges: 1).
+- `HandleCtrls` (WL_TEXT.C:329; incoming edges: 1).
 
 ### WL6
 
@@ -151,16 +151,12 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `ClearPaletteShifts` (WL_PLAY.C:1129; incoming edges: 1).
 - `ClearSplitVWB` (WL_INTER.C:17; incoming edges: 4).
 - `Confirm` (WL_MENU.C:3592; incoming edges: 5).
-- `ConnectAreas` (WL_ACT1.C:308; incoming edges: 2).
 - `DemoLoop` (WL_MAIN.C:1411; incoming edges: 1).
 - `Died` (WL_GAME.C:1114; incoming edges: 1).
 - `DiskFlopAnim` (WL_MAIN.C:293; incoming edges: 2).
 - `DoActor` (WL_PLAY.C:1260; incoming edges: 1).
 - `DoChecksum` (WL_MAIN.C:304; incoming edges: 2).
 - `DoJukebox` (WL_MAIN.C:1015; incoming edges: 1).
-- `DoorClosing` (WL_ACT1.C:617; incoming edges: 1).
-- `DoorOpen` (WL_ACT1.C:538; incoming edges: 1).
-- `DoorOpening` (WL_ACT1.C:554; incoming edges: 1).
 - `DrawAmmo` (WL_AGENT.C:603; incoming edges: 7).
 - `DrawCtlScreen` (WL_MENU.C:1962; incoming edges: 1).
 - `DrawFace` (WL_AGENT.C:270; incoming edges: 6).
@@ -188,6 +184,10 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `FizzleFade` (ID_VH.C:471; incoming edges: 3).
 - `FreeMusic` (WL_MENU.C:3789; incoming edges: 2).
 - `GRFILEPOS` (ID_CA.C:132; incoming edges: 4).
+- `GameLoop` (WL_GAME.C:1238; incoming edges: 1).
+- `GetNewActor` (WL_PLAY.C:919; incoming edges: 7).
+- `HandleCommand` (WL_TEXT.C:186; incoming edges: 1).
+- `HandleCtrls` (WL_TEXT.C:329; incoming edges: 1).
 
 ### SDM
 
@@ -235,15 +235,11 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `ClearPaletteShifts` (WL_PLAY.C:1129; incoming edges: 1).
 - `ClearSplitVWB` (WL_INTER.C:17; incoming edges: 3).
 - `Confirm` (WL_MENU.C:3592; incoming edges: 5).
-- `ConnectAreas` (WL_ACT1.C:308; incoming edges: 2).
 - `DemoLoop` (WL_MAIN.C:1411; incoming edges: 1).
 - `Died` (WL_GAME.C:1114; incoming edges: 1).
 - `DiskFlopAnim` (WL_MAIN.C:293; incoming edges: 2).
 - `DoActor` (WL_PLAY.C:1260; incoming edges: 1).
 - `DoChecksum` (WL_MAIN.C:304; incoming edges: 2).
-- `DoorClosing` (WL_ACT1.C:617; incoming edges: 1).
-- `DoorOpen` (WL_ACT1.C:538; incoming edges: 1).
-- `DoorOpening` (WL_ACT1.C:554; incoming edges: 1).
 - `DrawAmmo` (WL_AGENT.C:603; incoming edges: 7).
 - `DrawCtlScreen` (WL_MENU.C:1962; incoming edges: 1).
 - `DrawFace` (WL_AGENT.C:270; incoming edges: 6).
@@ -271,9 +267,13 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `GRFILEPOS` (ID_CA.C:132; incoming edges: 4).
 - `GameLoop` (WL_GAME.C:1238; incoming edges: 1).
 - `GetNewActor` (WL_PLAY.C:919; incoming edges: 5).
-- `GiveKey` (WL_AGENT.C:643; incoming edges: 1).
 - `HandleMenu` (WL_MENU.C:3106; incoming edges: 7).
 - `IN_Ack` (ID_IN.C:918; incoming edges: 8).
+- `IN_CheckAck` (ID_IN.C:891; incoming edges: 5).
+- `IN_ClearKeysDown` (ID_IN.C:674; incoming edges: 18).
+- `IN_MouseButtons` (ID_IN.C:959; incoming edges: 4).
+- `IN_ReadControl` (ID_IN.C:691; incoming edges: 1).
+- `IN_Shutdown` (ID_IN.C:641; incoming edges: 2).
 
 ### SOD
 
@@ -322,7 +322,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `ClearPaletteShifts` (WL_PLAY.C:1129; incoming edges: 1).
 - `ClearSplitVWB` (WL_INTER.C:17; incoming edges: 4).
 - `Confirm` (WL_MENU.C:3592; incoming edges: 5).
-- `ConnectAreas` (WL_ACT1.C:308; incoming edges: 2).
 - `CopyProtection` (WL_INTER.C:1485; incoming edges: 1).
 - `DemoLoop` (WL_MAIN.C:1411; incoming edges: 1).
 - `Died` (WL_GAME.C:1114; incoming edges: 1).
@@ -330,9 +329,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `DoActor` (WL_PLAY.C:1260; incoming edges: 1).
 - `DoChecksum` (WL_MAIN.C:304; incoming edges: 2).
 - `DoJukebox` (WL_MAIN.C:1015; incoming edges: 1).
-- `DoorClosing` (WL_ACT1.C:617; incoming edges: 1).
-- `DoorOpen` (WL_ACT1.C:538; incoming edges: 1).
-- `DoorOpening` (WL_ACT1.C:554; incoming edges: 1).
 - `DrawAmmo` (WL_AGENT.C:603; incoming edges: 7).
 - `DrawCtlScreen` (WL_MENU.C:1962; incoming edges: 1).
 - `DrawFace` (WL_AGENT.C:270; incoming edges: 6).
@@ -360,6 +356,10 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `FinishSignon` (WL_MAIN.C:765; incoming edges: 1).
 - `FizzleFade` (ID_VH.C:471; incoming edges: 2).
 - `GRFILEPOS` (ID_CA.C:132; incoming edges: 4).
+- `GameLoop` (WL_GAME.C:1238; incoming edges: 1).
+- `GetNewActor` (WL_PLAY.C:919; incoming edges: 5).
+- `HandleMenu` (WL_MENU.C:3106; incoming edges: 8).
+- `IN_Ack` (ID_IN.C:918; incoming edges: 10).
 
 ## Interpretation rules
 

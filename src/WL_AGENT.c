@@ -191,7 +191,7 @@ void WL_TakeDamageFrom(struct wg_level *level, unsigned points,
 {
     unsigned damage;
 
-    if (level == NULL || level->player_dead)
+    if (level == NULL || level->player_dead || level->victory_flag)
     {
         return;
     }
@@ -231,6 +231,7 @@ static void WL_GiveExtraMan(wg_level_t *level)
     {
         ++level->player_lives;
     }
+    (void)WG_QueueSound(level, WG_SOUND_BONUS_EXTRA_LIFE);
 }
 
 void WL_GivePoints(struct wg_level *level, uint32_t points)
@@ -714,7 +715,48 @@ int WL_ControlMovement(struct wg_level *level,
     return 1;
 }
 
-int WL_CmdUse(struct wg_level *level)
+void WL_VictorySpin(struct wg_level *level, unsigned tics)
+{
+    int32_t destination_y;
+    uint32_t change;
+
+    if (level == NULL || tics == 0U)
+    {
+        return;
+    }
+    change = tics > UINT32_MAX / 4096U ? UINT32_MAX : tics * 4096U;
+    if (level->player_angle > 270U)
+    {
+        unsigned angle_change = tics > UINT_MAX / 3U
+                                    ? UINT_MAX : tics * 3U;
+
+        level->player_angle = angle_change >= level->player_angle - 270U
+                                  ? 270U
+                                  : (uint16_t)(level->player_angle
+                                               - angle_change);
+    }
+    else if (level->player_angle < 270U)
+    {
+        unsigned angle_change = tics > UINT_MAX / 3U
+                                    ? UINT_MAX : tics * 3U;
+
+        level->player_angle = angle_change >= 270U - level->player_angle
+                                  ? 270U
+                                  : (uint16_t)(level->player_angle
+                                               + angle_change);
+    }
+    destination_y = ((int32_t)level->player_tile_y - 5) * WG_FIXED_ONE
+                    - INT32_C(0x3000);
+    if (level->player_y > destination_y)
+    {
+        int64_t moved_y = (int64_t)level->player_y - change;
+
+        level->player_y = moved_y < destination_y
+                              ? destination_y : (int32_t)moved_y;
+    }
+}
+
+int WL_CmdUseHeld(struct wg_level *level, int button_held)
 {
     int check_x;
     int check_y;
@@ -768,20 +810,27 @@ int WL_CmdUse(struct wg_level *level)
                            direction);
     }
     tile = level->tiles[index];
-    if (tile == 21U && elevator_ok)
+    if (!button_held && tile == 21U && elevator_ok)
     {
         ++level->tiles[index];
         index = (size_t)level->player_tile_y * WG_LEVEL_SIZE
                 + level->player_tile_x;
         level->secret_level = (uint8_t)(level->areas[index] == 0U);
         level->level_completed = 1U;
+        (void)WG_QueueSound(level, WG_SOUND_LEVEL_DONE);
         return 1;
     }
-    if ((tile & 0x80U) != 0U)
+    if (!button_held && (tile & 0x80U) != 0U)
     {
         return WL_OperateDoor(level, tile & 0x3fU);
     }
+    (void)WG_QueueSound(level, WG_SOUND_DO_NOTHING);
     return 0;
+}
+
+int WL_CmdUse(struct wg_level *level)
+{
+    return WL_CmdUseHeld(level, 0);
 }
 
 static int WL_PlayerAttackTarget(const wg_level_t *level, size_t *target_index,

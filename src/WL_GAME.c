@@ -616,6 +616,20 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
             ++level->door_count;
         }
     }
+    if (player_found)
+    {
+        uint8_t player_area = level->areas[
+            (size_t)level->player_tile_y * WG_LEVEL_SIZE
+            + level->player_tile_x];
+
+        /* SpawnPlayer ended by calling InitAreas: with every door initially
+           closed, only the player's starting area is connected. */
+        if (player_area >= WG_NUM_AREAS)
+        {
+            return 0;
+        }
+        level->area_by_player[player_area] = 1U;
+    }
     return player_found;
 }
 

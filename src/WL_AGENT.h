@@ -56,7 +56,9 @@ int WL_Thrust(struct wg_level *level, const struct wg_view_tables *tables,
 int WL_ControlMovement(struct wg_level *level,
                        const struct wg_view_tables *tables,
                        int control_x, int control_y, int strafe);
+void WL_VictorySpin(struct wg_level *level, unsigned tics);
 int WL_CmdUse(struct wg_level *level);
+int WL_CmdUseHeld(struct wg_level *level, int button_held);
 int WL_SelectWeapon(struct wg_level *level, unsigned weapon);
 int WL_GunAttack(struct wg_level *level);
 int WL_KnifeAttack(struct wg_level *level);

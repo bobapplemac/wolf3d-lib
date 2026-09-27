@@ -20,6 +20,7 @@ struct wg_view_tables;
 
 typedef enum wg_sound
 {
+    WG_SOUND_HIT_WALL = 0,
     WG_SOUND_NOWAY = 6,
     WG_SOUND_SCHABBS_THROW = 8,
     WG_SOUND_PLAYER_DEATH = 9,
@@ -28,6 +29,7 @@ typedef enum wg_sound
     WG_SOUND_GET_KEY = 12,
     WG_SOUND_OPEN_DOOR = 18,
     WG_SOUND_CLOSE_DOOR = 19,
+    WG_SOUND_DO_NOTHING = 20,
     WG_SOUND_GUARD_SIGHT = 21,
     WG_SOUND_DEATH_SCREAM_2 = 22,
     WG_SOUND_ATTACK_KNIFE = 23,
@@ -44,6 +46,7 @@ typedef enum wg_sound
     WG_SOUND_BONUS_2 = 36,
     WG_SOUND_BONUS_3 = 37,
     WG_SOUND_GET_GATLING = 38,
+    WG_SOUND_LEVEL_DONE = 40,
     WG_SOUND_DOG_BARK = 41,
     WG_SOUND_BONUS_EXTRA_LIFE = 44,
     WG_SOUND_BONUS_4 = 45,

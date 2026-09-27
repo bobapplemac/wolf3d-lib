@@ -10,6 +10,15 @@
 
 #define WG_DOOR_OPEN_TICS 300U
 
+static int WL_DoorSoundConnected(const wg_level_t *level,
+                                 const wg_door_t *door)
+{
+    uint8_t area = level->areas[(size_t)door->tile_y * WG_LEVEL_SIZE
+                                + door->tile_x];
+
+    return area < WG_NUM_AREAS && level->area_by_player[area] != 0U;
+}
+
 static int WL_DoorIsObstructed(const wg_level_t *level,
                                const wg_door_t *door)
 {
@@ -102,9 +111,13 @@ int WL_CloseDoor(struct wg_level *level, size_t door_index)
     {
         return 0;
     }
-    (void)WG_QueueSoundAt(level, WG_SOUND_CLOSE_DOOR,
-                          door->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2,
-                          door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    if (WL_DoorSoundConnected(level, door))
+    {
+        (void)WG_QueueSoundAt(
+            level, WG_SOUND_CLOSE_DOOR,
+            door->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+            door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    }
     door->action = WG_DOOR_CLOSING;
     return 1;
 }
@@ -162,13 +175,8 @@ int WL_MoveDoors(struct wg_level *level, unsigned tics)
         }
         else if (door->action == WG_DOOR_OPENING)
         {
-            if (door->position == 0U)
-            {
-                (void)WG_QueueSoundAt(
-                    level, WG_SOUND_OPEN_DOOR,
-                    door->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2,
-                    door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
-            }
+            int just_started = door->position == 0U;
+
             if (tics >= 64U
                 || (uint32_t)door->position + ((uint32_t)tics << 10)
                        >= 0xffffU)
@@ -183,6 +191,13 @@ int WL_MoveDoors(struct wg_level *level, unsigned tics)
                                              + ((uint32_t)tics << 10));
             }
             (void)WL_UpdateAreaConnectivity(level);
+            if (just_started && WL_DoorSoundConnected(level, door))
+            {
+                (void)WG_QueueSoundAt(
+                    level, WG_SOUND_OPEN_DOOR,
+                    door->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                    door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+            }
         }
         else if (door->action == WG_DOOR_CLOSING)
         {

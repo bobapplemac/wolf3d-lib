@@ -489,6 +489,8 @@ static void TestSpearBossSetup(void)
 
     CHECK(WG_LevelBuildForVariant(&map, WG_DIFFICULTY_BABY,
                                   WG_GAME_SPEAR_FULL_SOD, &level));
+    CHECK(level.area_by_player[0] == 1U);
+    CHECK(level.area_by_player[1] == 0U);
     CHECK(level.actor_count == 6U);
     CHECK(level.kill_total == 6U);
     for (index = 0U; index < level.actor_count; ++index)
@@ -861,6 +863,11 @@ static void TestOrdinaryShootingStates(void)
     WL_TakeDamage(&level, 20U);
     CHECK(level.player_health == 95U);
     CHECK(level.damage_count == 5U);
+    level.victory_flag = 1U;
+    WL_TakeDamage(&level, 20U);
+    CHECK(level.player_health == 95U);
+    CHECK(level.damage_count == 5U);
+    level.victory_flag = 0U;
     WL_TakeDamage(&level, 400U);
     CHECK(level.player_health == 0U);
     CHECK(level.player_dead != 0U);
@@ -2012,6 +2019,9 @@ static void TestBonusPickups(void)
     CHECK(level.bonus_count == 18U);
     CHECK(level.statics[0].removed == 1U);
     CHECK(level.statics[0].blocking == 0U);
+    CHECK(level.sound_event_count == 2U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_BONUS_EXTRA_LIFE);
+    CHECK(level.sound_events[1].sound == WG_SOUND_BONUS_EXTRA_LIFE);
 
     memset(&level, 0, sizeof(level));
     level.player_lives = 3U;
@@ -2020,6 +2030,9 @@ static void TestBonusPickups(void)
     CHECK(level.score == 85000U);
     CHECK(level.next_extra == 120000U);
     CHECK(level.player_lives == 5U);
+    CHECK(level.sound_event_count == 2U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_BONUS_EXTRA_LIFE);
+    CHECK(level.sound_events[1].sound == WG_SOUND_BONUS_EXTRA_LIFE);
 
     SetBonus(&level, WG_ITEM_CROSS);
     level.statics[0].tile_x = 7U;
@@ -2229,6 +2242,20 @@ static void TestPlayerMovementAndUse(void)
     CHECK(level.player_x > 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
 
     SetPlayerMovementLevel(&level);
+    level.player_angle = 300U;
+    level.player_tile_y = 10U;
+    level.player_y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    WL_VictorySpin(&level, 5U);
+    CHECK(level.player_angle == 285U);
+    CHECK(level.player_y == 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2
+                            - 5 * 4096);
+    WL_VictorySpin(&level, 10U);
+    CHECK(level.player_angle == 270U);
+    level.player_y = 5 * WG_FIXED_ONE - INT32_C(0x2fff);
+    WL_VictorySpin(&level, 1U);
+    CHECK(level.player_y == 5 * WG_FIXED_ONE - INT32_C(0x3000));
+
+    SetPlayerMovementLevel(&level);
     level.door_count = 1U;
     level.doors[0].tile_x = 11U;
     level.doors[0].tile_y = 10U;
@@ -2294,6 +2321,13 @@ static void TestPlayerMovementAndUse(void)
     CHECK(level.tiles[10U * WG_LEVEL_SIZE + 11U] == 22U);
     CHECK(level.level_completed == 1U);
     CHECK(level.secret_level == 1U);
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_LEVEL_DONE);
+
+    SetPlayerMovementLevel(&level);
+    CHECK(!WL_CmdUse(&level));
+    CHECK(level.sound_event_count == 1U);
+    CHECK(level.sound_events[0].sound == WG_SOUND_DO_NOTHING);
 }
 
 static void TestPlayLoop(void)
@@ -2394,6 +2428,47 @@ static void TestPlayLoop(void)
     CHECK(level.doors[0].position == 0U);
     CHECK(WL_PlayTick(&level, &tables, &play, &input));
     CHECK(level.doors[0].position == 1024U);
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
+    memset(&input, 0, sizeof(input));
+    input.use = 1U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.pushwall_state == 0U);
+    level.tiles[10U * WG_LEVEL_SIZE + 11U] = 2U;
+    level.info[10U * WG_LEVEL_SIZE + 11U] = 98U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.pushwall_state == 1U);
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
+    memset(&input, 0, sizeof(input));
+    input.attack = 1U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    input.attack = 0U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    input.attack = 1U;
+    while (level.attack_active)
+    {
+        CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    }
+    CHECK(play.attack_held == 0U);
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.attack_active == 1U);
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
+    memset(&input, 0, sizeof(input));
+    level.victory_flag = 1U;
+    level.player_angle = 250U;
+    level.player_tile_y = 10U;
+    level.player_y = 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+    start_x = level.player_x;
+    input.up = 1U;
+    CHECK(WL_PlayTick(&level, &tables, &play, &input));
+    CHECK(level.player_x == start_x);
+    CHECK(level.player_angle == 253U);
+    CHECK(level.player_y == 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2 - 4096);
 }
 
 static void TestJoystickInput(void)

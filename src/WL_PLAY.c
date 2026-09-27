@@ -213,9 +213,10 @@ static int WL_PlayFrame(struct wg_level *level,
     int speed;
     int control_x;
     int control_y;
-    int attack_pressed;
+    int attack_button;
     int attack_started = 0;
-    int use_pressed;
+    int use_button;
+    int was_attacking;
 
     if (level == NULL || tables == NULL || state == NULL || input == NULL
         || tics == 0U)
@@ -229,17 +230,34 @@ static int WL_PlayFrame(struct wg_level *level,
     level->made_noise = 0U;
     level->time_count += tics;
 
-    attack_pressed = input->attack && !state->attack_held;
-    use_pressed = input->use && !state->use_held;
-    state->attack_held = input->attack != 0U;
-    state->use_held = input->use != 0U;
+    attack_button = input->attack != 0U;
+    use_button = input->use != 0U;
+    was_attacking = level->attack_active != 0U;
+    /* T_Attack clears a newly pressed attack/use button before movement.
+       PollControls then copies that mutated state into buttonheld on the
+       following frame, so a held press is not lost when the attack ends. */
+    if (was_attacking)
+    {
+        if (attack_button && !state->attack_held)
+        {
+            attack_button = 0;
+        }
+        if (use_button && !state->use_held)
+        {
+            use_button = 0;
+        }
+    }
 
     if (!WL_MoveDoors(level, tics) || !WL_MovePushWalls(level, tics))
     {
         return 0;
     }
 
-    if (!level->player_dead && !level->victory_flag)
+    if (!level->player_dead && level->victory_flag)
+    {
+        WL_VictorySpin(level, tics);
+    }
+    else if (!level->player_dead)
     {
         if (!level->attack_active)
         {
@@ -247,11 +265,11 @@ static int WL_PlayFrame(struct wg_level *level,
             {
                 (void)WL_SelectWeapon(level, input->weapon - 1U);
             }
-            if (use_pressed)
+            if (use_button)
             {
-                (void)WL_CmdUse(level);
+                (void)WL_CmdUseHeld(level, state->use_held != 0U);
             }
-            if (attack_pressed)
+            if (attack_button && !state->attack_held)
             {
                 attack_started = WL_StartAttack(level);
             }
@@ -313,12 +331,15 @@ static int WL_PlayFrame(struct wg_level *level,
         }
         if (!WL_ControlMovement(level, tables, control_x, control_y,
                                 input->strafe != 0U)
-            || (!attack_started
-                && !WL_TickPlayerAttack(level, tics, input->attack != 0U)))
+            || (!level->victory_flag && !attack_started
+                && !WL_TickPlayerAttack(level, tics, attack_button)))
         {
             return 0;
         }
     }
+
+    state->attack_held = (uint8_t)attack_button;
+    state->use_held = (uint8_t)use_button;
 
     return WL_TickActors(level, tics);
 }

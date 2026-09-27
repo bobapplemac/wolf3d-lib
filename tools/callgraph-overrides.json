@@ -2,6 +2,7 @@
   "mappings": {
     "BJ_Breathe": "WG_GameSessionAdvanceIntermission",
     "VictoryTile": "WL_Thrust",
+    "VictorySpin": "WL_VictorySpin",
     "SpawnBJVictory": "WL_SpawnBJVictory",
     "T_BJRun": "WL_T_BJRun",
     "T_BJJump": "WL_TickBJVictory",
@@ -19,6 +20,27 @@
     "A_Victory": "WL_TickActors",
     "T_Attack": "WL_TickPlayerAttack",
     "T_Player": "WL_PlayFrame",
+    "CheckWeaponChange": "WL_SelectWeapon",
+    "Cmd_Fire": "WL_StartAttack",
+    "Cmd_Use": "WL_CmdUseHeld",
+    "ConnectAreas": "WL_UpdateAreaConnectivity",
+    "RecursiveConnect": "WL_UpdateAreaConnectivity",
+    "InitAreas": "WG_LevelBuildForVariant",
+    "DoorOpen": "WL_MoveDoors",
+    "DoorOpening": "WL_MoveDoors",
+    "DoorClosing": "WL_MoveDoors",
+    "MoveDoors": "WL_MoveDoors",
+    "MovePWalls": "WL_MovePushWalls",
+    "GiveKey": "WL_GetBonus",
+    "GiveExtraMan": "WL_GiveExtraMan",
+    "GivePoints": "WL_GivePoints",
+    "SpawnDoor": "WG_LevelBuildForVariant",
+    "SpawnPlayer": "WG_LevelBuildForVariant",
+    "SpawnStatic": "WG_LevelBuildForVariant",
+    "InitDoorList": "WG_LevelBuildForVariant",
+    "InitStaticList": "WG_LevelBuildForVariant",
+    "ScanInfoPlane": "WG_LevelBuildForVariant",
+    "SetupGameLevel": "WG_GameSessionOpen",
     "T_Launch": "WL_T_SpearLaunch",
     "T_UShoot": "WL_T_Shoot",
     "T_Will": "WL_T_SpecialBoss",
@@ -92,6 +114,16 @@
       "caller": "T_BJYell",
       "callee": "T_BJDone",
       "reason": "The terminal jump callback is folded into WL_TickBJVictory."
+    },
+    {
+      "caller": "SpawnPlayer",
+      "callee": "Thrust",
+      "reason": "WG_LevelBuildForVariant directly initializes the tile coordinates and starting-area state that the original established through Thrust(0, 0)."
+    },
+    {
+      "caller": "T_Attack",
+      "callee": "VictorySpin",
+      "reason": "WL_PlayFrame invokes WL_VictorySpin before its translated attack/player branches when victory is active."
     }
   ],
   "classifications": [

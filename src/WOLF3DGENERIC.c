@@ -2680,8 +2680,6 @@ static int WG_GameSessionTick(void)
     wl_demo_command_t demo_command;
     size_t sound;
     int demo_last_command = 0;
-    int32_t old_player_x;
-    int32_t old_player_y;
     uint16_t old_health;
     uint8_t old_best_weapon;
     unsigned simulation_tics;
@@ -2763,9 +2761,10 @@ static int WG_GameSessionTick(void)
         demo_last_command =
             wg_game.demo.position == wg_game.demo.command_count;
     }
-    WG_GameSessionUpdateFace(simulation_tics);
-    old_player_x = wg_game.level.player_x;
-    old_player_y = wg_game.level.player_y;
+    if (!wg_game.level.victory_flag)
+    {
+        WG_GameSessionUpdateFace(simulation_tics);
+    }
     old_health = wg_game.level.player_health;
     old_best_weapon = wg_game.level.player_best_weapon;
     if (wg_game.demo_playback)
@@ -2802,8 +2801,7 @@ static int WG_GameSessionTick(void)
     }
     WG_GameSessionUpdateSpearIdle(
         simulation_tics,
-        old_player_x != wg_game.level.player_x
-            || old_player_y != wg_game.level.player_y);
+        wg_game.level.player_thrust_speed != 0);
     WL_UpdatePaletteShiftsForTics(
         &wg_game.level, WG_Palette,
         wg_game.demo_playback ? WL_DEMO_TICS : 1U);
