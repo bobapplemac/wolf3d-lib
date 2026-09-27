@@ -210,6 +210,7 @@ typedef struct wg_game_session
     int8_t high_score_entry;
     uint8_t high_score_cursor;
     uint8_t high_score_caps_lock;
+    uint16_t high_score_hold_tics;
     wg_death_phase_t death_phase;
     uint16_t death_target_angle;
     uint16_t death_hold_tics;
@@ -2589,6 +2590,10 @@ static int WG_GameSessionBeginHighScores(void)
         wg_high_scores, wg_game.level.score,
         (uint16_t)(wg_game.map_number % 10U + 1U),
         (uint16_t)(wg_game.map_number / 10U));
+    wg_game.high_score_cursor = 0U;
+    wg_game.high_score_caps_lock = 0U;
+    wg_game.high_score_hold_tics =
+        wg_game.high_score_entry < 0 ? 500U : 0U;
     if (!WL_DrawHighScores(WG_ScreenBuffer, &wg_game.graphics,
                            wg_high_scores))
     {
@@ -2729,7 +2734,8 @@ static int WG_GameSessionHighScoreKey(uint16_t scan_code, int pressed)
                                       wg_game.high_score_caps_lock);
         if (character >= 32 && character < 127
             && length < WL_MAX_HIGH_NAME
-            && WL_HighScoreNameWidth(&wg_game.graphics, score->name) < 100U)
+            && WL_HighScoreNameWidth(&wg_game.graphics, score->name)
+                   < (WG_IsSpearGame() ? 130U : 100U))
         {
             memmove(score->name + wg_game.high_score_cursor + 1U,
                     score->name + wg_game.high_score_cursor,
@@ -3053,6 +3059,12 @@ static int WG_GameSessionTick(void)
 
     if (wg_game.game_over)
     {
+        if (wg_game.high_scores && wg_game.high_score_entry < 0
+            && wg_game.high_score_hold_tics != 0U
+            && --wg_game.high_score_hold_tics == 0U)
+        {
+            return WG_GameSessionReturnToMenu();
+        }
         return 1;
     }
     if (wg_game.preload_tics != 0U)

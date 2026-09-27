@@ -10,10 +10,10 @@ Original source: `WOLFSRC`
 
 | Profile | Original functions | Original states | Chocolate functions | Mapped functions | Reviewed edge translations | Unmapped state callbacks | Bridge-confirmed missing | Bridge-confirmed path gaps |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| WL1 | 528 | 305 | 461 | 109 | 13 | 0 | 195 | 0 |
-| WL6 | 529 | 305 | 462 | 109 | 13 | 0 | 196 | 0 |
-| SDM | 514 | 264 | 434 | 101 | 13 | 0 | 174 | 0 |
-| SOD | 519 | 264 | 439 | 101 | 13 | 0 | 179 | 0 |
+| WL1 | 528 | 305 | 461 | 110 | 13 | 0 | 194 | 0 |
+| WL6 | 529 | 305 | 462 | 110 | 13 | 0 | 195 | 0 |
+| SDM | 514 | 264 | 434 | 102 | 13 | 0 | 173 | 0 |
+| SOD | 519 | 264 | 439 | 102 | 13 | 0 | 178 | 0 |
 
 ## Chocolate-corroborated audit leads
 
@@ -57,7 +57,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `CalcTics` (WL_DRAW.C:1236; incoming edges: 2).
 - `CenterWindow` (WL_PLAY.C:597; incoming edges: 6).
 - `CheckForEpisodes` (WL_MENU.C:3882; incoming edges: 1).
-- `CheckHighScore` (WL_INTER.C:1195; incoming edges: 1).
 - `CheckKeys` (WL_PLAY.C:614; incoming edges: 1).
 - `CheckPause` (WL_MENU.C:3821; incoming edges: 2).
 - `CleanupControlPanel` (WL_MENU.C:3089; incoming edges: 1).
@@ -102,6 +101,7 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `HandleWord` (WL_TEXT.C:352; incoming edges: 1).
 - `HelpScreens` (WL_TEXT.C:747; incoming edges: 2).
 - `IN_Ack` (ID_IN.C:918; incoming edges: 10).
+- `IN_CheckAck` (ID_IN.C:891; incoming edges: 5).
 
 ### WL6
 
@@ -143,7 +143,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `CalcTics` (WL_DRAW.C:1236; incoming edges: 2).
 - `CenterWindow` (WL_PLAY.C:597; incoming edges: 6).
 - `CheckForEpisodes` (WL_MENU.C:3882; incoming edges: 1).
-- `CheckHighScore` (WL_INTER.C:1195; incoming edges: 1).
 - `CheckKeys` (WL_PLAY.C:614; incoming edges: 1).
 - `CheckPause` (WL_MENU.C:3821; incoming edges: 2).
 - `CleanupControlPanel` (WL_MENU.C:3089; incoming edges: 1).
@@ -188,6 +187,7 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `HandleWord` (WL_TEXT.C:352; incoming edges: 1).
 - `HelpScreens` (WL_TEXT.C:747; incoming edges: 2).
 - `IN_Ack` (ID_IN.C:918; incoming edges: 11).
+- `IN_CheckAck` (ID_IN.C:891; incoming edges: 5).
 
 ### SDM
 
@@ -227,7 +227,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `CalcTics` (WL_DRAW.C:1236; incoming edges: 2).
 - `CenterWindow` (WL_PLAY.C:597; incoming edges: 6).
 - `CheckForEpisodes` (WL_MENU.C:3882; incoming edges: 1).
-- `CheckHighScore` (WL_INTER.C:1195; incoming edges: 1).
 - `CheckKeys` (WL_PLAY.C:614; incoming edges: 1).
 - `CheckPause` (WL_MENU.C:3821; incoming edges: 2).
 - `CleanupControlPanel` (WL_MENU.C:3089; incoming edges: 1).
@@ -274,6 +273,7 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `IN_Startup` (ID_IN.C:584; incoming edges: 1).
 - `IN_UserInput` (ID_IN.C:935; incoming edges: 5).
 - `InitActorList` (WL_PLAY.C:875; incoming edges: 2).
+- `InitDigiMap` (WL_MAIN.C:962; incoming edges: 1).
 
 ### SOD
 
@@ -314,7 +314,6 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `CalcTics` (WL_DRAW.C:1236; incoming edges: 2).
 - `CenterWindow` (WL_PLAY.C:597; incoming edges: 6).
 - `CheckForEpisodes` (WL_MENU.C:3882; incoming edges: 1).
-- `CheckHighScore` (WL_INTER.C:1195; incoming edges: 1).
 - `CheckKeys` (WL_PLAY.C:614; incoming edges: 1).
 - `CheckPause` (WL_MENU.C:3821; incoming edges: 2).
 - `CleanupControlPanel` (WL_MENU.C:3089; incoming edges: 1).
@@ -360,6 +359,7 @@ Routines reachable in both original and Chocolate without a portable mapping or 
 - `IN_ClearKeysDown` (ID_IN.C:674; incoming edges: 21).
 - `IN_MouseButtons` (ID_IN.C:959; incoming edges: 4).
 - `IN_ReadControl` (ID_IN.C:691; incoming edges: 1).
+- `IN_Shutdown` (ID_IN.C:641; incoming edges: 2).
 
 ## Interpretation rules
 

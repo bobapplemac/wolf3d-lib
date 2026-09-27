@@ -1696,3 +1696,14 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Kept BJ's breathing animation active while counting and while sound effects
   finish, and added real-data rendering coverage for distinct initial and
   completed intermission frames.
+
+## 2026-09-27: High-score transition parity
+
+- Restored the original `CheckHighScore` timeout for a score that does not
+  enter the table: the roster remains visible for up to 500 tics and returns
+  early on input, instead of waiting forever for a key.
+- Reset the line editor's cursor and Caps Lock state for each new entry and
+  restored Spear of Destiny's wider 130-pixel name limit; Wolfenstein keeps
+  its original 100-pixel limit.
+- Added the high-score transition to the reviewed original-to-portable call
+  graph mappings.

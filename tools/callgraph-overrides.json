@@ -69,6 +69,7 @@
     "T_Stand": "WL_TickAwareness",
     "PlayLoop": "WG_GameSessionTick",
     "LevelCompleted": "WG_GameSessionBeginIntermission",
+    "CheckHighScore": "WG_GameSessionBeginHighScores",
     "ThreeDRefresh": "WG_GameSessionRender",
     "TakeDamage": "WL_TakeDamageFrom"
   },
