@@ -5,6 +5,16 @@ and remain under the Git-ignored `build/artifacts/` directory. They are never di
 with the source repository. Each entry records a deterministic indexed-frame
 hash so the milestone remains verifiable even when the screenshot is absent.
 
+## 2026-09-26: Fractional pushwall intersections
+
+- Restored the `WL_DR_A.ASM` pushwall intersection step omitted by the initial
+  portable raycaster: each ray now advances along its tangent by the wall's
+  fractional movement and continues tracing if that point leaves the tile.
+- This restores the moving block's side geometry and removes the flat vertical
+  squeeze seen while opening E1M1's first secret. The corrected halfway frame
+  hashes to `deb2c8e3a4c04570`; its synthetic ray geometry hashes to
+  `f2347a1bd90b06f4` with 95 rays striking the translated front plane.
+
 ## 2026-09-26: Opt-in mouse control
 
 - Made mouse hardware absent unless `--mouse` is present, matching the original

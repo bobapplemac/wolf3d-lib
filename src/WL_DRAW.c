@@ -31,6 +31,17 @@ static int32_t WG_HalfFloor(int32_t value)
     return (value - 1) / 2;
 }
 
+static int32_t WG_PushWallStepOffset(int32_t step, uint8_t position)
+{
+    int64_t product = (int64_t)step * position;
+
+    if (product >= 0)
+    {
+        return (int32_t)(product / 64);
+    }
+    return -(int32_t)((-product + 63) / 64);
+}
+
 static uint16_t WG_DoorPage(uint16_t base, wg_door_lock_t lock,
                             int vertical_hit)
 {
@@ -336,6 +347,27 @@ static int WG_RaycastWallsInternal(
                 {
                     if ((tile & 0xc0U) == 0xc0U)
                     {
+                        int32_t adjusted = y_intercept
+                            + WG_PushWallStepOffset(
+                                y_step, level->pushwall_position);
+
+                        /* WL_DR_A.ASM advances the ray intersection by the
+                           same fraction that the pushwall has moved. If that
+                           leaves this map tile, the ray struck the stationary
+                           tile edge before reaching the translated wall and
+                           must continue tracing. */
+                        if (WG_FixedTile(adjusted) != map_y)
+                        {
+                            if (visible_tiles != NULL)
+                            {
+                                visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                              + (size_t)map_x] = 1U;
+                            }
+                            x_tile += x_tile_step;
+                            y_intercept += y_step;
+                            continue;
+                        }
+                        y_intercept = adjusted;
                         x_intercept = x_tile * WG_FIXED_ONE;
                         WG_RecordPushWallHit(
                             level, tables, &hits[pixel], tile,
@@ -431,6 +463,22 @@ static int WG_RaycastWallsInternal(
                 {
                     if ((tile & 0xc0U) == 0xc0U)
                     {
+                        int32_t adjusted = x_intercept
+                            + WG_PushWallStepOffset(
+                                x_step, level->pushwall_position);
+
+                        if (WG_FixedTile(adjusted) != map_x)
+                        {
+                            if (visible_tiles != NULL)
+                            {
+                                visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                              + (size_t)map_x] = 1U;
+                            }
+                            y_tile += y_tile_step;
+                            x_intercept += x_step;
+                            continue;
+                        }
+                        x_intercept = adjusted;
                         y_intercept = y_tile * WG_FIXED_ONE;
                         WG_RecordPushWallHit(
                             level, tables, &hits[pixel], tile,

@@ -308,7 +308,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --pushwall-view
             --frame-hash)
         set_tests_properties(pushwall-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "48bdacd231ece2d9")
+            PASS_REGULAR_EXPRESSION "deb2c8e3a4c04570")
         add_test(NAME death-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --death-view
             --frame-hash)
@@ -570,7 +570,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --pushwall-view
             --frame-hash)
         set_tests_properties(pushwall-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "48bdacd231ece2d9")
+            PASS_REGULAR_EXPRESSION "deb2c8e3a4c04570")
         add_test(NAME death-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --death-view
             --frame-hash)

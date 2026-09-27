@@ -2862,6 +2862,34 @@ static void TestPushWalls(void)
     CHECK(hits[159].tile == (2U | 0xc0U));
     CHECK(hits[159].x == 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
     CHECK(hits[159].wall_page == 3U);
+    {
+        unsigned pushwall_hits = 0U;
+        uint64_t pushwall_hash = 1469598103934665603ULL;
+        unsigned pixel;
+
+        for (pixel = 0U; pixel < WG_MAX_VIEW_WIDTH; ++pixel)
+        {
+            if (hits[pixel].tile == (2U | 0xc0U))
+            {
+                ++pushwall_hits;
+                CHECK(hits[pixel].x
+                      == 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+                CHECK(hits[pixel].map_y == 10U);
+            }
+            pushwall_hash ^= (uint32_t)hits[pixel].x;
+            pushwall_hash *= 1099511628211ULL;
+            pushwall_hash ^= (uint32_t)hits[pixel].y;
+            pushwall_hash *= 1099511628211ULL;
+            pushwall_hash ^= (uint32_t)hits[pixel].height;
+            pushwall_hash *= 1099511628211ULL;
+            pushwall_hash ^= hits[pixel].texture_column;
+            pushwall_hash *= 1099511628211ULL;
+        }
+        printf("pushwall ray hits: %u, FNV-1a: %016llx\n",
+               pushwall_hits, (unsigned long long)pushwall_hash);
+        CHECK(pushwall_hits == 95U);
+        CHECK(pushwall_hash == 0xf2347a1bd90b06f4ULL);
+    }
 
     CHECK(WL_MovePushWalls(&level, 64U));
     CHECK(level.pushwall_state == 128U);
@@ -2911,6 +2939,34 @@ static void TestPushWalls(void)
     CHECK(!WL_PushWall(&level, 10U, 10U, 0U));
     level.statics[0].blocking = 0U;
     CHECK(WL_PushWall(&level, 10U, 10U, 0U));
+
+    /* Exercise the horizontal intersection path as well as the E1M1-style
+       vertical plane above. */
+    memset(&level, 0, sizeof(level));
+    for (x = 0; x < WG_LEVEL_SIZE; ++x)
+    {
+        level.tiles[x] = 1U;
+        level.tiles[(WG_LEVEL_SIZE - 1) * WG_LEVEL_SIZE + x] = 1U;
+    }
+    for (y = 0; y < WG_LEVEL_SIZE; ++y)
+    {
+        level.tiles[y * WG_LEVEL_SIZE] = 1U;
+        level.tiles[y * WG_LEVEL_SIZE + WG_LEVEL_SIZE - 1] = 1U;
+    }
+    level.tiles[source] = 2U;
+    level.player_tile_x = 10U;
+    level.player_tile_y = 12U;
+    CHECK(WL_PushWall(&level, 10U, 10U, 2U));
+    CHECK(WL_MovePushWalls(&level, 63U));
+    CHECK(WG_RaycastWalls(&level, &tables,
+                          10 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          12 * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                          90U, 10U, hits));
+    CHECK(hits[159].side == WG_WALL_HORIZONTAL);
+    CHECK(hits[159].map_y == 10U);
+    CHECK(hits[159].tile == (2U | 0xc0U));
+    CHECK(hits[159].y == 10 * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    CHECK(hits[159].wall_page == 2U);
 }
 
 static void TestStaticRenderer(void)
