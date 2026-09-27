@@ -57,6 +57,7 @@ int WL_DrawGetPsyched(uint8_t framebuffer[320 * 200],
     switch (graphics->variant)
     {
     case WG_GAME_WOLF3D_SHAREWARE_14:
+    case WG_GAME_WOLF3D_FULL_APOGEE_14:
         /* The released Apogee v1.4 shareware archive uses the GFXV_APO.H
            layout: GETPSYCHEDPIC is the final 224x48 picture at chunk 146. */
         picture = 146U;

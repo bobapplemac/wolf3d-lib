@@ -41,18 +41,18 @@ static int WL_ArticleChunks(wg_game_variant_t variant, size_t *top,
     {
         return 0;
     }
+    if (WG_DataUsesApogeeWolfGraphics(variant))
+    {
+        *top = 17U;
+        *help_text = 150U;
+        *end_text = 155U;
+        return 1;
+    }
     if (variant == WG_GAME_WOLF3D_FULL_GT_14)
     {
         *top = 6U;
         *help_text = 138U;
         *end_text = 143U;
-        return 1;
-    }
-    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
-    {
-        *top = 17U;
-        *help_text = 150U;
-        *end_text = 155U;
         return 1;
     }
     return 0;

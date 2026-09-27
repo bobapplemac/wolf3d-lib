@@ -105,10 +105,11 @@ its archives renamed to `.SOD`. Automatic detection cannot distinguish those
 three identically named layouts, so select the corresponding `SDn` profile.
 
 All five original executable-linked 320x200 SIGNON screens are embedded in the
-engine, just as the active screen was embedded in the DOS executable. WL1
-selects the Apogee screen, WL6 selects the GT screen, and every Spear profile
-selects the Spear screen automatically. Override the publisher artwork at
-runtime with `apogee`, `gt`, `id`, `activision`, or `spear`:
+engine, just as the active screen was embedded in the DOS executable. WL1 and
+the original Apogee WL6 graphics set select the Apogee screen; later WL6 sets
+select the GT screen, and every Spear profile selects the Spear screen
+automatically. Override the publisher artwork at runtime with `apogee`, `gt`,
+`id`, `activision`, or `spear`:
 
 ```text
 wolf3dgeneric-win32 --data "C:\path\to\game" --game WL6 --signon id

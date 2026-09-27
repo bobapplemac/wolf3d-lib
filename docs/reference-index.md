@@ -186,11 +186,12 @@ Supplied inside the trusted reference tree:
 
 - `game files\WL1 - Shareware v1.4`: the complete Apogee shareware data set,
   original executable, configuration, and `file_id.diz`.
+- `game files\WL6 - Apogee v1.4`: the original full Apogee data set,
+  executable, and configuration, including its expanded graphics layout.
 - `game files\WL6 - GT v1.4`: the complete GT/ID/Activision full data set,
   original executable, and configuration.
 
-The two sets contain 21 files totaling 3,898,682 bytes. SHA-256 values for the
-sixteen required data archives are published in
+SHA-256 values for the required data archives are published in
 [`supported-data.md`](supported-data.md); executables and runtime files remain
 external validation material rather than engine inputs.
 

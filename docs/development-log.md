@@ -1,5 +1,21 @@
 # Development log
 
+## 2026-09-27: Apogee and later WL6 resource profiles
+
+- Split full Wolfenstein 3D v1.4 into automatically detected Apogee and
+  GT/ID/Activision graphics profiles while retaining `WL6` as the single user
+  selector. The 162-entry Apogee `VGAHEAD.WL6` and 150-entry later header are
+  unambiguous and share the same maps, sprites, audio, and gameplay.
+- Routed title, menu, status, intermission, pause, Get Psyched, demo, help, and
+  episode-ending chunks through the detected layout. Apogee uses the original
+  144-picture corpus; later releases use the compacted 132-picture corpus.
+  The decoded `T_HELPART` streams are byte-identical (41 pages in both sets),
+  but their surrounding picture tables and article-frame chunk numbers differ.
+- Added the supplied Apogee WL6 archive as an independent real-data test. It
+  decodes every graphics chunk, renders all 41 help pages and all twelve
+  ending pages, validates every map/sprite/audio resource, and checks all four
+  complete demos separately from the existing later-WL6 corpus.
+
 ## 2026-09-27: WL1 Get Psyched resource correction
 
 - Corrected the v1.4 shareware `GETPSYCHEDPIC` mapping from chunk 138 to

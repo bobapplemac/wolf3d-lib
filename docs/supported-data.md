@@ -17,6 +17,19 @@ matching is case-insensitive; SHA-256 values identify the file contents.
 | `VGAHEAD.WL1` | `f4cc800dc8444373092d4eaa5d6ab59d63d23a510a9d38b73ca9b3dbb700d18b` |
 | `VSWAP.WL1` | `698f217257e2cbb951a4d110ba09140291f38d0121b3784d1d6be59c03a6b47b` |
 
+## Apogee full v1.4 (`WL6`)
+
+| File | SHA-256 |
+| --- | --- |
+| `AUDIOHED.WL6` | `16e21eab17af2062019cc85cc271f887191301d1aa6de04b1afac5998aad9d9c` |
+| `AUDIOT.WL6` | `2cc23cb811df16e656f1fea25cd2629859c1ec9997d35bc3b1776594094b67ef` |
+| `GAMEMAPS.WL6` | `3df9f2ad54c601e79ab117c8175477b5d96571ba9e290cb9cd7d910abfeaae56` |
+| `MAPHEAD.WL6` | `289e04f47128a5ba19f9b3f912b4048e26dc16c6fa00205ead51efb1d8e23c69` |
+| `VGADICT.WL6` | `e4ca6e61a1da1de5b4b59b75fbd702f173238577b2f870e679fd499cfe78bf00` |
+| `VGAGRAPH.WL6` | `84adea791e3ab1251312ee159414e48d5114622dc84348cebbac8a1dacb4b41f` |
+| `VGAHEAD.WL6` | `386b56a62ce79cdfa502542b0c9a9bad0d29fab4250edf17e05ee4ac51aa37a8` |
+| `VSWAP.WL6` | `49ba24e0b3916732cd065122de4fe6fb6e6a5009c353eafa407c0e3a5a503407` |
+
 ## GT/ID/Activision full v1.4 (`WL6`)
 
 | File | SHA-256 |

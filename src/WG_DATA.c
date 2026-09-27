@@ -84,6 +84,13 @@ static const wg_data_profile_t *WG_DataProfile(wg_game_variant_t variant)
 {
     size_t index;
 
+    /* Both full v1.4 releases use .WL6.  The profile selects the files; the
+       VGA header later distinguishes the Apogee and GT resource layouts. */
+    if (variant == WG_GAME_WOLF3D_FULL_APOGEE_14)
+    {
+        variant = WG_GAME_WOLF3D_FULL_GT_14;
+    }
+
     for (index = 0U;
          index < sizeof(WG_DataProfiles) / sizeof(WG_DataProfiles[0]);
          ++index)
@@ -357,7 +364,24 @@ int WG_DataOpenSelected(wg_data_set_t *data_set, const char *root,
     memcpy(data_set->graphics_extension, selected->graphics_extension, 5U);
     memcpy(data_set->audio_extension, selected->audio_extension, 5U);
 
-    if (!WG_DataReadHeaderCounts(data_set) || !WG_DataReadPages(data_set))
+    if (!WG_DataReadHeaderCounts(data_set))
+    {
+        WG_DataClose(data_set);
+        return 0;
+    }
+    if (selected->variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        if (data_set->graphics_offset_count == 162U)
+        {
+            data_set->variant = WG_GAME_WOLF3D_FULL_APOGEE_14;
+        }
+        else if (data_set->graphics_offset_count != 150U)
+        {
+            WG_DataClose(data_set);
+            return 0;
+        }
+    }
+    if (!WG_DataReadPages(data_set))
     {
         WG_DataClose(data_set);
         return 0;
@@ -417,6 +441,12 @@ wg_game_family_t WG_DataVariantFamily(wg_game_variant_t variant)
     return profile != NULL ? profile->family : WG_GAME_FAMILY_UNKNOWN;
 }
 
+int WG_DataUsesApogeeWolfGraphics(wg_game_variant_t variant)
+{
+    return variant == WG_GAME_WOLF3D_SHAREWARE_14
+        || variant == WG_GAME_WOLF3D_FULL_APOGEE_14;
+}
+
 wg_game_family_t WG_DataExecutableFamily(const char *path)
 {
     const char *base;
@@ -464,6 +494,10 @@ void WG_DataClose(wg_data_set_t *data_set)
 
 const char *WG_DataVariantName(wg_game_variant_t variant)
 {
+    if (variant == WG_GAME_WOLF3D_FULL_APOGEE_14)
+    {
+        return "Wolfenstein 3D v1.4 Apogee";
+    }
     const wg_data_profile_t *profile = WG_DataProfile(variant);
     return profile != NULL ? profile->name : "unknown game data";
 }
@@ -493,7 +527,7 @@ size_t WG_DataDemoChunk(wg_game_variant_t variant, unsigned demo_number)
     {
         return SIZE_MAX;
     }
-    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         first_chunk = 151U;
     }
@@ -518,7 +552,7 @@ size_t WG_DataDemoChunk(wg_game_variant_t variant, unsigned demo_number)
 
 size_t WG_DataCreditsChunk(wg_game_variant_t variant)
 {
-    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         return 101U;
     }
@@ -539,7 +573,7 @@ size_t WG_DataCreditsChunk(wg_game_variant_t variant)
 
 size_t WG_DataRatingChunk(wg_game_variant_t variant)
 {
-    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         return 100U;
     }

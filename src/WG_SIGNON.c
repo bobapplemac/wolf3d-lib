@@ -65,7 +65,7 @@ static const wg_signon_asset_t *WG_SignonFind(const char *name)
 
 static const wg_signon_asset_t *WG_SignonDefault(wg_game_variant_t variant)
 {
-    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         return &WG_SignonAssets[0];
     }

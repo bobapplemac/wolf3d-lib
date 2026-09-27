@@ -46,16 +46,7 @@ static int WL_StatusChunks(wg_game_variant_t variant,
     {
         return 0;
     }
-    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
-    {
-        chunks->status_bar = 86U;
-        chunks->knife = 91U;
-        chunks->no_key = 95U;
-        chunks->blank_digit = 98U;
-        chunks->zero_digit = 99U;
-        chunks->face_1a = 109U;
-    }
-    else if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         /* The supplied Apogee v1.4 WL1 graph is four chunks later than the
            early generated GFXE_WL1.H retained in the source release. */
@@ -65,6 +56,15 @@ static int WL_StatusChunks(wg_game_variant_t variant,
         chunks->blank_digit = 110U;
         chunks->zero_digit = 111U;
         chunks->face_1a = 121U;
+    }
+    else if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        chunks->status_bar = 86U;
+        chunks->knife = 91U;
+        chunks->no_key = 95U;
+        chunks->blank_digit = 98U;
+        chunks->zero_digit = 99U;
+        chunks->face_1a = 109U;
     }
     else if (variant == WG_GAME_SPEAR_DEMO_SDM)
     {

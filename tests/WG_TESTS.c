@@ -3441,6 +3441,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t pause_hash = 1469598103934665603ULL;
     uint64_t article_hash = 1469598103934665603ULL;
     uint64_t help_hash = 1469598103934665603ULL;
+    uint64_t help_text_hash = 1469598103934665603ULL;
     uint64_t demo_hash = 1469598103934665603ULL;
     uint64_t menu_hash = 1469598103934665603ULL;
     uint64_t confirm_hash = 1469598103934665603ULL;
@@ -3464,6 +3465,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     size_t decoded_sprites = 0;
     size_t actor_classes[WG_ACTOR_FAT + 1] = { 0 };
     size_t item_types[WG_ITEM_CLIP2 + 1] = { 0 };
+    int apogee_graphics = WG_DataUsesApogeeWolfGraphics(expected_variant);
+    int shareware = expected_variant == WG_GAME_WOLF3D_SHAREWARE_14;
 
     CHECK(WG_DataOpen(&data_set, path));
     if (data_set.variant == WG_GAME_UNKNOWN)
@@ -3503,8 +3506,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                (unsigned long long)psyched_hash);
         CHECK(psyched_hash == 0x73c5ee973872697eULL);
 
-        CHECK(graphics.picture_count == (expected_variant
-              == WG_GAME_WOLF3D_SHAREWARE_14 ? 144U : 132U));
+        CHECK(graphics.picture_count == (apogee_graphics ? 144U : 132U));
         for (frame = 0U; frame < 2U; ++frame)
         {
             memset(framebuffer, 0, sizeof(framebuffer));
@@ -3567,7 +3569,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             WG_FontClose(&font);
         }
         CHECK(WG_GraphicsDecodePicture(&graphics,
-              expected_variant == WG_GAME_WOLF3D_SHAREWARE_14 ? 98U : 86U,
+              apogee_graphics ? 98U : 86U,
               &picture_pixels, &picture_width, &picture_height));
         if (picture_pixels != NULL)
         {
@@ -3577,7 +3579,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         }
         CHECK(WG_GraphicsDecodePicture(
             &graphics,
-            expected_variant == WG_GAME_WOLF3D_SHAREWARE_14 ? 145U : 133U,
+            apogee_graphics ? 145U : 133U,
             &picture_pixels, &picture_width, &picture_height));
         if (picture_pixels != NULL)
         {
@@ -3605,8 +3607,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             size_t page;
 
             for (episode = 0U;
-                 episode < (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
-                            ? 1U : 6U);
+                 episode < (shareware ? 1U : 6U);
                  ++episode)
             {
                 memset(&article, 0, sizeof(article));
@@ -3628,9 +3629,13 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s ending article FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)article_hash);
-            CHECK(article_hash == (expected_variant
-                  == WG_GAME_WOLF3D_SHAREWARE_14
-                  ? 0x42a18636c4286987ULL : 0x7aeca6c61a08514bULL));
+            CHECK(article_hash
+                  == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                          ? 0x42a18636c4286987ULL
+                      : expected_variant
+                                == WG_GAME_WOLF3D_FULL_APOGEE_14
+                          ? 0x158abf48cfcfae79ULL
+                          : 0x7aeca6c61a08514bULL));
         }
         {
             wl_article_t article;
@@ -3639,9 +3644,21 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             memset(&article, 0, sizeof(article));
             CHECK(WL_ArticleOpenHelp(&article, &graphics));
             CHECK(article.page_count == 41U);
-            printf("%s help article pages: %u\n",
+            for (page = 0U; page < article.text_size; ++page)
+            {
+                help_text_hash ^= article.text[page];
+                help_text_hash *= 1099511628211ULL;
+            }
+            printf("%s help article: %u pages, %u bytes\n",
                    WG_DataVariantName(data_set.variant),
-                   (unsigned)article.page_count);
+                   (unsigned)article.page_count,
+                   (unsigned)article.text_size);
+            printf("%s help article text FNV-1a: %016llx\n",
+                   WG_DataVariantName(data_set.variant),
+                   (unsigned long long)help_text_hash);
+            CHECK(help_text_hash
+                  == (shareware ? 0x651edf979d5ddac1ULL
+                                : 0xb1eff869fc578bb2ULL));
             for (page = 0U; page < article.page_count; ++page)
             {
                 memset(framebuffer, 0, sizeof(framebuffer));
@@ -3656,15 +3673,17 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s help article FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)help_hash);
-            CHECK(help_hash == (expected_variant
-                  == WG_GAME_WOLF3D_SHAREWARE_14
-                  ? 0x0555652391108503ULL : 0x0c09b4fdb0b59e80ULL));
+            CHECK(help_hash
+                  == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                          ? 0x0555652391108503ULL
+                      : expected_variant
+                                == WG_GAME_WOLF3D_FULL_APOGEE_14
+                          ? 0x1be79da64a5b8657ULL
+                          : 0x0c09b4fdb0b59e80ULL));
             WL_ArticleClose(&article);
         }
         {
-            size_t demo_chunk = expected_variant
-                                    == WG_GAME_WOLF3D_SHAREWARE_14
-                                    ? 151U : 139U;
+            size_t demo_chunk = apogee_graphics ? 151U : 139U;
             unsigned demo_number;
 
             for (demo_number = 0U; demo_number < 4U; ++demo_number)
@@ -3687,11 +3706,11 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                     &demo_data, &demo_size));
                 CHECK(WL_DemoOpen(&demo, demo_data, demo_size));
                 CHECK(demo.map_number
-                      == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                      == (shareware
                               ? shareware_maps[demo_number]
                               : full_maps[demo_number]));
                 CHECK(demo.command_count
-                      == (expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
+                      == (shareware
                               ? shareware_commands[demo_number]
                               : full_commands[demo_number]));
                 printf("%s demo %u: map %u, %u commands\n",
@@ -3825,7 +3844,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawEpisodeMenu(
             framebuffer, &graphics, 0U,
-            expected_variant == WG_GAME_WOLF3D_SHAREWARE_14));
+            shareware));
         for (index = 0U; index < sizeof(framebuffer); ++index)
         {
             episode_menu_hash ^= framebuffer[index];
@@ -3858,8 +3877,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             {
                 continue;
             }
-            if ((expected_variant == WG_GAME_WOLF3D_SHAREWARE_14
-                 && index == 147U)
+            if ((apogee_graphics && index == 147U)
                 || (expected_variant == WG_GAME_WOLF3D_FULL_GT_14
                     && index == 135U))
             {
@@ -4270,7 +4288,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(item_types[WG_ITEM_CROWN] != 0U);
         CHECK(item_types[WG_ITEM_FULLHEAL] != 0U);
         CHECK(item_types[WG_ITEM_GIBS] != 0U);
-        if (expected_variant == WG_GAME_WOLF3D_FULL_GT_14)
+        if (!shareware)
         {
             CHECK(actor_classes[WG_ACTOR_GHOST] != 0U);
             CHECK(actor_classes[WG_ACTOR_SCHABBS] != 0U);
@@ -4999,12 +5017,18 @@ static void TestGameSelection(void)
 
     CHECK(WG_DataVariantFamily(WG_GAME_WOLF3D_FULL_GT_14)
           == WG_GAME_FAMILY_WOLF3D);
+    CHECK(WG_DataVariantFamily(WG_GAME_WOLF3D_FULL_APOGEE_14)
+          == WG_GAME_FAMILY_WOLF3D);
+    CHECK(WG_DataUsesApogeeWolfGraphics(
+              WG_GAME_WOLF3D_FULL_APOGEE_14));
+    CHECK(!WG_DataUsesApogeeWolfGraphics(WG_GAME_WOLF3D_FULL_GT_14));
     CHECK(WG_DataVariantFamily(WG_GAME_SPEAR_MISSION_3_SD3)
           == WG_GAME_FAMILY_SPEAR);
     CHECK(strcmp(WG_DataVariantExtension(WG_GAME_SPEAR_DEMO_SDM),
                  "SDM") == 0);
     CHECK(WG_DataVariantExtension(WG_GAME_UNKNOWN) == NULL);
     CHECK(WG_DataDemoChunk(WG_GAME_WOLF3D_SHAREWARE_14, 0U) == 151U);
+    CHECK(WG_DataDemoChunk(WG_GAME_WOLF3D_FULL_APOGEE_14, 3U) == 154U);
     CHECK(WG_DataDemoChunk(WG_GAME_WOLF3D_FULL_GT_14, 3U) == 142U);
     CHECK(WG_DataDemoChunk(WG_GAME_SPEAR_FULL_SOD, 0U) == 164U);
     CHECK(WG_DataDemoChunk(WG_GAME_SPEAR_MISSION_3_SD3, 3U) == 167U);
@@ -5013,6 +5037,7 @@ static void TestGameSelection(void)
     CHECK(WG_DataDemoCount(WG_GAME_SPEAR_DEMO_SDM) == 1U);
     CHECK(WG_DataDemoCount(WG_GAME_SPEAR_FULL_SOD) == 4U);
     CHECK(WG_DataCreditsChunk(WG_GAME_WOLF3D_SHAREWARE_14) == 101U);
+    CHECK(WG_DataCreditsChunk(WG_GAME_WOLF3D_FULL_APOGEE_14) == 101U);
     CHECK(WG_DataCreditsChunk(WG_GAME_WOLF3D_FULL_GT_14) == 89U);
     CHECK(WG_DataCreditsChunk(WG_GAME_SPEAR_FULL_SOD) == 92U);
     CHECK(WG_DataCreditsChunk(WG_GAME_SPEAR_DEMO_SDM) == 78U);
@@ -5156,6 +5181,10 @@ int main(int argc, char **argv)
         {
             TestDataSet(argv[3], WG_GAME_WOLF3D_FULL_GT_14, 150);
         }
+        else if (strcmp(argv[2], "wl6-apogee") == 0)
+        {
+            TestDataSet(argv[3], WG_GAME_WOLF3D_FULL_APOGEE_14, 162);
+        }
         else
         {
             fprintf(stderr, "Unknown test data variant: %s\n", argv[2]);
@@ -5164,7 +5193,7 @@ int main(int argc, char **argv)
     }
     else if (argc != 1)
     {
-        fprintf(stderr, "usage: wg-tests [--data wl1|wl6 PATH | "
+        fprintf(stderr, "usage: wg-tests [--data wl1|wl6|wl6-apogee PATH | "
                         "--spear-data EXT PAGES MAPS PATH]\n");
         return 2;
     }

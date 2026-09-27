@@ -83,14 +83,14 @@ static int WL_IntermissionChunks(wg_game_variant_t variant,
     {
         return 0;
     }
-    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
-    {
-        chunks->guy = 43U;
-    }
-    else if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         /* This late Apogee graph places the level-end lump at chunk 55. */
         chunks->guy = 55U;
+    }
+    else if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        chunks->guy = 43U;
     }
     else if (variant == WG_GAME_SPEAR_DEMO_SDM)
     {
@@ -149,15 +149,15 @@ static int WL_HighScoreChunks(wg_game_variant_t variant,
     {
         return 0;
     }
-    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
-    {
-        chunks->time_code = 37U;
-        chunks->title = 90U;
-    }
-    else if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         chunks->time_code = 49U;
         chunks->title = 102U;
+    }
+    else if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        chunks->time_code = 37U;
+        chunks->title = 90U;
     }
     else if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
     {

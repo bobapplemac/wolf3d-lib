@@ -274,6 +274,8 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
 
     set(WG_TEST_WL1_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL1 data")
     set(WG_TEST_WL6_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL6 data")
+    set(WG_TEST_WL6_APOGEE_PATH "" CACHE PATH
+        "Path to external Wolf3D v1.4 Apogee WL6 data")
     set(WG_TEST_SOD_PATH "" CACHE PATH "Path to external Spear of Destiny SOD data")
     set(WG_TEST_SDM_PATH "" CACHE PATH "Path to external Spear of Destiny demo SDM data")
     set(WG_TEST_SD1_PATH "" CACHE PATH "Path to external Spear mission 1 data")
@@ -525,6 +527,38 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --high-score-entry-view --frame-hash)
         set_tests_properties(high-score-entry-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "3b75e429fe454ad8")
+    endif()
+    if(WG_TEST_WL6_APOGEE_PATH)
+        add_test(NAME data-wl6-apogee COMMAND wg-tests --data wl6-apogee
+            "${WG_TEST_WL6_APOGEE_PATH}")
+        add_test(NAME signon-auto-wl6-apogee COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_APOGEE_PATH}" --game WL6 --signon auto
+            --frame-hash --palette-hash)
+        set_tests_properties(signon-auto-wl6-apogee PROPERTIES
+            PASS_REGULAR_EXPRESSION "c4439e1ef4a9b8f5.*1e14f48394b7e6fd")
+        add_test(NAME main-menu-view-wl6-apogee
+            COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_APOGEE_PATH}" --game WL6 --play-view
+            --main-menu-view --frame-hash)
+        set_tests_properties(main-menu-view-wl6-apogee PROPERTIES
+            PASS_REGULAR_EXPRESSION "cdbff8b31548b64e")
+        add_test(NAME help-view-wl6-apogee COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_APOGEE_PATH}" --game WL6 --play-view
+            --help-view --frame-hash --palette-hash)
+        set_tests_properties(help-view-wl6-apogee PROPERTIES
+            PASS_REGULAR_EXPRESSION "afa188f7e955ec42.*1e14f48394b7e6fd")
+        add_test(NAME end-text-view-wl6-apogee
+            COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_APOGEE_PATH}" --game WL6 --play-view
+            --end-text-view --frame-hash)
+        set_tests_properties(end-text-view-wl6-apogee PROPERTIES
+            PASS_REGULAR_EXPRESSION "9751906604fce502")
+        add_test(NAME demo-complete-0-wl6-apogee
+            COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_APOGEE_PATH}" --game WL6 --play-view
+            --demo-view --demo-number 0 --demo-commands 691 --frame-hash)
+        set_tests_properties(demo-complete-0-wl6-apogee PROPERTIES
+            PASS_REGULAR_EXPRESSION "90263e978a27f884")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")

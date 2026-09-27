@@ -13,7 +13,8 @@ typedef enum wg_game_variant
     WG_GAME_SPEAR_DEMO_SDM,
     WG_GAME_SPEAR_MISSION_1_SD1,
     WG_GAME_SPEAR_MISSION_2_SD2,
-    WG_GAME_SPEAR_MISSION_3_SD3
+    WG_GAME_SPEAR_MISSION_3_SD3,
+    WG_GAME_WOLF3D_FULL_APOGEE_14
 } wg_game_variant_t;
 
 typedef enum wg_game_family
@@ -53,6 +54,7 @@ void WG_DataClose(wg_data_set_t *data_set);
 wg_game_variant_t WG_DataVariantFromExtension(const char *extension);
 int WG_DataParseGame(const char *text, wg_game_variant_t *variant);
 wg_game_family_t WG_DataVariantFamily(wg_game_variant_t variant);
+int WG_DataUsesApogeeWolfGraphics(wg_game_variant_t variant);
 wg_game_family_t WG_DataExecutableFamily(const char *path);
 const char *WG_DataVariantExtension(wg_game_variant_t variant);
 const char *WG_DataVariantName(wg_game_variant_t variant);

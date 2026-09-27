@@ -77,25 +77,7 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
     {
         return 0;
     }
-    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
-    {
-        chunks->options = 10U;
-        chunks->cursor = 11U;
-        chunks->mouse_back = 18U;
-        chunks->baby_mode = 19U;
-        chunks->episode_one = 30U;
-        chunks->not_selected = 13U;
-        chunks->selected = 14U;
-        chunks->effects_title = 15U;
-        chunks->digitized_title = 16U;
-        chunks->music_title = 17U;
-        chunks->control_title = 26U;
-        chunks->customize_title = 27U;
-        chunks->load_title = 28U;
-        chunks->save_title = 29U;
-        return 1;
-    }
-    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         /* Apogee 1.4 inserts H_SPEARADPIC after the help-window pieces. */
         chunks->options = 22U;
@@ -112,6 +94,24 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         chunks->customize_title = 39U;
         chunks->load_title = 40U;
         chunks->save_title = 41U;
+        return 1;
+    }
+    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        chunks->options = 10U;
+        chunks->cursor = 11U;
+        chunks->mouse_back = 18U;
+        chunks->baby_mode = 19U;
+        chunks->episode_one = 30U;
+        chunks->not_selected = 13U;
+        chunks->selected = 14U;
+        chunks->effects_title = 15U;
+        chunks->digitized_title = 16U;
+        chunks->music_title = 17U;
+        chunks->control_title = 26U;
+        chunks->customize_title = 27U;
+        chunks->load_title = 28U;
+        chunks->save_title = 29U;
         return 1;
     }
     if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)

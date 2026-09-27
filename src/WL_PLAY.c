@@ -29,7 +29,7 @@ int WL_DrawPaused(uint8_t *framebuffer, const struct wg_graphics *graphics)
     /* The supplied Apogee v1.4 WL1 graph uses the later layout also used by
        its status bar: PAUSEDPIC is chunk 145 rather than the source release's
        early generated-header values. */
-    if (graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(graphics->variant))
     {
         chunk = 145U;
     }

@@ -12,13 +12,13 @@
 
 static size_t WG_GraphicsPictureCount(wg_game_variant_t variant)
 {
+    if (WG_DataUsesApogeeWolfGraphics(variant))
+    {
+        return 144U;
+    }
     if (variant == WG_GAME_WOLF3D_FULL_GT_14)
     {
         return 132U;
-    }
-    if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
-    {
-        return 144U;
     }
     if (variant == WG_GAME_SPEAR_DEMO_SDM)
     {
@@ -193,7 +193,8 @@ int WG_GraphicsDecodeChunk(const wg_graphics_t *graphics, size_t chunk,
         return 0;
     }
     if ((graphics->variant == WG_GAME_WOLF3D_FULL_GT_14 && chunk == 135U)
-        || (graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14 && chunk == 147U))
+        || (WG_DataUsesApogeeWolfGraphics(graphics->variant)
+            && chunk == 147U))
     {
         /* The generated headers give TILE8 an implicit size. Keep it bounded;
            unlike the original routine, Huffman expansion must never read into
@@ -307,13 +308,13 @@ int WG_GraphicsDecodeTitle(const wg_graphics_t *graphics,
     {
         return 0;
     }
-    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
-    {
-        title_chunk = 87;
-    }
-    else if (variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         title_chunk = 99;
+    }
+    else if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        title_chunk = 87;
     }
     else
     {
