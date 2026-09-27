@@ -1705,5 +1705,8 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Reset the line editor's cursor and Caps Lock state for each new entry and
   restored Spear of Destiny's wider 130-pixel name limit; Wolfenstein keeps
   its original 100-pixel limit.
+- Corrected the menu's Spear high-score music to use `XAWARD_MUS` (index 20)
+  rather than Wolfenstein's `ROSTER_MUS` index; the post-game and menu paths
+  now select the same edition-appropriate track.
 - Added the high-score transition to the reviewed original-to-portable call
   graph mappings.

@@ -1716,7 +1716,7 @@ static int WG_DrawFrontHighScores(int attract)
         if (!attract)
         {
             wg_attract_phase = WG_ATTRACT_NONE;
-            WG_FrontMusicStart(23U);
+            WG_FrontMusicStart(WG_IsSpearGame() ? 20U : 23U);
         }
     }
     return result;
