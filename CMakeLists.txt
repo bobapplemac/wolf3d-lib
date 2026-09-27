@@ -1,20 +1,42 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(wolf3dgeneric VERSION 1.1.0 LANGUAGES C)
+if(POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW)
+endif()
+
+project(wolf3dgeneric VERSION 1.2.0 LANGUAGES C)
 
 include(CTest)
+
+configure_file(packaging/WIN32-README.txt.in
+               ${CMAKE_CURRENT_BINARY_DIR}/WIN32-README.txt @ONLY)
 
 option(WG_BUILD_HEADLESS "Build the deterministic headless host" ON)
 option(WG_BUILD_WIN32 "Build the dependency-free Win32 host" ON)
 option(WG_WARNINGS_AS_ERRORS "Treat project warnings as errors" ON)
+option(WG_STATIC_MSVC_RUNTIME
+    "Link the MSVC runtime statically for self-contained Windows releases" ON)
+
+if(MSVC AND WG_STATIC_MSVC_RUNTIME)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY
+        "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 if(NOT WIN32)
     set(WG_BUILD_WIN32 OFF CACHE BOOL "Win32 is only available on Windows" FORCE)
 endif()
 
-# Kept as a separate LGPL component so its upstream source and replacement
-# boundary remain independently reviewable.
-add_library(nuked-opl3 STATIC third_party/Nuked-OPL3/opl3.c)
+# Keep the LGPL component independently replaceable in Windows binaries. Other
+# platforms retain the simple static-library boundary used by generic hosts.
+if(WIN32)
+    add_library(nuked-opl3 SHARED third_party/Nuked-OPL3/opl3.c)
+    set_target_properties(nuked-opl3 PROPERTIES
+        OUTPUT_NAME "Nuked-OPL3"
+        WINDOWS_EXPORT_ALL_SYMBOLS ON
+    )
+else()
+    add_library(nuked-opl3 STATIC third_party/Nuked-OPL3/opl3.c)
+endif()
 target_include_directories(nuked-opl3 PUBLIC third_party/Nuked-OPL3)
 target_compile_features(nuked-opl3 PUBLIC c_std_99)
 
@@ -116,6 +138,41 @@ if(WG_BUILD_WIN32)
         _UNICODE
     )
     target_link_libraries(wolf3dgeneric-win32 PRIVATE user32 gdi32 winmm shell32)
+
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(WG_WIN32_RELEASE_ARCH x64)
+    else()
+        set(WG_WIN32_RELEASE_ARCH x86)
+    endif()
+    set(WG_WIN32_RELEASE_DIR
+        "${CMAKE_BINARY_DIR}/release/wolf3dgeneric-${PROJECT_VERSION}-win32-${WG_WIN32_RELEASE_ARCH}")
+    add_custom_target(win32-release
+        COMMAND ${CMAKE_COMMAND} -E remove_directory
+            "${WG_WIN32_RELEASE_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${WG_WIN32_RELEASE_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wolf3dgeneric-win32>"
+            "${WG_WIN32_RELEASE_DIR}/wolf3dgeneric.exe"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:nuked-opl3>"
+            "${WG_WIN32_RELEASE_DIR}/Nuked-OPL3.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/LICENSE"
+            "${WG_WIN32_RELEASE_DIR}/COPYING.txt"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
+            "${WG_WIN32_RELEASE_DIR}/COPYING.Nuked-OPL3.txt"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/THIRD_PARTY.md"
+            "${WG_WIN32_RELEASE_DIR}/THIRD_PARTY.md"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_BINARY_DIR}/WIN32-README.txt"
+            "${WG_WIN32_RELEASE_DIR}/README.txt"
+        DEPENDS wolf3dgeneric-win32 nuked-opl3
+        COMMENT "Staging ${WG_WIN32_RELEASE_ARCH} Win32 release folder"
+        VERBATIM
+    )
 endif()
 
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)

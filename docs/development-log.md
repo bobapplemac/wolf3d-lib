@@ -1406,3 +1406,24 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Added a renderer-level assertion for Spear map 1's `0x6f` ceiling and updated
   the affected Trans Grosse and attract-demo visual hashes. UI-only screens
   remain byte-identical.
+
+## 2026-09-26: Minimal Win32 release folders
+
+- Added a `win32-release` build target that stages an architecture-labelled
+  folder containing only `wolf3dgeneric.exe`, `Nuked-OPL3.dll`, the project and
+  LGPL license texts, third-party provenance, and a runtime guide. Headless
+  tools, tests, import libraries, symbols, and intermediate files remain in the
+  build tree.
+- Changed the Windows OPL boundary from static linkage to a replaceable DLL.
+  The official vendored Nuked-OPL3 revision remains the reference and default;
+  the Windows executable now imports its public emulator entry points instead
+  of embedding them.
+- Made interactive hosts use the executable's directory as the default data
+  root when `--data` is absent. The Win32 host obtains the canonical module
+  filename so this remains correct when launched through Explorer, a shortcut,
+  a relative command, or `PATH`.
+- Enabled the static MSVC runtime by default so a staged folder has no Visual
+  C++ redistributable dependency. Dependency inspection leaves only Windows
+  system DLLs plus the staged Nuked-OPL3 DLL.
+- Rebuilt and passed all 130 tests with strict warnings on both MSVC x86 and
+  x64 after introducing the DLL and adjacent-data paths.

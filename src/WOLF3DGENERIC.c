@@ -400,6 +400,47 @@ static const char *WG_FindDataPath(int argc, char **argv)
     return NULL;
 }
 
+static int WG_FindExecutableDirectory(const char *argument_zero,
+                                      char *directory,
+                                      size_t directory_size)
+{
+    const char *separator;
+    const char *cursor;
+    size_t length;
+
+    if (argument_zero == NULL || directory == NULL || directory_size < 2U)
+    {
+        return 0;
+    }
+    separator = NULL;
+    for (cursor = argument_zero; *cursor != '\0'; ++cursor)
+    {
+        if (*cursor == '/' || *cursor == '\\')
+        {
+            separator = cursor;
+        }
+    }
+    if (separator == NULL)
+    {
+        directory[0] = '.';
+        directory[1] = '\0';
+        return 1;
+    }
+    length = (size_t)(separator - argument_zero);
+    if (length == 0U
+        || (length == 2U && argument_zero[1] == ':'))
+    {
+        ++length;
+    }
+    if (length >= directory_size)
+    {
+        return 0;
+    }
+    memcpy(directory, argument_zero, length);
+    directory[length] = '\0';
+    return 1;
+}
+
 static int WG_FindStringArgument(int argc, char **argv,
                                  const char *argument,
                                  const char **value_out)
@@ -3496,6 +3537,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
 {
     size_t framebuffer_size;
     const char *data_path;
+    char default_data_path[1024];
     unsigned map_number;
     unsigned actor_tics;
     unsigned forward_tics;
@@ -3572,6 +3614,12 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     wg_initialized = 1;
     wg_next_demo = 0U;
     data_path = WG_FindDataPath(argc, argv);
+    if (data_path == NULL && WG_IsInteractive() && argc > 0
+        && WG_FindExecutableDirectory(argv[0], default_data_path,
+                                      sizeof(default_data_path)))
+    {
+        data_path = default_data_path;
+    }
     if (data_path != NULL
         && !WG_LoadTitleScreen(data_path, requested_variant,
                                preferred_family))

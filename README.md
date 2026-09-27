@@ -38,6 +38,22 @@ ctest --test-dir build --output-on-failure
 The same CMake project supports Linux builds with GCC or Clang; the Win32 host
 is automatically omitted there.
 
+Create a minimal redistributable folder from a Release-configured x86 or x64
+build with:
+
+```text
+cmake --build build --config Release --target win32-release
+```
+
+The result is under `build/release/wolf3dgeneric-1.2.0-win32-x86` or `-x64`.
+It contains the executable, replaceable `Nuked-OPL3.dll`, license notices, and
+a short usage guide, but no tests, object files, or headless tools. Copy the
+original game data files into that folder and run `wolf3dgeneric.exe`; the
+interactive host uses its own directory when `--data` is omitted. Rename the
+executable to begin with `spear` or `sod` to prefer Spear data, or use `--game`
+when the folder contains multiple editions. The game data itself is never
+included by this project.
+
 To run the interactive Win32 host:
 
 ```text

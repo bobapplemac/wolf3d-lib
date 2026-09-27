@@ -567,6 +567,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
 {
     int argc;
     wchar_t **wide_argv;
+    wchar_t module_path[32768];
+    const wchar_t *wide_argument;
+    DWORD module_path_length;
     char **argv;
     int index;
     int exit_code;
@@ -583,6 +586,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
         return 1;
     }
 
+    module_path_length = GetModuleFileNameW(NULL, module_path,
+                                           (DWORD)(sizeof(module_path)
+                                                   / sizeof(module_path[0])));
+
     argv = (char **)LocalAlloc(LMEM_FIXED, (size_t)argc * sizeof(*argv));
     if (argv == NULL)
     {
@@ -592,8 +599,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
 
     for (index = 0; index < argc; ++index)
     {
-        int bytes = WideCharToMultiByte(CP_UTF8, 0, wide_argv[index], -1,
-                                        NULL, 0, NULL, NULL);
+        int bytes;
+
+        wide_argument = index == 0 && module_path_length > 0U
+                                && module_path_length
+                                       < (DWORD)(sizeof(module_path)
+                                                 / sizeof(module_path[0]))
+                            ? module_path : wide_argv[index];
+        bytes = WideCharToMultiByte(CP_UTF8, 0, wide_argument, -1,
+                                    NULL, 0, NULL, NULL);
         argv[index] = (char *)LocalAlloc(LMEM_FIXED, (size_t)bytes);
         if (argv[index] == NULL)
         {
@@ -605,7 +619,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
             LocalFree(wide_argv);
             return 1;
         }
-        WideCharToMultiByte(CP_UTF8, 0, wide_argv[index], -1,
+        WideCharToMultiByte(CP_UTF8, 0, wide_argument, -1,
                             argv[index], bytes, NULL, NULL);
     }
 

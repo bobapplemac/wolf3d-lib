@@ -12,6 +12,10 @@
 - [x] MSVC x86 and x64 strict-warning builds pass all 130 tests.
 - [x] Static-analyzer findings reviewed and actionable findings corrected.
 - [x] Official Nuked-OPL3 source and LGPL terms retained separately.
+- [x] Win32 release staging produces a minimal x86/x64 folder with a
+  replaceable Nuked-OPL3 DLL, complete license notices, and no build artifacts.
+- [x] Staged executables use the adjacent folder for game data by default and
+  require no non-system Visual C++ runtime DLL.
 - [x] GPL and third-party provenance reviewed.
 - [x] No proprietary game data, generated saves, configs, captures, or builds
   are tracked.

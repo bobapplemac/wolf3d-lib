@@ -1,0 +1,32 @@
+wolf3dgeneric @PROJECT_VERSION@ - Windows release
+=====================================
+
+This folder contains:
+
+  wolf3dgeneric.exe       Wolfenstein 3D engine and Win32 host
+  Nuked-OPL3.dll          Replaceable LGPL-2.1-or-later OPL emulator
+  COPYING.txt             wolf3dgeneric license
+  COPYING.Nuked-OPL3.txt  Nuked-OPL3 license
+  THIRD_PARTY.md          Third-party provenance and revision
+
+Game data is not included. Copy the files from an original supported game into
+this folder beside wolf3dgeneric.exe, then run the executable. Supported data
+extensions are WL1, WL6, SOD, SDM, SD1, SD2, and SD3.
+
+If this folder contains more than one game, open a terminal here and select the
+desired extension explicitly:
+
+  wolf3dgeneric.exe --game WL6
+  wolf3dgeneric.exe --game SOD
+
+Renaming the executable to a name beginning with "wolf" prefers WL1/WL6 data.
+A name beginning with "spear" or "sod" prefers SOD/SDM/SD1/SD2/SD3 data. You
+may instead keep game files elsewhere and pass --data "C:\path\to\game".
+
+Nuked-OPL3.dll must remain beside the executable. It may be replaced with a
+compatible modified build, as provided for by its GNU Lesser General Public
+License. Corresponding source is identified in THIRD_PARTY.md and is included
+in the wolf3dgeneric source distribution.
+
+Configuration and saved games use the process working directory and retain the
+selected game's data extension.
