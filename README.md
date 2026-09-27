@@ -20,7 +20,9 @@ portable translation unit to its original Wolfenstein 3D source owner, and the
 [`development log`](docs/development-log.md) records deterministic visual
 milestones. Third-party code and exact revisions are recorded in
 [`THIRD_PARTY.md`](THIRD_PARTY.md). The small host API is documented in the
-[`porting guide`](docs/porting-guide.md), and exact tested asset hashes are in
+[`porting guide`](docs/porting-guide.md), all supported compiler and IDE
+workflows are collected in the [`build guide`](docs/building.md), and exact
+tested asset hashes are in
 [`supported data`](docs/supported-data.md). Release changes and final acceptance
 gates are recorded in [`CHANGELOG.md`](CHANGELOG.md) and the
 [`release checklist`](docs/release-checklist.md).
@@ -38,8 +40,55 @@ ctest --preset windows-dev-x64
 
 Replace `x64` with `x86` for the 32-bit build. The presets use Visual Studio
 2019 so architecture selection does not depend on which developer prompt is
-open. On Linux, use the corresponding `linux-dev` configure, build, and test
-presets; the Win32 host is automatically omitted there.
+open.
+
+For the Visual Studio IDE, open the checked-in `wolf3dgeneric.sln`. Select any
+combination of `Debug`/`Release` (or its `Dynamic CRT` counterpart) and
+`Win32`/`x64`, then build the `wolf3dgeneric` project. The source-owned
+solution delegates to the same CMake
+targets as the CLI, presents the engine and host sources for browsing, and can
+launch the corresponding Win32 executable under the debugger. Visual Studio
+2022 can open the v142 solution and upgrade the platform toolset locally if
+only v143 is installed.
+
+## Build on Linux
+
+The CMake/Ninja workflow is:
+
+```text
+cmake --preset linux-dev
+cmake --build --preset linux-dev
+ctest --preset linux-dev
+```
+
+The repository also has a GNU Make entry point. It uses CMake's Unix Makefiles
+generator internally, keeping the CMake target graph as the single source of
+truth:
+
+```text
+make
+make test
+make library-release
+```
+
+Override `BUILD_DIR`, `BUILD_TYPE`, or append configuration settings through
+`CMAKE_ARGS` when needed. For example, an asset-backed validation build can use
+`make test CMAKE_ARGS="-DWG_TEST_WL1_PATH=/path/to/WL1"`. The Win32 host is
+automatically omitted on non-Windows systems.
+
+GCC and Clang are both supported and tested. Select a compiler before the
+first configure of a build directory using the conventional `CC` variable;
+use a separate build directory for each compiler because CMake deliberately
+does not switch compilers inside an existing tree:
+
+```text
+make test CC=gcc BUILD_DIR=build/linux-gcc
+make test CC=clang BUILD_DIR=build/linux-clang
+```
+
+The portable core targets ISO C99 and does not contain compiler-specific game
+logic. Other CMake-supported C compilers may work, but GCC, Clang, and MSVC are
+the maintained validation set.
 
 Create a minimal redistributable folder from a Release-configured x86 or x64
 build with:
@@ -58,7 +107,8 @@ and run `wolf3dgeneric.exe`; the interactive host uses its own directory when
 prefer Spear data, or use `--game` when the folder contains multiple editions.
 The game data itself is never included by this project.
 
-The engine itself is a shared library, independent of either supplied host.
+The engine itself is always a shared library, independent of either supplied
+host, preserving the clean, replaceable engine/host boundary.
 Create its clean developer/runtime package with:
 
 ```text
@@ -70,6 +120,11 @@ That folder contains `wolf3dgeneric.dll` and its import library on Windows (or
 `libwolf3dgeneric.so` on Linux), `Nuked-OPL3` as a separate shared dependency,
 the public `WOLF3DGENERIC.h`, and the applicable notices. Hosts register the
 versioned `wg_platform_api_t` callback table before creating the engine.
+Windows builds embed the MSVC runtime by default, so the Visual C++
+Redistributable is not required on the target machine. Set
+`WG_STATIC_MSVC_RUNTIME=OFF` for a smaller custom build that uses the matching
+installed Redistributable instead. Linux shared libraries conventionally use
+the host libc dynamically.
 [`docs/repository-layout.md`](docs/repository-layout.md) explains the complete
 source, build, artifact, and distribution layout.
 

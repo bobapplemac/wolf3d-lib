@@ -257,7 +257,6 @@ int WL_IntermissionCalculate(const wg_level_t *level,
                              unsigned map_number,
                              wl_intermission_t *intermission)
 {
-    unsigned floor;
     uint32_t time_left;
 
     int spear;
@@ -272,7 +271,6 @@ int WL_IntermissionCalculate(const wg_level_t *level,
     {
         return 0;
     }
-    floor = map_number % 10U;
     intermission->seconds = level->time_count / 70U;
     if (intermission->seconds > 99U * 60U)
     {

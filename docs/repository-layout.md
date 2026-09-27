@@ -13,6 +13,9 @@ files live under `build/` or `dist/` and are ignored by Git.
 | `third_party/` | Vendored, independently licensed dependencies. |
 | `packaging/` | Templates copied into staged runtime and library packages. |
 | `tools/` | Maintainer-side source generators, including reproducible SIGNON embedding. |
+| `Makefile` | GNU Make convenience wrapper around the authoritative CMake targets. |
+| `wolf3dgeneric.sln` | Source-owned Visual Studio entry point for Win32/x64 Debug and Release builds. |
+| `ide/visual-studio/` | Maintained Visual Studio project metadata; compilation delegates to CMake. |
 | `docs/` | Architecture, porting, provenance, development, and release notes. |
 | `build/` | All local compiler output and generated diagnostic artifacts. |
 | `dist/` | Clean folders produced by `win32-release` and `library-release`. |
@@ -31,6 +34,8 @@ files live under `build/` or `dist/` and are ignored by Git.
 | `windows-library-x86` | `build/windows-library-x86` | Host-free 32-bit engine package. |
 | `linux-dev` | `build/linux-dev` | Native Linux engine, headless host, and tests. |
 | `linux-library` | `build/linux-library` | Host-free Linux shared-library package. |
+| GNU Make with GCC | `build/linux-gcc` | Native GCC engine, headless host, and tests. |
+| GNU Make with Clang | `build/linux-clang` | Native Clang engine, headless host, and tests. |
 
 Generated milestone frames, raw PPM captures, and WAV diagnostics live in
 `build/artifacts/`. They can contain copyrighted original-game imagery or
@@ -40,3 +45,7 @@ development log links to those local files for rendered milestone inspection.
 Staged packages are written directly to architecture-labelled folders under
 `dist/`; compiler objects, tests, caches, and diagnostic captures never enter
 those folders.
+
+The checked-in Visual Studio solution delegates its eight platform/configuration
+combinations to the matching CMake development trees. CMake's additional
+generated solution and project files remain local products under `build/`.

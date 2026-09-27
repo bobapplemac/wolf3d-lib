@@ -1794,3 +1794,22 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   bound and verified matching results on x86 and x64. Gameplay coordinates,
   fixed-point products, tic counters, and serialized values retain explicit
   fixed-width types; no gameplay or renderer floating-point expression remains.
+
+## 2026-09-27: Native build portability
+
+- Added a source-owned Visual Studio solution with Win32/x64 and Debug/Release
+  configurations. The IDE delegates to the authoritative CMake graph and
+  shares the established `build/windows-dev-*` trees with command-line builds.
+- Added explicit dynamic-CRT Visual Studio configurations while retaining `/MT`
+  as the redistributable-free default. Both modes keep `wolf3dgeneric.dll` and
+  `Nuked-OPL3.dll` independently replaceable; dependency inspection confirms
+  only `/MD` builds import the Visual C++ runtime DLLs.
+- Added a root GNU Make workflow with compiler-qualified `build/linux-gcc` and
+  `build/linux-clang` trees. GCC 14.2 and Clang 19.1 strict-warning builds each
+  pass all 147 tests against the complete supported-data corpus.
+- Staged and inspected the Linux library package: it contains only the engine,
+  replaceable Nuked-OPL3 library, public header, and notices, and exports only
+  the documented six-symbol ABI.
+- Ran the full suite under Clang AddressSanitizer and UndefinedBehaviorSanitizer.
+  The audit found and corrected one signed-left-shift in digitized-sample
+  conversion; all 147 sanitizer tests now pass.

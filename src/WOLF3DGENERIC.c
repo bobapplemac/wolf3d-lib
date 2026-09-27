@@ -3216,7 +3216,7 @@ static int WG_GameSessionTick(unsigned live_tics)
     }
     if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR
         && old_health > wg_game.level.player_health
-        && old_health - wg_game.level.player_health > 30U
+        && old_health - wg_game.level.player_health > 30
         && wg_game.level.player_health != 0U)
     {
         wg_game.face = WL_STATUS_FACE_OUCH;

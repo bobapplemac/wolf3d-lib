@@ -15,6 +15,10 @@ Windows distributions also include wolf3dgeneric.lib, the import library used
 to link a host against wolf3dgeneric.dll. On ELF systems the corresponding
 runtime artifact is libwolf3dgeneric.so.
 
+Official Windows packages embed the MSVC runtime and do not require the Visual
+C++ Redistributable. Custom builds made with WG_STATIC_MSVC_RUNTIME=OFF use the
+dynamic MSVC runtime and require the matching Redistributable.
+
 Nuked-OPL3 is licensed under LGPL-2.1-or-later and intentionally remains a
 separate, replaceable shared library. See COPYING.Nuked-OPL3.txt and
 THIRD_PARTY.md.

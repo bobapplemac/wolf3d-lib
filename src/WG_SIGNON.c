@@ -3,7 +3,14 @@
 #include <stddef.h>
 #include <string.h>
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#endif
 #include "WG_SIGNON_ASSETS.inc"
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 typedef struct wg_signon_asset
 {

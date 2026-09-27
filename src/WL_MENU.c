@@ -410,7 +410,7 @@ int WL_DrawLoadSaveMenu(
     uint8_t framebuffer[320 * 200], const wg_graphics_t *graphics,
     int saving, unsigned selected,
     const uint8_t available[WL_SAVE_SLOTS],
-    const char names[WL_SAVE_SLOTS][WL_SAVE_NAME_LENGTH + 1U],
+    char names[WL_SAVE_SLOTS][WL_SAVE_NAME_LENGTH + 1U],
     int editing, int confirm_overwrite)
 {
     static const char empty[] = "      - EMPTY -";

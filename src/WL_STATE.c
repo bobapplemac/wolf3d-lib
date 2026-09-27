@@ -1044,11 +1044,6 @@ static int WL_IsBJRunState(wg_actor_state_t state)
     return state >= WG_STATE_BJ_RUN1 && state <= WG_STATE_BJ_RUN4;
 }
 
-static int WL_IsBJJumpState(wg_actor_state_t state)
-{
-    return state >= WG_STATE_BJ_JUMP1 && state <= WG_STATE_BJ_JUMP4;
-}
-
 static int32_t WL_BJStateDuration(wg_actor_state_t state)
 {
     static const int32_t run_durations[] = { 12, 3, 8, 12, 3, 8 };

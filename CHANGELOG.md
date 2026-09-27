@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Added a GNU Make entry point for native Linux configure, build, test, clean,
+  and library-package workflows while retaining CMake as the sole build graph.
+- Added a checked-in Visual Studio solution supporting Debug/Release and
+  Win32/x64 while delegating compilation to the authoritative CMake targets.
+- Exposed both static (`/MT`, default) and dynamic (`/MD`) MSVC runtime builds
+  while retaining the engine as a separate DLL in both modes.
+- Corrected strict ISO C portability findings exposed by GCC and Clang without
+  changing engine behavior.
+
 ## 1.3.0 - 2026-09-27
 
 - Restored DOS `CalcTics` batching for live play: each rendered gameplay frame

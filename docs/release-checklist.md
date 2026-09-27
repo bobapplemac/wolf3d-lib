@@ -10,6 +10,9 @@
 - [x] Portable two-device joystick scaling, controls, menus, and persistence
   are covered by deterministic tests.
 - [x] MSVC x86 and x64 strict-warning builds pass all 147 tests.
+- [x] GCC and Clang strict-warning Linux builds pass all 147 tests against the
+  complete supported-data corpus.
+- [x] Clang AddressSanitizer and UndefinedBehaviorSanitizer pass all 147 tests.
 - [x] Live gameplay preserves original 1--10 `CalcTics` batching, while demos
   preserve their authored four-tic command cadence.
 - [x] Runtime renderer and gameplay angle math is deterministic and independent

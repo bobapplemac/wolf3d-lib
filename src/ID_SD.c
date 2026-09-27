@@ -546,7 +546,7 @@ static void ID_SD_DigitalMix(id_sd_music_t *music, int16_t *stereo,
          ++frame)
     {
         int32_t sample = ((int32_t)music->digital_data[music->digital_position]
-                          - 128) << 8;
+                          - 128) * 256;
         int32_t left = sample * (15 - music->digital_left) / 15;
         int32_t right = sample * (15 - music->digital_right) / 15;
 

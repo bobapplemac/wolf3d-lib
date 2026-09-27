@@ -149,8 +149,12 @@ else()
     set(WG_RELEASE_ARCH x86)
 endif()
 string(TOLOWER "${CMAKE_SYSTEM_NAME}" WG_RELEASE_SYSTEM)
+set(WG_RELEASE_RUNTIME_SUFFIX "")
+if(MSVC AND NOT WG_STATIC_MSVC_RUNTIME)
+    set(WG_RELEASE_RUNTIME_SUFFIX "-dynamic-crt")
+endif()
 set(WG_LIBRARY_RELEASE_DIR
-    "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}")
+    "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_RUNTIME_SUFFIX}")
 
 set(WG_LIBRARY_RELEASE_COMMANDS
     COMMAND ${CMAKE_COMMAND} -E remove_directory
@@ -232,7 +236,7 @@ if(WG_BUILD_WIN32)
     target_link_libraries(wolf3dgeneric-win32 PRIVATE user32 gdi32 winmm shell32)
 
     set(WG_WIN32_RELEASE_DIR
-        "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-win32-${WG_RELEASE_ARCH}")
+        "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-win32-${WG_RELEASE_ARCH}${WG_RELEASE_RUNTIME_SUFFIX}")
     add_custom_target(win32-release
         COMMAND ${CMAKE_COMMAND} -E remove_directory
             "${WG_WIN32_RELEASE_DIR}"

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug Dynamic CRT|Win32">
+      <Configuration>Debug Dynamic CRT</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug Dynamic CRT|x64">
+      <Configuration>Debug Dynamic CRT</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release Dynamic CRT|Win32">
+      <Configuration>Release Dynamic CRT</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release Dynamic CRT|x64">
+      <Configuration>Release Dynamic CRT</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{F6F21D5A-C02A-4A69-9F21-0198E475D9A4}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+    <RootNamespace>wolf3dgeneric</RootNamespace>
+    <ProjectName>wolf3dgeneric</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Dynamic CRT|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Dynamic CRT|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Dynamic CRT|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Dynamic CRT|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <WGCMake>cmake</WGCMake>
+    <WGBundledCMake>$(VsInstallRoot)\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe</WGBundledCMake>
+    <WGCMake Condition="Exists('$(WGBundledCMake)')">$(WGBundledCMake)</WGCMake>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)'=='Win32'">
+    <WGPreset>windows-dev-x86</WGPreset>
+    <WGBuildDir>$(SolutionDir)build\windows-dev-x86</WGBuildDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)'=='x64'">
+    <WGPreset>windows-dev-x64</WGPreset>
+    <WGBuildDir>$(SolutionDir)build\windows-dev-x64</WGBuildDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <WGStaticMsvcRuntime>ON</WGStaticMsvcRuntime>
+    <WGCMakeConfig>$(Configuration)</WGCMakeConfig>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug Dynamic CRT'">
+    <WGStaticMsvcRuntime>OFF</WGStaticMsvcRuntime>
+    <WGCMakeConfig>Debug</WGCMakeConfig>
+    <WGBuildDir>$(WGBuildDir)-dynamic-crt</WGBuildDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release Dynamic CRT'">
+    <WGStaticMsvcRuntime>OFF</WGStaticMsvcRuntime>
+    <WGCMakeConfig>Release</WGCMakeConfig>
+    <WGBuildDir>$(WGBuildDir)-dynamic-crt</WGBuildDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IntDir>$(WGBuildDir)\msbuild\$(WGCMakeConfig)\</IntDir>
+    <OutDir>$(WGBuildDir)\msbuild\$(WGCMakeConfig)\</OutDir>
+    <NMakeBuildCommandLine>cd /d "$(SolutionDir)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)"</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>cd /d "$(SolutionDir)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)" --clean-first</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cd /d "$(SolutionDir)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)" --target clean</NMakeCleanCommandLine>
+    <NMakeOutput>$(WGBuildDir)\$(WGCMakeConfig)\wolf3dgeneric-win32.exe</NMakeOutput>
+    <NMakeIncludeSearchPath>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)third_party\Nuked-OPL3</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;%(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <LocalDebuggerCommand>$(NMakeOutput)</LocalDebuggerCommand>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="$(SolutionDir)src\*.c" />
+    <ClCompile Include="$(SolutionDir)platforms\headless\*.c" />
+    <ClCompile Include="$(SolutionDir)platforms\win32\*.c" />
+    <ClCompile Include="$(SolutionDir)tests\*.c" />
+    <ClCompile Include="$(SolutionDir)third_party\Nuked-OPL3\*.c" />
+    <ClInclude Include="$(SolutionDir)include\*.h" />
+    <ClInclude Include="$(SolutionDir)src\*.h" />
+    <ClInclude Include="$(SolutionDir)third_party\Nuked-OPL3\*.h" />
+    <None Include="$(SolutionDir)CMakeLists.txt" />
+    <None Include="$(SolutionDir)CMakePresets.json" />
+    <None Include="$(SolutionDir)README.md" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>

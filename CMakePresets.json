@@ -11,7 +11,8 @@
       "hidden": true,
       "generator": "Visual Studio 16 2019",
       "cacheVariables": {
-        "WG_WARNINGS_AS_ERRORS": "ON"
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON"
       }
     },
     {

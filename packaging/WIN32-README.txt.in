@@ -10,6 +10,10 @@ This folder contains:
   COPYING.Nuked-OPL3.txt  Nuked-OPL3 license
   THIRD_PARTY.md          Third-party provenance and revision
 
+Official packages embed the MSVC runtime, so the Microsoft Visual C++
+Redistributable is not required on the destination system. Custom builds made
+with WG_STATIC_MSVC_RUNTIME=OFF require the matching Redistributable.
+
 Game data is not included. Copy the files from an original supported game into
 this folder beside wolf3dgeneric.exe, then run the executable. Supported data
 extensions are WL1, WL6, SOD, SDM, SD1, SD2, and SD3.
