@@ -1530,3 +1530,15 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   roots remain ignored by Git.
 - Recreated all six Windows preset trees from scratch, staged all four x86/x64
   packages, and passed the complete 130-test suite in both development builds.
+
+## 2026-09-26: Guard death sprite-range invariant
+
+- Compared every WL1 guard death page with WL6 and the original `WL_ACT2.C`
+  state chain. The intended sequence remains sprites 91, 92, 93, and 95;
+  sprite 99 is the first dog walking frame.
+- Made the renderer derive the original non-rotating property from death state
+  as well as the cached rotation field. A stale rotation value can therefore
+  no longer add four frames to the dead guard and enter the dog sprite range.
+- Extended the actor test through all 45 individual death tics and added visual
+  gates for the first and terminal frames. The WL1 checkpoints hash to
+  `71b19599a4c9bc49` and `fb94e191f92153c3`, respectively.

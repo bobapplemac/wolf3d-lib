@@ -16,6 +16,9 @@
   original selection boxes and titles instead of unrelated weapon/disk art.
 - Restored the original fractional pushwall ray intersections so secret walls
   translate backward with correct edge and side geometry instead of squeezing.
+- Prevented stale actor rotation metadata from rotating non-rotating death
+  states into the following sprite range, which could make a dying WL1 guard
+  flash as a dog.
 - Added one runtime-selectable engine for Spear of Destiny (`SOD`), its
   two-floor demo (`SDM`), and the `SD1`, `SD2`, and `SD3` mission profiles.
 - Added executable-name family preference plus strict `--game` extension

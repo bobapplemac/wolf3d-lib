@@ -1335,6 +1335,7 @@ static void TestActorDamageAndDeath(void)
 {
     wg_level_t level;
     wg_actor_t *actor;
+    unsigned death_tic;
 
     memset(&level, 0, sizeof(level));
     level.difficulty = WG_DIFFICULTY_MEDIUM;
@@ -1368,12 +1369,29 @@ static void TestActorDamageAndDeath(void)
     CHECK(level.statics[0].blocking == 0U);
     CHECK(level.statics[0].item == WG_ITEM_CLIP2);
     CHECK(!WL_DamageActor(&level, 0U, 1U));
-    CHECK(WL_TickActors(&level, 15U));
-    CHECK(actor->state == WG_STATE_DIE2 && actor->shape == 92U);
-    CHECK(WL_TickActors(&level, 15U));
-    CHECK(actor->state == WG_STATE_DIE3 && actor->shape == 93U);
-    CHECK(WL_TickActors(&level, 15U));
-    CHECK(actor->state == WG_STATE_DEAD && actor->shape == 95U);
+    for (death_tic = 1U; death_tic <= 45U; ++death_tic)
+    {
+        CHECK(WL_TickActors(&level, 1U));
+        CHECK(actor->actor_class == WG_ACTOR_GUARD);
+        CHECK(actor->rotate == 0U);
+        if (death_tic < 15U)
+        {
+            CHECK(actor->state == WG_STATE_DIE1 && actor->shape == 91U);
+        }
+        else if (death_tic < 30U)
+        {
+            CHECK(actor->state == WG_STATE_DIE2 && actor->shape == 92U);
+        }
+        else if (death_tic < 45U)
+        {
+            CHECK(actor->state == WG_STATE_DIE3 && actor->shape == 93U);
+        }
+        else
+        {
+            CHECK(actor->state == WG_STATE_DEAD && actor->shape == 95U);
+        }
+        CHECK(actor->shape < 99U);
+    }
 
     CHECK(WL_SpawnStand(&level, WG_ACTOR_DOG, 11U, 10U, 0U));
     actor = &level.actors[1];
@@ -3043,6 +3061,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t hud_hash = 1469598103934665603ULL;
     uint64_t open_view_hash = 1469598103934665603ULL;
     uint64_t guard_view_hash = 1469598103934665603ULL;
+    uint64_t death_reference_hash = 1469598103934665603ULL;
+    uint64_t death_rotation_hash = 1469598103934665603ULL;
     uint64_t pause_hash = 1469598103934665603ULL;
     uint64_t article_hash = 1469598103934665603ULL;
     uint64_t help_hash = 1469598103934665603ULL;
@@ -3648,6 +3668,63 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)guard_view_hash);
                 CHECK(guard_view_hash == 0xa6db229142f7150bULL);
+                {
+                    const wg_actor_t *guard = FindLastLiveGuard(&level);
+
+                    CHECK(guard != NULL);
+                    if (guard != NULL)
+                    {
+                        wg_actor_t *dead_guard;
+                        int32_t view_x = guard->x - 3 * WG_FIXED_ONE;
+                        int32_t view_y = guard->y;
+
+                        actor_index = (size_t)(guard - level.actors);
+                        CHECK(WL_DamageActor(
+                            &level, actor_index,
+                            (unsigned)level.actors[actor_index].hit_points));
+                        CHECK(WL_TickActors(&level, 45U));
+                        dead_guard = &level.actors[actor_index];
+                        CHECK(dead_guard->state == WG_STATE_DEAD);
+                        CHECK(dead_guard->shape == 95U);
+                        CHECK(WG_RenderStaticView(
+                            framebuffer, &level, &view_tables, &wall_cache,
+                            0, 0, view_x, view_y, 0, render_hits,
+                            visible_tiles));
+                        CHECK(WL_DrawScaleds(
+                            framebuffer, &pages, &level, &view_tables,
+                            render_hits, visible_tiles, view_x, view_y, 0));
+                        CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0,
+                                                  WG_VIDEO_WIDTH));
+                        CHECK(WL_DrawStatusBar(framebuffer, &graphics,
+                                               &status));
+                        for (index = 0; index < sizeof(framebuffer); ++index)
+                        {
+                            death_reference_hash ^= framebuffer[index];
+                            death_reference_hash *= 1099511628211ULL;
+                        }
+                        dead_guard->rotate = 1U;
+                        CHECK(WG_RenderStaticView(
+                            framebuffer, &level, &view_tables, &wall_cache,
+                            0, 0, view_x, view_y, 0, render_hits,
+                            visible_tiles));
+                        CHECK(WL_DrawScaleds(
+                            framebuffer, &pages, &level, &view_tables,
+                            render_hits, visible_tiles, view_x, view_y, 0));
+                        CHECK(WL_DrawPlayerWeapon(framebuffer, &pages, 1, 0,
+                                                  WG_VIDEO_WIDTH));
+                        CHECK(WL_DrawStatusBar(framebuffer, &graphics,
+                                               &status));
+                    }
+                }
+                for (index = 0; index < sizeof(framebuffer); ++index)
+                {
+                    death_rotation_hash ^= framebuffer[index];
+                    death_rotation_hash *= 1099511628211ULL;
+                }
+                printf("%s stale-rotation death FNV-1a: %016llx\n",
+                       WG_DataVariantName(data_set.variant),
+                       (unsigned long long)death_rotation_hash);
+                CHECK(death_rotation_hash == death_reference_hash);
                 WG_GraphicsClose(&graphics);
                 WG_WallCacheFree(&wall_cache);
                 WG_PagesClose(&pages);

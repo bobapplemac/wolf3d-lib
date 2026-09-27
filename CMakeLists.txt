@@ -314,6 +314,16 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash)
         set_tests_properties(death-view-wl1 PROPERTIES
             PASS_REGULAR_EXPRESSION "1a6b2675d0e3e31b")
+        add_test(NAME death-start-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --death-view
+            --actor-tics 1 --frame-hash)
+        set_tests_properties(death-start-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "71b19599a4c9bc49")
+        add_test(NAME death-terminal-view-wl1 COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL1_PATH}" --play-view --death-view
+            --actor-tics 45 --frame-hash)
+        set_tests_properties(death-terminal-view-wl1 PROPERTIES
+            PASS_REGULAR_EXPRESSION "fb94e191f92153c3")
         add_test(NAME boss-death-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --map 8
             --boss-death-view --frame-hash)

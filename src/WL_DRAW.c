@@ -704,7 +704,13 @@ static uint16_t WG_ActorShape(const wg_actor_t *actor, int projected_x,
                           : actor->direction * (WG_ANGLES / 8);
     int angle = (view_angle - 180) - actor_angle;
 
-    if (actor->rotate == 0U)
+    /* Original death states never rotate.  Keep that property tied to the
+       state as well as the cached rotate field so a stale field (for example
+       from a save made during a transition) cannot index into the following
+       actor's sprite range. */
+    if (actor->rotate == 0U
+        || (actor->state >= WG_STATE_DIE1
+            && actor->state <= WG_STATE_DEAD))
     {
         return actor->shape;
     }

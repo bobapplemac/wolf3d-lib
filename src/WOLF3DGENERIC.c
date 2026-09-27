@@ -3263,7 +3263,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         actor_index = (size_t)(actor - level.actors);
         if (!WL_DamageActor(&level, actor_index,
                             (unsigned)actor->hit_points)
-            || !WL_TickActors(&level, 30U))
+            || !WL_TickActors(&level, actor_tics == 0U ? 30U
+                                                       : actor_tics))
         {
             goto cleanup;
         }
