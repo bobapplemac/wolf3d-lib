@@ -3120,6 +3120,10 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t customize_hash = 1469598103934665603ULL;
     uint64_t episode_menu_hash = 1469598103934665603ULL;
     uint64_t difficulty_menu_hash = 1469598103934665603ULL;
+    uint64_t intermission_bj_hash[2] =
+    {
+        1469598103934665603ULL, 1469598103934665603ULL
+    };
     size_t index;
     size_t actor_index;
     size_t decoded_graphics = 0;
@@ -3148,8 +3152,22 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     CHECK(WG_GraphicsOpen(&graphics, &data_set));
     if (graphics.offsets != NULL)
     {
+        unsigned frame;
+
         CHECK(graphics.picture_count == (expected_variant
               == WG_GAME_WOLF3D_SHAREWARE_14 ? 144U : 132U));
+        for (frame = 0U; frame < 2U; ++frame)
+        {
+            memset(framebuffer, 0, sizeof(framebuffer));
+            CHECK(WL_DrawIntermissionBJ(framebuffer, &graphics, frame));
+            for (index = 0U; index < sizeof(framebuffer); ++index)
+            {
+                intermission_bj_hash[frame] ^= framebuffer[index];
+                intermission_bj_hash[frame] *= 1099511628211ULL;
+            }
+        }
+        CHECK(intermission_bj_hash[0] != intermission_bj_hash[1]);
+        CHECK(!WL_DrawIntermissionBJ(framebuffer, &graphics, 2U));
         CHECK(WG_GraphicsDecodeTitle(&graphics, data_set.variant, framebuffer));
         for (index = 0; index < sizeof(framebuffer); ++index)
         {
@@ -4083,6 +4101,10 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     uint8_t palette[256U * 3U];
     uint64_t frame_hash = 1469598103934665603ULL;
     uint64_t palette_hash = 1469598103934665603ULL;
+    uint64_t intermission_bj_hash[2] =
+    {
+        1469598103934665603ULL, 1469598103934665603ULL
+    };
     size_t present_maps = 0U;
     size_t ammo_boxes = 0U;
     size_t spears = 0U;
@@ -4116,6 +4138,20 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     CHECK(WG_GraphicsOpen(&graphics, &data_set));
     CHECK(graphics.picture_count
           == (variant == WG_GAME_SPEAR_DEMO_SDM ? 125U : 147U));
+    for (index = 0U; index < 2U; ++index)
+    {
+        size_t pixel;
+
+        memset(framebuffer, 0, sizeof(framebuffer));
+        CHECK(WL_DrawIntermissionBJ(framebuffer, &graphics,
+                                    (unsigned)index));
+        for (pixel = 0U; pixel < sizeof(framebuffer); ++pixel)
+        {
+            intermission_bj_hash[index] ^= framebuffer[pixel];
+            intermission_bj_hash[index] *= 1099511628211ULL;
+        }
+    }
+    CHECK(intermission_bj_hash[0] != intermission_bj_hash[1]);
     CHECK(WG_GraphicsDecodeTitleWithPalette(&graphics, variant, framebuffer,
                                             palette));
     for (index = 0U; index < sizeof(framebuffer); ++index)

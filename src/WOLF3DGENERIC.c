@@ -174,6 +174,8 @@ typedef struct wg_game_session
     uint8_t game_over;
     uint8_t paused;
     uint8_t intermission;
+    uint8_t intermission_breathe_frame;
+    uint16_t intermission_breathe_tics;
     uint8_t demo_conclusion;
     uint8_t victory;
     uint8_t victory_collapse_phase;
@@ -2059,6 +2061,8 @@ static int WG_GameSessionBeginIntermission(void)
             wg_game.intermission_state;
     }
     wg_game.intermission = 1U;
+    wg_game.intermission_breathe_frame = 0U;
+    wg_game.intermission_breathe_tics = 11U;
     memset(wg_game.keys, 0, sizeof(wg_game.keys));
     wg_game.mouse_buttons = 0U;
     wg_game.mouse_x = 0;
@@ -2079,6 +2083,18 @@ static int WG_GameSessionBeginIntermission(void)
     }
     wg_game.level.score += wg_game.intermission_state.bonus;
     return 1;
+}
+
+static int WG_GameSessionAdvanceIntermission(void)
+{
+    if (--wg_game.intermission_breathe_tics != 0U)
+    {
+        return 1;
+    }
+    wg_game.intermission_breathe_tics = 36U;
+    wg_game.intermission_breathe_frame ^= 1U;
+    return WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
+                                 wg_game.intermission_breathe_frame);
 }
 
 static int WG_GameSessionBeginVictory(void)
@@ -5707,8 +5723,7 @@ wg_result_t wolf3dgeneric_Run(void)
             unsigned ticks_run = 0U;
 
             last_ticks = now;
-            if (wg_game.paused || wg_game.intermission
-                || wg_game.control_panel
+            if (wg_game.paused || wg_game.control_panel
                 || wg_confirm_action != WG_CONFIRM_NONE)
             {
                 accumulator = 0U;
@@ -5719,16 +5734,32 @@ wg_result_t wolf3dgeneric_Run(void)
                 elapsed = 250U;
             }
             accumulator += elapsed * 70U;
-            while (accumulator >= 1000U && ticks_run < 18U
-                   && !wg_game.intermission)
+            while (accumulator >= 1000U && ticks_run < 18U)
             {
-                if (!WG_GameSessionTick())
+                int was_intermission = wg_game.intermission;
+
+                if (was_intermission)
+                {
+                    if (!WG_GameSessionAdvanceIntermission())
+                    {
+                        WG_ReportError(
+                            "The Wolf3D intermission animation failed.");
+                        return WG_RESULT_PLATFORM_ERROR;
+                    }
+                }
+                else if (!WG_GameSessionTick())
                 {
                     WG_ReportError("The Wolf3D game simulation failed.");
                     return WG_RESULT_PLATFORM_ERROR;
                 }
                 accumulator -= 1000U;
                 ++ticks_run;
+                if (!was_intermission && wg_game.intermission)
+                {
+                    /* LevelCompleted starts with a fresh presentation clock. */
+                    accumulator = 0U;
+                    break;
+                }
                 if (wg_game.demo_finished)
                 {
                     WG_GameSessionClose();

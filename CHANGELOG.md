@@ -2,6 +2,9 @@
 
 ## 1.2.0 - 2026-09-26
 
+- Restored BJ's original two-frame breathing animation on the level-completed
+  screen, including its initial 10-tic delay and subsequent 35-tic cadence.
+
 - Refactored the engine into a true shared library with a versioned platform
   callback ABI, a six-symbol public surface, and a clean `library-release`
   package; the Win32 executable now dynamically links that engine.

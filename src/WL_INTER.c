@@ -28,6 +28,7 @@ int WL_DrawSpearDemoConclusion(uint8_t *framebuffer,
 typedef struct wl_intermission_chunks
 {
     size_t guy;
+    size_t guy2;
     size_t colon;
     size_t zero;
     size_t percent;
@@ -108,9 +109,26 @@ static int WL_IntermissionChunks(wg_game_variant_t variant,
     chunks->percent = chunks->zero + 10U;
     chunks->letter_a = chunks->percent + 1U;
     chunks->exclamation = chunks->letter_a + 26U;
+    chunks->guy2 = chunks->guy + 41U;
     chunks->time_code = chunks->guy - 6U;
     chunks->bj_win = chunks->guy + 42U;
     return 1;
+}
+
+int WL_DrawIntermissionBJ(uint8_t *framebuffer,
+                          const wg_graphics_t *graphics,
+                          unsigned frame)
+{
+    wl_intermission_chunks_t chunks;
+
+    if (framebuffer == NULL || graphics == NULL || frame > 1U
+        || !WL_IntermissionChunks(graphics->variant, &chunks))
+    {
+        return 0;
+    }
+    return WG_VideoDrawPicture(framebuffer, graphics,
+                               frame == 0U ? chunks.guy : chunks.guy2,
+                               0, 16);
 }
 
 int WL_IntermissionIsSpecial(wg_game_variant_t variant,
@@ -328,7 +346,7 @@ int WL_DrawLevelCompleted(uint8_t *framebuffer,
     }
     WG_VideoBar(framebuffer, 0, 0, 320, 160,
                 WL_INTERMISSION_BACKGROUND);
-    if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.guy, 0, 16))
+    if (!WL_DrawIntermissionBJ(framebuffer, graphics, 0U))
     {
         return 0;
     }

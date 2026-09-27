@@ -1,5 +1,14 @@
 # Development log
 
+## 2026-09-27: level-completed BJ breathing restored
+
+The original `BJ_Breathe` alternates `L_GUYPIC` and `L_GUY2PIC` while the
+level-completed screen waits for acknowledgement. The generic session had
+rendered only the first image and frozen all intermission timing. The wrapper
+now advances this presentation-only animation at the original 70 Hz timing:
+the first change follows the original 10-tic threshold, with later changes
+following the 35-tic threshold. Gameplay simulation remains stopped.
+
 Graphical captures are generated from the user's external Wolfenstein 3D data
 and remain under the Git-ignored `build/artifacts/` directory. They are never distributed
 with the source repository. Each entry records a deterministic indexed-frame
