@@ -1,0 +1,20 @@
+wolf3dgeneric @PROJECT_VERSION@ - shared engine library
+=====================================================
+
+This is the platform-neutral wolf3dgeneric engine library distribution. It
+contains the shared engine, its public C99 header, the replaceable Nuked-OPL3
+shared library, and the applicable license and provenance files.
+
+A host must populate wg_platform_api_t with its video, input, timing, error,
+and PCM callbacks, call wolf3dgeneric_SetPlatform(), and then call
+wolf3dgeneric_Create(), wolf3dgeneric_Run(), and wolf3dgeneric_Shutdown(). See
+docs/porting-guide.md in the source distribution and the headless and Win32
+hosts for complete examples.
+
+Windows distributions also include wolf3dgeneric.lib, the import library used
+to link a host against wolf3dgeneric.dll. On ELF systems the corresponding
+runtime artifact is libwolf3dgeneric.so.
+
+Nuked-OPL3 is licensed under LGPL-2.1-or-later and intentionally remains a
+separate, replaceable shared library. See COPYING.Nuked-OPL3.txt and
+THIRD_PARTY.md.

@@ -1,4 +1,5 @@
 #include "WOLF3DGENERIC.h"
+#include "../WG_HOST.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -309,6 +310,12 @@ int main(int argc, char **argv)
     unsigned left_position = 0U;
     unsigned right_position = 0U;
     int sound_number = -1;
+
+    if (!WG_InstallPlatform())
+    {
+        fprintf(stderr, "Unable to install the headless platform API.\n");
+        return 1;
+    }
 
     smoke_test = argc == 2 && strcmp(argv[1], "--headless-smoke") == 0;
     dump_path = WG_DumpPath(argc, argv);

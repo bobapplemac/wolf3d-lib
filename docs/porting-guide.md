@@ -1,24 +1,27 @@
 # Porting wolf3dgeneric to a new host
 
-The engine is a static C99 library. A host supplies the functions declared in
-`src/WG_PLATFORM.h`; it does not need to expose an operating-system object to
-the core. `platforms/headless/WG_HEADLESS.c` is the smallest implementation and
+The engine is a shared C99 library (`wolf3dgeneric.dll` on Windows and
+`libwolf3dgeneric.so` on Linux). A host fills the public
+`wg_platform_api_t` callback table from `WOLF3DGENERIC.h` and passes it to
+`wolf3dgeneric_SetPlatform` before creating the engine. The library therefore
+has no unresolved dependency on symbols supplied by its executable.
+`platforms/headless/WG_HEADLESS.c` is the smallest implementation and
 `platforms/win32/WG_WIN32.c` is the complete interactive reference.
 
 ## Required boundary
 
-| Function | Host responsibility |
+| Callback | Host responsibility |
 | --- | --- |
-| `WG_Init`, `WG_Shutdown` | Create and release host state. Return nonzero from init on success. |
-| `WG_Present` | Present exactly 320x200 indexed pixels using the supplied 256-entry RGB palette. Nearest-neighbor 4:3 scaling preserves the intended image. |
-| `WG_GetTicksMs` | Return wrapping, monotonic 32-bit milliseconds. |
-| `WG_SleepMs` | Yield for approximately the requested duration; game timing does not assume exact sleeps. |
-| `WG_PollEvent` | Pop one event without blocking and return nonzero, or return zero when the queue is empty. |
-| `WG_IsInteractive` | Return nonzero for a live host and zero for deterministic/offline tools. |
-| `WG_SetWindowTitle`, `WG_ReportError` | Publish user-facing status and errors in the host's normal way. |
-| `WG_PCMInit`, `WG_PCMShutdown` | Open/close signed 16-bit stereo PCM at the requested sample rate. |
-| `WG_PCMWritableFrames` | Report how many frames can be submitted immediately without blocking. |
-| `WG_PCMSubmit` | Queue interleaved signed 16-bit frames and return nonzero on success. |
+| `init`, `shutdown` | Create and release host state. Return nonzero from init on success. |
+| `present` | Present exactly 320x200 indexed pixels using the supplied 256-entry RGB palette. Nearest-neighbor 4:3 scaling preserves the intended image. |
+| `get_ticks_ms` | Return wrapping, monotonic 32-bit milliseconds. |
+| `sleep_ms` | Yield for approximately the requested duration; game timing does not assume exact sleeps. |
+| `poll_event` | Pop one event without blocking and return nonzero, or return zero when the queue is empty. |
+| `is_interactive` | Return nonzero for a live host and zero for deterministic/offline tools. |
+| `set_window_title`, `report_error` | Publish user-facing status and errors in the host's normal way. |
+| `pcm_init`, `pcm_shutdown` | Open/close signed 16-bit stereo PCM at the requested sample rate. |
+| `pcm_writable_frames` | Report how many frames can be submitted immediately without blocking. |
+| `pcm_submit` | Queue interleaved signed 16-bit frames and return nonzero on success. |
 
 ## Input contract
 
@@ -54,11 +57,14 @@ clock and 140 Hz effect clock; a host must not derive either from video or the
 
 ## Build integration
 
-Add one executable containing the host and an entry point, link it to
-`wolf3dgeneric`, and apply C99 plus strict warnings. The existing
-`wg_configure_host` CMake helper demonstrates the intended setup. Call
-`wolf3dgeneric_Create`, then `wolf3dgeneric_Run`, and always finish with
-`wolf3dgeneric_Shutdown` after successful creation.
+Add one executable containing the host and an entry point, link it to the
+`wolf3dgeneric` shared target, and apply C99 plus strict warnings. Initialize
+every callback, set `api_version` to `WG_PLATFORM_API_VERSION`, set
+`struct_size` to `sizeof(wg_platform_api_t)`, and call
+`wolf3dgeneric_SetPlatform`. Then call `wolf3dgeneric_Create`, followed by
+`wolf3dgeneric_Run`, and always finish with `wolf3dgeneric_Shutdown` after
+successful creation. The existing Win32 host demonstrates this exact dynamic
+library boundary.
 
 Game data is external. Pass its directory through `--data`; never compile or
 package the commercial files into a host. A new platform should first reproduce

@@ -4413,8 +4413,24 @@ static void TestGameSelection(void)
     CHECK(WG_DataCreditsChunk(WG_GAME_SPEAR_DEMO_SDM) == 78U);
 }
 
+static void TestPlatformAPI(void)
+{
+    wg_platform_api_t platform;
+
+    memset(&platform, 0, sizeof(platform));
+    CHECK(wolf3dgeneric_SetPlatform(NULL) == WG_RESULT_INVALID_ARGUMENT);
+    platform.api_version = WG_PLATFORM_API_VERSION;
+    platform.struct_size = sizeof(platform);
+    CHECK(wolf3dgeneric_SetPlatform(&platform)
+          == WG_RESULT_INVALID_ARGUMENT);
+    platform.api_version = WG_PLATFORM_API_VERSION + 1U;
+    CHECK(wolf3dgeneric_SetPlatform(&platform)
+          == WG_RESULT_INVALID_ARGUMENT);
+}
+
 int main(int argc, char **argv)
 {
+    TestPlatformAPI();
     TestIMFSequencer();
     TestHuffman();
     TestCarmack();

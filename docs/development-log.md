@@ -1427,3 +1427,25 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   system DLLs plus the staged Nuked-OPL3 DLL.
 - Rebuilt and passed all 130 tests with strict warnings on both MSVC x86 and
   x64 after introducing the DLL and adjacent-data paths.
+
+## 2026-09-26: Shared generic engine boundary
+
+- Changed the `wolf3dgeneric` CMake target from a static archive to the actual
+  platform-neutral shared engine: `wolf3dgeneric.dll` on Windows and
+  `libwolf3dgeneric.so` on ELF platforms.
+- Replaced the core's implicit references to executable-defined `WG_*`
+  functions with public, versioned `wg_platform_api_t` callback registration.
+  A host now registers its video, input, timing, error, and PCM functions before
+  engine creation, leaving no circular DLL/executable symbol dependency.
+- Reduced the Windows DLL's public surface to six symbols: the four lifecycle
+  functions and the engine-owned screen and palette pointers. The Win32 host's
+  dependency table now names `wolf3dgeneric.dll`, which in turn names the
+  independently replaceable `Nuked-OPL3.dll`.
+- Added `library-release`, a host-free package containing the shared engine,
+  public header, Windows import library where applicable, Nuked-OPL3 shared
+  dependency, provenance, and licenses. The existing `win32-release` package
+  now adds the engine DLL beside its thin executable.
+- Kept the internal static test archive private to the build tree so the
+  headless diagnostic executable and unit suite can exercise non-public engine
+  modules without widening the shipped ABI. Both MSVC x86 and x64 continue to
+  pass all 130 tests under strict warnings.

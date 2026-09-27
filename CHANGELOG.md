@@ -2,6 +2,9 @@
 
 ## 1.2.0 - 2026-09-26
 
+- Refactored the engine into a true shared library with a versioned platform
+  callback ABI, a six-symbol public surface, and a clean `library-release`
+  package; the Win32 executable now dynamically links that engine.
 - Added minimal x86/x64 `win32-release` folders with adjacent-data discovery,
   a replaceable Nuked-OPL3 DLL, license notices, and no external MSVC runtime
   dependency.

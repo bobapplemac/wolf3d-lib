@@ -10,6 +10,8 @@ include(CTest)
 
 configure_file(packaging/WIN32-README.txt.in
                ${CMAKE_CURRENT_BINARY_DIR}/WIN32-README.txt @ONLY)
+configure_file(packaging/LIBRARY-README.txt.in
+               ${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt @ONLY)
 
 option(WG_BUILD_HEADLESS "Build the deterministic headless host" ON)
 option(WG_BUILD_WIN32 "Build the dependency-free Win32 host" ON)
@@ -26,17 +28,12 @@ if(NOT WIN32)
     set(WG_BUILD_WIN32 OFF CACHE BOOL "Win32 is only available on Windows" FORCE)
 endif()
 
-# Keep the LGPL component independently replaceable in Windows binaries. Other
-# platforms retain the simple static-library boundary used by generic hosts.
-if(WIN32)
-    add_library(nuked-opl3 SHARED third_party/Nuked-OPL3/opl3.c)
-    set_target_properties(nuked-opl3 PROPERTIES
-        OUTPUT_NAME "Nuked-OPL3"
-        WINDOWS_EXPORT_ALL_SYMBOLS ON
-    )
-else()
-    add_library(nuked-opl3 STATIC third_party/Nuked-OPL3/opl3.c)
-endif()
+# Keep the LGPL component independently replaceable on every platform.
+add_library(nuked-opl3 SHARED third_party/Nuked-OPL3/opl3.c)
+set_target_properties(nuked-opl3 PROPERTIES
+    OUTPUT_NAME "Nuked-OPL3"
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
 target_include_directories(nuked-opl3 PUBLIC third_party/Nuked-OPL3)
 target_compile_features(nuked-opl3 PUBLIC c_std_99)
 
@@ -56,6 +53,7 @@ set(WG_CORE_SOURCES
     src/ID_PM.c
     src/ID_SD.c
     src/WG_PALETTE.c
+    src/WG_PLATFORM.c
     src/ID_US_1.c
     src/WL_AGENT.c
     src/WL_ACT1.c
@@ -74,35 +72,104 @@ set(WG_CORE_SOURCES
     src/WOLF3DGENERIC.c
 )
 
-add_library(wolf3dgeneric STATIC ${WG_CORE_SOURCES})
+add_library(wolf3dgeneric SHARED ${WG_CORE_SOURCES})
+set_target_properties(wolf3dgeneric PROPERTIES
+    OUTPUT_NAME "wolf3dgeneric"
+    C_VISIBILITY_PRESET hidden
+    BUILD_RPATH_USE_ORIGIN ON
+)
+target_compile_definitions(wolf3dgeneric PRIVATE WOLF3DGENERIC_BUILD)
 
-target_link_libraries(wolf3dgeneric PUBLIC nuked-opl3)
+if(WG_BUILD_HEADLESS)
+    add_library(wolf3dgeneric-internal STATIC ${WG_CORE_SOURCES})
+    target_compile_definitions(wolf3dgeneric-internal
+        PUBLIC WOLF3DGENERIC_STATIC)
+endif()
 
-target_include_directories(wolf3dgeneric
-    PUBLIC include
-    PRIVATE src
+function(wg_configure_core target)
+    target_link_libraries(${target} PRIVATE nuked-opl3)
+
+    target_include_directories(${target}
+        PUBLIC include
+        PRIVATE src
+    )
+
+    target_compile_features(${target} PUBLIC c_std_99)
+
+    if(NOT MSVC)
+        target_link_libraries(${target} PRIVATE m)
+    endif()
+
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4 /permissive-)
+        if(WG_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE /WX)
+        endif()
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+        if(WG_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE -Werror)
+        endif()
+    endif()
+endfunction()
+
+wg_configure_core(wolf3dgeneric)
+if(WG_BUILD_HEADLESS)
+    wg_configure_core(wolf3dgeneric-internal)
+endif()
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(WG_RELEASE_ARCH x64)
+else()
+    set(WG_RELEASE_ARCH x86)
+endif()
+string(TOLOWER "${CMAKE_SYSTEM_NAME}" WG_RELEASE_SYSTEM)
+set(WG_LIBRARY_RELEASE_DIR
+    "${CMAKE_BINARY_DIR}/release/wolf3dgeneric-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}")
+
+set(WG_LIBRARY_RELEASE_COMMANDS
+    COMMAND ${CMAKE_COMMAND} -E remove_directory
+        "${WG_LIBRARY_RELEASE_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${WG_LIBRARY_RELEASE_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:wolf3dgeneric>"
+        "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3dgeneric>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:nuked-opl3>"
+        "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/include/WOLF3DGENERIC.h"
+        "${WG_LIBRARY_RELEASE_DIR}/WOLF3DGENERIC.h"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/LICENSE"
+        "${WG_LIBRARY_RELEASE_DIR}/COPYING.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
+        "${WG_LIBRARY_RELEASE_DIR}/COPYING.Nuked-OPL3.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/THIRD_PARTY.md"
+        "${WG_LIBRARY_RELEASE_DIR}/THIRD_PARTY.md"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt"
+        "${WG_LIBRARY_RELEASE_DIR}/README.txt"
+)
+if(WIN32)
+    list(APPEND WG_LIBRARY_RELEASE_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_LINKER_FILE:wolf3dgeneric>"
+            "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_LINKER_FILE_NAME:wolf3dgeneric>"
+    )
+endif()
+add_custom_target(library-release
+    ${WG_LIBRARY_RELEASE_COMMANDS}
+    DEPENDS wolf3dgeneric nuked-opl3
+    COMMENT "Staging ${WG_RELEASE_ARCH} wolf3dgeneric shared library"
+    VERBATIM
 )
 
-target_compile_features(wolf3dgeneric PUBLIC c_std_99)
-
-if(NOT MSVC)
-    target_link_libraries(wolf3dgeneric PUBLIC m)
-endif()
-
-if(MSVC)
-    target_compile_options(wolf3dgeneric PRIVATE /W4 /permissive-)
-    if(WG_WARNINGS_AS_ERRORS)
-        target_compile_options(wolf3dgeneric PRIVATE /WX)
-    endif()
-else()
-    target_compile_options(wolf3dgeneric PRIVATE -Wall -Wextra -Wpedantic)
-    if(WG_WARNINGS_AS_ERRORS)
-        target_compile_options(wolf3dgeneric PRIVATE -Werror)
-    endif()
-endif()
-
-function(wg_configure_host target)
-    target_link_libraries(${target} PRIVATE wolf3dgeneric)
+function(wg_configure_host target engine_target)
+    target_link_libraries(${target} PRIVATE ${engine_target})
     target_include_directories(${target} PRIVATE src)
     target_compile_features(${target} PRIVATE c_std_99)
 
@@ -124,14 +191,14 @@ if(WG_BUILD_HEADLESS)
         platforms/headless/MAIN.c
         platforms/headless/WG_HEADLESS.c
     )
-    wg_configure_host(wolf3dgeneric-headless)
+    wg_configure_host(wolf3dgeneric-headless wolf3dgeneric-internal)
 endif()
 
 if(WG_BUILD_WIN32)
     add_executable(wolf3dgeneric-win32 WIN32
         platforms/win32/WG_WIN32.c
     )
-    wg_configure_host(wolf3dgeneric-win32)
+    wg_configure_host(wolf3dgeneric-win32 wolf3dgeneric)
     target_compile_definitions(wolf3dgeneric-win32 PRIVATE
         WIN32_LEAN_AND_MEAN
         UNICODE
@@ -139,13 +206,8 @@ if(WG_BUILD_WIN32)
     )
     target_link_libraries(wolf3dgeneric-win32 PRIVATE user32 gdi32 winmm shell32)
 
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(WG_WIN32_RELEASE_ARCH x64)
-    else()
-        set(WG_WIN32_RELEASE_ARCH x86)
-    endif()
     set(WG_WIN32_RELEASE_DIR
-        "${CMAKE_BINARY_DIR}/release/wolf3dgeneric-${PROJECT_VERSION}-win32-${WG_WIN32_RELEASE_ARCH}")
+        "${CMAKE_BINARY_DIR}/release/wolf3dgeneric-${PROJECT_VERSION}-win32-${WG_RELEASE_ARCH}")
     add_custom_target(win32-release
         COMMAND ${CMAKE_COMMAND} -E remove_directory
             "${WG_WIN32_RELEASE_DIR}"
@@ -154,6 +216,9 @@ if(WG_BUILD_WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:wolf3dgeneric-win32>"
             "${WG_WIN32_RELEASE_DIR}/wolf3dgeneric.exe"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wolf3dgeneric>"
+            "${WG_WIN32_RELEASE_DIR}/wolf3dgeneric.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:nuked-opl3>"
             "${WG_WIN32_RELEASE_DIR}/Nuked-OPL3.dll"
@@ -169,8 +234,8 @@ if(WG_BUILD_WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_CURRENT_BINARY_DIR}/WIN32-README.txt"
             "${WG_WIN32_RELEASE_DIR}/README.txt"
-        DEPENDS wolf3dgeneric-win32 nuked-opl3
-        COMMENT "Staging ${WG_WIN32_RELEASE_ARCH} Win32 release folder"
+        DEPENDS wolf3dgeneric-win32 wolf3dgeneric nuked-opl3
+        COMMENT "Staging ${WG_RELEASE_ARCH} Win32 release folder"
         VERBATIM
     )
 endif()
@@ -179,7 +244,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     add_test(NAME headless-smoke COMMAND wolf3dgeneric-headless --headless-smoke)
 
     add_executable(wg-tests tests/WG_TESTS.c)
-    wg_configure_host(wg-tests)
+    wg_configure_host(wg-tests wolf3dgeneric-internal)
     add_test(NAME unit-tests COMMAND wg-tests)
 
     set(WG_TEST_WL1_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL1 data")

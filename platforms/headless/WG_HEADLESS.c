@@ -1,36 +1,37 @@
 #include "WG_PLATFORM.h"
+#include "../WG_HOST.h"
 
 #include <stdio.h>
 
 static uint32_t wg_headless_ticks;
 
-int WG_Init(void)
+static int WG_HeadlessInit(void)
 {
     wg_headless_ticks = 0;
     return 1;
 }
 
-void WG_Shutdown(void)
+static void WG_HeadlessShutdown(void)
 {
 }
 
-void WG_Present(const uint8_t *pixels, const uint8_t *palette)
+static void WG_HeadlessPresent(const uint8_t *pixels, const uint8_t *palette)
 {
     (void)pixels;
     (void)palette;
 }
 
-uint32_t WG_GetTicksMs(void)
+static uint32_t WG_HeadlessGetTicksMs(void)
 {
     return wg_headless_ticks;
 }
 
-void WG_SleepMs(uint32_t milliseconds)
+static void WG_HeadlessSleepMs(uint32_t milliseconds)
 {
     wg_headless_ticks += milliseconds;
 }
 
-int WG_PollEvent(wg_event_t *event)
+static int WG_HeadlessPollEvent(wg_event_t *event)
 {
     if (event != NULL)
     {
@@ -39,36 +40,60 @@ int WG_PollEvent(wg_event_t *event)
     return 0;
 }
 
-int WG_IsInteractive(void)
+static int WG_HeadlessIsInteractive(void)
 {
     return 0;
 }
 
-void WG_SetWindowTitle(const char *title)
+static void WG_HeadlessSetWindowTitle(const char *title)
 {
     (void)title;
 }
 
-void WG_ReportError(const char *message)
+static void WG_HeadlessReportError(const char *message)
 {
     fprintf(stderr, "wolf3dgeneric: %s\n", message);
 }
 
-int WG_PCMInit(uint32_t sample_rate, uint16_t channels)
+static int WG_HeadlessPCMInit(uint32_t sample_rate, uint16_t channels)
 {
     return sample_rate != 0U && channels != 0U;
 }
 
-void WG_PCMShutdown(void)
+static void WG_HeadlessPCMShutdown(void)
 {
 }
 
-size_t WG_PCMWritableFrames(void)
+static size_t WG_HeadlessPCMWritableFrames(void)
 {
     return 0U;
 }
 
-int WG_PCMSubmit(const int16_t *samples, size_t frame_count)
+static int WG_HeadlessPCMSubmit(const int16_t *samples, size_t frame_count)
 {
     return samples != NULL || frame_count == 0U;
+}
+
+int WG_InstallPlatform(void)
+{
+    static const wg_platform_api_t platform =
+    {
+        WG_PLATFORM_API_VERSION,
+        sizeof(wg_platform_api_t),
+        WG_HeadlessInit,
+        WG_HeadlessShutdown,
+        WG_HeadlessPresent,
+        WG_HeadlessGetTicksMs,
+        WG_HeadlessSleepMs,
+        WG_HeadlessPollEvent,
+        WG_HeadlessIsInteractive,
+        WG_HeadlessSetWindowTitle,
+        WG_HeadlessReportError,
+        WG_HeadlessPCMInit,
+        WG_HeadlessPCMShutdown,
+        WG_HeadlessPCMWritableFrames,
+        WG_HeadlessPCMSubmit
+    };
+
+    return wolf3dgeneric_SetPlatform(&platform) == WG_RESULT_OK;
 }

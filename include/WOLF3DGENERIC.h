@@ -8,6 +8,20 @@
 extern "C" {
 #endif
 
+#if defined(WOLF3DGENERIC_STATIC)
+#define WG_API
+#elif defined(_WIN32)
+#if defined(WOLF3DGENERIC_BUILD)
+#define WG_API __declspec(dllexport)
+#else
+#define WG_API __declspec(dllimport)
+#endif
+#elif defined(__GNUC__) || defined(__clang__)
+#define WG_API __attribute__((visibility("default")))
+#else
+#define WG_API
+#endif
+
 #define WG_SCREEN_WIDTH 320
 #define WG_SCREEN_HEIGHT 200
 #define WG_PALETTE_COLORS 256
@@ -83,12 +97,35 @@ typedef struct wg_event
     uint32_t buttons;
 } wg_event_t;
 
-extern uint8_t *WG_ScreenBuffer;
-extern uint8_t WG_Palette[WG_PALETTE_COLORS * 3];
+#define WG_PLATFORM_API_VERSION 1U
 
-wg_result_t wolf3dgeneric_Create(int argc, char **argv);
-wg_result_t wolf3dgeneric_Run(void);
-void wolf3dgeneric_Shutdown(void);
+typedef struct wg_platform_api
+{
+    uint32_t api_version;
+    size_t struct_size;
+    int (*init)(void);
+    void (*shutdown)(void);
+    void (*present)(const uint8_t *pixels, const uint8_t *palette);
+    uint32_t (*get_ticks_ms)(void);
+    void (*sleep_ms)(uint32_t milliseconds);
+    int (*poll_event)(wg_event_t *event);
+    int (*is_interactive)(void);
+    void (*set_window_title)(const char *title);
+    void (*report_error)(const char *message);
+    int (*pcm_init)(uint32_t sample_rate, uint16_t channels);
+    void (*pcm_shutdown)(void);
+    size_t (*pcm_writable_frames)(void);
+    int (*pcm_submit)(const int16_t *samples, size_t frame_count);
+} wg_platform_api_t;
+
+WG_API extern uint8_t *WG_ScreenBuffer;
+WG_API extern uint8_t WG_Palette[WG_PALETTE_COLORS * 3];
+
+WG_API wg_result_t wolf3dgeneric_SetPlatform(
+    const wg_platform_api_t *platform);
+WG_API wg_result_t wolf3dgeneric_Create(int argc, char **argv);
+WG_API wg_result_t wolf3dgeneric_Run(void);
+WG_API void wolf3dgeneric_Shutdown(void);
 
 #ifdef __cplusplus
 }

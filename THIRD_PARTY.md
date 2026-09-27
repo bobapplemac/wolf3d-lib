@@ -8,8 +8,8 @@
 - Location: `third_party/Nuked-OPL3`
 
 The official implementation is the project's OPL reference and default
-synthesizer. Windows builds expose it as the independently replaceable
-`Nuked-OPL3.dll`; other platforms retain a separate static-library target.
+synthesizer. It remains an independently replaceable shared library
+(`Nuked-OPL3.dll` on Windows and the corresponding shared object elsewhere).
 Binary distributors must satisfy the LGPL's applicable notice, source,
 modification, and relinking requirements; consult the included license when
 preparing a release.

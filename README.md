@@ -46,13 +46,26 @@ cmake --build build --config Release --target win32-release
 ```
 
 The result is under `build/release/wolf3dgeneric-1.2.0-win32-x86` or `-x64`.
-It contains the executable, replaceable `Nuked-OPL3.dll`, license notices, and
-a short usage guide, but no tests, object files, or headless tools. Copy the
-original game data files into that folder and run `wolf3dgeneric.exe`; the
-interactive host uses its own directory when `--data` is omitted. Rename the
-executable to begin with `spear` or `sod` to prefer Spear data, or use `--game`
-when the folder contains multiple editions. The game data itself is never
-included by this project.
+It contains the small Win32 executable, `wolf3dgeneric.dll`, replaceable
+`Nuked-OPL3.dll`, license notices, and a short usage guide, but no tests, object
+files, or headless tools. Copy the original game data files into that folder
+and run `wolf3dgeneric.exe`; the interactive host uses its own directory when
+`--data` is omitted. Rename the executable to begin with `spear` or `sod` to
+prefer Spear data, or use `--game` when the folder contains multiple editions.
+The game data itself is never included by this project.
+
+The engine itself is a shared library, independent of either supplied host.
+Create its clean developer/runtime package with:
+
+```text
+cmake -S . -B build-library -G Ninja -DCMAKE_BUILD_TYPE=Release -DWG_BUILD_HEADLESS=OFF -DWG_BUILD_WIN32=OFF -DBUILD_TESTING=OFF
+cmake --build build-library --config Release --target library-release
+```
+
+That folder contains `wolf3dgeneric.dll` and its import library on Windows (or
+`libwolf3dgeneric.so` on Linux), `Nuked-OPL3` as a separate shared dependency,
+the public `WOLF3DGENERIC.h`, and the applicable notices. Hosts register the
+versioned `wg_platform_api_t` callback table before creating the engine.
 
 To run the interactive Win32 host:
 

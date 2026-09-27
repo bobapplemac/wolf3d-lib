@@ -1,4 +1,5 @@
 #include "WG_PLATFORM.h"
+#include "../WG_HOST.h"
 
 #include <windows.h>
 #include <mmsystem.h>
@@ -31,6 +32,8 @@ static WAVEHDR wg_wave_headers[WG_PCM_BUFFER_COUNT];
 static int16_t wg_wave_samples[WG_PCM_BUFFER_COUNT]
                               [WG_PCM_BUFFER_FRAMES * 2U];
 static uint8_t wg_wave_used[WG_PCM_BUFFER_COUNT];
+
+static void WG_Win32PCMShutdown(void);
 
 #define WG_EVENT_QUEUE_CAPACITY 64U
 static wg_event_t wg_event_queue[WG_EVENT_QUEUE_CAPACITY];
@@ -251,7 +254,7 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
     }
 }
 
-int WG_Init(void)
+static int WG_Win32Init(void)
 {
     RAWINPUTDEVICE mouse;
     WNDCLASSW window_class;
@@ -311,9 +314,9 @@ int WG_Init(void)
     return 1;
 }
 
-void WG_Shutdown(void)
+static void WG_Win32Shutdown(void)
 {
-    WG_PCMShutdown();
+    WG_Win32PCMShutdown();
     wg_xinput_get_state = NULL;
     if (wg_xinput_module != NULL)
     {
@@ -328,7 +331,7 @@ void WG_Shutdown(void)
     UnregisterClassW(wg_window_class, GetModuleHandleW(NULL));
 }
 
-void WG_Present(const uint8_t *pixels, const uint8_t *palette)
+static void WG_Win32Present(const uint8_t *pixels, const uint8_t *palette)
 {
     BITMAPINFO bitmap_info;
     RECT client;
@@ -365,7 +368,7 @@ void WG_Present(const uint8_t *pixels, const uint8_t *palette)
     ReleaseDC(wg_window, device_context);
 }
 
-uint32_t WG_GetTicksMs(void)
+static uint32_t WG_Win32GetTicksMs(void)
 {
     LARGE_INTEGER now;
     uint64_t ticks;
@@ -375,12 +378,12 @@ uint32_t WG_GetTicksMs(void)
     return (uint32_t)((ticks * 1000U) / (uint64_t)wg_counter_frequency.QuadPart);
 }
 
-void WG_SleepMs(uint32_t milliseconds)
+static void WG_Win32SleepMs(uint32_t milliseconds)
 {
     Sleep(milliseconds);
 }
 
-int WG_PollEvent(wg_event_t *event)
+static int WG_Win32PollEvent(wg_event_t *event)
 {
     MSG message;
 
@@ -420,12 +423,12 @@ int WG_PollEvent(wg_event_t *event)
     return 0;
 }
 
-int WG_IsInteractive(void)
+static int WG_Win32IsInteractive(void)
 {
     return 1;
 }
 
-void WG_SetWindowTitle(const char *title)
+static void WG_Win32SetWindowTitle(const char *title)
 {
     wchar_t wide_title[256];
 
@@ -439,12 +442,12 @@ void WG_SetWindowTitle(const char *title)
     SetWindowTextW(wg_window, wide_title);
 }
 
-void WG_ReportError(const char *message)
+static void WG_Win32ReportError(const char *message)
 {
     MessageBoxA(wg_window, message, "wolf3dgeneric", MB_OK | MB_ICONERROR);
 }
 
-int WG_PCMInit(uint32_t sample_rate, uint16_t channels)
+static int WG_Win32PCMInit(uint32_t sample_rate, uint16_t channels)
 {
     WAVEFORMATEX format;
     size_t index;
@@ -453,7 +456,7 @@ int WG_PCMInit(uint32_t sample_rate, uint16_t channels)
     {
         return 0;
     }
-    WG_PCMShutdown();
+    WG_Win32PCMShutdown();
     ZeroMemory(&format, sizeof(format));
     format.wFormatTag = WAVE_FORMAT_PCM;
     format.nChannels = channels;
@@ -478,14 +481,14 @@ int WG_PCMInit(uint32_t sample_rate, uint16_t channels)
                                  sizeof(wg_wave_headers[index]))
             != MMSYSERR_NOERROR)
         {
-            WG_PCMShutdown();
+            WG_Win32PCMShutdown();
             return 0;
         }
     }
     return 1;
 }
 
-void WG_PCMShutdown(void)
+static void WG_Win32PCMShutdown(void)
 {
     size_t index;
 
@@ -508,7 +511,7 @@ void WG_PCMShutdown(void)
     ZeroMemory(wg_wave_used, sizeof(wg_wave_used));
 }
 
-size_t WG_PCMWritableFrames(void)
+static size_t WG_Win32PCMWritableFrames(void)
 {
     size_t index;
 
@@ -531,7 +534,7 @@ size_t WG_PCMWritableFrames(void)
     return 0U;
 }
 
-int WG_PCMSubmit(const int16_t *samples, size_t frame_count)
+static int WG_Win32PCMSubmit(const int16_t *samples, size_t frame_count)
 {
     size_t index;
 
@@ -562,6 +565,30 @@ int WG_PCMSubmit(const int16_t *samples, size_t frame_count)
     return 0;
 }
 
+int WG_InstallPlatform(void)
+{
+    static const wg_platform_api_t platform =
+    {
+        WG_PLATFORM_API_VERSION,
+        sizeof(wg_platform_api_t),
+        WG_Win32Init,
+        WG_Win32Shutdown,
+        WG_Win32Present,
+        WG_Win32GetTicksMs,
+        WG_Win32SleepMs,
+        WG_Win32PollEvent,
+        WG_Win32IsInteractive,
+        WG_Win32SetWindowTitle,
+        WG_Win32ReportError,
+        WG_Win32PCMInit,
+        WG_Win32PCMShutdown,
+        WG_Win32PCMWritableFrames,
+        WG_Win32PCMSubmit
+    };
+
+    return wolf3dgeneric_SetPlatform(&platform) == WG_RESULT_OK;
+}
+
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
                     PWSTR command_line, int show_command)
 {
@@ -579,6 +606,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
     (void)previous_instance;
     (void)command_line;
     (void)show_command;
+
+    if (!WG_InstallPlatform())
+    {
+        return 1;
+    }
 
     wide_argv = CommandLineToArgvW(GetCommandLineW(), &argc);
     if (wide_argv == NULL)
