@@ -94,6 +94,11 @@ static uint8_t wg_music_enabled = 1U;
 
 static unsigned WG_DefaultMenuSelection(void)
 {
+    if (wg_data_set.variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        /* GOODTIMES starts on New Game because Read This is absent. */
+        return 0U;
+    }
     return WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR
                ? 7U : WL_MAIN_MENU_DEFAULT_ITEM;
 }
@@ -3946,12 +3951,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     }
     if (main_menu_view
         && !WL_DrawMainMenu(WG_ScreenBuffer, &graphics,
-                            main_menu_view == 2U ? 8U
-                                                 : (WG_DataVariantFamily(
-                                                        wg_data_set.variant)
-                                                            == WG_GAME_FAMILY_SPEAR
-                                                        ? 7U
-                                                        : WL_MAIN_MENU_DEFAULT_ITEM),
+                             main_menu_view == 2U ? 8U
+                                                  : WG_DefaultMenuSelection(),
                             main_menu_view == 2U))
     {
         goto cleanup;
@@ -4502,10 +4503,15 @@ static wg_result_t WG_GameQuickKey(uint16_t key)
     switch (key)
     {
         case WG_KEY_F1:
-            if (WG_DataVariantFamily(wg_data_set.variant)
-                == WG_GAME_FAMILY_SPEAR)
+            if (wg_data_set.variant == WG_GAME_WOLF3D_FULL_GT_14
+                || WG_DataVariantFamily(wg_data_set.variant)
+                       == WG_GAME_FAMILY_SPEAR)
             {
-                /* SPEAR's DOS boss-key body was compiled out under NOTYET. */
+                /*
+                 * GOODTIMES maps F1 to the DOS boss key; SPEAR's body was
+                 * compiled out under NOTYET. There is no DOS screen to
+                 * restore in the generic library, so resume play.
+                 */
                 return WG_GameSessionLeaveControlPanel()
                            ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
             }

@@ -71,6 +71,17 @@ typedef struct wl_menu_item
     uint8_t active;
 } wl_menu_item_t;
 
+static int WL_MainMenuOmitsReadThis(wg_game_variant_t variant)
+{
+    /*
+     * The later GT/ID/Activision executable was built with GOODTIMES.
+     * Like SPEAR, that build removes CP_ReadThis from MainMenu rather than
+     * displaying the legacy article that remains in the graphics archive.
+     */
+    return variant == WG_GAME_WOLF3D_FULL_GT_14
+        || WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR;
+}
+
 static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
 {
     if (chunks == NULL)
@@ -178,7 +189,7 @@ static void WL_MenuItems(wl_menu_item_t items[WL_MAIN_MENU_ITEMS],
         items[index].active = index == 4U ? (uint8_t)(in_game ? 1U : 0U)
                             : index == 6U ? 2U : 1U;
     }
-    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    if (WL_MainMenuOmitsReadThis(variant))
     {
         items[6].active = 0U;
     }
@@ -229,14 +240,12 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
     }
     WL_MenuBar(framebuffer, WL_MENU_X - 8, WL_MENU_Y - 3,
                WL_MENU_WIDTH,
-               WG_DataVariantFamily(graphics->variant)
-                       == WG_GAME_FAMILY_SPEAR
+               WL_MainMenuOmitsReadThis(graphics->variant)
                    ? WL_MENU_HEIGHT - 13 : WL_MENU_HEIGHT,
                WL_MENU_BACKGROUND_COLOR);
     WL_MenuOutline(framebuffer, WL_MENU_X - 8, WL_MENU_Y - 3,
                    WL_MENU_WIDTH,
-                   WG_DataVariantFamily(graphics->variant)
-                           == WG_GAME_FAMILY_SPEAR
+                   WL_MainMenuOmitsReadThis(graphics->variant)
                        ? WL_MENU_HEIGHT - 13 : WL_MENU_HEIGHT);
 
     for (index = 0U; index < WL_MAIN_MENU_ITEMS; ++index)
@@ -244,7 +253,7 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
         uint8_t color;
         unsigned row = index;
 
-        if (WG_DataVariantFamily(graphics->variant) == WG_GAME_FAMILY_SPEAR)
+        if (WL_MainMenuOmitsReadThis(graphics->variant))
         {
             if (index == 6U)
             {
@@ -278,9 +287,8 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                                WL_MENU_X & ~7,
                                WL_MENU_Y - 2
                                    + (int)(selected
-                                       - (WG_DataVariantFamily(
+                                       - (WL_MainMenuOmitsReadThis(
                                                 graphics->variant)
-                                                  == WG_GAME_FAMILY_SPEAR
                                               && selected > 6U ? 1U : 0U))
                                          * 13);
 }

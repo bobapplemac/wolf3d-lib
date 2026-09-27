@@ -2720,6 +2720,12 @@ static void TestMenuMovement(void)
     CHECK(WL_MainMenuMove(9U, 1, 0) == 0U);
     CHECK(WL_MainMenuMove(3U, 1, 0) == 5U);
     CHECK(WL_MainMenuMove(3U, 1, 1) == 4U);
+    CHECK(WL_MainMenuMoveForVariant(5U, 1, 0,
+                                    WG_GAME_WOLF3D_FULL_GT_14) == 7U);
+    CHECK(WL_MainMenuMoveForVariant(7U, -1, 0,
+                                    WG_GAME_WOLF3D_FULL_GT_14) == 5U);
+    CHECK(WL_MainMenuMoveForVariant(5U, 1, 0,
+                                    WG_GAME_WOLF3D_FULL_APOGEE_14) == 6U);
     CHECK(WL_MainMenuMove(WL_MAIN_MENU_DEFAULT_ITEM, 0, 0)
           == WL_MAIN_MENU_DEFAULT_ITEM);
     CHECK(WL_EpisodeMenuMove(0U, -1) == 5U);
@@ -3733,7 +3739,9 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         }
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawMainMenu(framebuffer, &graphics,
-                              WL_MAIN_MENU_DEFAULT_ITEM, 0));
+                              expected_variant == WG_GAME_WOLF3D_FULL_GT_14
+                                  ? 0U : WL_MAIN_MENU_DEFAULT_ITEM,
+                              0));
         for (index = 0U; index < sizeof(framebuffer); ++index)
         {
             menu_hash ^= framebuffer[index];
@@ -3742,7 +3750,9 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         printf("%s main menu FNV-1a: %016llx\n",
                WG_DataVariantName(data_set.variant),
                (unsigned long long)menu_hash);
-        CHECK(menu_hash == 0xcdbff8b31548b64eULL);
+        CHECK(menu_hash == (expected_variant == WG_GAME_WOLF3D_FULL_GT_14
+                                ? 0xf10ed9855ad7a846ULL
+                                : 0xcdbff8b31548b64eULL));
         CHECK(WL_DrawConfirm(framebuffer, &graphics,
                              "Are you sure you want\n"
                              "to end the game you\n"
@@ -3755,7 +3765,9 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         printf("%s confirmation FNV-1a: %016llx\n",
                WG_DataVariantName(data_set.variant),
                (unsigned long long)confirm_hash);
-        CHECK(confirm_hash == 0x0b2a93f76bdc8ce8ULL);
+        CHECK(confirm_hash == (expected_variant == WG_GAME_WOLF3D_FULL_GT_14
+                                   ? 0x025ab818aa8840a9ULL
+                                   : 0x0b2a93f76bdc8ce8ULL));
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawSoundMenu(framebuffer, &graphics, 0U, 2U, 1, 1));
         for (index = 0U; index < sizeof(framebuffer); ++index)

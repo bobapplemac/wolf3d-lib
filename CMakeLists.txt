@@ -711,12 +711,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --main-menu-view
             --frame-hash)
         set_tests_properties(main-menu-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "cdbff8b31548b64e")
+            PASS_REGULAR_EXPRESSION "f10ed9855ad7a846")
         add_test(NAME in-game-menu-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --in-game-menu-view
             --frame-hash)
         set_tests_properties(in-game-menu-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "9d4fae41d9d29488")
+            PASS_REGULAR_EXPRESSION "1315674b21b3bb10")
         add_test(NAME load-game-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --load-game-view
             --frame-hash)
