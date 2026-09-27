@@ -426,7 +426,10 @@ static void WL_QueueDeathSound(wg_level_t *level, const wg_actor_t *actor)
     wg_sound_t sound;
     int positioned = 1;
 
-    if (level->map_number % 10U == 9U
+    if (level->variant != WG_GAME_WOLF3D_SHAREWARE_14
+        && (WG_DataVariantFamily(level->variant) == WG_GAME_FAMILY_SPEAR
+             ? (level->map_number == 18U || level->map_number == 19U)
+             : level->map_number % 10U == 9U)
         && WG_RandomNext(&level->random) == 0U
         && (actor->actor_class == WG_ACTOR_MUTANT
             || actor->actor_class == WG_ACTOR_GUARD
@@ -445,7 +448,9 @@ static void WL_QueueDeathSound(wg_level_t *level, const wg_actor_t *actor)
             break;
         case WG_ACTOR_GUARD:
             sound = guard_sounds[WG_RandomNext(&level->random)
-                                 % (level->shareware ? 2U : 8U)];
+                                 % (level->variant
+                                        == WG_GAME_WOLF3D_SHAREWARE_14
+                                    ? 2U : 8U)];
             break;
         case WG_ACTOR_OFFICER:
             sound = WG_SOUND_NEIN_SOWAS;

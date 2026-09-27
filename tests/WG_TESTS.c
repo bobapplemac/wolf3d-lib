@@ -1666,6 +1666,7 @@ static void TestPlayerWeapons(void)
     CHECK(level.score == 100U);
 
     memset(&level, 0, sizeof(level));
+    level.variant = WG_GAME_WOLF3D_SHAREWARE_14;
     level.difficulty = WG_DIFFICULTY_MEDIUM;
     level.shareware = 1U;
     CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
@@ -1673,6 +1674,42 @@ static void TestPlayerWeapons(void)
     CHECK(WL_KillActor(&level, 0U));
     CHECK(level.sound_event_count == 1U);
     CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_2);
+
+    memset(&level, 0, sizeof(level));
+    level.variant = WG_GAME_WOLF3D_SHAREWARE_14;
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.map_number = 9U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
+    WG_RandomSeed(&level.random, 255U);
+    CHECK(WL_KillActor(&level, 0U));
+    CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_1);
+
+    memset(&level, 0, sizeof(level));
+    level.variant = WG_GAME_SPEAR_FULL_SOD;
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.map_number = 9U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
+    WG_RandomSeed(&level.random, 255U);
+    CHECK(WL_KillActor(&level, 0U));
+    CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_1);
+
+    memset(&level, 0, sizeof(level));
+    level.variant = WG_GAME_SPEAR_FULL_SOD;
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.map_number = 18U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
+    WG_RandomSeed(&level.random, 255U);
+    CHECK(WL_KillActor(&level, 0U));
+    CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_6);
+
+    memset(&level, 0, sizeof(level));
+    level.variant = WG_GAME_WOLF3D_FULL_GT_14;
+    level.difficulty = WG_DIFFICULTY_MEDIUM;
+    level.map_number = 9U;
+    CHECK(WL_SpawnStand(&level, WG_ACTOR_GUARD, 11U, 10U, 0U));
+    WG_RandomSeed(&level.random, 255U);
+    CHECK(WL_KillActor(&level, 0U));
+    CHECK(level.sound_events[0].sound == WG_SOUND_DEATH_SCREAM_6);
 
     memset(&level, 0, sizeof(level));
     level.difficulty = WG_DIFFICULTY_MEDIUM;

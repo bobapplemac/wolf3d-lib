@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0 - 2026-09-26
+
+- Added one runtime-selectable engine for Spear of Destiny (`SOD`), its
+  two-floor demo (`SDM`), and the `SD1`, `SD2`, and `SD3` mission profiles.
+- Added executable-name family preference plus strict `--game` extension
+  selection, including historical mixed-extension and isolated GOG layouts.
+- Restored Spear's palette, title and menu layouts, map ceiling colors, status
+  faces, actors, bosses, projectiles, items, sound mapping, music, secret-floor
+  routing, Spear pickup transition, intermissions, victory collapse, ending,
+  high scores, attract demos, and SDM conclusion.
+- Added runtime-selectable original SIGNON screens and explicit Wolf/Spear
+  palette selection without embedding copyrighted assets.
+- Kept configuration and save files isolated by logical game profile even when
+  a GOG mission directory physically names every archive `.SOD`.
+- Validated every map and asset reference in SOD, SDM, and all three mission
+  packs, and added deterministic visual and full-demo regression coverage.
+
 ## 1.1.0 - 2026-09-26
 
 - Added a portable two-device joystick event contract and restored the original

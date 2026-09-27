@@ -2,11 +2,11 @@
 
 ## Completion status
 
-The Wolfenstein 3D v1.4 scope of this plan is complete. Both
-the Apogee shareware (`WL1`) and GT/ID/Activision full (`WL6`) editions pass the
-deterministic x86 and x64 regression suite; release 1.1 also restores portable
-joystick support. Spear of Destiny remains deliberately separate and is not
-required by, or claimed as part of, this Wolfenstein 3D release.
+The original Wolfenstein 3D and Spear of Destiny scope is complete. The Apogee
+shareware (`WL1`), GT/ID/Activision full (`WL6`), Spear (`SOD`), Spear demo
+(`SDM`), and all three mission profiles (`SD1`/`SD2`/`SD3`) pass the
+deterministic regression suite. Release 1.1 restored portable joystick support;
+release 1.2 added the runtime-selected Spear family without forking the engine.
 
 ## Project intent
 

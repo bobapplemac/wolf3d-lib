@@ -657,6 +657,21 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash --palette-hash)
         set_tests_properties(demo-view-sod PROPERTIES
             PASS_REGULAR_EXPRESSION "525cbfb8e59bee04.*eba126e8df00d1cb")
+        set(_wg_sod_demo_hashes
+            1b1413cf97abe5ad
+            015b8d5e3c3a84fc
+            b46ad48632050ce8
+            1c531d2ea19774a2)
+        foreach(_wg_demo RANGE 0 3)
+            list(GET _wg_sod_demo_hashes ${_wg_demo} _wg_demo_hash)
+            add_test(NAME demo-complete-${_wg_demo}-sod
+                COMMAND wolf3dgeneric-headless
+                    --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
+                    --demo-view --demo-number ${_wg_demo}
+                    --demo-commands 100000 --frame-hash)
+            set_tests_properties(demo-complete-${_wg_demo}-sod PROPERTIES
+                PASS_REGULAR_EXPRESSION "${_wg_demo_hash}")
+        endforeach()
         add_test(NAME credits-view-sod COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
             --credits-view --frame-hash --palette-hash)
@@ -687,6 +702,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --frame-hash --palette-hash)
         set_tests_properties(demo-view-sdm PROPERTIES
             PASS_REGULAR_EXPRESSION "525cbfb8e59bee04.*eba126e8df00d1cb")
+        add_test(NAME demo-complete-0-sdm COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_SDM_PATH}" --game SDM --play-view
+            --demo-view --demo-number 0 --demo-commands 100000 --frame-hash)
+        set_tests_properties(demo-complete-0-sdm PROPERTIES
+            PASS_REGULAR_EXPRESSION "1b1413cf97abe5ad")
         add_test(NAME credits-view-sdm COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SDM_PATH}" --game SDM --play-view
             --credits-view --frame-hash --palette-hash)

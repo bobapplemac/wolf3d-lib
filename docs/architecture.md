@@ -70,7 +70,8 @@ panel with `Save Game` enabled and `Back to Game` selected; simulation tics and
 the IMF sequencer pause without destroying the owned map session.
 
 The Load/Save slice retains `WL_MENU.C`'s ten outlined slots, font-0 names,
-authored title plaques, wrapping cursor, and `SAVEGAM?.WL1`/`.WL6` naming. The
+authored title plaques, wrapping cursor, and profile-specific
+`SAVEGAM?.WL1`/`.WL6`/`.SOD`/`.SDM`/`.SD1`/`.SD2`/`.SD3` naming. The
 original `SaveTheGame` wrote compiler-layout structures and reconstructed
 16-bit near pointers while loading. `WG_SAVE.c` is the narrow modernization
 boundary: every integer and enum is encoded explicitly little-endian, array

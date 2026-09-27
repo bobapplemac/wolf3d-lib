@@ -21,6 +21,14 @@ hash so the milestone remains verifiable even when the screenshot is absent.
   Wolf3D's `Read This` article.
 - Added data-backed coverage that decodes every special status portrait from
   both the SOD and SDM graphics archives.
+- Corrected the rare `DEATHSCREAM6SND` easter-egg condition: Wolf3D uses each
+  episode's internal map 9, while Spear uses internal maps 18 and 19. The
+  earlier shared modulo check incorrectly applied Wolf's rule to Spear.
+- Kept all eight ordinary guard death screams enabled for SDM, as in the
+  original `SPEARDEMO` build; only the Wolf3D shareware (`UPLOAD`) profile
+  limits that selection to its first two sounds and omits the rare scream.
+- Added full-command playback regressions for all four SOD attract demos and
+  the single SDM demo, complementing the existing early-frame visual checks.
 
 ## 2026-09-23: Initial E1M1 walls and doors
 
