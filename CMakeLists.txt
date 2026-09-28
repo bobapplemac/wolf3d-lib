@@ -4,7 +4,7 @@ if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
 
-project(wolf3dgeneric VERSION 1.3.0 LANGUAGES C)
+project(wolf3dgeneric VERSION 1.4.0 LANGUAGES C)
 
 include(CTest)
 

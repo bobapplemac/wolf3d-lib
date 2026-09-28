@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 - 2026-09-27
 
 - Restored the data-driven DOS `ORDERSCREEN` and `ERRORSCREEN` console output,
   including CP437 line art and VGA colors through a portable text-cell host
@@ -11,6 +11,8 @@
 - Added a Linux virtual-console host with direct DRM/KMS dumb-buffer video,
   evdev keyboard/mouse/gamepad input, ALSA audio with silent fallback, 4:3
   presentation, device overrides, and a minimal staged runtime package.
+- Added an SDL3 GUI host for Windows and Linux with keyboard, opt-in mouse,
+  gamepad, audio, aspect-correct 4:3 presentation, and minimal staged packages.
 - Added a GNU Make entry point for native Linux configure, build, test, clean,
   and library-package workflows while retaining CMake as the sole build graph.
 - Added a checked-in Visual Studio solution supporting Debug/Release and
@@ -19,6 +21,11 @@
   while retaining the engine as a separate DLL in both modes.
 - Corrected strict ISO C portability findings exposed by GCC and Clang without
   changing engine behavior.
+- Restored visible fast-host startup pacing: SIGNON now preserves its initial
+  status and green `Working...` beats, while Get Psyched visibly fills its
+  preload bar before the original completed-bar hold.
+- Kept the DOS exit screen above the returned Windows command prompt so the
+  shell no longer overwrites the final line of the original colored output.
 
 ## 1.3.0 - 2026-09-27
 

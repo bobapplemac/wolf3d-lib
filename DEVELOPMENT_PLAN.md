@@ -8,7 +8,9 @@ shareware (`WL1`), GT/ID/Activision full (`WL6`), Spear (`SOD`), Spear demo
 deterministic regression suite. Release 1.1 restored portable joystick support;
 release 1.2 added the runtime-selected Spear family without forking the engine;
 release 1.3 completed the source-parity audit, original variable-tic batching,
-and deterministic fixed-point/view-math pass.
+and deterministic fixed-point/view-math pass; release 1.4 completes the native
+Linux, Visual Studio, and cross-platform SDL3 host/build matrix together with
+the remaining original startup and DOS-console presentation details.
 
 ## Project intent
 
