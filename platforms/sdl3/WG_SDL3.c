@@ -323,6 +323,10 @@ static void WG_SDLWriteWindowsText(void)
     rectangle.Bottom = (SHORT)(wg_text_rows - 1U);
     (void)SetConsoleOutputCP(437U);
     (void)WriteConsoleOutputA(output, characters, size, origin, &rectangle);
+    /* Leave cmd.exe/PowerShell on the first line below the DOS screen. */
+    origin.X = 0;
+    origin.Y = (SHORT)wg_text_rows;
+    (void)SetConsoleCursorPosition(output, origin);
 }
 #endif
 

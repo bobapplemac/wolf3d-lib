@@ -109,7 +109,7 @@ static void wg_write_text_screen(void)
     (void)SetConsoleOutputCP(437U);
     (void)WriteConsoleOutputA(output, characters, size, origin, &rectangle);
     origin.X = 0;
-    origin.Y = (SHORT)(wg_text_rows > 1U ? wg_text_rows - 2U : 0U);
+    origin.Y = (SHORT)wg_text_rows;
     (void)SetConsoleCursorPosition(output, origin);
     wg_text_columns = 0U;
     wg_text_rows = 0U;
