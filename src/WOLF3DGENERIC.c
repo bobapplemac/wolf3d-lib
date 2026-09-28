@@ -341,7 +341,7 @@ static int WG_GameSessionRender(void);
 static int WG_GameSessionBeginEntryFizzle(void);
 static int WG_GameSessionBeginPreload(void);
 static int WG_GameSessionOpen(unsigned map_number,
-                              wg_difficulty_t difficulty);
+                              wg_difficulty_t difficulty, int randomize);
 static int WG_GameSessionReload(unsigned map_number, int died);
 static int WG_GameSessionFinishIntermission(void);
 
@@ -2136,7 +2136,7 @@ static int WG_GameSessionLoad(unsigned slot)
     if (slot >= WL_SAVE_SLOTS || !wg_save_available[slot]
         || !WG_SavePath(path, sizeof(path), slot)
         || !WG_SaveReadFile(path, wg_data_set.variant, name, &state)
-        || !WG_GameSessionOpen(state.map_number, state.level.difficulty))
+        || !WG_GameSessionOpen(state.map_number, state.level.difficulty, 1))
     {
         return 0;
     }
@@ -2981,13 +2981,15 @@ static int WG_GameSessionHighScoreKey(uint16_t scan_code, int pressed)
                wg_game.high_score_cursor);
 }
 
-static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty)
+static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty,
+                              int randomize)
 {
     wg_maps_t maps;
     wg_map_t map;
     int success = 0;
     const uint8_t *music_data;
     size_t music_size;
+    uint8_t random_index;
 
     if (wg_game.active)
     {
@@ -3000,10 +3002,15 @@ static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty)
     memset(&maps, 0, sizeof(maps));
     memset(&map, 0, sizeof(map));
     memset(&wg_game, 0, sizeof(wg_game));
+    /* SetupGameLevel sampled DOS time before CA_CacheMap.  Choose the index
+       before host file I/O for the same ordering, then let map construction
+       consume it while actors are spawned. */
+    random_index = WG_RandomInitialIndex(randomize, WG_GetTicksMs());
     if (!WG_MapsOpen(&maps, &wg_data_set)
         || !WG_MapsLoad(&maps, map_number, &map)
-        || !WG_LevelBuildForVariant(&map, difficulty, wg_data_set.variant,
-                                    &wg_game.level)
+        || !WG_LevelBuildForVariant(
+            &map, difficulty, wg_data_set.variant, random_index,
+            &wg_game.level)
         || !WG_PagesOpen(&wg_game.pages, &wg_data_set)
         || !WG_WallCacheLoad(&wg_game.walls, &wg_game.pages)
         || !WG_GraphicsOpen(&wg_game.graphics, &wg_data_set)
@@ -3102,7 +3109,7 @@ static int WG_GameSessionOpenDemo(unsigned demo_number)
         return 0;
     }
     WG_GraphicsClose(&graphics);
-    if (!WG_GameSessionOpen(demo.map_number, WG_DIFFICULTY_HARD))
+    if (!WG_GameSessionOpen(demo.map_number, WG_DIFFICULTY_HARD, 0))
     {
         free(data);
         return 0;
@@ -3218,7 +3225,7 @@ static int WG_GameSessionReload(unsigned map_number, int died)
         return WG_GameSessionBeginHighScores();
     }
     WG_GameSessionClose();
-    if (!WG_GameSessionOpen(map_number, difficulty))
+    if (!WG_GameSessionOpen(map_number, difficulty, 1))
     {
         return 0;
     }
@@ -3250,7 +3257,7 @@ static int WG_GameSessionEnterSpearMap(void)
     WG_CampaignCapture(&state, &wg_game.level);
     memcpy(level_ratios, wg_game.level_ratios, sizeof(level_ratios));
     WG_GameSessionClose();
-    if (!WG_GameSessionOpen(20U, difficulty)
+    if (!WG_GameSessionOpen(20U, difficulty, 1)
         || !WG_CampaignApply(&wg_game.level, &state, score, 0))
     {
         return 0;
@@ -3706,9 +3713,9 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         || !WG_MapsLoad(&maps, map_number, &map)
         || !(demo_view
              ? WG_LevelBuildForVariant(&map, WG_DIFFICULTY_HARD,
-                                       wg_data_set.variant, &level)
+                                       wg_data_set.variant, 0U, &level)
              : WG_LevelBuildForVariant(&map, WG_DIFFICULTY_MEDIUM,
-                                       wg_data_set.variant, &level))
+                                       wg_data_set.variant, 0U, &level))
         || !WG_PagesOpen(&pages, &wg_data_set)
         || !WG_WallCacheLoad(&walls, &pages))
     {
@@ -4543,7 +4550,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
         unsigned maximum = WG_IsSpearGame() ? 20U : 59U;
 
         if (ted_level > maximum || !WG_IsInteractive()
-            || !WG_GameSessionOpen(ted_level, ted_difficulty))
+            || !WG_GameSessionOpen(ted_level, ted_difficulty, 1))
         {
             wolf3dgeneric_Shutdown();
             return ted_level > maximum ? WG_RESULT_INVALID_ARGUMENT
@@ -4553,7 +4560,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     else if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
         && WG_IsInteractive())
     {
-        if (!WG_GameSessionOpen(map_number, WG_DIFFICULTY_MEDIUM))
+        if (!WG_GameSessionOpen(map_number, WG_DIFFICULTY_MEDIUM, 1))
         {
             wolf3dgeneric_Shutdown();
             return WG_RESULT_PLATFORM_ERROR;
@@ -6046,7 +6053,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             if (!WG_GameSessionOpen(
                                     WG_NewGameStartMap(),
-                                    wg_difficulty_selection))
+                                    wg_difficulty_selection, 1))
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
@@ -6425,7 +6432,7 @@ wg_result_t wolf3dgeneric_Run(void)
                     else if (event.button == 1U
                              && !WG_GameSessionOpen(
                                  WG_NewGameStartMap(),
-                                 wg_difficulty_selection))
+                                 wg_difficulty_selection, 1))
                     {
                         return WG_RESULT_PLATFORM_ERROR;
                     }

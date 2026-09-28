@@ -293,7 +293,10 @@ editions is exercised through this conversion.
 
 The gameplay random generator is the original 256-byte lookup table and byte
 index progression rather than a host C library generator. Its state is held in
-an engine-owned object so tests and later demo playback can reset it exactly.
+an engine-owned object so tests and demo playback can reset it exactly. As in
+`SetupGameLevel`, the index is selected before actors are scanned from the map:
+embedded demos start at zero, while ordinary games use the host monotonic
+clock's hundredths phase (0--99), corresponding to DOS `US_InitRndT(true)`.
 
 ## Renderer math
 

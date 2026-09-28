@@ -305,7 +305,8 @@ static wg_item_type_t WG_StaticItem(unsigned type)
 }
 
 int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
-                            wg_game_variant_t variant, wg_level_t *level)
+                            wg_game_variant_t variant, uint8_t random_index,
+                            wg_level_t *level)
 {
     size_t index;
     int player_found = 0;
@@ -329,7 +330,9 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
     level->player_weapon = 1U;
     level->player_chosen_weapon = 1U;
     level->player_best_weapon = 1U;
-    WG_RandomSeed(&level->random, 0U);
+    /* SetupGameLevel calls US_InitRndT before ScanInfoPlane, so the selected
+       live/demo seed must be installed before actor spawning consumes it. */
+    WG_RandomSeed(&level->random, random_index);
     /* The DOS actorat array begins as a copy of every solid map tile.  Actor
        pointers later overwrite these small integer tokens. */
     for (index = 0U; index < WG_LEVEL_SIZE * WG_LEVEL_SIZE; ++index)
@@ -734,14 +737,14 @@ int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
 int WG_LevelBuild(const wg_map_t *map, wg_level_t *level)
 {
     return WG_LevelBuildForVariant(map, WG_DIFFICULTY_MEDIUM,
-                                   WG_GAME_WOLF3D_FULL_GT_14, level);
+                                   WG_GAME_WOLF3D_FULL_GT_14, 0U, level);
 }
 
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level)
 {
     return WG_LevelBuildForVariant(map, difficulty,
-                                   WG_GAME_WOLF3D_FULL_GT_14, level);
+                                   WG_GAME_WOLF3D_FULL_GT_14, 0U, level);
 }
 
 int WG_QueueSound(wg_level_t *level, wg_sound_t sound)

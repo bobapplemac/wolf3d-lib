@@ -52,6 +52,15 @@ void WG_RandomSeed(wg_random_t *random, uint8_t index)
     }
 }
 
+uint8_t WG_RandomInitialIndex(int randomize, uint32_t milliseconds)
+{
+    /* DOS int 21h/2ch returned hundredths in DL.  US_InitRndT retained that
+       byte for ordinary play and used zero for demos.  A monotonic host clock
+       supplies the same changing 0--99 phase without making wall time part of
+       the generic platform contract. */
+    return randomize ? (uint8_t)((milliseconds / 10U) % 100U) : 0U;
+}
+
 uint8_t WG_RandomNext(wg_random_t *random)
 {
     if (random == 0)

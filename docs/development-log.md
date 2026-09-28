@@ -1774,6 +1774,22 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Kept both effects entirely in presentation state: neither changes gameplay
   tics, demo input timing, random-number consumption, or audio scheduling.
 
+## 2026-09-27: Live-game random initialization parity
+
+- Restored `SetupGameLevel`'s distinction between deterministic demos and
+  time-varied live play. Demo construction starts the original lookup-table
+  generator at index zero; ordinary sessions derive the original 0--99
+  hundredths phase from the portable host clock.
+- Made the selected index an explicit level-builder input and install it before
+  actor scanning. This preserves the original ordering for randomized actor
+  animation tics instead of trying to reseed after construction.
+- Added boundary tests for the millisecond-to-hundredths conversion and an
+  actor-spawn fixture proving that a nonzero seed affects construction. All
+  complete embedded-demo gates retain their deterministic index-zero behavior.
+- Regenerated the source-parity call-graph report. Its mapped-function totals
+  are now 111/111/103/103 for WL1/WL6/SDM/SOD, with no path gaps or unmapped
+  state callbacks.
+
 ## 2026-09-27: Independent-audit corrections
 
 - Added coordinate validation before legacy version-1/2 portable saves rebuild

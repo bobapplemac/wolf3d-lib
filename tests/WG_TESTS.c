@@ -490,7 +490,7 @@ static void TestSpearBossSetup(void)
     map.planes[1] = plane_one;
 
     CHECK(WG_LevelBuildForVariant(&map, WG_DIFFICULTY_BABY,
-                                  WG_GAME_SPEAR_FULL_SOD, &level));
+                                  WG_GAME_SPEAR_FULL_SOD, 0U, &level));
     CHECK(level.area_by_player[0] == 1U);
     CHECK(level.area_by_player[1] == 0U);
     CHECK(level.actor_count == 6U);
@@ -516,6 +516,7 @@ static void TestPatrolMovement(void)
     uint16_t plane_one[WG_LEVEL_SIZE * WG_LEVEL_SIZE];
     wg_map_t map;
     wg_level_t level;
+    wg_level_t seeded_level;
     wg_actor_t *actor;
     size_t index;
 
@@ -542,6 +543,11 @@ static void TestPatrolMovement(void)
     CHECK(actor->distance == WG_FIXED_ONE);
     CHECK(actor->tile_x == 3U);
     CHECK(actor->tile_y == 2U);
+    CHECK(WG_LevelBuildForVariant(&map, WG_DIFFICULTY_MEDIUM,
+                                  WG_GAME_WOLF3D_FULL_GT_14, 14U,
+                                  &seeded_level));
+    CHECK(seeded_level.random.index == 15U);
+    CHECK(seeded_level.actors[0].tic_count == 1);
     CHECK(WL_TickActors(&level, 128U));
     CHECK(actor->state == WG_STATE_PATH3S);
     CHECK(actor->tic_count == 5);
@@ -3041,6 +3047,12 @@ static void TestRandom(void)
     uint32_t hash = 2166136261U;
     unsigned index;
 
+    CHECK(WG_RandomInitialIndex(0, 999U) == 0U);
+    CHECK(WG_RandomInitialIndex(1, 0U) == 0U);
+    CHECK(WG_RandomInitialIndex(1, 9U) == 0U);
+    CHECK(WG_RandomInitialIndex(1, 10U) == 1U);
+    CHECK(WG_RandomInitialIndex(1, 999U) == 99U);
+    CHECK(WG_RandomInitialIndex(1, 1000U) == 0U);
     WG_RandomSeed(&random, 0);
     CHECK(WG_RandomNext(&random) == 8U);
     CHECK(WG_RandomNext(&random) == 109U);
@@ -4788,7 +4800,7 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
                 CHECK(map.width == 64U);
                 CHECK(map.height == 64U);
                 if (!WG_LevelBuildForVariant(&map, WG_DIFFICULTY_MEDIUM,
-                                             variant, &level))
+                                             variant, 0U, &level))
                 {
                     size_t player_starts = 0U;
                     size_t tile_index;

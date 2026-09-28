@@ -279,7 +279,8 @@ int WG_LevelBuild(const wg_map_t *map, wg_level_t *level);
 int WG_LevelBuildForDifficulty(const wg_map_t *map, wg_difficulty_t difficulty,
                                wg_level_t *level);
 int WG_LevelBuildForVariant(const wg_map_t *map, wg_difficulty_t difficulty,
-                            wg_game_variant_t variant, wg_level_t *level);
+                            wg_game_variant_t variant, uint8_t random_index,
+                            wg_level_t *level);
 int WG_QueueSound(wg_level_t *level, wg_sound_t sound);
 int WG_SoundNumberForVariant(wg_game_variant_t variant,
                              wg_sound_t sound, unsigned *sound_number);

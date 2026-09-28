@@ -2,6 +2,9 @@
 
 ## 1.4.0 - 2026-09-27
 
+- Restored the original live-versus-demo random initialization: live levels
+  use the host clock's hundredths phase, while demos use index zero, and the
+  selected index is installed before map actors consume random values.
 - Rejected legacy portable saves whose actor coordinates fall outside the
   64x64 occupancy grid instead of using those coordinates as array indices.
 - Prevented the native Win32 message pump from filling its translated-event
