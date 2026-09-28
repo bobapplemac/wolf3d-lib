@@ -92,12 +92,39 @@ int WL_DrawGetPsyched(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    /* PM_Preload leaves its progress bar full before the original one-second
-       IN_UserInput hold.  Resource decoding is synchronous here, so draw that
-       final state directly. */
-    WG_VideoBar(framebuffer, 53, 101, 214, 2, 0x37U);
-    WG_VideoBar(framebuffer, 53, 101, 213, 1, 0x32U);
+    /* Preserve the completed state for direct/headless rendering.  Interactive
+       hosts rewind this to zero and animate it while simulating PM_Preload. */
+    WL_DrawGetPsychedProgress(framebuffer, 1U, 1U);
     return 1;
+}
+
+void WL_DrawGetPsychedProgress(uint8_t framebuffer[320 * 200],
+                               unsigned current, unsigned total)
+{
+    unsigned width;
+
+    if (framebuffer == NULL)
+    {
+        return;
+    }
+    WG_VideoBar(framebuffer, 53, 101, 214, 2, 0U);
+    if (total == 0U || current == 0U)
+    {
+        return;
+    }
+    if (current > total)
+    {
+        current = total;
+    }
+    width = (unsigned)(((uint64_t)214U * current) / total);
+    if (width != 0U)
+    {
+        WG_VideoBar(framebuffer, 53, 101, (int)width, 2, 0x37U);
+        if (width > 1U)
+        {
+            WG_VideoBar(framebuffer, 53, 101, (int)width - 1, 1, 0x32U);
+        }
+    }
 }
 
 uint16_t WL_DeathTargetAngle(const wg_level_t *level)

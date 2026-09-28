@@ -2964,6 +2964,20 @@ static void TestVideo(void)
     CHECK(destination[159U * WG_VIDEO_WIDTH] == 127U);
     CHECK(!WL_DrawPlayBorder(destination, 63U));
 
+    WL_DrawGetPsychedProgress(destination, 0U, 70U);
+    CHECK(destination[101U * WG_VIDEO_WIDTH + 53U] == 0U);
+    CHECK(destination[101U * WG_VIDEO_WIDTH + 266U] == 0U);
+    WL_DrawGetPsychedProgress(destination, 35U, 70U);
+    CHECK(destination[101U * WG_VIDEO_WIDTH + 53U] == 0x32U);
+    CHECK(destination[101U * WG_VIDEO_WIDTH + 158U] == 0x32U);
+    CHECK(destination[101U * WG_VIDEO_WIDTH + 159U] == 0x37U);
+    CHECK(destination[101U * WG_VIDEO_WIDTH + 160U] == 0U);
+    CHECK(destination[102U * WG_VIDEO_WIDTH + 159U] == 0x37U);
+    WL_DrawGetPsychedProgress(destination, 70U, 70U);
+    CHECK(destination[101U * WG_VIDEO_WIDTH + 265U] == 0x32U);
+    CHECK(destination[101U * WG_VIDEO_WIDTH + 266U] == 0x37U);
+    CHECK(destination[102U * WG_VIDEO_WIDTH + 266U] == 0x37U);
+
     memset(black, 0, sizeof(black));
     WG_PaletteFade(black, WG_WolfPaletteVGA, 15, 30, faded);
     CHECK(faded[5] == 21U);

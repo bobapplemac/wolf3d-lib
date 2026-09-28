@@ -305,6 +305,8 @@ int WL_DrawPlayBorder(uint8_t framebuffer[320 * 200],
 int WL_DrawGetPsyched(uint8_t framebuffer[320 * 200],
                       const struct wg_graphics *graphics,
                       const wg_level_t *level);
+void WL_DrawGetPsychedProgress(uint8_t framebuffer[320 * 200],
+                               unsigned current, unsigned total);
 uint16_t WL_DeathTargetAngle(const wg_level_t *level);
 int WL_DeathRotateStep(wg_level_t *level, uint16_t target_angle,
                        unsigned degrees);

@@ -1760,6 +1760,20 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   mappings and recorded the scheduler-separated render/fizzle edges in the
   call-graph audit.
 
+## 2026-09-27: Fast-host presentation pacing
+
+- Added non-blocking minimum presentation intervals around the Wolf3D SIGNON
+  sequence. The embedded black startup message now remains visible for 750
+  milliseconds before the yellow “Press a key” prompt, and the green
+  “Working...” response remains visible for another 750 milliseconds after
+  acknowledgment. Spear retains its original three-second SIGNON hold.
+- Recreated the visible `PM_Preload` progress on modern storage by filling the
+  Get Psyched bar over one logical second before the original one-second,
+  input-skippable completed-bar hold. The simulated work interval cannot be
+  skipped, while its completed hold retains original input behavior.
+- Kept both effects entirely in presentation state: neither changes gameplay
+  tics, demo input timing, random-number consumption, or audio scheduling.
+
 ## 2026-09-27: Intermission timing and acknowledgment parity
 
 - Replaced the portable intermission's immediate final-value screen with a

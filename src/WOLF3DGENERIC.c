@@ -213,7 +213,9 @@ static uint8_t wg_quick_slot_valid;
 typedef enum wg_attract_phase
 {
     WG_ATTRACT_NONE = 0,
+    WG_ATTRACT_SIGNON_WAIT,
     WG_ATTRACT_SIGNON,
+    WG_ATTRACT_SIGNON_WORKING,
     WG_ATTRACT_RATING,
     WG_ATTRACT_TITLE,
     WG_ATTRACT_CREDITS,
@@ -222,6 +224,9 @@ typedef enum wg_attract_phase
 
 static wg_attract_phase_t wg_attract_phase;
 static uint32_t wg_attract_deadline;
+#define WG_SIGNON_WORK_MIN_MS 750U
+#define WG_PRELOAD_FILL_TICS 70U
+#define WG_PRELOAD_HOLD_TICS 70U
 static wg_game_family_t wg_signon_family;
 static uint8_t wg_signon_sound_blaster;
 static wg_audio_t wg_front_audio;
@@ -308,6 +313,7 @@ typedef struct wg_game_session
     uint8_t entry_fizzle_active;
     wg_fizzle_t entry_fizzle;
     uint8_t entry_source[WG_SCREEN_WIDTH * WG_PLAY_VIEW_HEIGHT];
+    uint16_t preload_fill_tics;
     uint16_t preload_tics;
     unsigned map_number;
     unsigned next_map_number;
@@ -1385,7 +1391,8 @@ static int WG_LoadSignonScreen(const char *path,
                        ? WG_GAME_SPEAR_FULL_SOD
                        : WG_GAME_WOLF3D_FULL_GT_14,
                    WG_Palette);
-    if (!WG_DrawSignonPrompt("Press a key", 14U))
+    if (!WG_IsInteractive()
+        && !WG_DrawSignonPrompt("Press a key", 14U))
     {
         return 0;
     }
@@ -1398,9 +1405,16 @@ static int WG_LoadSignonScreen(const char *path,
     wg_control_screen = 0U;
     wg_mouse_sensitivity_screen = 0U;
     wg_customize_screen = 0U;
-    WG_AttractSet(WG_ATTRACT_SIGNON,
-                  WG_DataVariantFamily(wg_data_set.variant)
-                          == WG_GAME_FAMILY_SPEAR ? 3000U : 0U);
+    if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        WG_AttractSet(WG_ATTRACT_SIGNON, 3000U);
+    }
+    else
+    {
+        WG_AttractSet(WG_IsInteractive() ? WG_ATTRACT_SIGNON_WAIT
+                                         : WG_ATTRACT_SIGNON,
+                      0U);
+    }
     return 1;
 }
 
@@ -1428,7 +1442,8 @@ static int WG_DrawEmbeddedSignon(const char *name,
                        ? WG_GAME_SPEAR_FULL_SOD
                        : WG_GAME_WOLF3D_FULL_GT_14,
                    WG_Palette);
-    if (!WG_DrawSignonPrompt("Press a key", 14U))
+    if (!WG_IsInteractive()
+        && !WG_DrawSignonPrompt("Press a key", 14U))
     {
         return 0;
     }
@@ -1441,9 +1456,16 @@ static int WG_DrawEmbeddedSignon(const char *name,
     wg_control_screen = 0U;
     wg_mouse_sensitivity_screen = 0U;
     wg_customize_screen = 0U;
-    WG_AttractSet(WG_ATTRACT_SIGNON,
-                  WG_DataVariantFamily(wg_data_set.variant)
-                          == WG_GAME_FAMILY_SPEAR ? 3000U : 0U);
+    if (WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        WG_AttractSet(WG_ATTRACT_SIGNON, 3000U);
+    }
+    else
+    {
+        WG_AttractSet(WG_IsInteractive() ? WG_ATTRACT_SIGNON_WAIT
+                                         : WG_ATTRACT_SIGNON,
+                      0U);
+    }
     return 1;
 }
 
@@ -2258,7 +2280,17 @@ static int WG_GameSessionBeginPreload(void)
     {
         return 0;
     }
-    wg_game.preload_tics = 70U;
+    if (WG_IsInteractive())
+    {
+        WL_DrawGetPsychedProgress(WG_ScreenBuffer, 0U,
+                                  WG_PRELOAD_FILL_TICS);
+        wg_game.preload_fill_tics = WG_PRELOAD_FILL_TICS;
+    }
+    else
+    {
+        wg_game.preload_fill_tics = 0U;
+    }
+    wg_game.preload_tics = WG_PRELOAD_HOLD_TICS;
     wg_game.entry_fizzle_active = 0U;
     memset(wg_game.keys, 0, sizeof(wg_game.keys));
     wg_game.mouse_buttons = 0U;
@@ -3259,6 +3291,16 @@ static int WG_GameSessionTick(unsigned live_tics)
         {
             return WG_GameSessionReturnToMenu();
         }
+        return 1;
+    }
+    if (wg_game.preload_fill_tics != 0U)
+    {
+        unsigned current;
+
+        --wg_game.preload_fill_tics;
+        current = WG_PRELOAD_FILL_TICS - wg_game.preload_fill_tics;
+        WL_DrawGetPsychedProgress(WG_ScreenBuffer, current,
+                                  WG_PRELOAD_FILL_TICS);
         return 1;
     }
     if (wg_game.preload_tics != 0U)
@@ -4974,12 +5016,27 @@ static int WG_AttractAdvance(void)
 {
     switch (wg_attract_phase)
     {
+        case WG_ATTRACT_SIGNON_WAIT:
+            if (!WG_DrawSignonPrompt("Press a key", 14U))
+            {
+                return 0;
+            }
+            WG_AttractSet(WG_ATTRACT_SIGNON, 0U);
+            return 1;
         case WG_ATTRACT_SIGNON:
+            if (WG_DataVariantFamily(wg_data_set.variant)
+                == WG_GAME_FAMILY_SPEAR)
+            {
+                return WG_DrawRatingScreen();
+            }
             if (!WG_DrawSignonPrompt("Working...", 10U))
             {
                 return 0;
             }
-            WG_Present(WG_ScreenBuffer, WG_Palette);
+            WG_AttractSet(WG_ATTRACT_SIGNON_WORKING,
+                          WG_SIGNON_WORK_MIN_MS);
+            return 1;
+        case WG_ATTRACT_SIGNON_WORKING:
             return WG_DrawRatingScreen();
         case WG_ATTRACT_RATING:
             return WG_DrawTitleScreen();
@@ -5064,6 +5121,13 @@ wg_result_t wolf3dgeneric_Run(void)
     {
         return WG_RESULT_NOT_IMPLEMENTED;
     }
+    if (wg_attract_phase == WG_ATTRACT_SIGNON_WAIT
+        && wg_attract_deadline == 0U)
+    {
+        /* Start the minimum interval only after the host has received the
+           first frame, rather than while Create is still doing setup work. */
+        WG_AttractSet(WG_ATTRACT_SIGNON_WAIT, WG_SIGNON_WORK_MIN_MS);
+    }
 
     last_ticks = WG_GetTicksMs();
     for (;;)
@@ -5103,7 +5167,10 @@ wg_result_t wolf3dgeneric_Run(void)
                 {
                     continue;
                 }
-                if (wg_attract_phase == WG_ATTRACT_SIGNON && event.connected)
+                if ((wg_attract_phase == WG_ATTRACT_SIGNON_WAIT
+                     || wg_attract_phase == WG_ATTRACT_SIGNON
+                     || wg_attract_phase == WG_ATTRACT_SIGNON_WORKING)
+                    && event.connected)
                 {
                     WG_SignonDrawIndicators(WG_ScreenBuffer,
                                             wg_signon_family,
@@ -5113,7 +5180,8 @@ wg_result_t wolf3dgeneric_Run(void)
                 ID_IN_GetJoyDelta(event.joystick, &new_x, &new_y);
                 pressed_buttons = (uint8_t)(ID_IN_JoyButtons(event.joystick)
                                             & (uint8_t)~old_buttons);
-                if (wg_game.active && wg_game.preload_tics != 0U
+                if (wg_game.active && wg_game.preload_fill_tics == 0U
+                    && wg_game.preload_tics != 0U
                     && pressed_buttons != 0U)
                 {
                     wg_game.preload_tics = 1U;
@@ -5248,7 +5316,17 @@ wg_result_t wolf3dgeneric_Run(void)
                 accumulator = 0U;
                 continue;
             }
-            if (wg_game.active && wg_game.preload_tics != 0U
+            if (!wg_game.active
+                && (wg_attract_phase == WG_ATTRACT_SIGNON_WAIT
+                    || wg_attract_phase == WG_ATTRACT_SIGNON_WORKING
+                    || (wg_attract_phase == WG_ATTRACT_SIGNON
+                        && WG_DataVariantFamily(wg_data_set.variant)
+                               == WG_GAME_FAMILY_SPEAR)))
+            {
+                continue;
+            }
+            if (wg_game.active && wg_game.preload_fill_tics == 0U
+                && wg_game.preload_tics != 0U
                 && event.pressed
                 && (event.type == WG_EVENT_KEY
                     || event.type == WG_EVENT_MOUSE_BUTTON))
