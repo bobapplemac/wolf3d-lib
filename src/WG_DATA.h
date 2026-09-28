@@ -24,6 +24,16 @@ typedef enum wg_game_family
     WG_GAME_FAMILY_SPEAR
 } wg_game_family_t;
 
+typedef enum wg_data_edition
+{
+    WG_DATA_EDITION_UNKNOWN = 0,
+    WG_DATA_EDITION_APOGEE,
+    WG_DATA_EDITION_GT,
+    WG_DATA_EDITION_ID,
+    WG_DATA_EDITION_ACTIVISION,
+    WG_DATA_EDITION_SPEAR
+} wg_data_edition_t;
+
 typedef struct wg_page_entry
 {
     uint32_t offset;
@@ -33,6 +43,7 @@ typedef struct wg_page_entry
 typedef struct wg_data_set
 {
     wg_game_variant_t variant;
+    wg_data_edition_t edition;
     char root[1024];
     char extension[5];
     char graphics_extension[5];

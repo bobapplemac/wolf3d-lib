@@ -469,6 +469,8 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     set(WG_TEST_WL6_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL6 data")
     set(WG_TEST_WL6_APOGEE_PATH "" CACHE PATH
         "Path to external Wolf3D v1.4 Apogee WL6 data")
+    set(WG_TEST_WL6_GOG_PATH "" CACHE PATH
+        "Path to external Wolf3D v1.4 Activision/GOG WL6 data")
     set(WG_TEST_SOD_PATH "" CACHE PATH "Path to external Spear of Destiny SOD data")
     set(WG_TEST_SDM_PATH "" CACHE PATH "Path to external Spear of Destiny demo SDM data")
     set(WG_TEST_SD1_PATH "" CACHE PATH "Path to external Spear mission 1 data")
@@ -1014,6 +1016,15 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --high-score-entry-view --frame-hash)
         set_tests_properties(high-score-entry-view-wl6 PROPERTIES
             PASS_REGULAR_EXPRESSION "3b75e429fe454ad8")
+    endif()
+    if(WG_TEST_WL6_GOG_PATH)
+        add_test(NAME data-wl6-gog COMMAND wg-tests --data wl6-gog
+            "${WG_TEST_WL6_GOG_PATH}")
+        add_test(NAME signon-auto-wl6-gog COMMAND wolf3dgeneric-headless
+            --data "${WG_TEST_WL6_GOG_PATH}" --game WL6 --signon auto
+            --frame-hash --palette-hash)
+        set_tests_properties(signon-auto-wl6-gog PROPERTIES
+            PASS_REGULAR_EXPRESSION "7cb4dca1b0143110.*1e14f48394b7e6fd")
     endif()
     if(WG_TEST_SOD_PATH)
         add_test(NAME signon-auto-sod COMMAND wolf3dgeneric-headless

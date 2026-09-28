@@ -2,6 +2,10 @@
 
 ## 1.4.0 - 2026-09-27
 
+- Recognized the supplied GOG/Activision WL6 resource profile independently
+  of its folder name and selected the embedded Activision SIGNON automatically.
+  Added real-data coverage for its changed scenery sprite and its intentionally
+  duplicated, therefore static, intermission portrait frame.
 - Restored reliable two-frame BJ breathing on the level-complete screen by
   rebuilding the complete intermission image at each original-timed portrait
   transition, including GT/Activision WL6 sound and wait phases.

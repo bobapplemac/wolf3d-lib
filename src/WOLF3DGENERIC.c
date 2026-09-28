@@ -1442,7 +1442,8 @@ static int WG_DrawEmbeddedSignon(const char *name,
     wg_game_family_t asset_family;
     wg_game_family_t palette_family;
 
-    if (!WG_SignonDraw(WG_ScreenBuffer, wg_data_set.variant, name,
+    if (!WG_SignonDraw(WG_ScreenBuffer, wg_data_set.variant,
+                       wg_data_set.edition, name,
                        wg_mouse_present,
                        ID_IN_JoystickPresent(0U)
                            || ID_IN_JoystickPresent(1U),

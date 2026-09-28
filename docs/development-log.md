@@ -1,5 +1,19 @@
 # Development log
 
+## 2026-09-28: Activision/GOG WL6 resource profile
+
+- Compared the added GOG corpus byte-for-byte with GT WL6. Maps and audio are
+  identical; the only decoded picture change is `L_GUYPIC`, which is an exact
+  duplicate of `L_GUY2PIC`, and the only VSWAP page change is sprite 42
+  (`SPR_STAT_40`, the original `Call Apogee` scenery object).
+- Used the replacement VSWAP page's exact fingerprint to identify this data
+  distribution without relying on a directory, executable, or storefront
+  name. Automatic SIGNON selection now chooses the embedded Activision screen.
+- Kept the GOG intermission portrait static because both animation frames in
+  that release genuinely contain the same pixels; no art is borrowed from a
+  different installation. Added the GOG corpus to data and SIGNON regression
+  coverage on every configured compiler and architecture.
+
 ## 2026-09-27: Intermission portrait and fullscreen cursor fixes
 
 - Revalidated GT WL6's original `L_GUYPIC`/`L_GUY2PIC` chunk mapping (43 and

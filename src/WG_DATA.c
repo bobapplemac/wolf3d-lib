@@ -276,6 +276,30 @@ static int WG_DataReadPages(wg_data_set_t *data_set)
         data_set->pages[index].length = length;
     }
 
+    if (data_set->variant == WG_GAME_WOLF3D_FULL_GT_14
+        && data_set->page_count == 663U
+        && data_set->sprite_start == 106U
+        && data_set->sound_start == 542U
+        && data_set->pages[148U].length == 1102U)
+    {
+        const wg_page_entry_t *page = &data_set->pages[148U];
+        uint32_t hash = 2166136261U;
+        size_t byte;
+
+        /* The Activision/GOG archive replaces the "Call Apogee" static
+           sprite at this page.  Its exact page fingerprint distinguishes
+           that distribution without relying on a directory or EXE name. */
+        for (byte = 0U; byte < page->length; ++byte)
+        {
+            hash ^= file.data[page->offset + byte];
+            hash *= 16777619U;
+        }
+        if (hash == 0xbb7adeb2U)
+        {
+            data_set->edition = WG_DATA_EDITION_ACTIVISION;
+        }
+    }
+
     WG_FreeFile(&file);
     return 1;
 }
@@ -380,6 +404,20 @@ int WG_DataOpenSelected(wg_data_set_t *data_set, const char *root,
             WG_DataClose(data_set);
             return 0;
         }
+    }
+    if (data_set->variant == WG_GAME_WOLF3D_FULL_APOGEE_14
+        || data_set->variant == WG_GAME_WOLF3D_SHAREWARE_14)
+    {
+        data_set->edition = WG_DATA_EDITION_APOGEE;
+    }
+    else if (data_set->variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        data_set->edition = WG_DATA_EDITION_GT;
+    }
+    else if (WG_DataVariantFamily(data_set->variant)
+             == WG_GAME_FAMILY_SPEAR)
+    {
+        data_set->edition = WG_DATA_EDITION_SPEAR;
     }
     if (!WG_DataReadPages(data_set))
     {

@@ -3576,6 +3576,7 @@ static void TestStaticRenderer(void)
 }
 
 static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
+                        wg_data_edition_t expected_edition,
                         size_t expected_graphics_offsets)
 {
     wg_data_set_t data_set;
@@ -3641,6 +3642,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     }
 
     CHECK(data_set.variant == expected_variant);
+    CHECK(data_set.edition == expected_edition);
     CHECK(data_set.page_count == 663);
     CHECK(data_set.sprite_start == 106);
     CHECK(data_set.sound_start == 542);
@@ -3691,7 +3693,17 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 intermission_bj_hash[frame] *= 1099511628211ULL;
             }
         }
-        CHECK(intermission_bj_hash[0] != intermission_bj_hash[1]);
+        if (expected_edition == WG_DATA_EDITION_ACTIVISION)
+        {
+            /* Activision/GOG replaced L_GUYPIC with a duplicate of
+               L_GUY2PIC, so its shipped intermission portrait is static. */
+            CHECK(intermission_bj_hash[0] == intermission_bj_hash[1]);
+            CHECK(intermission_bj_hash[0] == 0x92658974d3d13006ULL);
+        }
+        else
+        {
+            CHECK(intermission_bj_hash[0] != intermission_bj_hash[1]);
+        }
         CHECK(!WL_DrawIntermissionBJ(framebuffer, &graphics, 2U));
         {
             wl_intermission_t intermission =
@@ -5302,7 +5314,8 @@ static void TestSignonAssets(void)
     CHECK(!WG_SignonIsEmbeddedName("SIGNON.BIN"));
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_SHAREWARE_14,
-                        "auto", 1, 0, 1, &family));
+                        WG_DATA_EDITION_APOGEE, "auto", 1, 0, 1,
+                        &family));
     CHECK(family == WG_GAME_FAMILY_WOLF3D);
     for (index = 0U; index < 10U; ++index)
     {
@@ -5320,18 +5333,19 @@ static void TestSignonAssets(void)
     CHECK(framebuffer[174U * 320U + 164U] != 14U);
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
-                        "gt", 0, 0, 0, &family));
+                        WG_DATA_EDITION_GT, "gt", 0, 0, 0, &family));
     CHECK(framebuffer[82U * 320U + 164U] != 14U);
     CHECK(framebuffer[128U * 320U + 164U] == 14U);
     CHECK(framebuffer[151U * 320U + 164U] != 14U);
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_SPEAR_FULL_SOD,
-                        NULL, 1, 1, 1, &family));
+                        WG_DATA_EDITION_SPEAR, NULL, 1, 1, 1, &family));
     CHECK(family == WG_GAME_FAMILY_SPEAR);
     CHECK(framebuffer[163U * 320U + 49U] == 0x4fU);
     CHECK(framebuffer[105U * 320U + 164U] == 14U);
     CHECK(!WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
-                         "unknown", 0, 0, 1, &family));
+                         WG_DATA_EDITION_GT, "unknown", 0, 0, 1,
+                         &family));
     free(framebuffer);
 }
 
@@ -5400,15 +5414,23 @@ int main(int argc, char **argv)
     {
         if (strcmp(argv[2], "wl1") == 0)
         {
-            TestDataSet(argv[3], WG_GAME_WOLF3D_SHAREWARE_14, 157);
+            TestDataSet(argv[3], WG_GAME_WOLF3D_SHAREWARE_14,
+                        WG_DATA_EDITION_APOGEE, 157);
         }
         else if (strcmp(argv[2], "wl6") == 0)
         {
-            TestDataSet(argv[3], WG_GAME_WOLF3D_FULL_GT_14, 150);
+            TestDataSet(argv[3], WG_GAME_WOLF3D_FULL_GT_14,
+                        WG_DATA_EDITION_GT, 150);
+        }
+        else if (strcmp(argv[2], "wl6-gog") == 0)
+        {
+            TestDataSet(argv[3], WG_GAME_WOLF3D_FULL_GT_14,
+                        WG_DATA_EDITION_ACTIVISION, 150);
         }
         else if (strcmp(argv[2], "wl6-apogee") == 0)
         {
-            TestDataSet(argv[3], WG_GAME_WOLF3D_FULL_APOGEE_14, 162);
+            TestDataSet(argv[3], WG_GAME_WOLF3D_FULL_APOGEE_14,
+                        WG_DATA_EDITION_APOGEE, 162);
         }
         else
         {
@@ -5418,7 +5440,7 @@ int main(int argc, char **argv)
     }
     else if (argc != 1)
     {
-        fprintf(stderr, "usage: wg-tests [--data wl1|wl6|wl6-apogee PATH | "
+        fprintf(stderr, "usage: wg-tests [--data wl1|wl6|wl6-gog|wl6-apogee PATH | "
                         "--spear-data EXT PAGES MAPS PATH]\n");
         return 2;
     }

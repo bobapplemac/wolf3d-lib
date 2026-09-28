@@ -70,8 +70,29 @@ static const wg_signon_asset_t *WG_SignonFind(const char *name)
     return NULL;
 }
 
-static const wg_signon_asset_t *WG_SignonDefault(wg_game_variant_t variant)
+static const wg_signon_asset_t *WG_SignonDefault(
+    wg_game_variant_t variant, wg_data_edition_t edition)
 {
+    if (edition == WG_DATA_EDITION_APOGEE)
+    {
+        return &WG_SignonAssets[0];
+    }
+    if (edition == WG_DATA_EDITION_GT)
+    {
+        return &WG_SignonAssets[1];
+    }
+    if (edition == WG_DATA_EDITION_ID)
+    {
+        return &WG_SignonAssets[2];
+    }
+    if (edition == WG_DATA_EDITION_ACTIVISION)
+    {
+        return &WG_SignonAssets[3];
+    }
+    if (edition == WG_DATA_EDITION_SPEAR)
+    {
+        return &WG_SignonAssets[4];
+    }
     if (WG_DataUsesApogeeWolfGraphics(variant))
     {
         return &WG_SignonAssets[0];
@@ -141,7 +162,8 @@ int WG_SignonIsEmbeddedName(const char *name)
 }
 
 int WG_SignonDraw(uint8_t framebuffer[WG_SIGNON_SIZE],
-                  wg_game_variant_t game_variant, const char *name,
+                  wg_game_variant_t game_variant,
+                  wg_data_edition_t data_edition, const char *name,
                   int mouse_present, int joystick_present,
                   int sound_blaster_present,
                   wg_game_family_t *palette_family)
@@ -153,7 +175,8 @@ int WG_SignonDraw(uint8_t framebuffer[WG_SIGNON_SIZE],
         return 0;
     }
     asset = name == NULL || WG_SignonEqualCaseInsensitive(name, "auto")
-                ? WG_SignonDefault(game_variant) : WG_SignonFind(name);
+                ? WG_SignonDefault(game_variant, data_edition)
+                : WG_SignonFind(name);
     if (asset == NULL)
     {
         return 0;
