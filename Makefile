@@ -12,7 +12,8 @@ CMAKE ?= cmake
 CMAKE_ARGS ?=
 CMAKE_COMPILER_ARG := -DCMAKE_C_COMPILER="$(CC)"
 
-.PHONY: all configure build test library-release linux-console-release clean
+.PHONY: all configure build test library-release linux-console-release \
+	sdl3 sdl3-release clean
 
 all: build
 
@@ -33,6 +34,15 @@ library-release: configure
 
 linux-console-release: configure
 	$(CMAKE) --build "$(BUILD_DIR)" --target linux-console-release --parallel
+
+sdl3:
+	$(MAKE) build CC="$(CC)" BUILD_TYPE="$(BUILD_TYPE)" \
+		BUILD_DIR="build/linux-sdl3-$(COMPILER_NAME)" \
+		CMAKE_ARGS="$(CMAKE_ARGS) -DBUILD_TESTING=OFF -DWG_BUILD_HEADLESS=OFF -DWG_BUILD_LINUX_CONSOLE=OFF -DWG_BUILD_SDL3=ON"
+
+sdl3-release:
+	$(MAKE) sdl3 CC="$(CC)" BUILD_TYPE="$(BUILD_TYPE)" CMAKE_ARGS="$(CMAKE_ARGS)"
+	$(CMAKE) --build "build/linux-sdl3-$(COMPILER_NAME)" --target sdl3-release --parallel
 
 clean:
 	@if [ -f "$(BUILD_DIR)/CMakeCache.txt" ]; then \

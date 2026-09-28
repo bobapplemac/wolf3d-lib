@@ -17,7 +17,10 @@ packages belong under `dist/`. Both directories are ignored by Git.
 - Linux: GNU Make plus GCC or Clang. Ninja is additionally required when using
   the Linux CMake presets directly. The direct-console host requires pkg-config,
   libdrm headers, and ALSA headers (`pkgconf libdrm-dev libasound2-dev` on
-  Debian-family systems).
+  Debian-family systems). SDL3 uses the normal X11 or Wayland development
+  dependencies used by SDL on that distribution.
+- SDL3 GUI builds: initialize the pinned dependency once with
+  `git submodule update --init`.
 - Original Wolfenstein 3D data is optional for compilation and required only
   for the asset-backed regression tests or normal gameplay.
 
@@ -103,6 +106,19 @@ cmake --build build/windows-release-x64-dynamic-crt --config Release --target wi
 
 The result is `dist/wolf3dgeneric-<version>-win32-x64-dynamic-crt`.
 
+The Visual Studio solution and `windows-dev-*` presets also compile the SDL3
+GUI target. Stage its minimal package independently with:
+
+```text
+cmake --preset windows-sdl3-x64
+cmake --build --preset windows-sdl3-x64
+```
+
+Replace `x64` with `x86` as needed. The package contains
+`wolf3dgeneric-sdl3.exe`, `wolf3dgeneric.dll`, `Nuked-OPL3.dll`, and
+`SDL3.dll`. The selected static or dynamic MSVC runtime policy applies to all
+locally compiled binaries.
+
 ## Linux with GNU Make
 
 GCC is the default compiler:
@@ -168,6 +184,18 @@ This stages `wolf3dgeneric`, `libwolf3dgeneric.so`, the replaceable
 `dist/wolf3dgeneric-<version>-linux-console-<architecture>`. libdrm, ALSA,
 libc, and their transitive dependencies remain system-provided.
 
+Build and stage the desktop SDL3 host with either maintained compiler:
+
+```text
+make sdl3-release
+make sdl3-release CC=clang
+```
+
+Compiler-specific objects stay in `build/linux-sdl3-gcc` or
+`build/linux-sdl3-clang`. The clean package is staged under
+`dist/wolf3dgeneric-<version>-sdl3-linux-<architecture>` with the executable
+and local wolf3dgeneric, Nuked-OPL3, and SDL3 shared libraries.
+
 ## Linux with CMake and Ninja
 
 The direct preset workflow remains available:
@@ -194,6 +222,13 @@ The direct-console package preset is:
 ```text
 cmake --preset linux-console
 cmake --build --preset linux-console
+```
+
+The SDL3 GUI package preset is:
+
+```text
+cmake --preset linux-sdl3
+cmake --build --preset linux-sdl3
 ```
 
 The console host runs directly from an active Linux virtual terminal. It does
@@ -239,6 +274,8 @@ The game data remains external and must never be committed or packaged.
 | `WG_BUILD_HEADLESS` | `ON` | Build the deterministic headless host and test support. |
 | `WG_BUILD_WIN32` | `ON` on Windows | Build the native Win32 wrapper. Forced off elsewhere. |
 | `WG_BUILD_LINUX_CONSOLE` | `ON` on Linux | Build the DRM/evdev/ALSA console wrapper. Forced off elsewhere. |
+| `WG_BUILD_SDL3` | `OFF` | Build the SDL3 GUI wrapper. Enabled by SDL3 and Windows development presets. |
+| `WG_USE_SYSTEM_SDL3` | `OFF` | Use installed SDL3 3.4 rather than the pinned submodule. |
 | `WG_WARNINGS_AS_ERRORS` | `ON` in presets/Makefile | Treat the maintained warning set as errors. |
 | `WG_STATIC_MSVC_RUNTIME` | `ON` | Use `/MT` instead of the Redistributable-backed `/MD`; Windows/MSVC only. |
 | `BUILD_TESTING` | `ON` | Generate the CTest suite. |

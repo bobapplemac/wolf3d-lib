@@ -93,6 +93,16 @@ The portable core targets ISO C99 and does not contain compiler-specific game
 logic. Other CMake-supported C compilers may work, but GCC, Clang, and MSVC are
 the maintained validation set.
 
+An additional SDL3 desktop host is available on both Windows and Linux. SDL is
+pinned as a Git submodule, so initialize dependencies after cloning with
+`git submodule update --init`. Build and stage the Windows GUI package with
+the `windows-sdl3-x64` or `windows-sdl3-x86` configure/build preset. On Linux,
+use `make sdl3-release` (optionally with `CC=clang`) or the `linux-sdl3`
+preset. The staged folder contains the SDL executable and separate
+wolf3dgeneric, Nuked-OPL3, and SDL3 runtime libraries. It provides the same
+intended 4:3 presentation, opt-in `--mouse` behavior, audio, and two-controller
+support on either desktop platform.
+
 Run the console host from an active virtual console, normally as root or as a
 user with permission for the DRM, input, and audio devices:
 

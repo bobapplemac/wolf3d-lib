@@ -15,3 +15,16 @@ modification, and relinking requirements; consult the included license when
 preparing a release.
 
 No MAME or DOSBox OPL implementation is included.
+
+## SDL3
+
+- Upstream: `libsdl-org/SDL`
+- Vendored release: `3.4.16`
+- License: Zlib
+- Location: `third_party/SDL3` (Git submodule)
+
+SDL3 is an optional host-layer dependency used only by the portable GUI
+wrapper. It remains a separate shared library in staged SDL3 packages. The
+native Win32, Linux direct-console, headless, and engine-library targets do
+not require it. Configure with `WG_USE_SYSTEM_SDL3=ON` to use an installed
+SDL3 package instead of the pinned submodule.

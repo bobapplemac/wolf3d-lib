@@ -12,7 +12,8 @@
       "generator": "Visual Studio 16 2019",
       "cacheVariables": {
         "WG_WARNINGS_AS_ERRORS": "ON",
-        "WG_STATIC_MSVC_RUNTIME": "ON"
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_BUILD_SDL3": "ON"
       }
     },
     {
@@ -68,6 +69,28 @@
       }
     },
     {
+      "name": "windows-sdl3-x64",
+      "displayName": "Windows SDL3 GUI release (x64)",
+      "inherits": "windows-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-sdl3-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF",
+        "WG_BUILD_WIN32": "OFF"
+      }
+    },
+    {
+      "name": "windows-sdl3-x86",
+      "displayName": "Windows SDL3 GUI release (x86)",
+      "inherits": "windows-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-sdl3-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF",
+        "WG_BUILD_WIN32": "OFF"
+      }
+    },
+    {
       "name": "linux-base",
       "hidden": true,
       "generator": "Ninja",
@@ -101,6 +124,18 @@
       "cacheVariables": {
         "BUILD_TESTING": "OFF",
         "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "linux-sdl3",
+      "displayName": "Linux SDL3 GUI release",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-sdl3",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF",
+        "WG_BUILD_LINUX_CONSOLE": "OFF",
+        "WG_BUILD_SDL3": "ON"
       }
     }
   ],
@@ -140,6 +175,18 @@
       "targets": ["library-release"]
     },
     {
+      "name": "windows-sdl3-x64",
+      "configurePreset": "windows-sdl3-x64",
+      "configuration": "Release",
+      "targets": ["sdl3-release"]
+    },
+    {
+      "name": "windows-sdl3-x86",
+      "configurePreset": "windows-sdl3-x86",
+      "configuration": "Release",
+      "targets": ["sdl3-release"]
+    },
+    {
       "name": "linux-dev",
       "configurePreset": "linux-dev"
     },
@@ -152,6 +199,11 @@
       "name": "linux-console",
       "configurePreset": "linux-console",
       "targets": ["linux-console-release"]
+    },
+    {
+      "name": "linux-sdl3",
+      "configurePreset": "linux-sdl3",
+      "targets": ["sdl3-release"]
     }
   ],
   "testPresets": [

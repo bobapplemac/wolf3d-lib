@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
@@ -36,11 +36,16 @@ configure_file(packaging/LIBRARY-README.txt.in
                ${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt @ONLY)
 configure_file(packaging/LINUX-CONSOLE-README.txt.in
                ${CMAKE_CURRENT_BINARY_DIR}/LINUX-CONSOLE-README.txt @ONLY)
+configure_file(packaging/SDL3-README.txt.in
+               ${CMAKE_CURRENT_BINARY_DIR}/SDL3-README.txt @ONLY)
 
 option(WG_BUILD_HEADLESS "Build the deterministic headless host" ON)
 option(WG_BUILD_WIN32 "Build the dependency-free Win32 host" ON)
 option(WG_BUILD_LINUX_CONSOLE
     "Build the direct DRM/evdev/ALSA Linux console host" ON)
+option(WG_BUILD_SDL3 "Build the cross-platform SDL3 GUI host" OFF)
+option(WG_USE_SYSTEM_SDL3
+    "Use an installed SDL3 package instead of the pinned submodule" OFF)
 option(WG_WARNINGS_AS_ERRORS "Treat project warnings as errors" ON)
 option(WG_STATIC_MSVC_RUNTIME
     "Link the MSVC runtime statically for self-contained Windows releases" ON)
@@ -50,6 +55,29 @@ set(WG_DIST_ROOT "${CMAKE_SOURCE_DIR}/dist" CACHE PATH
 if(MSVC AND WG_STATIC_MSVC_RUNTIME)
     set(CMAKE_MSVC_RUNTIME_LIBRARY
         "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
+if(WG_BUILD_SDL3)
+    if(WG_USE_SYSTEM_SDL3)
+        find_package(SDL3 3.4 REQUIRED CONFIG COMPONENTS SDL3-shared)
+    else()
+        if(NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/SDL3/CMakeLists.txt")
+            message(FATAL_ERROR
+                "SDL3 submodule missing; run git submodule update --init")
+        endif()
+        set(SDL_SHARED ON CACHE BOOL "Build SDL shared library" FORCE)
+        set(SDL_STATIC OFF CACHE BOOL "Do not build SDL static library" FORCE)
+        set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not build SDL test library" FORCE)
+        set(SDL_TESTS OFF CACHE BOOL "Do not build SDL tests" FORCE)
+        set(SDL_EXAMPLES OFF CACHE BOOL "Do not build SDL examples" FORCE)
+        set(SDL_INSTALL OFF CACHE BOOL "Do not install bundled SDL" FORCE)
+        # SDL's D3D11 feature probe accepts older Windows SDKs that lack
+        # dxgi1_4.h, although its implementation requires that header.
+        # The D3D9, OpenGL, and software renderers cover our simple texture.
+        set(SDL_RENDER_D3D11 OFF CACHE BOOL
+            "Keep SDL compatible with the VS 2019 SDK baseline" FORCE)
+        add_subdirectory(third_party/SDL3 EXCLUDE_FROM_ALL)
+    endif()
 endif()
 
 if(NOT WIN32)
@@ -277,6 +305,86 @@ if(WG_BUILD_WIN32)
         COMMENT "Staging ${WG_RELEASE_ARCH} Win32 release folder"
         VERBATIM
     )
+endif()
+
+if(WG_BUILD_SDL3)
+    if(WIN32)
+        add_executable(wolf3dgeneric-sdl3 WIN32
+            platforms/WG_TEXT_OUTPUT.c
+            platforms/sdl3/WG_SDL3.c
+        )
+    else()
+        add_executable(wolf3dgeneric-sdl3
+            platforms/WG_TEXT_OUTPUT.c
+            platforms/sdl3/WG_SDL3.c
+        )
+    endif()
+    wg_configure_host(wolf3dgeneric-sdl3 wolf3dgeneric)
+    target_link_libraries(wolf3dgeneric-sdl3 PRIVATE SDL3::SDL3-shared)
+    set_target_properties(wolf3dgeneric-sdl3 PROPERTIES
+        BUILD_WITH_INSTALL_RPATH ON
+        INSTALL_RPATH "$ORIGIN"
+    )
+    if(WIN32)
+        target_compile_definitions(wolf3dgeneric-sdl3 PRIVATE
+            WIN32_LEAN_AND_MEAN
+            UNICODE
+            _UNICODE
+        )
+    endif()
+
+    set(WG_SDL3_RELEASE_DIR
+        "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-sdl3-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_RUNTIME_SUFFIX}")
+    set(WG_SDL3_RELEASE_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E remove_directory
+            "${WG_SDL3_RELEASE_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${WG_SDL3_RELEASE_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wolf3dgeneric-sdl3>"
+            "${WG_SDL3_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3dgeneric-sdl3>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wolf3dgeneric>"
+            "${WG_SDL3_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3dgeneric>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:nuked-opl3>"
+            "${WG_SDL3_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:SDL3::SDL3-shared>"
+            "${WG_SDL3_RELEASE_DIR}/$<TARGET_FILE_NAME:SDL3::SDL3-shared>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/LICENSE"
+            "${WG_SDL3_RELEASE_DIR}/COPYING.txt"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
+            "${WG_SDL3_RELEASE_DIR}/COPYING.Nuked-OPL3.txt"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/third_party/SDL3/LICENSE.txt"
+            "${WG_SDL3_RELEASE_DIR}/COPYING.SDL3.txt"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/THIRD_PARTY.md"
+            "${WG_SDL3_RELEASE_DIR}/THIRD_PARTY.md"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_BINARY_DIR}/SDL3-README.txt"
+            "${WG_SDL3_RELEASE_DIR}/README.txt"
+    )
+    if(UNIX AND NOT APPLE)
+        list(APPEND WG_SDL3_RELEASE_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "$<TARGET_SONAME_FILE:SDL3::SDL3-shared>"
+                "${WG_SDL3_RELEASE_DIR}/$<TARGET_SONAME_FILE_NAME:SDL3::SDL3-shared>"
+        )
+    endif()
+    add_custom_target(sdl3-release
+        ${WG_SDL3_RELEASE_COMMANDS}
+        DEPENDS wolf3dgeneric-sdl3 wolf3dgeneric nuked-opl3 SDL3::SDL3-shared
+        COMMENT "Staging ${WG_RELEASE_ARCH} SDL3 GUI release folder"
+        VERBATIM
+    )
+
+    if(BUILD_TESTING)
+        add_test(NAME sdl3-help COMMAND wolf3dgeneric-sdl3 --sdl3-help)
+    endif()
 endif()
 
 if(WG_BUILD_LINUX_CONSOLE)

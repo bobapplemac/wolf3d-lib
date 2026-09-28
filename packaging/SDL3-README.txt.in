@@ -1,0 +1,26 @@
+wolf3dgeneric @PROJECT_VERSION@ - SDL3 GUI host
+================================================
+
+This folder is a minimal cross-platform GUI build. Keep the executable,
+wolf3dgeneric shared library, Nuked-OPL3 shared library, and SDL3 shared
+library together.
+
+Copy the files from one supported original game installation beside the
+executable, then run wolf3dgeneric-sdl3. Alternatively, leave the data
+elsewhere and pass --data PATH. Use --game WL1, WL6, SDM, SOD, SD1, SD2,
+or SD3 when automatic selection is ambiguous.
+
+Mouse hardware is deliberately hidden from the game by default. Pass
+--mouse to enable relative mouse input. SDL-compatible game controllers
+are detected automatically.
+
+The host displays the original 320x200 framebuffer at the intended 4:3
+display aspect ratio with nearest-neighbor scaling. SDL3 provides the
+window, keyboard, optional mouse/gamepad input, and audio device access;
+game behavior remains in the separate wolf3dgeneric library.
+
+Run with --sdl3-help for host-specific help or --help for game options.
+
+SDL3 is distributed under the zlib license. Nuked-OPL3 is independently
+replaceable and distributed under LGPL-2.1-or-later. See the included
+COPYING and THIRD_PARTY files.
