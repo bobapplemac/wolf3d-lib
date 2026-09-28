@@ -1,5 +1,12 @@
 # Development log
 
+## 2026-09-27: Live Change View projection update
+
+- Restored the original `CP_ChangeView` to `NewViewSize` behavior: accepting a
+  new size now recalculates the active session's projection table immediately.
+- Kept the preview non-destructive and retained Escape's original cancellation
+  behavior. Keyboard, mouse, and gamepad acceptance share the corrected path.
+
 ## 2026-09-27: Toggleable GUI fullscreen
 
 - Added host-owned borderless desktop fullscreen without changing the generic

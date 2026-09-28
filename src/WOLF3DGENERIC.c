@@ -330,6 +330,29 @@ typedef struct wg_game_session
 
 static wg_game_session_t wg_game;
 
+static int WG_GameSessionNewViewSize(unsigned view_size)
+{
+    if (view_size < WL_VIEW_SIZE_MIN || view_size > WL_VIEW_SIZE_MAX)
+    {
+        return 0;
+    }
+    /* The original CP_ChangeView calls NewViewSize on acceptance, which
+       immediately rebuilds the active CalcProjection state. */
+    if (wg_game.active
+        && !WG_ViewCalculateProjection(&wg_game.view,
+                                       (uint16_t)(view_size * 16U),
+                                       WG_FOCAL_LENGTH))
+    {
+        return 0;
+    }
+    wg_view_size = view_size;
+    if (wg_game.active)
+    {
+        wg_game.level.view_width = wg_game.view.view_width;
+    }
+    return 1;
+}
+
 static unsigned WG_GameSessionNextMap(void);
 static int WG_GameSessionRender(void);
 static int WG_GameSessionBeginEntryFizzle(void);
@@ -5737,8 +5760,9 @@ wg_result_t wolf3dgeneric_Run(void)
                         else if (event.key == WG_KEY_ENTER
                                  || event.key == WG_KEY_SPACE)
                         {
-                            wg_view_size = wg_change_view_size;
-                            if (!WG_DrawMainMenuScreen())
+                            if (!WG_GameSessionNewViewSize(
+                                    wg_change_view_size)
+                                || !WG_DrawMainMenuScreen())
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
@@ -6280,8 +6304,8 @@ wg_result_t wolf3dgeneric_Run(void)
                     }
                     else if (event.button == 1U)
                     {
-                        wg_view_size = wg_change_view_size;
-                        if (!WG_DrawMainMenuScreen())
+                        if (!WG_GameSessionNewViewSize(wg_change_view_size)
+                            || !WG_DrawMainMenuScreen())
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }

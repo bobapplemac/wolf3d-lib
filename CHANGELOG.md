@@ -4,6 +4,9 @@
 
 - Added borderless desktop fullscreen to the native Win32 and SDL3 hosts,
   selectable at startup with `--fullscreen` and toggleable with Alt+Enter.
+- Applied accepted Change View sizes to the active renderer immediately,
+  matching the original `NewViewSize` path instead of deferring the new
+  projection until another game or level was started.
 - Restored the original live-versus-demo random initialization: live levels
   use the host clock's hundredths phase, while demos use index zero, and the
   selected index is installed before map actors consume random values.
