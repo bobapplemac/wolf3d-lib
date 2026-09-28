@@ -344,6 +344,7 @@ int WL_DrawLevelCompletedProgress(
     status.weapon = level->player_weapon;
     status.lives = level->player_lives;
     status.keys = level->player_keys;
+    status.map = level->map_number;
     if (!WL_DrawStatusBar(framebuffer, graphics, &status))
     {
         return 0;
@@ -588,6 +589,7 @@ int WL_DrawVictory(uint8_t *framebuffer,
     status.weapon = level->player_weapon;
     status.lives = level->player_lives;
     status.keys = level->player_keys;
+    status.map = level->map_number;
     if (!WL_DrawStatusBar(framebuffer, graphics, &status))
     {
         return 0;

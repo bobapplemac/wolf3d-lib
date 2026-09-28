@@ -1,5 +1,19 @@
 # Development log
 
+## 2026-09-28: Persistent floor HUD and original portrait updates
+
+- Fixed the active-game status construction to retain `level.map_number`.
+  Get Psyched already showed the newly loaded floor correctly, but the first
+  rendered gameplay frame had left the status field at its Floor 1 default.
+- Corrected the same omission in level-complete and victory status-bar
+  reconstruction, preserving the displayed floor on all later transitions.
+- Applied the same correction to the headless play-view diagnostic, turning
+  the existing map-1 framebuffer checks into regressions for the live HUD.
+- Removed the full-screen intermission rebuild added during the static-GOG-BJ
+  investigation. Timed breathing once again changes only the portrait, like
+  the original `BJ_Breathe`, while ordinary score changes continue to redraw
+  the complete results content as required.
+
 ## 2026-09-28: Activision/GOG WL6 resource profile
 
 - Compared the added GOG corpus byte-for-byte with GT WL6. Maps and audio are
@@ -14,15 +28,15 @@
   different installation. Added the GOG corpus to data and SIGNON regression
   coverage on every configured compiler and architecture.
 
-## 2026-09-27: Intermission portrait and fullscreen cursor fixes
+## 2026-09-27: Intermission portrait investigation and fullscreen cursor fix
 
 - Revalidated GT WL6's original `L_GUYPIC`/`L_GUY2PIC` chunk mapping (43 and
   84) and retained the original first 11-tic, then 36-tic breathing cadence.
-- Removed the special portrait-only repaint used while an intermission sound
-  was playing or the results screen was waiting for acknowledgment. Every
-  frame transition now rebuilds the complete results image through the same
-  path used by the counting phases, so the two full-body BJ frames reliably
-  alternate without stale compositing.
+- Initially replaced portrait-only repaints during intermission sounds and the
+  acknowledgment wait with complete results-screen rebuilds while diagnosing
+  a reportedly static portrait. The later GOG corpus comparison proved its
+  two source pictures are identical, so the engine has returned to the
+  original `BJ_Breathe`-style direct portrait updates.
 - The native Win32 and SDL3 wrappers now hide the system cursor in fullscreen
   and restore it when returning to windowed mode. Win32 also handles
   `WM_SETCURSOR`, preventing the class cursor from reappearing on movement.

@@ -492,12 +492,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --map 8 --boss-view
             --frame-hash)
         set_tests_properties(boss-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "fc695e1b31cf0734")
+            PASS_REGULAR_EXPRESSION "1d485eba8c33cbaf")
         add_test(NAME boss-fire-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --map 8
             --boss-fire-view --frame-hash)
         set_tests_properties(boss-fire-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "4a50b68c08516c05")
+            PASS_REGULAR_EXPRESSION "e27e5ef07f402c3a")
         add_test(NAME patrol-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --open-doors
             --patrol-view --actor-tics 127 --frame-hash)
@@ -547,7 +547,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --map 8
             --boss-death-view --frame-hash)
         set_tests_properties(boss-death-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "9deae22ef69864d0")
+            PASS_REGULAR_EXPRESSION "2146e49de8e66017")
         add_test(NAME player-fire-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --player-fire-view
             --frame-hash)
@@ -572,7 +572,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --map 1
             --frame-hash)
         set_tests_properties(next-floor-view-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "3edcb881f0b1e94e")
+            PASS_REGULAR_EXPRESSION "5b83eae539383e97")
         add_test(NAME pause-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --pause-view
             --frame-hash)
@@ -691,17 +691,17 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL1_PATH}" --play-view --demo-view
             --demo-number 1 --demo-commands 1284 --frame-hash)
         set_tests_properties(demo-complete-1-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "61cd3c99eaae90bb")
+            PASS_REGULAR_EXPRESSION "38a09a4befc1607b")
         add_test(NAME demo-complete-2-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --demo-view
             --demo-number 2 --demo-commands 671 --frame-hash)
         set_tests_properties(demo-complete-2-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "d5f7852d06592b3a")
+            PASS_REGULAR_EXPRESSION "c8979588ac87cbd3")
         add_test(NAME demo-complete-3-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --demo-view
             --demo-number 3 --demo-commands 633 --frame-hash)
         set_tests_properties(demo-complete-3-wl1 PROPERTIES
-            PASS_REGULAR_EXPRESSION "84c5558fde31d293")
+            PASS_REGULAR_EXPRESSION "7dbe2cf7c8efc5f4")
         add_test(NAME episode-menu-view-wl1 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL1_PATH}" --play-view --episode-menu-view
             --frame-hash)
@@ -753,7 +753,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_APOGEE_PATH}" --game WL6 --play-view
             --demo-view --demo-number 0 --demo-commands 691 --frame-hash)
         set_tests_properties(demo-complete-0-wl6-apogee PROPERTIES
-            PASS_REGULAR_EXPRESSION "90263e978a27f884")
+            PASS_REGULAR_EXPRESSION "a83159039d84ca9c")
     endif()
     if(WG_TEST_WL6_PATH)
         add_test(NAME data-wl6 COMMAND wg-tests --data wl6 "${WG_TEST_WL6_PATH}")
@@ -781,12 +781,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --map 8 --boss-view
             --frame-hash)
         set_tests_properties(boss-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "fc695e1b31cf0734")
+            PASS_REGULAR_EXPRESSION "1d485eba8c33cbaf")
         add_test(NAME boss-fire-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --map 8
             --boss-fire-view --frame-hash)
         set_tests_properties(boss-fire-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "4a50b68c08516c05")
+            PASS_REGULAR_EXPRESSION "e27e5ef07f402c3a")
         add_test(NAME patrol-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --open-doors
             --patrol-view --actor-tics 127 --frame-hash)
@@ -816,17 +816,17 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --map 18
             --needle-view --frame-hash)
         set_tests_properties(needle-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "388a3470b93bc069")
+            PASS_REGULAR_EXPRESSION "3236987d899f0630")
         add_test(NAME rocket-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --map 38
             --rocket-view --frame-hash)
         set_tests_properties(rocket-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "0c30161c05898ce1")
+            PASS_REGULAR_EXPRESSION "5bf01b790397a154")
         add_test(NAME flame-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --map 28
             --flame-view --frame-hash)
         set_tests_properties(flame-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "58979ff8971b4b53")
+            PASS_REGULAR_EXPRESSION "093b1a496a6e809b")
         add_test(NAME pushwall-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --pushwall-view
             --frame-hash)
@@ -841,7 +841,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --map 8
             --boss-death-view --frame-hash)
         set_tests_properties(boss-death-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "9deae22ef69864d0")
+            PASS_REGULAR_EXPRESSION "2146e49de8e66017")
         add_test(NAME player-fire-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --player-fire-view
             --frame-hash)
@@ -866,7 +866,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --map 1
             --frame-hash)
         set_tests_properties(next-floor-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "3edcb881f0b1e94e")
+            PASS_REGULAR_EXPRESSION "5b83eae539383e97")
         add_test(NAME pause-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --pause-view
             --frame-hash)
@@ -975,27 +975,27 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_WL6_PATH}" --play-view --demo-view
             --demo-commands 70 --frame-hash)
         set_tests_properties(demo-view-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "99b7b2ae7ac75059")
+            PASS_REGULAR_EXPRESSION "c2c076ab6c8a6ac5")
         add_test(NAME demo-complete-0-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --demo-view
             --demo-number 0 --demo-commands 691 --frame-hash)
         set_tests_properties(demo-complete-0-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "90263e978a27f884")
+            PASS_REGULAR_EXPRESSION "a83159039d84ca9c")
         add_test(NAME demo-complete-1-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --demo-view
             --demo-number 1 --demo-commands 1899 --frame-hash)
         set_tests_properties(demo-complete-1-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "52ceca4780752dc2")
+            PASS_REGULAR_EXPRESSION "27d709a5dd215cac")
         add_test(NAME demo-complete-2-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --demo-view
             --demo-number 2 --demo-commands 1140 --frame-hash)
         set_tests_properties(demo-complete-2-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "e6e25d79ce52f937")
+            PASS_REGULAR_EXPRESSION "b60dad965cc64a47")
         add_test(NAME demo-complete-3-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --demo-view
             --demo-number 3 --demo-commands 1656 --frame-hash)
         set_tests_properties(demo-complete-3-wl6 PROPERTIES
-            PASS_REGULAR_EXPRESSION "5726d6254923afb5")
+            PASS_REGULAR_EXPRESSION "2d7ca110aa9658ba")
         add_test(NAME episode-menu-view-wl6 COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_WL6_PATH}" --play-view --episode-menu-view
             --frame-hash)
@@ -1058,12 +1058,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_SOD_PATH}" --game SOD --play-view --map 4
             --boss-view --frame-hash --palette-hash)
         set_tests_properties(trans-view-sod PROPERTIES
-            PASS_REGULAR_EXPRESSION "971673bd371473b9.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "2184a70f72440498.*eba126e8df00d1cb")
         add_test(NAME intermission-view-sod COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD --play-view --map 4
             --intermission-view --frame-hash --palette-hash)
         set_tests_properties(intermission-view-sod PROPERTIES
-            PASS_REGULAR_EXPRESSION "9cc20a4c95361c33.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "b29aa7321c8c4602.*eba126e8df00d1cb")
         add_test(NAME victory-collapse-view-sod COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
             --victory-collapse-view --collapse-frame 3
@@ -1074,7 +1074,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_SOD_PATH}" --game SOD --play-view --map 20
             --victory-view --frame-hash --palette-hash)
         set_tests_properties(victory-view-sod PROPERTIES
-            PASS_REGULAR_EXPRESSION "036fbc4175dd12ab.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "dca73a1ba674eeb7.*eba126e8df00d1cb")
         add_test(NAME end-view-sod COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SOD_PATH}" --game SOD --play-view
             --end-text-view --end-page 1 --frame-hash --palette-hash)
@@ -1090,12 +1090,12 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --demo-view --demo-number 0 --demo-commands 70
             --frame-hash --palette-hash)
         set_tests_properties(demo-view-sod PROPERTIES
-            PASS_REGULAR_EXPRESSION "f8c58dd87ae5e65b.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "fb736a0bff6318ea.*eba126e8df00d1cb")
         set(_wg_sod_demo_hashes
-            d9e01c9ef44362f4
-            b3e2677b9eb154e3
-            73b602b9df683bf8
-            e98f779498814fe7)
+            0e9cf5849373b8f1
+            9c558e54d073dfbc
+            6e5a538107e55dda
+            30509f4a991bbd4d)
         foreach(_wg_demo RANGE 0 3)
             list(GET _wg_sod_demo_hashes ${_wg_demo} _wg_demo_hash)
             add_test(NAME demo-complete-${_wg_demo}-sod
@@ -1134,18 +1134,18 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_SDM_PATH}" --game SDM --play-view --map 1
             --intermission-view --frame-hash --palette-hash)
         set_tests_properties(intermission-view-sdm PROPERTIES
-            PASS_REGULAR_EXPRESSION "4b48bd845813fdf5.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "18ddf86c6ac57354.*eba126e8df00d1cb")
         add_test(NAME demo-view-sdm COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SDM_PATH}" --game SDM --play-view
             --demo-view --demo-number 0 --demo-commands 70
             --frame-hash --palette-hash)
         set_tests_properties(demo-view-sdm PROPERTIES
-            PASS_REGULAR_EXPRESSION "f8c58dd87ae5e65b.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "fb736a0bff6318ea.*eba126e8df00d1cb")
         add_test(NAME demo-complete-0-sdm COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SDM_PATH}" --game SDM --play-view
             --demo-view --demo-number 0 --demo-commands 100000 --frame-hash)
         set_tests_properties(demo-complete-0-sdm PROPERTIES
-            PASS_REGULAR_EXPRESSION "d9e01c9ef44362f4")
+            PASS_REGULAR_EXPRESSION "0e9cf5849373b8f1")
         add_test(NAME credits-view-sdm COMMAND wolf3dgeneric-headless
             --data "${WG_TEST_SDM_PATH}" --game SDM --play-view
             --credits-view --frame-hash --palette-hash)
@@ -1155,7 +1155,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
             --data "${WG_TEST_SDM_PATH}" --game SDM --play-view --map 1
             --demo-conclusion-view --frame-hash --palette-hash)
         set_tests_properties(conclusion-view-sdm PROPERTIES
-            PASS_REGULAR_EXPRESSION "e8186a081eb15e49.*eba126e8df00d1cb")
+            PASS_REGULAR_EXPRESSION "1b5cc36cbfc9c558.*eba126e8df00d1cb")
     endif()
 
     foreach(_wg_mission IN ITEMS 1 2 3)

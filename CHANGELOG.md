@@ -6,9 +6,11 @@
   of its folder name and selected the embedded Activision SIGNON automatically.
   Added real-data coverage for its changed scenery sprite and its intentionally
   duplicated, therefore static, intermission portrait frame.
-- Restored reliable two-frame BJ breathing on the level-complete screen by
-  rebuilding the complete intermission image at each original-timed portrait
-  transition, including GT/Activision WL6 sound and wait phases.
+- Kept the level-complete BJ breathing on its original direct portrait-update
+  path; confirmed the static GOG result comes from duplicated source artwork,
+  not a missed engine animation callback.
+- Preserved the loaded floor number across gameplay and intermission HUD
+  redraws, so Floor 2 no longer returns to Floor 1 after Get Psyched.
 - Hid the native pointer while either GUI host is fullscreen and restored it
   on return to windowed mode.
 - Added borderless desktop fullscreen to the native Win32 and SDL3 hosts,

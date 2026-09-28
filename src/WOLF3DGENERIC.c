@@ -2253,6 +2253,7 @@ static int WG_GameSessionRender(void)
     status.weapon = wg_game.level.player_weapon;
     status.lives = wg_game.level.player_lives;
     status.keys = wg_game.level.player_keys;
+    status.map = wg_game.level.map_number;
     status.face_frame = wg_game.face_frame;
     status.face = wg_game.face;
     return WL_DrawStatusBar(WG_ScreenBuffer, &wg_game.graphics, &status);
@@ -2510,11 +2511,15 @@ static int WG_GameSessionAdvanceIntermission(void)
     }
     if (wg_game.intermission_phase == WG_INTERMISSION_WAIT)
     {
-        return !redraw || WG_GameSessionDrawIntermission();
+        return !redraw
+            || WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
+                                     wg_game.intermission_breathe_frame);
     }
     if (WG_GameSessionSoundPlaying())
     {
-        return !redraw || WG_GameSessionDrawIntermission();
+        return !redraw
+            || WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
+                                     wg_game.intermission_breathe_frame);
     }
 
     switch (wg_game.intermission_phase)
@@ -4133,6 +4138,7 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
     status.weapon = level.player_weapon;
     status.lives = level.player_lives;
     status.keys = level.player_keys;
+    status.map = level.map_number;
     if (!WL_DrawStatusBar(WG_ScreenBuffer, &graphics, &status))
     {
         goto cleanup;
