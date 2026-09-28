@@ -2,6 +2,11 @@
 
 ## 1.4.0 - 2026-09-27
 
+- Restored reliable two-frame BJ breathing on the level-complete screen by
+  rebuilding the complete intermission image at each original-timed portrait
+  transition, including GT/Activision WL6 sound and wait phases.
+- Hid the native pointer while either GUI host is fullscreen and restored it
+  on return to windowed mode.
 - Added borderless desktop fullscreen to the native Win32 and SDL3 hosts,
   selectable at startup with `--fullscreen` and toggleable with Alt+Enter.
 - Applied accepted Change View sizes to the active renderer immediately,

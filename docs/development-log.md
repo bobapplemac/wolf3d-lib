@@ -1,5 +1,18 @@
 # Development log
 
+## 2026-09-27: Intermission portrait and fullscreen cursor fixes
+
+- Revalidated GT WL6's original `L_GUYPIC`/`L_GUY2PIC` chunk mapping (43 and
+  84) and retained the original first 11-tic, then 36-tic breathing cadence.
+- Removed the special portrait-only repaint used while an intermission sound
+  was playing or the results screen was waiting for acknowledgment. Every
+  frame transition now rebuilds the complete results image through the same
+  path used by the counting phases, so the two full-body BJ frames reliably
+  alternate without stale compositing.
+- The native Win32 and SDL3 wrappers now hide the system cursor in fullscreen
+  and restore it when returning to windowed mode. Win32 also handles
+  `WM_SETCURSOR`, preventing the class cursor from reappearing on movement.
+
 ## 2026-09-27: Live Change View projection update
 
 - Restored the original `CP_ChangeView` to `NewViewSize` behavior: accepting a

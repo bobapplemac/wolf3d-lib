@@ -296,6 +296,7 @@ static int WG_Win32SetFullscreen(int fullscreen)
         }
     }
     wg_fullscreen = fullscreen;
+    SetCursor(fullscreen ? NULL : LoadCursorW(NULL, IDC_ARROW));
     return 1;
 }
 
@@ -304,6 +305,14 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
 {
     switch (message)
     {
+        case WM_SETCURSOR:
+            if (wg_fullscreen && LOWORD(lparam) == HTCLIENT)
+            {
+                SetCursor(NULL);
+                return TRUE;
+            }
+            return DefWindowProcW(window, message, wparam, lparam);
+
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         case WM_KEYUP:

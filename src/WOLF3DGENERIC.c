@@ -2509,15 +2509,11 @@ static int WG_GameSessionAdvanceIntermission(void)
     }
     if (wg_game.intermission_phase == WG_INTERMISSION_WAIT)
     {
-        return !redraw
-            || WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
-                                     wg_game.intermission_breathe_frame);
+        return !redraw || WG_GameSessionDrawIntermission();
     }
     if (WG_GameSessionSoundPlaying())
     {
-        return !redraw
-            || WL_DrawIntermissionBJ(WG_ScreenBuffer, &wg_game.graphics,
-                                     wg_game.intermission_breathe_frame);
+        return !redraw || WG_GameSessionDrawIntermission();
     }
 
     switch (wg_game.intermission_phase)

@@ -49,6 +49,11 @@ static int WG_SDLSetFullscreen(int fullscreen)
         return 0;
     }
     wg_fullscreen = fullscreen;
+    if (!(fullscreen ? SDL_HideCursor() : SDL_ShowCursor()))
+    {
+        fprintf(stderr, "wolf3dgeneric: could not change cursor visibility: %s\n",
+                SDL_GetError());
+    }
     return 1;
 }
 
