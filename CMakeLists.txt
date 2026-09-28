@@ -322,7 +322,8 @@ if(WG_BUILD_SDL3)
     wg_configure_host(wolf3dgeneric-sdl3 wolf3dgeneric)
     target_link_libraries(wolf3dgeneric-sdl3 PRIVATE SDL3::SDL3-shared)
     set_target_properties(wolf3dgeneric-sdl3 PROPERTIES
-        BUILD_WITH_INSTALL_RPATH ON
+        BUILD_RPATH "$ORIGIN"
+        BUILD_RPATH_USE_ORIGIN ON
         INSTALL_RPATH "$ORIGIN"
     )
     if(WIN32)
@@ -330,6 +331,13 @@ if(WG_BUILD_SDL3)
             WIN32_LEAN_AND_MEAN
             UNICODE
             _UNICODE
+        )
+        add_custom_command(TARGET wolf3dgeneric-sdl3 POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "$<TARGET_FILE:SDL3::SDL3-shared>"
+                "$<TARGET_FILE_DIR:wolf3dgeneric-sdl3>/$<TARGET_FILE_NAME:SDL3::SDL3-shared>"
+            COMMENT "Copying SDL3 beside the development executable"
+            VERBATIM
         )
     endif()
 
