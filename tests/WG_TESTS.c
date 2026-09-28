@@ -11,6 +11,7 @@
 #include "WG_DATA.h"
 #include "WG_CONFIG.h"
 #include "WG_FIXED.h"
+#include "WG_FILE.h"
 #include "ID_VH.h"
 #include "WG_GRAPHICS.h"
 #include "WL_GAME.h"
@@ -3016,6 +3017,24 @@ static void TestVideo(void)
     CHECK(destination[100U * WG_VIDEO_WIDTH + 120U] == 7U);
 }
 
+static void TestFileIO(void)
+{
+    static const char actual_path[] = "wg_case_probe_14.tmp";
+    static const char requested_path[] = "WG_CASE_PROBE_14.TMP";
+    static const uint8_t contents[] = { 0x57U, 0x47U, 0x14U };
+    wg_file_buffer_t loaded;
+
+    memset(&loaded, 0, sizeof(loaded));
+    CHECK(WG_WriteFile(actual_path, contents, sizeof(contents)));
+    CHECK(WG_FileExists(requested_path));
+    CHECK(WG_LoadFile(requested_path, &loaded));
+    CHECK(loaded.size == sizeof(contents));
+    CHECK(loaded.data != NULL
+          && memcmp(loaded.data, contents, sizeof(contents)) == 0);
+    WG_FreeFile(&loaded);
+    CHECK(remove(actual_path) == 0);
+}
+
 static void TestRandom(void)
 {
     wg_random_t random;
@@ -4855,6 +4874,12 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
 
 static void TestPortableSave(void)
 {
+    static const uint8_t actor_record_prefix[] =
+    {
+        0xa0U, 0x86U, 0x01U, 0x00U,
+        0xc0U, 0xf2U, 0xfcU, 0xffU,
+        0x6cU, 0x00U
+    };
     uint8_t encoded[WG_SAVE_BUFFER_SIZE];
     uint8_t legacy[WG_SAVE_BUFFER_SIZE];
     char name[WG_SAVE_NAME_BYTES] = "E1L1 - CELL BLOCK";
@@ -4866,6 +4891,7 @@ static void TestPortableSave(void)
     uint64_t encoded_hash = 1469598103934665603ULL;
     size_t legacy_size;
     uint32_t legacy_checksum;
+    size_t actor_tile_offset = SIZE_MAX;
 
     memset(&source, 0, sizeof(source));
     memset(&decoded, 0, sizeof(decoded));
@@ -5010,6 +5036,39 @@ static void TestPortableSave(void)
         wl_intermission_t empty = { 0 };
         CHECK(memcmp(&decoded.level_ratios[index], &empty,
                      sizeof(empty)) == 0);
+    }
+
+    /* A valid checksum does not make decoded coordinates safe to index.
+       Version 1/2 saves rebuild actorat[] from actor tile positions, so reject
+       an out-of-range position before beginning that reconstruction. */
+    for (index = 0U;
+         index + sizeof(actor_record_prefix) + 2U <= legacy_size;
+         ++index)
+    {
+        if (memcmp(legacy + index, actor_record_prefix,
+                   sizeof(actor_record_prefix)) == 0)
+        {
+            actor_tile_offset = index + sizeof(actor_record_prefix);
+            break;
+        }
+    }
+    CHECK(actor_tile_offset != SIZE_MAX);
+    if (actor_tile_offset != SIZE_MAX)
+    {
+        legacy[actor_tile_offset] = WG_LEVEL_SIZE;
+        legacy_checksum = 2166136261U;
+        for (index = WG_SAVE_NAME_BYTES; index < legacy_size - 4U; ++index)
+        {
+            legacy_checksum ^= legacy[index];
+            legacy_checksum *= 16777619U;
+        }
+        legacy[legacy_size - 4U] = (uint8_t)legacy_checksum;
+        legacy[legacy_size - 3U] = (uint8_t)(legacy_checksum >> 8U);
+        legacy[legacy_size - 2U] = (uint8_t)(legacy_checksum >> 16U);
+        legacy[legacy_size - 1U] = (uint8_t)(legacy_checksum >> 24U);
+        CHECK(!WG_SaveDecode(legacy, legacy_size,
+                             WG_GAME_WOLF3D_FULL_GT_14,
+                             decoded_name, &decoded));
     }
     CHECK(!WG_SaveDecode(encoded, encoded_size,
                          WG_GAME_WOLF3D_SHAREWARE_14,
@@ -5245,6 +5304,7 @@ int main(int argc, char **argv)
     TestRLEW();
     TestMalformedCompression();
     TestVideo();
+    TestFileIO();
     TestRandom();
     TestScanCodeASCII();
     TestActorSetup();

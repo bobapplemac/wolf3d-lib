@@ -1774,6 +1774,22 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Kept both effects entirely in presentation state: neither changes gameplay
   tics, demo input timing, random-number consumption, or audio scheduling.
 
+## 2026-09-27: Independent-audit corrections
+
+- Added coordinate validation before legacy version-1/2 portable saves rebuild
+  the 64x64 `actor_at` occupancy grid, with a checksum-valid rejection fixture
+  covering the previously unchecked index.
+- Changed the Win32 event pump to return translated events before dispatching
+  further host messages. Since one Windows message produces only a small event
+  group, host backlogs can no longer fill the ring and discard digital release
+  transitions.
+- Added ASCII case-insensitive read fallback for the generated DOS data
+  filenames on case-sensitive filesystems, plus a portable file-I/O regression
+  test. Exact-case opens remain the fast path, and write paths are unchanged.
+- Made the file-size overflow guard conditional on data models where `long`
+  can actually exceed `size_t`, retaining the check without MinGW's
+  always-false strict-warning diagnostic.
+
 ## 2026-09-27: Intermission timing and acknowledgment parity
 
 - Replaced the portable intermission's immediate final-value screen with a

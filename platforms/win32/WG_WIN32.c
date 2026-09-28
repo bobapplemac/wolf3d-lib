@@ -537,6 +537,18 @@ static int WG_Win32PollEvent(wg_event_t *event)
         return 1;
     }
 
+    /* Drain translated input before dispatching more Windows messages.  A
+       single message can enqueue only a small group of raw-mouse events, so
+       returning as soon as that group exists keeps the fixed queue from ever
+       being crowded by a host-message backlog.  In particular, key/button
+       releases cannot be discarded behind accumulated mouse motion. */
+    if (wg_event_read != wg_event_write)
+    {
+        *event = wg_event_queue[wg_event_read];
+        wg_event_read = (wg_event_read + 1U) % WG_EVENT_QUEUE_CAPACITY;
+        return 1;
+    }
+
     while (PeekMessageW(&message, NULL, 0, 0, PM_REMOVE))
     {
         if (message.message == WM_QUIT)
@@ -546,6 +558,12 @@ static int WG_Win32PollEvent(wg_event_t *event)
         }
         TranslateMessage(&message);
         DispatchMessageW(&message);
+        if (wg_event_read != wg_event_write)
+        {
+            *event = wg_event_queue[wg_event_read];
+            wg_event_read = (wg_event_read + 1U) % WG_EVENT_QUEUE_CAPACITY;
+            return 1;
+        }
     }
 
     wg_poll_joysticks();

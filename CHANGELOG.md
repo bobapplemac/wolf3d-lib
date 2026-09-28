@@ -2,6 +2,13 @@
 
 ## 1.4.0 - 2026-09-27
 
+- Rejected legacy portable saves whose actor coordinates fall outside the
+  64x64 occupancy grid instead of using those coordinates as array indices.
+- Prevented the native Win32 message pump from filling its translated-event
+  queue and dropping later key or button releases during an input burst.
+- Made generated DOS data filenames resolve case-insensitively on
+  case-sensitive hosts, matching DOS/Windows behavior and the documented
+  data-file contract.
 - Restored the data-driven DOS `ORDERSCREEN` and `ERRORSCREEN` console output,
   including CP437 line art and VGA colors through a portable text-cell host
   callback with native Win32 and ANSI terminal implementations.

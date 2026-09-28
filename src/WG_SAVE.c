@@ -381,6 +381,15 @@ static void WG_LoadLevel(wg_save_reader_t *reader, wg_level_t *level,
         actor->trans_x = (int32_t)WG_LoadU32(reader);
         actor->state = (wg_actor_state_t)WG_LoadU8(reader);
         actor->actor_class = (wg_actor_class_t)WG_LoadU8(reader);
+        if (actor->tile_x >= WG_LEVEL_SIZE
+            || actor->tile_y >= WG_LEVEL_SIZE)
+        {
+            reader->valid = 0;
+        }
+    }
+    if (!reader->valid)
+    {
+        return;
     }
     if (version >= 3U)
     {
