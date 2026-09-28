@@ -1,5 +1,6 @@
 #include "WG_PLATFORM.h"
 #include "../WG_HOST.h"
+#include "../WG_TEXT_OUTPUT.h"
 
 #include <windows.h>
 #include <mmsystem.h>
@@ -16,6 +17,11 @@ static uint32_t wg_pixels[WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT];
 static LARGE_INTEGER wg_counter_frequency;
 static LARGE_INTEGER wg_counter_start;
 static int wg_quit_pending;
+static uint8_t wg_text_screen[WG_TEXT_COLUMNS * WG_TEXT_ROWS
+                              * WG_TEXT_CELL_BYTES];
+static uint16_t wg_text_columns;
+static uint16_t wg_text_rows;
+static HANDLE wg_console_output;
 
 typedef DWORD (WINAPI *wg_xinput_get_state_t)(DWORD, XINPUT_STATE *);
 static HMODULE wg_xinput_module;
@@ -37,6 +43,77 @@ static int16_t wg_wave_samples[WG_PCM_BUFFER_COUNT]
 static uint8_t wg_wave_used[WG_PCM_BUFFER_COUNT];
 
 static void WG_Win32PCMShutdown(void);
+
+static HANDLE wg_console_output_handle(void)
+{
+    HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD mode;
+
+    if (wg_console_output != NULL
+        && wg_console_output != INVALID_HANDLE_VALUE)
+    {
+        return wg_console_output;
+    }
+    if (output != NULL && output != INVALID_HANDLE_VALUE
+        && GetConsoleMode(output, &mode))
+    {
+        wg_console_output = output;
+        return output;
+    }
+    if ((output == NULL || output == INVALID_HANDLE_VALUE)
+        && AttachConsole(ATTACH_PARENT_PROCESS))
+    {
+        output = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                             OPEN_EXISTING, 0, NULL);
+        if (output != INVALID_HANDLE_VALUE)
+        {
+            wg_console_output = output;
+            return output;
+        }
+    }
+    return NULL;
+}
+
+static void wg_write_text_screen(void)
+{
+    HANDLE output;
+    CHAR_INFO characters[WG_TEXT_COLUMNS * WG_TEXT_ROWS];
+    COORD size;
+    COORD origin = { 0, 0 };
+    SMALL_RECT rectangle;
+    size_t index;
+
+    if (wg_text_columns == 0U || wg_text_rows == 0U)
+    {
+        return;
+    }
+    output = wg_console_output_handle();
+    if (output == NULL)
+    {
+        WG_WriteTextScreen(stdout, wg_text_screen, wg_text_columns,
+                           wg_text_rows, 0);
+        return;
+    }
+    for (index = 0U; index < (size_t)wg_text_columns * wg_text_rows; ++index)
+    {
+        characters[index].Char.AsciiChar = (CHAR)wg_text_screen[index * 2U];
+        characters[index].Attributes = wg_text_screen[index * 2U + 1U];
+    }
+    size.X = (SHORT)wg_text_columns;
+    size.Y = (SHORT)wg_text_rows;
+    rectangle.Left = 0;
+    rectangle.Top = 0;
+    rectangle.Right = (SHORT)(wg_text_columns - 1U);
+    rectangle.Bottom = (SHORT)(wg_text_rows - 1U);
+    (void)SetConsoleOutputCP(437U);
+    (void)WriteConsoleOutputA(output, characters, size, origin, &rectangle);
+    origin.X = 0;
+    origin.Y = (SHORT)(wg_text_rows > 1U ? wg_text_rows - 2U : 0U);
+    (void)SetConsoleCursorPosition(output, origin);
+    wg_text_columns = 0U;
+    wg_text_rows = 0U;
+}
 
 static RECT wg_presentation_rectangle(const RECT *client)
 {
@@ -373,6 +450,7 @@ static void WG_Win32Shutdown(void)
         wg_window = NULL;
     }
     UnregisterClassW(wg_window_class, GetModuleHandleW(NULL));
+    wg_write_text_screen();
 }
 
 static void WG_Win32Present(const uint8_t *pixels, const uint8_t *palette)
@@ -504,7 +582,58 @@ static void WG_Win32SetWindowTitle(const char *title)
 
 static void WG_Win32ReportError(const char *message)
 {
+    HANDLE output = wg_console_output_handle();
+
+    if (output != NULL)
+    {
+        DWORD written;
+        static const char prefix[] = "wolf3dgeneric: ";
+        static const char newline[] = "\r\n";
+
+        (void)WriteFile(output, prefix, (DWORD)(sizeof(prefix) - 1U),
+                        &written, NULL);
+        (void)WriteFile(output, message, (DWORD)strlen(message),
+                        &written, NULL);
+        (void)WriteFile(output, newline, (DWORD)(sizeof(newline) - 1U),
+                        &written, NULL);
+    }
     MessageBoxA(wg_window, message, "wolf3dgeneric", MB_OK | MB_ICONERROR);
+}
+
+static void WG_Win32PrintMessage(const char *message)
+{
+    HANDLE output = wg_console_output_handle();
+
+    if (output != NULL)
+    {
+        DWORD written;
+        static const char newline[] = "\r\n";
+
+        (void)WriteFile(output, message, (DWORD)strlen(message),
+                        &written, NULL);
+        (void)WriteFile(output, newline, (DWORD)(sizeof(newline) - 1U),
+                        &written, NULL);
+    }
+    else
+    {
+        fprintf(stdout, "%s\n", message);
+        fflush(stdout);
+    }
+}
+
+static void WG_Win32PresentText(const uint8_t *cells, uint16_t columns,
+                                uint16_t rows)
+{
+    size_t size = (size_t)columns * rows * WG_TEXT_CELL_BYTES;
+
+    if (cells == NULL || columns > WG_TEXT_COLUMNS || rows > WG_TEXT_ROWS
+        || size > sizeof(wg_text_screen))
+    {
+        return;
+    }
+    memcpy(wg_text_screen, cells, size);
+    wg_text_columns = columns;
+    wg_text_rows = rows;
 }
 
 static int WG_Win32PCMInit(uint32_t sample_rate, uint16_t channels)
@@ -639,7 +768,9 @@ int WG_InstallPlatform(void)
         WG_Win32PollEvent,
         WG_Win32IsInteractive,
         WG_Win32SetWindowTitle,
+        WG_Win32PrintMessage,
         WG_Win32ReportError,
+        WG_Win32PresentText,
         WG_Win32PCMInit,
         WG_Win32PCMShutdown,
         WG_Win32PCMWritableFrames,

@@ -951,6 +951,11 @@ static void TestOrdinaryShootingStates(void)
     CHECK(level.player_health == 95U);
     CHECK(level.damage_count == 5U);
     level.victory_flag = 0U;
+    level.god_mode = 1U;
+    WL_TakeDamage(&level, 400U);
+    CHECK(level.player_health == 95U);
+    CHECK(level.damage_count == 5U);
+    level.god_mode = 0U;
     WL_TakeDamage(&level, 400U);
     CHECK(level.player_health == 0U);
     CHECK(level.player_dead != 0U);
@@ -3516,6 +3521,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     const uint8_t *page_data;
     size_t page_size;
     uint8_t framebuffer[320 * 200];
+    uint8_t text_screen[80U * 25U * 2U];
     uint8_t *picture_pixels;
     uint16_t picture_width;
     uint16_t picture_height;
@@ -3579,6 +3585,9 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     if (graphics.offsets != NULL)
     {
         unsigned frame;
+
+        CHECK(WG_GraphicsDecodeTextScreen(&graphics, 0, text_screen));
+        CHECK(WG_GraphicsDecodeTextScreen(&graphics, 1, text_screen));
 
         memset(&psyched_level, 0, sizeof(psyched_level));
         psyched_level.player_health = 100U;
@@ -4588,6 +4597,7 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     wg_maps_t maps;
     wg_level_t psyched_level;
     uint8_t framebuffer[320U * 200U];
+    uint8_t text_screen[80U * 25U * 2U];
     uint8_t palette[256U * 3U];
     uint64_t frame_hash = 1469598103934665603ULL;
     uint64_t palette_hash = 1469598103934665603ULL;
@@ -4626,6 +4636,8 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     CHECK(data_set.audio_offset_count == 268U);
 
     CHECK(WG_GraphicsOpen(&graphics, &data_set));
+    CHECK(WG_GraphicsDecodeTextScreen(&graphics, 0, text_screen));
+    CHECK(WG_GraphicsDecodeTextScreen(&graphics, 1, text_screen));
     memset(&psyched_level, 0, sizeof(psyched_level));
     psyched_level.player_health = 100U;
     psyched_level.player_ammo = 8U;

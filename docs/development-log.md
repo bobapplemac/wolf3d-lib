@@ -1,5 +1,24 @@
 # Development log
 
+## 2026-09-27: Original DOS console exit and launch controls
+
+- Restored `Quit`'s original data-driven `ORDERSCREEN` and `ERRORSCREEN`
+  resources for WL1, both WL6 layouts, SOD, SDM, and the mission disks. The
+  library passes the decoded 80x25 CP437 character/VGA-attribute cells through
+  its platform boundary before shutdown.
+- Added native Win32 console-cell output and an ANSI/Unicode terminal path for
+  Linux and headless hosts. Both preserve the original foreground/background
+  colors; redirected output omits escape codes while retaining readable text.
+- Restored the DOS argument convention (case-insensitive after leading
+  punctuation) for `GOOBERS`, `DEBUGMODE`, `TEDLEVEL`, `NOWAIT`, and TED's
+  four difficulty names. Implemented the original debug unlock chord and its
+  principal level, god, hurt, item, and fast-quit keys.
+- Added a distinct ordinary-message callback so debug text does not become a
+  graphical error dialog. Fatal paths use the original colored error panel
+  when game resources are available.
+- Verified all text resources against the real data corpus. The full suite
+  passes 147/147 under MSVC and 148/148 under both GCC and Clang.
+
 ## 2026-09-27: Apogee and later WL6 resource profiles
 
 - Split full Wolfenstein 3D v1.4 into automatically detected Apogee and

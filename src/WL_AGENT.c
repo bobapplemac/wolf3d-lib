@@ -191,7 +191,8 @@ void WL_TakeDamageFrom(struct wg_level *level, unsigned points,
 {
     unsigned damage;
 
-    if (level == NULL || level->player_dead || level->victory_flag)
+    if (level == NULL || level->player_dead || level->victory_flag
+        || level->god_mode)
     {
         return;
     }

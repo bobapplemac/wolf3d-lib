@@ -222,6 +222,7 @@ typedef struct wg_level
     uint16_t damage_count;
     uint16_t bonus_count;
     uint8_t player_dead;
+    uint8_t god_mode;
     int32_t killer_x;
     int32_t killer_y;
     uint8_t player_weapon;

@@ -225,6 +225,7 @@ endfunction()
 
 if(WG_BUILD_HEADLESS)
     add_executable(wolf3dgeneric-headless
+        platforms/WG_TEXT_OUTPUT.c
         platforms/headless/MAIN.c
         platforms/headless/WG_HEADLESS.c
     )
@@ -233,6 +234,7 @@ endif()
 
 if(WG_BUILD_WIN32)
     add_executable(wolf3dgeneric-win32 WIN32
+        platforms/WG_TEXT_OUTPUT.c
         platforms/win32/WG_WIN32.c
     )
     wg_configure_host(wolf3dgeneric-win32 wolf3dgeneric)
@@ -283,6 +285,7 @@ if(WG_BUILD_LINUX_CONSOLE)
     pkg_check_modules(ALSA REQUIRED IMPORTED_TARGET alsa)
 
     add_executable(wolf3dgeneric-linux-console
+        platforms/WG_TEXT_OUTPUT.c
         platforms/linux-console/MAIN.c
         platforms/linux-console/WG_LINUX_CONSOLE.c
     )

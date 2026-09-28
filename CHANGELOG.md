@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Restored the data-driven DOS `ORDERSCREEN` and `ERRORSCREEN` console output,
+  including CP437 line art and VGA colors through a portable text-cell host
+  callback with native Win32 and ANSI terminal implementations.
+- Restored case-insensitive, punctuation-tolerant DOS launch options including
+  `-GOOBERS`/`-DEBUGMODE`, `-TEDLEVEL`, `-NOWAIT`, and TED difficulty names,
+  plus the principal gated debug keys.
 - Added a Linux virtual-console host with direct DRM/KMS dumb-buffer video,
   evdev keyboard/mouse/gamepad input, ALSA audio with silent fallback, 4:3
   presentation, device overrides, and a minimal staged runtime package.

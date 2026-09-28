@@ -257,6 +257,23 @@ mouse is present and enabled at startup:
 wolf3dgeneric-win32 --mouse
 ```
 
+The original DOS command-line switches are also accepted case-insensitively,
+with any leading punctuation. `-GOOBERS` enables Wolf3D's debug-key unlock;
+Spear uses `-DEBUGMODE`. During play, hold Backspace+Left Shift+Alt to unlock
+the debug keys, then hold Tab with E (complete level), G (god mode), H (hurt),
+I (free items), or Q (immediate quit). `-TEDLEVEL n` starts directly on the
+numbered map (`0`--`59` for Wolf3D and `0`--`20` for Spear); add `baby`,
+`easy`, `normal`, or `hard` to choose its difficulty. `-NOWAIT` skips the
+timed startup presentation and enters the title/attract loop immediately.
+
+On a normal quit, the host restores the edition's original 80x25 DOS text
+screen: the shareware ordering message or the registered-game notice. These
+screens are decoded from the selected game data, including their CP437 line
+art and VGA foreground/background colors. Fatal engine errors similarly use
+the original colored error screen when game data is available. Windows writes
+native console cells when launched from a console; Linux uses ANSI color on a
+terminal. Redirected output remains readable UTF-8 text without control codes.
+
 The Pause key displays the original pause plaque, freezes game tics, and
 temporarily silences the IMF sequencer until the next key or mouse-button press.
 The game simulation advances on the original 70 Hz logical clock. Live play

@@ -25,6 +25,9 @@ extern "C" {
 #define WG_SCREEN_WIDTH 320
 #define WG_SCREEN_HEIGHT 200
 #define WG_PALETTE_COLORS 256
+#define WG_TEXT_COLUMNS 80
+#define WG_TEXT_ROWS 25
+#define WG_TEXT_CELL_BYTES 2
 #define WG_MAX_JOYSTICKS 2
 
 typedef enum wg_result
@@ -54,8 +57,14 @@ typedef enum wg_key
     WG_KEY_2 = 0x03,
     WG_KEY_3 = 0x04,
     WG_KEY_4 = 0x05,
+    WG_KEY_E = 0x12,
+    WG_KEY_G = 0x22,
+    WG_KEY_H = 0x23,
+    WG_KEY_I = 0x17,
+    WG_KEY_Q = 0x10,
     WG_KEY_Y = 0x15,
     WG_KEY_BACKSPACE = 0x0e,
+    WG_KEY_TAB = 0x0f,
     WG_KEY_ENTER = 0x1c,
     WG_KEY_CONTROL = 0x1d,
     WG_KEY_LEFT_SHIFT = 0x2a,
@@ -97,7 +106,7 @@ typedef struct wg_event
     uint32_t buttons;
 } wg_event_t;
 
-#define WG_PLATFORM_API_VERSION 1U
+#define WG_PLATFORM_API_VERSION 2U
 
 typedef struct wg_platform_api
 {
@@ -111,7 +120,10 @@ typedef struct wg_platform_api
     int (*poll_event)(wg_event_t *event);
     int (*is_interactive)(void);
     void (*set_window_title)(const char *title);
+    void (*print_message)(const char *message);
     void (*report_error)(const char *message);
+    void (*present_text)(const uint8_t *cells, uint16_t columns,
+                         uint16_t rows);
     int (*pcm_init)(uint32_t sample_rate, uint16_t channels);
     void (*pcm_shutdown)(void);
     size_t (*pcm_writable_frames)(void);

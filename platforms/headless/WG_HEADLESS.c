@@ -1,5 +1,6 @@
 #include "WG_PLATFORM.h"
 #include "../WG_HOST.h"
+#include "../WG_TEXT_OUTPUT.h"
 
 #include <stdio.h>
 
@@ -55,6 +56,19 @@ static void WG_HeadlessReportError(const char *message)
     fprintf(stderr, "wolf3dgeneric: %s\n", message);
 }
 
+static void WG_HeadlessPrintMessage(const char *message)
+{
+    fprintf(stdout, "%s\n", message);
+    fflush(stdout);
+}
+
+static void WG_HeadlessPresentText(const uint8_t *cells, uint16_t columns,
+                                   uint16_t rows)
+{
+    WG_WriteTextScreen(stdout, cells, columns, rows,
+                       WG_TextOutputSupportsColor(stdout));
+}
+
 static int WG_HeadlessPCMInit(uint32_t sample_rate, uint16_t channels)
 {
     return sample_rate != 0U && channels != 0U;
@@ -88,7 +102,9 @@ int WG_InstallPlatform(void)
         WG_HeadlessPollEvent,
         WG_HeadlessIsInteractive,
         WG_HeadlessSetWindowTitle,
+        WG_HeadlessPrintMessage,
         WG_HeadlessReportError,
+        WG_HeadlessPresentText,
         WG_HeadlessPCMInit,
         WG_HeadlessPCMShutdown,
         WG_HeadlessPCMWritableFrames,

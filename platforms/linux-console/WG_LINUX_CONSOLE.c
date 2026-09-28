@@ -1,5 +1,6 @@
 #include "WG_PLATFORM.h"
 #include "../WG_HOST.h"
+#include "../WG_TEXT_OUTPUT.h"
 #include "WG_LINUX_CONSOLE.h"
 
 #include <alsa/asoundlib.h>
@@ -88,6 +89,10 @@ static snd_pcm_t *wg_pcm;
 static uint8_t wg_previous_pixels[WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT];
 static uint8_t wg_previous_palette[WG_PALETTE_COLORS * 3U];
 static int wg_previous_frame_valid;
+static uint8_t wg_text_screen[WG_TEXT_COLUMNS * WG_TEXT_ROWS
+                              * WG_TEXT_CELL_BYTES];
+static uint16_t wg_text_columns;
+static uint16_t wg_text_rows;
 
 static wg_event_t wg_event_queue[WG_EVENT_QUEUE_CAPACITY];
 static size_t wg_event_read;
@@ -803,6 +808,14 @@ static void WG_LinuxConsoleShutdown(void)
         wg_console_descriptor = -1;
         wg_console_graphics = 0;
     }
+    if (wg_text_columns != 0U && wg_text_rows != 0U)
+    {
+        WG_WriteTextScreen(stdout, wg_text_screen, wg_text_columns,
+                           wg_text_rows,
+                           WG_TextOutputSupportsColor(stdout));
+        wg_text_columns = 0U;
+        wg_text_rows = 0U;
+    }
 }
 
 static void WG_LinuxConsolePresent(const uint8_t *pixels,
@@ -939,6 +952,27 @@ static void WG_LinuxConsoleReportError(const char *message)
     fprintf(stderr, "wolf3dgeneric: %s\n", message);
 }
 
+static void WG_LinuxConsolePrintMessage(const char *message)
+{
+    fprintf(stdout, "%s\n", message);
+    fflush(stdout);
+}
+
+static void WG_LinuxConsolePresentText(const uint8_t *cells,
+                                       uint16_t columns, uint16_t rows)
+{
+    size_t size = (size_t)columns * rows * WG_TEXT_CELL_BYTES;
+
+    if (cells == NULL || columns > WG_TEXT_COLUMNS || rows > WG_TEXT_ROWS
+        || size > sizeof(wg_text_screen))
+    {
+        return;
+    }
+    memcpy(wg_text_screen, cells, size);
+    wg_text_columns = columns;
+    wg_text_rows = rows;
+}
+
 static int WG_LinuxConsolePCMInit(uint32_t sample_rate, uint16_t channels)
 {
     int error;
@@ -1025,7 +1059,9 @@ int WG_InstallPlatform(void)
         WG_LinuxConsolePollEvent,
         WG_LinuxConsoleIsInteractive,
         WG_LinuxConsoleSetWindowTitle,
+        WG_LinuxConsolePrintMessage,
         WG_LinuxConsoleReportError,
+        WG_LinuxConsolePresentText,
         WG_LinuxConsolePCMInit,
         WG_LinuxConsolePCMShutdown,
         WG_LinuxConsolePCMWritableFrames,

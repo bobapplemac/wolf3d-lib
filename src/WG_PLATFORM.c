@@ -17,7 +17,9 @@ wg_result_t wolf3dgeneric_SetPlatform(const wg_platform_api_t *platform)
         || platform->poll_event == NULL
         || platform->is_interactive == NULL
         || platform->set_window_title == NULL
+        || platform->print_message == NULL
         || platform->report_error == NULL
+        || platform->present_text == NULL
         || platform->pcm_init == NULL
         || platform->pcm_shutdown == NULL
         || platform->pcm_writable_frames == NULL
@@ -89,6 +91,22 @@ void WG_ReportError(const char *message)
     if (wg_platform.report_error != NULL)
     {
         wg_platform.report_error(message);
+    }
+}
+
+void WG_PrintMessage(const char *message)
+{
+    if (wg_platform.print_message != NULL)
+    {
+        wg_platform.print_message(message);
+    }
+}
+
+void WG_PresentText(const uint8_t *cells, uint16_t columns, uint16_t rows)
+{
+    if (wg_platform.present_text != NULL)
+    {
+        wg_platform.present_text(cells, columns, rows);
     }
 }
 

@@ -39,6 +39,8 @@ uint8_t WG_Palette[WG_PALETTE_COLORS * 3];
 
 static int wg_initialized;
 static int wg_data_loaded;
+static uint8_t wg_clean_exit_requested;
+static char wg_fatal_error[256];
 static unsigned wg_start_map;
 static wg_data_set_t wg_data_set;
 static wl_high_score_t wg_high_scores[WL_MAX_HIGH_SCORES];
@@ -91,6 +93,8 @@ static char wg_save_original_name[WL_SAVE_NAME_LENGTH + 1U];
 static uint8_t wg_sound_mode = 2U;
 static uint8_t wg_digitized_effects = 1U;
 static uint8_t wg_music_enabled = 1U;
+static uint8_t wg_debug_parameter;
+static uint8_t wg_debug_keys_enabled;
 
 static unsigned WG_DefaultMenuSelection(void)
 {
@@ -106,6 +110,85 @@ static unsigned WG_DefaultMenuSelection(void)
 static int WG_IsSpearGame(void)
 {
     return WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR;
+}
+
+static wg_result_t WG_RequestCleanExit(void)
+{
+    wg_clean_exit_requested = 1U;
+    return WG_RESULT_QUIT;
+}
+
+static void WG_ReportFatalError(const char *message)
+{
+    if (message != NULL)
+    {
+        (void)snprintf(wg_fatal_error, sizeof(wg_fatal_error), "%s",
+                       message);
+    }
+    WG_ReportError(message);
+}
+
+static void WG_OverlayDOSError(uint8_t *cells, const char *message)
+{
+    size_t x = 9U;
+    size_t y = 3U;
+
+    while (message != NULL && *message != '\0' && y < WG_TEXT_ROWS)
+    {
+        unsigned char character = (unsigned char)*message++;
+
+        if (character == '\n')
+        {
+            x = 9U;
+            ++y;
+            continue;
+        }
+        if (x >= WG_TEXT_COLUMNS)
+        {
+            x = 0U;
+            ++y;
+            if (y >= WG_TEXT_ROWS)
+            {
+                break;
+            }
+        }
+        cells[(y * WG_TEXT_COLUMNS + x) * WG_TEXT_CELL_BYTES] = character;
+        cells[(y * WG_TEXT_COLUMNS + x) * WG_TEXT_CELL_BYTES + 1U] = 7U;
+        ++x;
+    }
+}
+
+static void WG_PresentDOSExitScreen(void)
+{
+    wg_graphics_t graphics;
+    uint8_t cells[WG_TEXT_COLUMNS * WG_TEXT_ROWS * WG_TEXT_CELL_BYTES];
+
+    int error = wg_fatal_error[0] != '\0';
+
+    if ((!wg_clean_exit_requested && !error) || !wg_data_loaded)
+    {
+        return;
+    }
+    if (WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        if (WG_GraphicsDecodeTextScreen(&graphics, error, cells))
+        {
+            if (error)
+            {
+                size_t index;
+
+                for (index = 7U * WG_TEXT_COLUMNS;
+                     index < WG_TEXT_COLUMNS * WG_TEXT_ROWS; ++index)
+                {
+                    cells[index * WG_TEXT_CELL_BYTES] = ' ';
+                    cells[index * WG_TEXT_CELL_BYTES + 1U] = 7U;
+                }
+                WG_OverlayDOSError(cells, wg_fatal_error);
+            }
+            WG_PresentText(cells, WG_TEXT_COLUMNS, WG_TEXT_ROWS);
+        }
+        WG_GraphicsClose(&graphics);
+    }
 }
 
 static unsigned WG_NewGameStartMap(void)
@@ -613,6 +696,113 @@ static int WG_HasArgument(int argc, char **argv, const char *argument)
     return 0;
 }
 
+static int WG_DOSArgumentEquals(const char *argument, const char *name)
+{
+    unsigned left;
+    unsigned right;
+
+    if (argument == NULL || name == NULL)
+    {
+        return 0;
+    }
+    while (*argument != '\0'
+           && !((*argument >= 'A' && *argument <= 'Z')
+                || (*argument >= 'a' && *argument <= 'z')))
+    {
+        ++argument;
+    }
+    do
+    {
+        left = (unsigned char)*argument++;
+        right = (unsigned char)*name++;
+        if (left >= 'A' && left <= 'Z')
+        {
+            left += 'a' - 'A';
+        }
+        if (right >= 'A' && right <= 'Z')
+        {
+            right += 'a' - 'A';
+        }
+    } while (left != 0U && left == right);
+    return left == right;
+}
+
+static int WG_HasDOSArgument(int argc, char **argv, const char *name)
+{
+    int index;
+
+    for (index = 1; index < argc; ++index)
+    {
+        if (WG_DOSArgumentEquals(argv[index], name))
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int WG_FindDOSUnsignedArgument(int argc, char **argv,
+                                      const char *name,
+                                      unsigned *value, int *found)
+{
+    int index;
+
+    if (value == NULL || found == NULL)
+    {
+        return 0;
+    }
+    *found = 0;
+    for (index = 1; index < argc; ++index)
+    {
+        if (WG_DOSArgumentEquals(argv[index], name))
+        {
+            char *end = NULL;
+            unsigned long parsed;
+
+            if (index + 1 >= argc)
+            {
+                return 0;
+            }
+            parsed = strtoul(argv[index + 1], &end, 10);
+            if (end == argv[index + 1] || *end != '\0'
+                || parsed > UINT_MAX)
+            {
+                return 0;
+            }
+            *value = (unsigned)parsed;
+            *found = 1;
+            return 1;
+        }
+    }
+    return 1;
+}
+
+static wg_difficulty_t WG_DOSDifficulty(int argc, char **argv)
+{
+    int index;
+
+    for (index = 1; index < argc; ++index)
+    {
+        if (WG_DOSArgumentEquals(argv[index], "baby"))
+        {
+            return WG_DIFFICULTY_BABY;
+        }
+        if (WG_DOSArgumentEquals(argv[index], "easy"))
+        {
+            return WG_DIFFICULTY_EASY;
+        }
+        if (WG_DOSArgumentEquals(argv[index], "normal"))
+        {
+            return WG_DIFFICULTY_MEDIUM;
+        }
+        if (WG_DOSArgumentEquals(argv[index], "hard"))
+        {
+            return WG_DIFFICULTY_HARD;
+        }
+    }
+    return WG_DIFFICULTY_EASY;
+}
+
 static int WG_FindUnsignedArgument(int argc, char **argv,
                                    const char *argument,
                                    unsigned default_value,
@@ -1003,7 +1193,7 @@ static int WG_DrawTitleScreen(void)
     if (!WG_GraphicsDecodeTitleWithPalette(&graphics, wg_data_set.variant,
                                            WG_ScreenBuffer, WG_Palette))
     {
-        WG_ReportError("Unable to decode the Wolf3D title screen.");
+        WG_ReportFatalError("Unable to decode the Wolf3D title screen.");
         WG_GraphicsClose(&graphics);
         return 0;
     }
@@ -1099,13 +1289,13 @@ static int WG_LoadTitleScreen(const char *data_path,
     if (!WG_DataOpenSelected(&wg_data_set, data_path, requested_variant,
                              preferred_family))
     {
-        WG_ReportError("The selected directory does not contain one unambiguous supported game data set.");
+        WG_ReportFatalError("The selected directory does not contain one unambiguous supported game data set.");
         return 0;
     }
+    wg_data_loaded = 1;
     if (!WG_DrawTitleScreen())
     {
-        WG_ReportError("Unable to open the Wolf3D graphics resources.");
-        WG_DataClose(&wg_data_set);
+        WG_ReportFatalError("Unable to open the Wolf3D graphics resources.");
         return 0;
     }
     title_length = snprintf(title, sizeof(title), "wolf3dgeneric - %s",
@@ -1114,7 +1304,6 @@ static int WG_LoadTitleScreen(const char *data_path,
     {
         WG_SetWindowTitle(title);
     }
-    wg_data_loaded = 1;
     wg_menu_selection = WG_DefaultMenuSelection();
     return 1;
 }
@@ -1174,7 +1363,7 @@ static int WG_LoadSignonScreen(const char *path,
         || file.size != (size_t)WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT)
     {
         WG_FreeFile(&file);
-        WG_ReportError("SIGNON must be a raw 320x200 (64000-byte) screen.");
+        WG_ReportFatalError("SIGNON must be a raw 320x200 (64000-byte) screen.");
         return 0;
     }
     if (palette_family == WG_GAME_FAMILY_UNKNOWN)
@@ -2851,7 +3040,7 @@ cleanup:
     if (!success)
     {
         WG_GameSessionClose();
-        WG_ReportError("Unable to start the Wolf3D game session.");
+        WG_ReportFatalError("Unable to start the Wolf3D game session.");
     }
     return success;
 }
@@ -4150,7 +4339,7 @@ cleanup:
     WG_MapsClose(&maps);
     if (!success)
     {
-        WG_ReportError("Unable to render the initial Wolf3D play view.");
+        WG_ReportFatalError("Unable to render the initial Wolf3D play view.");
     }
     return success;
 }
@@ -4168,6 +4357,9 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     unsigned view_size;
     unsigned end_page;
     unsigned collapse_frame;
+    unsigned ted_level = 0U;
+    int ted_level_present;
+    wg_difficulty_t ted_difficulty = WG_DIFFICULTY_EASY;
     wg_game_variant_t requested_variant;
     wg_game_family_t preferred_family;
     wg_game_family_t signon_palette_family;
@@ -4188,6 +4380,8 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     }
     if (!WG_FindGameSelection(argc, argv, &requested_variant,
                               &preferred_family)
+        || !WG_FindDOSUnsignedArgument(argc, argv, "tedlevel",
+                                       &ted_level, &ted_level_present)
         || !WG_FindStringArgument(argc, argv, "--signon", &signon_path)
         || !WG_FindStringArgument(argc, argv, "--signon-palette",
                                   &signon_palette)
@@ -4221,7 +4415,7 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     WG_ScreenBuffer = (uint8_t *)calloc(framebuffer_size, sizeof(*WG_ScreenBuffer));
     if (WG_ScreenBuffer == NULL)
     {
-        WG_ReportError("Unable to allocate the Wolf3D framebuffer.");
+        WG_ReportFatalError("Unable to allocate the Wolf3D framebuffer.");
         return WG_RESULT_PLATFORM_ERROR;
     }
 
@@ -4298,7 +4492,23 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
     {
         wg_view_size = view_size;
     }
-    if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
+    wg_debug_parameter = (uint8_t)(WG_IsSpearGame()
+        ? WG_HasDOSArgument(argc, argv, "debugmode")
+        : WG_HasDOSArgument(argc, argv, "goobers"));
+    ted_difficulty = WG_DOSDifficulty(argc, argv);
+    if (data_path != NULL && ted_level_present)
+    {
+        unsigned maximum = WG_IsSpearGame() ? 20U : 59U;
+
+        if (ted_level > maximum || !WG_IsInteractive()
+            || !WG_GameSessionOpen(ted_level, ted_difficulty))
+        {
+            wolf3dgeneric_Shutdown();
+            return ted_level > maximum ? WG_RESULT_INVALID_ARGUMENT
+                                       : WG_RESULT_PLATFORM_ERROR;
+        }
+    }
+    else if (data_path != NULL && WG_HasArgument(argc, argv, "--play-view")
         && WG_IsInteractive())
     {
         if (!WG_GameSessionOpen(map_number, WG_DIFFICULTY_MEDIUM))
@@ -4359,6 +4569,13 @@ wg_result_t wolf3dgeneric_Create(int argc, char **argv)
             WG_HasArgument(argc, argv, "--high-score-view"),
             WG_HasArgument(argc, argv, "--high-score-entry-view"), actor_tics,
             forward_tics, view_size))
+    {
+        wolf3dgeneric_Shutdown();
+        return WG_RESULT_PLATFORM_ERROR;
+    }
+    if (data_path != NULL && !ted_level_present && !wg_game.active
+        && WG_HasDOSArgument(argc, argv, "nowait")
+        && !WG_DrawTitleScreen())
     {
         wolf3dgeneric_Shutdown();
         return WG_RESULT_PLATFORM_ERROR;
@@ -4480,7 +4697,7 @@ static wg_result_t WG_ConfirmKey(uint16_t key)
             return WG_GameSessionLoad(wg_save_selection)
                        ? WG_RESULT_OK : WG_RESULT_PLATFORM_ERROR;
         case WG_CONFIRM_QUIT:
-            return WG_RESULT_QUIT;
+            return WG_RequestCleanExit();
         default:
             return WG_RESULT_PLATFORM_ERROR;
     }
@@ -4783,6 +5000,54 @@ static int WG_AttractAdvance(void)
     }
 }
 
+static wg_result_t WG_GameDebugKey(uint16_t key)
+{
+    unsigned ammo;
+
+    if (!wg_debug_keys_enabled || !wg_game.active
+        || !wg_game.keys[WG_KEY_TAB])
+    {
+        return WG_RESULT_OK;
+    }
+    switch (key)
+    {
+        case WG_KEY_E:
+            wg_game.level.level_completed = 1U;
+            WG_PrintMessage("Debug: level completed.");
+            break;
+        case WG_KEY_G:
+            wg_game.level.god_mode ^= 1U;
+            WG_PrintMessage(wg_game.level.god_mode
+                                ? "God mode ON" : "God mode OFF");
+            break;
+        case WG_KEY_H:
+            WL_TakeDamage(&wg_game.level, 16U);
+            WG_PrintMessage("Debug: player hurt.");
+            break;
+        case WG_KEY_I:
+            WL_GivePoints(&wg_game.level, 100000U);
+            wg_game.level.player_health = 100U;
+            if (wg_game.level.player_best_weapon < WG_WEAPON_CHAINGUN)
+            {
+                ++wg_game.level.player_best_weapon;
+                wg_game.level.player_weapon =
+                    wg_game.level.player_best_weapon;
+                wg_game.level.player_chosen_weapon =
+                    wg_game.level.player_best_weapon;
+            }
+            ammo = wg_game.level.player_ammo + 50U;
+            wg_game.level.player_ammo =
+                (uint16_t)(ammo > 99U ? 99U : ammo);
+            WG_PrintMessage("Free items!");
+            break;
+        case WG_KEY_Q:
+            return WG_RequestCleanExit();
+        default:
+            break;
+    }
+    return WG_RESULT_OK;
+}
+
 wg_result_t wolf3dgeneric_Run(void)
 {
     wg_event_t event;
@@ -4807,7 +5072,7 @@ wg_result_t wolf3dgeneric_Run(void)
         {
             if (event.type == WG_EVENT_QUIT)
             {
-                return WG_RESULT_QUIT;
+                return WG_RequestCleanExit();
             }
             if (!wg_mouse_present
                 && (event.type == WG_EVENT_MOUSE_MOTION
@@ -4976,7 +5241,7 @@ wg_result_t wolf3dgeneric_Run(void)
             {
                 if (!WG_AttractAdvance())
                 {
-                    WG_ReportError("The Wolf3D startup sequence failed.");
+                    WG_ReportFatalError("The Wolf3D startup sequence failed.");
                     return WG_RESULT_PLATFORM_ERROR;
                 }
                 last_ticks = WG_GetTicksMs();
@@ -5791,7 +6056,27 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 if (event.key < sizeof(wg_game.keys))
                 {
+                    uint8_t was_pressed = wg_game.keys[event.key];
+                    wg_result_t debug_result;
+
                     wg_game.keys[event.key] = event.pressed != 0;
+                    if (wg_debug_parameter && !wg_debug_keys_enabled
+                        && wg_game.keys[WG_KEY_BACKSPACE]
+                        && wg_game.keys[WG_KEY_LEFT_SHIFT]
+                        && wg_game.keys[WG_KEY_ALT])
+                    {
+                        wg_debug_keys_enabled = 1U;
+                        WG_PrintMessage(
+                            "Debugging keys are now available!");
+                    }
+                    if (event.pressed && !was_pressed)
+                    {
+                        debug_result = WG_GameDebugKey(event.key);
+                        if (debug_result != WG_RESULT_OK)
+                        {
+                            return debug_result;
+                        }
+                    }
                 }
             }
             else if (event.type == WG_EVENT_MOUSE_MOTION
@@ -6212,7 +6497,7 @@ wg_result_t wolf3dgeneric_Run(void)
         {
             if (!WG_AttractAdvance())
             {
-                WG_ReportError("The Wolf3D attract loop failed.");
+                WG_ReportFatalError("The Wolf3D attract loop failed.");
                 return WG_RESULT_PLATFORM_ERROR;
             }
             last_ticks = WG_GetTicksMs();
@@ -6261,14 +6546,14 @@ wg_result_t wolf3dgeneric_Run(void)
                 {
                     if (!WG_GameSessionAdvanceIntermission())
                     {
-                        WG_ReportError(
+                        WG_ReportFatalError(
                             "The Wolf3D intermission animation failed.");
                         return WG_RESULT_PLATFORM_ERROR;
                     }
                 }
                 else if (!WG_GameSessionTick(step_tics))
                 {
-                    WG_ReportError("The Wolf3D game simulation failed.");
+                    WG_ReportFatalError("The Wolf3D game simulation failed.");
                     return WG_RESULT_PLATFORM_ERROR;
                 }
                 accumulator -= step_tics * 1000U;
@@ -6300,18 +6585,18 @@ wg_result_t wolf3dgeneric_Run(void)
                 && wg_game.death_phase < WG_DEATH_FIZZLE
                 && !WG_GameSessionRender())
             {
-                WG_ReportError("The Wolf3D game renderer failed.");
+                WG_ReportFatalError("The Wolf3D game renderer failed.");
                 return WG_RESULT_PLATFORM_ERROR;
             }
             if (wg_game.active && !WG_GameSessionPumpAudio())
             {
-                WG_ReportError("The Wolf3D audio stream failed.");
+                WG_ReportFatalError("The Wolf3D audio stream failed.");
                 return WG_RESULT_PLATFORM_ERROR;
             }
         }
         else if (!WG_FrontMusicPump())
         {
-            WG_ReportError("The Wolf3D front-end audio stream failed.");
+            WG_ReportFatalError("The Wolf3D front-end audio stream failed.");
             return WG_RESULT_PLATFORM_ERROR;
         }
         WG_Present(WG_ScreenBuffer, WG_Palette);
@@ -6330,11 +6615,14 @@ void wolf3dgeneric_Shutdown(void)
     WG_WriteConfig();
     WG_GameSessionClose();
     WG_FrontMusicClose();
+    WG_PresentDOSExitScreen();
     WG_Shutdown();
     WG_DataClose(&wg_data_set);
     free(WG_ScreenBuffer);
     WG_ScreenBuffer = NULL;
     wg_data_loaded = 0;
+    wg_clean_exit_requested = 0U;
+    wg_fatal_error[0] = '\0';
     wg_start_map = 0U;
     wg_next_demo = 0U;
     wg_change_view_screen = 0U;
@@ -6354,6 +6642,8 @@ void wolf3dgeneric_Shutdown(void)
     wg_config_ready = 0U;
     wg_mouse_present = 0U;
     wg_mouse_enabled = 0U;
+    wg_debug_parameter = 0U;
+    wg_debug_keys_enabled = 0U;
     wg_confirm_action = WG_CONFIRM_NONE;
     wg_quick_slot_valid = 0U;
     ID_IN_ResetJoysticks();

@@ -119,6 +119,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)src\*.c" />
+    <ClCompile Include="$(SolutionDir)platforms\*.c" />
     <ClCompile Include="$(SolutionDir)platforms\headless\*.c" />
     <ClCompile Include="$(SolutionDir)platforms\linux-console\*.c" />
     <ClCompile Include="$(SolutionDir)platforms\win32\*.c" />

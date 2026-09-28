@@ -20,7 +20,9 @@ video, raw evdev input, monotonic POSIX timing, and ALSA PCM.
 | `sleep_ms` | Yield for approximately the requested duration; game timing does not assume exact sleeps. |
 | `poll_event` | Pop one event without blocking and return nonzero, or return zero when the queue is empty. |
 | `is_interactive` | Return nonzero for a live host and zero for deterministic/offline tools. |
-| `set_window_title`, `report_error` | Publish user-facing status and errors in the host's normal way. |
+| `set_window_title` | Publish the current game/profile name in the host's normal way. |
+| `print_message`, `report_error` | Write ordinary console/debug text and report errors. `report_error` may additionally use a native dialog. |
+| `present_text` | Preserve an 80x25 DOS text-mode screen supplied as interleaved CP437 character/VGA-attribute bytes. Native console cells are ideal; ANSI color plus CP437-to-Unicode conversion is the portable fallback. Copy the cells if presentation is deferred until shutdown. |
 | `pcm_init`, `pcm_shutdown` | Open/close signed 16-bit stereo PCM at the requested sample rate. |
 | `pcm_writable_frames` | Report how many frames can be submitted immediately without blocking. |
 | `pcm_submit` | Queue interleaved signed 16-bit frames and return nonzero on success. |
@@ -50,6 +52,13 @@ must not add a second dead zone unless required by their device API.
 The pixel and palette pointers passed to `WG_Present` remain engine-owned; copy
 them if presentation is asynchronous. The engine may change the palette without
 changing pixel indices, notably for damage and bonus flashes.
+
+The cell pointer passed to `WG_PresentText` is likewise temporary. This
+callback is made before platform shutdown so a graphical host can close its
+display, restore the terminal, and then emit the original colored DOS quit or
+error screen. Attribute bits 0--3 are the VGA foreground, bits 4--6 are the
+background, and bit 7 is blink. Hosts that cannot represent color should still
+emit the CP437 text in a readable encoding.
 
 `WG_PCMWritableFrames` may return zero. The core will try again on a later loop
 iteration. `WG_PCMSubmit` must copy or consume the supplied samples before it

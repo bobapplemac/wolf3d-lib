@@ -234,6 +234,53 @@ int WG_GraphicsDecodeChunk(const wg_graphics_t *graphics, size_t chunk,
     return 1;
 }
 
+int WG_GraphicsDecodeTextScreen(const wg_graphics_t *graphics, int error,
+                                uint8_t cells[80 * 25 * 2])
+{
+    size_t chunk;
+    uint8_t *decoded = NULL;
+    size_t decoded_size = 0U;
+    int result;
+
+    if (graphics == NULL || cells == NULL)
+    {
+        return 0;
+    }
+    switch (graphics->variant)
+    {
+        case WG_GAME_WOLF3D_SHAREWARE_14:
+            chunk = 148U;
+            break;
+        case WG_GAME_WOLF3D_FULL_APOGEE_14:
+            chunk = 148U;
+            break;
+        case WG_GAME_WOLF3D_FULL_GT_14:
+            chunk = 136U;
+            break;
+        case WG_GAME_SPEAR_DEMO_SDM:
+            chunk = 129U;
+            break;
+        case WG_GAME_SPEAR_FULL_SOD:
+        case WG_GAME_SPEAR_MISSION_1_SD1:
+        case WG_GAME_SPEAR_MISSION_2_SD2:
+        case WG_GAME_SPEAR_MISSION_3_SD3:
+            chunk = 151U;
+            break;
+        default:
+            return 0;
+    }
+    chunk += error != 0;
+    result = WG_GraphicsDecodeChunk(graphics, chunk, &decoded,
+                                    &decoded_size)
+          && decoded_size >= 7U + 80U * 25U * 2U;
+    if (result)
+    {
+        memcpy(cells, decoded + 7U, 80U * 25U * 2U);
+    }
+    free(decoded);
+    return result;
+}
+
 int WG_GraphicsDecodePicture(const wg_graphics_t *graphics, size_t chunk,
                              uint8_t **pixels, uint16_t *width,
                              uint16_t *height)
