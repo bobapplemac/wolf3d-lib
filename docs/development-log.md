@@ -1951,3 +1951,22 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Ran the full suite under Clang AddressSanitizer and UndefinedBehaviorSanitizer.
   The audit found and corrected one signed-left-shift in digitized-sample
   conversion; all 147 sanitizer tests now pass.
+## 2026-09-28: Menu cursor and death-transition parity
+
+- Restored `HandleMenu`'s `C_CURSOR1PIC`/`C_CURSOR2PIC` animation for the main,
+  load/save, sound, control, customize, episode, and difficulty menus. The
+  portable host follows the original 9-tic flash and 71-tic hold cadence,
+  retains that cadence across selection moves, and redraws the current frame
+  after a menu refresh.
+- Traced the restart path through the original `Died`, `GameLoop`, and
+  `ThreeDRefresh` functions. The DOS game fills an off-screen view with color
+  index 4, fizzles it onto the displayed page over 70 tics, omits
+  `PreloadGraphics` after a death, and then fizzles the new view onto that
+  still-red page over 20 tics.
+- Corrected the portable restart path to clear both preload pacing counters.
+  This removes the orphaned Get Psyched progress bar that could appear on a
+  black screen after death. Entry fizzle setup now retains a red view region
+  specifically for death restarts while ordinary level entry remains black.
+- Added real-resource coverage proving that the second cursor frame is
+  present and visually distinct. The complete 150-test corpus passes in both
+  x64 and x86 MSVC builds.

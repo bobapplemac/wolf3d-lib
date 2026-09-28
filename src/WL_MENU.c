@@ -71,6 +71,8 @@ typedef struct wl_menu_item
     uint8_t active;
 } wl_menu_item_t;
 
+static int WL_SoundMenuActive(unsigned item);
+
 static int WL_MainMenuOmitsReadThis(wg_game_variant_t variant)
 {
     /*
@@ -152,6 +154,90 @@ static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
         return 1;
     }
     return 0;
+}
+
+int WL_DrawMenuCursor(uint8_t framebuffer[320 * 200],
+                      const wg_graphics_t *graphics,
+                      wl_menu_cursor_context_t context,
+                      unsigned selected, unsigned frame)
+{
+    wl_menu_chunks_t chunks;
+    int x;
+    int y;
+
+    if (framebuffer == NULL || graphics == NULL || frame > 1U
+        || !WL_MenuChunks(graphics->variant, &chunks))
+    {
+        return 0;
+    }
+    switch (context)
+    {
+    case WL_MENU_CURSOR_MAIN:
+        if (selected >= WL_MAIN_MENU_ITEMS
+            || (WL_MainMenuOmitsReadThis(graphics->variant)
+                && selected == 6U))
+        {
+            return 0;
+        }
+        x = WL_MENU_X & ~7;
+        y = WL_MENU_Y - 2
+            + (int)(selected
+                    - (WL_MainMenuOmitsReadThis(graphics->variant)
+                       && selected > 6U ? 1U : 0U)) * 13;
+        break;
+    case WL_MENU_CURSOR_LOAD_SAVE:
+        if (selected >= WL_SAVE_SLOTS)
+        {
+            return 0;
+        }
+        x = WL_LOAD_SAVE_X & ~7;
+        y = WL_LOAD_SAVE_Y - 2 + (int)selected * 13;
+        break;
+    case WL_MENU_CURSOR_SOUND:
+        if (selected >= WL_SOUND_MENU_ITEMS || !WL_SoundMenuActive(selected))
+        {
+            return 0;
+        }
+        x = WL_SOUND_X & ~7;
+        y = WL_SOUND_Y1 - 2 + (int)selected * 13;
+        break;
+    case WL_MENU_CURSOR_CONTROL:
+        if (selected >= WL_CONTROL_MENU_ITEMS)
+        {
+            return 0;
+        }
+        x = WL_CONTROL_X;
+        y = WL_CONTROL_Y - 2 + (int)selected * 13;
+        break;
+    case WL_MENU_CURSOR_CUSTOMIZE:
+        if (selected >= WL_CUSTOM_MENU_ITEMS)
+        {
+            return 0;
+        }
+        x = WL_CUSTOM_X;
+        y = WL_CUSTOM_Y - 2 + (int)selected * 13;
+        break;
+    case WL_MENU_CURSOR_EPISODE:
+        if (selected >= 6U)
+        {
+            return 0;
+        }
+        x = 8;
+        y = 21 + (int)selected * 26;
+        break;
+    case WL_MENU_CURSOR_DIFFICULTY:
+        if (selected >= 4U)
+        {
+            return 0;
+        }
+        x = 48;
+        y = 98 + (int)selected * 13;
+        break;
+    default:
+        return 0;
+    }
+    return WG_VideoDrawPicture(framebuffer, graphics,
+                               chunks.cursor + frame, x, y);
 }
 
 static void WL_MenuBar(uint8_t *framebuffer, int x, int y,

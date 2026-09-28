@@ -18,6 +18,22 @@
 #define WL_SAVE_SLOTS 10U
 #define WL_SAVE_NAME_LENGTH 31U
 
+typedef enum wl_menu_cursor_context
+{
+    WL_MENU_CURSOR_MAIN = 0,
+    WL_MENU_CURSOR_LOAD_SAVE,
+    WL_MENU_CURSOR_SOUND,
+    WL_MENU_CURSOR_CONTROL,
+    WL_MENU_CURSOR_CUSTOMIZE,
+    WL_MENU_CURSOR_EPISODE,
+    WL_MENU_CURSOR_DIFFICULTY
+} wl_menu_cursor_context_t;
+
+int WL_DrawMenuCursor(uint8_t framebuffer[320 * 200],
+                      const wg_graphics_t *graphics,
+                      wl_menu_cursor_context_t context,
+                      unsigned selected, unsigned frame);
+
 int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                     const wg_graphics_t *graphics, unsigned selected,
                     int in_game);

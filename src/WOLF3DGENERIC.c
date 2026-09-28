@@ -221,12 +221,18 @@ static uint32_t wg_attract_deadline;
 #define WG_SIGNON_WORK_MIN_MS 750U
 #define WG_PRELOAD_FILL_TICS 70U
 #define WG_PRELOAD_HOLD_TICS 70U
+#define WG_MENU_CURSOR_FLASH_MS 129U
+#define WG_MENU_CURSOR_HOLD_MS 1015U
 static wg_game_family_t wg_signon_family;
 static uint8_t wg_signon_sound_blaster;
 static wg_audio_t wg_front_audio;
 static id_sd_music_t *wg_front_music;
 static uint8_t wg_front_audio_active;
 static unsigned wg_front_song = UINT_MAX;
+static uint8_t wg_menu_cursor_frame;
+static uint32_t wg_menu_cursor_deadline;
+static uint8_t wg_menu_cursor_context_valid;
+static wl_menu_cursor_context_t wg_menu_cursor_context;
 
 typedef enum wg_death_phase
 {
@@ -355,7 +361,7 @@ static int WG_GameSessionNewViewSize(unsigned view_size)
 
 static unsigned WG_GameSessionNextMap(void);
 static int WG_GameSessionRender(void);
-static int WG_GameSessionBeginEntryFizzle(void);
+static int WG_GameSessionBeginEntryFizzle(int death_restart);
 static int WG_GameSessionBeginPreload(void);
 static int WG_GameSessionOpen(unsigned map_number,
                               wg_difficulty_t difficulty, int randomize);
@@ -1487,6 +1493,145 @@ static int WG_DrawEmbeddedSignon(const char *name,
     return 1;
 }
 
+static void WG_MenuCursorReset(void)
+{
+    wg_menu_cursor_frame = 0U;
+    wg_menu_cursor_deadline = 0U;
+    wg_menu_cursor_context_valid = 0U;
+}
+
+static int WG_MenuCursorState(wl_menu_cursor_context_t *context,
+                              unsigned *selected)
+{
+    if (context == NULL || selected == NULL
+        || wg_confirm_action != WG_CONFIRM_NONE)
+    {
+        return 0;
+    }
+    if (wg_load_save_screen != 0U && !wg_save_editing && !wg_save_confirm)
+    {
+        *context = WL_MENU_CURSOR_LOAD_SAVE;
+        *selected = wg_save_selection;
+        return 1;
+    }
+    if (wg_customize_screen && wg_customize_edit_column < 0
+        && !wg_customize_capture)
+    {
+        *context = WL_MENU_CURSOR_CUSTOMIZE;
+        *selected = wg_customize_selection;
+        return 1;
+    }
+    if (wg_control_screen)
+    {
+        *context = WL_MENU_CURSOR_CONTROL;
+        *selected = wg_control_selection;
+        return 1;
+    }
+    if (wg_sound_screen)
+    {
+        *context = WL_MENU_CURSOR_SOUND;
+        *selected = wg_sound_selection;
+        return 1;
+    }
+    if (wg_new_game_screen == 1U)
+    {
+        *context = WL_MENU_CURSOR_EPISODE;
+        *selected = wg_episode_selection;
+        return 1;
+    }
+    if (wg_new_game_screen == 2U)
+    {
+        *context = WL_MENU_CURSOR_DIFFICULTY;
+        *selected = (unsigned)wg_difficulty_selection;
+        return 1;
+    }
+    if (wg_menu_active)
+    {
+        *context = WL_MENU_CURSOR_MAIN;
+        *selected = wg_menu_selection;
+        return 1;
+    }
+    return 0;
+}
+
+static int WG_MenuCursorAdvance(void)
+{
+    wl_menu_cursor_context_t context;
+    wg_graphics_t graphics;
+    unsigned selected;
+    uint32_t now;
+    int result;
+
+    if (!WG_MenuCursorState(&context, &selected))
+    {
+        WG_MenuCursorReset();
+        return 1;
+    }
+    now = WG_GetTicksMs();
+    if (!wg_menu_cursor_context_valid || context != wg_menu_cursor_context)
+    {
+        wg_menu_cursor_frame = 0U;
+        wg_menu_cursor_context = context;
+        wg_menu_cursor_context_valid = 1U;
+        wg_menu_cursor_deadline = now + WG_MENU_CURSOR_FLASH_MS;
+        return 1;
+    }
+    if ((int32_t)(now - wg_menu_cursor_deadline) < 0)
+    {
+        return 1;
+    }
+    wg_menu_cursor_frame ^= 1U;
+    wg_menu_cursor_deadline = now
+        + (wg_menu_cursor_frame ? WG_MENU_CURSOR_FLASH_MS
+                                : WG_MENU_CURSOR_HOLD_MS);
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    result = WL_DrawMenuCursor(WG_ScreenBuffer, &graphics, context,
+                               selected, wg_menu_cursor_frame);
+    WG_GraphicsClose(&graphics);
+    return result;
+}
+
+static int WG_MenuCursorSyncAfterRedraw(void)
+{
+    wl_menu_cursor_context_t context;
+    wg_graphics_t graphics;
+    unsigned selected;
+    uint32_t now;
+    int result;
+
+    if (!WG_MenuCursorState(&context, &selected))
+    {
+        WG_MenuCursorReset();
+        return 1;
+    }
+    now = WG_GetTicksMs();
+    if (!wg_menu_cursor_context_valid || context != wg_menu_cursor_context)
+    {
+        wg_menu_cursor_frame = 0U;
+        wg_menu_cursor_context = context;
+        wg_menu_cursor_context_valid = 1U;
+        wg_menu_cursor_deadline = now + WG_MENU_CURSOR_FLASH_MS;
+        return 1;
+    }
+    if (wg_menu_cursor_frame == 0U)
+    {
+        return 1;
+    }
+    memset(&graphics, 0, sizeof(graphics));
+    if (!WG_GraphicsOpen(&graphics, &wg_data_set))
+    {
+        return 0;
+    }
+    result = WL_DrawMenuCursor(WG_ScreenBuffer, &graphics, context,
+                               selected, wg_menu_cursor_frame);
+    WG_GraphicsClose(&graphics);
+    return result;
+}
+
 static int WG_DrawMainMenuScreen(void)
 {
     wg_graphics_t graphics;
@@ -1515,6 +1660,7 @@ static int WG_DrawMainMenuScreen(void)
         wg_customize_screen = 0U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
+        result = WG_MenuCursorSyncAfterRedraw();
     }
     return result;
 }
@@ -1757,6 +1903,7 @@ static int WG_DrawLoadSaveScreen(unsigned mode, int refresh)
         wg_load_save_screen = (uint8_t)mode;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
+        result = WG_MenuCursorSyncAfterRedraw();
     }
     return result;
 }
@@ -1788,6 +1935,7 @@ static int WG_DrawSoundMenuScreen(void)
         wg_customize_screen = 0U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
+        result = WG_MenuCursorSyncAfterRedraw();
     }
     return result;
 }
@@ -1829,6 +1977,7 @@ static int WG_DrawControlMenuScreen(void)
         wg_customize_screen = 0U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
+        result = WG_MenuCursorSyncAfterRedraw();
     }
     return result;
 }
@@ -1893,6 +2042,7 @@ static int WG_DrawCustomizeScreen(void)
         wg_customize_screen = 1U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
+        result = WG_MenuCursorSyncAfterRedraw();
     }
     return result;
 }
@@ -1992,6 +2142,7 @@ static int WG_DrawEpisodeMenuScreen(void)
         wg_mouse_sensitivity_screen = 0U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
+        result = WG_MenuCursorSyncAfterRedraw();
     }
     return result;
 }
@@ -2021,6 +2172,7 @@ static int WG_DrawDifficultyMenuScreen(void)
         wg_mouse_sensitivity_screen = 0U;
         wg_attract_phase = WG_ATTRACT_NONE;
         WG_FrontMusicStart(14U);
+        result = WG_MenuCursorSyncAfterRedraw();
     }
     return result;
 }
@@ -2259,7 +2411,7 @@ static int WG_GameSessionRender(void)
     return WL_DrawStatusBar(WG_ScreenBuffer, &wg_game.graphics, &status);
 }
 
-static int WG_GameSessionBeginEntryFizzle(void)
+static int WG_GameSessionBeginEntryFizzle(int death_restart)
 {
     size_t view_width = wg_game.view.view_width;
     size_t view_height = view_width / 2U;
@@ -2282,6 +2434,14 @@ static int WG_GameSessionBeginEntryFizzle(void)
     if (!WL_DrawPlayBorder(WG_ScreenBuffer, (unsigned)view_width))
     {
         return 0;
+    }
+    if (death_restart)
+    {
+        /* Died() left the displayed DOS page solid palette index 4.  The
+           following ThreeDRefresh fizzled the restarted view onto that same
+           red page; it never passed through the black preload background. */
+        WG_VideoBar(WG_ScreenBuffer, (int)view_x, (int)view_y,
+                    (int)view_width, (int)view_height, 4U);
     }
     WG_FizzleStart(&wg_game.entry_fizzle);
     wg_game.entry_fizzle_active = 1U;
@@ -3259,8 +3419,13 @@ static int WG_GameSessionReload(unsigned map_number, int died)
     {
         return WG_GameSessionBeginPreload();
     }
+    /* WG_GameSessionOpen prepares the ordinary preload presentation before
+       the restored campaign state is known.  A death restart skips that DOS
+       PreloadGraphics path completely, including both portable pacing
+       counters. */
+    wg_game.preload_fill_tics = 0U;
     wg_game.preload_tics = 0U;
-    return WG_GameSessionRender() && WG_GameSessionBeginEntryFizzle();
+    return WG_GameSessionRender() && WG_GameSessionBeginEntryFizzle(1);
 }
 
 static int WG_GameSessionEnterSpearMap(void)
@@ -3335,7 +3500,7 @@ static int WG_GameSessionTick(unsigned live_tics)
         if (wg_game.preload_tics == 0U)
         {
             if (!WG_GameSessionRender()
-                || !WG_GameSessionBeginEntryFizzle())
+                || !WG_GameSessionBeginEntryFizzle(0))
             {
                 return 0;
             }
@@ -6703,6 +6868,11 @@ wg_result_t wolf3dgeneric_Run(void)
         else if (!WG_FrontMusicPump())
         {
             WG_ReportFatalError("The Wolf3D front-end audio stream failed.");
+            return WG_RESULT_PLATFORM_ERROR;
+        }
+        if (!WG_MenuCursorAdvance())
+        {
+            WG_ReportFatalError("Unable to animate the menu cursor.");
             return WG_RESULT_PLATFORM_ERROR;
         }
         WG_Present(WG_ScreenBuffer, WG_Palette);

@@ -3611,6 +3611,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     uint64_t help_text_hash = 1469598103934665603ULL;
     uint64_t demo_hash = 1469598103934665603ULL;
     uint64_t menu_hash = 1469598103934665603ULL;
+    uint64_t menu_cursor_hash = 1469598103934665603ULL;
     uint64_t confirm_hash = 1469598103934665603ULL;
     uint64_t sound_menu_hash = 1469598103934665603ULL;
     uint64_t control_menu_hash = 1469598103934665603ULL;
@@ -3933,6 +3934,29 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         CHECK(menu_hash == (expected_variant == WG_GAME_WOLF3D_FULL_GT_14
                                 ? 0xf10ed9855ad7a846ULL
                                 : 0xcdbff8b31548b64eULL));
+        CHECK(WL_DrawMenuCursor(
+            framebuffer, &graphics, WL_MENU_CURSOR_MAIN,
+            expected_variant == WG_GAME_WOLF3D_FULL_GT_14
+                ? 0U : WL_MAIN_MENU_DEFAULT_ITEM,
+            1U));
+        for (index = 0U; index < sizeof(framebuffer); ++index)
+        {
+            menu_cursor_hash ^= framebuffer[index];
+            menu_cursor_hash *= 1099511628211ULL;
+        }
+        printf("%s flashing menu cursor FNV-1a: %016llx\n",
+               WG_DataVariantName(data_set.variant),
+               (unsigned long long)menu_cursor_hash);
+        CHECK(menu_cursor_hash != menu_hash);
+        CHECK(!WL_DrawMenuCursor(
+            framebuffer, &graphics, WL_MENU_CURSOR_MAIN,
+            WL_MAIN_MENU_ITEMS, 1U));
+        CHECK(!WL_DrawMenuCursor(
+            framebuffer, &graphics, WL_MENU_CURSOR_MAIN, 0U, 2U));
+        CHECK(WL_DrawMainMenu(framebuffer, &graphics,
+                              expected_variant == WG_GAME_WOLF3D_FULL_GT_14
+                                  ? 0U : WL_MAIN_MENU_DEFAULT_ITEM,
+                              0));
         CHECK(WL_DrawConfirm(framebuffer, &graphics,
                              "Are you sure you want\n"
                              "to end the game you\n"

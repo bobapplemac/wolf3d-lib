@@ -2,6 +2,14 @@
 
 ## 1.4.0 - 2026-09-27
 
+- Restored the original two-frame menu gun animation: the highlighted cursor
+  now briefly shifts to `C_CURSOR2` for nine 70 Hz tics, then holds
+  `C_CURSOR1` for 71 tics, with its cadence preserved while moving within a
+  menu.
+- Restored the complete DOS death/restart presentation. Death still fizzles
+  the rendered view to palette-index red over 70 tics, but a surviving player
+  now skips both Get Psyched pacing phases and the restarted view fizzles back
+  over the retained red field in 20 tics instead of over black.
 - Recognized the supplied GOG/Activision WL6 resource profile independently
   of its folder name and selected the embedded Activision SIGNON automatically.
   Added real-data coverage for its changed scenery sprite and its intentionally
