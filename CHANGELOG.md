@@ -34,8 +34,9 @@
 - Restored visible fast-host startup pacing: SIGNON now preserves its initial
   status and green `Working...` beats, while Get Psyched visibly fills its
   preload bar before the original completed-bar hold.
-- Kept the DOS exit screen above the returned Windows command prompt so the
-  shell no longer overwrites the final line of the original colored output.
+- Positioned the shell after each exit screen's actual final content row and,
+  for Windows GUI hosts, preserved and restored the parent shell's real prompt
+  instead of overwriting it or leaving only an unlabelled input cursor.
 
 ## 1.3.0 - 2026-09-27
 

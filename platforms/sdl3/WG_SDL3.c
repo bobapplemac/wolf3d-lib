@@ -11,10 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 #define WG_SDL_LOGICAL_WIDTH 320
 #define WG_SDL_LOGICAL_HEIGHT 240
 #define WG_SDL_AUDIO_TARGET_FRAMES 2048U
@@ -288,48 +284,6 @@ static int WG_SDLInit(void)
     return 1;
 }
 
-#ifdef _WIN32
-static void WG_SDLWriteWindowsText(void)
-{
-    HANDLE output;
-    CHAR_INFO characters[WG_TEXT_COLUMNS * WG_TEXT_ROWS];
-    COORD size;
-    COORD origin = { 0, 0 };
-    SMALL_RECT rectangle;
-    size_t index;
-
-    output = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (output == NULL || output == INVALID_HANDLE_VALUE)
-    {
-        (void)AttachConsole(ATTACH_PARENT_PROCESS);
-        output = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                             OPEN_EXISTING, 0, NULL);
-    }
-    if (output == NULL || output == INVALID_HANDLE_VALUE)
-    {
-        return;
-    }
-    for (index = 0U; index < (size_t)wg_text_columns * wg_text_rows; ++index)
-    {
-        characters[index].Char.AsciiChar = (CHAR)wg_text_screen[index * 2U];
-        characters[index].Attributes = wg_text_screen[index * 2U + 1U];
-    }
-    size.X = (SHORT)wg_text_columns;
-    size.Y = (SHORT)wg_text_rows;
-    rectangle.Left = 0;
-    rectangle.Top = 0;
-    rectangle.Right = (SHORT)(wg_text_columns - 1U);
-    rectangle.Bottom = (SHORT)(wg_text_rows - 1U);
-    (void)SetConsoleOutputCP(437U);
-    (void)WriteConsoleOutputA(output, characters, size, origin, &rectangle);
-    /* Leave cmd.exe/PowerShell on the first line below the DOS screen. */
-    origin.X = 0;
-    origin.Y = (SHORT)wg_text_rows;
-    (void)SetConsoleCursorPosition(output, origin);
-}
-#endif
-
 static void WG_SDLShutdown(void)
 {
     if (wg_audio != NULL)
@@ -348,7 +302,8 @@ static void WG_SDLShutdown(void)
     if (wg_text_columns != 0U && wg_text_rows != 0U)
     {
 #ifdef _WIN32
-        WG_SDLWriteWindowsText();
+        WG_WriteWindowsTextScreen(wg_text_screen, wg_text_columns,
+                                  wg_text_rows);
 #else
         WG_WriteTextScreen(stdout, wg_text_screen, wg_text_columns,
                            wg_text_rows, WG_TextOutputSupportsColor(stdout));

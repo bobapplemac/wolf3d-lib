@@ -12,6 +12,7 @@
 #include "WG_CONFIG.h"
 #include "WG_FIXED.h"
 #include "WG_FILE.h"
+#include "WG_TEXT_OUTPUT.h"
 #include "ID_VH.h"
 #include "WG_GRAPHICS.h"
 #include "WL_GAME.h"
@@ -3041,6 +3042,20 @@ static void TestFileIO(void)
     CHECK(remove(actual_path) == 0);
 }
 
+static void TestTextOutput(void)
+{
+    uint8_t cells[8U * 5U * WG_TEXT_CELL_BYTES];
+
+    memset(cells, 0, sizeof(cells));
+    CHECK(WG_TextScreenContentRows(cells, 8U, 5U) == 0U);
+    cells[(1U * 8U + 2U) * WG_TEXT_CELL_BYTES] = 'A';
+    CHECK(WG_TextScreenContentRows(cells, 8U, 5U) == 2U);
+    cells[(4U * 8U + 7U) * WG_TEXT_CELL_BYTES] = 0xdbU;
+    CHECK(WG_TextScreenContentRows(cells, 8U, 5U) == 5U);
+    cells[(4U * 8U + 7U) * WG_TEXT_CELL_BYTES] = ' ';
+    CHECK(WG_TextScreenContentRows(cells, 8U, 5U) == 2U);
+}
+
 static void TestRandom(void)
 {
     wg_random_t random;
@@ -3632,7 +3647,12 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         unsigned frame;
 
         CHECK(WG_GraphicsDecodeTextScreen(&graphics, 0, text_screen));
+        CHECK(WG_TextScreenContentRows(text_screen, WG_TEXT_COLUMNS,
+                                       WG_TEXT_ROWS)
+              == (apogee_graphics ? 24U : 7U));
         CHECK(WG_GraphicsDecodeTextScreen(&graphics, 1, text_screen));
+        CHECK(WG_TextScreenContentRows(text_screen, WG_TEXT_COLUMNS,
+                                       WG_TEXT_ROWS) == 24U);
 
         memset(&psyched_level, 0, sizeof(psyched_level));
         psyched_level.player_health = 100U;
@@ -5317,6 +5337,7 @@ int main(int argc, char **argv)
     TestMalformedCompression();
     TestVideo();
     TestFileIO();
+    TestTextOutput();
     TestRandom();
     TestScanCodeASCII();
     TestActorSetup();

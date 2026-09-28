@@ -1,5 +1,21 @@
 # Development log
 
+## 2026-09-27: Data-driven exit-screen prompt placement
+
+- Replaced the assumed 25-row prompt position with a scan for the final
+  nonblank CP437 cell row. This distinguishes the seven-row GT/ID/Activision
+  `ORDERSCREEN` from the 24-row Apogee screen and applies equally to future
+  short exit resources.
+- Accounted for Windows GUI-subsystem launch behavior: `cmd.exe` renders its
+  next prompt without waiting for the game, so writing the DOS screen had
+  erased it. Both Win32 and SDL3 hosts now capture those actual console cells,
+  draw the 80x25 resource, restore the real prompt immediately below its
+  content, and leave the input cursor after it. Customized prompts and current
+  paths are preserved rather than reconstructed.
+- Made the content-row calculation shared with ANSI/plain terminal output and
+  added synthetic edge cases plus real-data assertions: Apogee order/error
+  screens occupy 24 rows, while later WL6 occupies 7/24 respectively.
+
 ## 2026-09-27: Original DOS console exit and launch controls
 
 - Restored `Quit`'s original data-driven `ORDERSCREEN` and `ERRORSCREEN`

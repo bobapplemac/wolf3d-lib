@@ -77,40 +77,11 @@ static HANDLE wg_console_output_handle(void)
 
 static void wg_write_text_screen(void)
 {
-    HANDLE output;
-    CHAR_INFO characters[WG_TEXT_COLUMNS * WG_TEXT_ROWS];
-    COORD size;
-    COORD origin = { 0, 0 };
-    SMALL_RECT rectangle;
-    size_t index;
-
     if (wg_text_columns == 0U || wg_text_rows == 0U)
     {
         return;
     }
-    output = wg_console_output_handle();
-    if (output == NULL)
-    {
-        WG_WriteTextScreen(stdout, wg_text_screen, wg_text_columns,
-                           wg_text_rows, 0);
-        return;
-    }
-    for (index = 0U; index < (size_t)wg_text_columns * wg_text_rows; ++index)
-    {
-        characters[index].Char.AsciiChar = (CHAR)wg_text_screen[index * 2U];
-        characters[index].Attributes = wg_text_screen[index * 2U + 1U];
-    }
-    size.X = (SHORT)wg_text_columns;
-    size.Y = (SHORT)wg_text_rows;
-    rectangle.Left = 0;
-    rectangle.Top = 0;
-    rectangle.Right = (SHORT)(wg_text_columns - 1U);
-    rectangle.Bottom = (SHORT)(wg_text_rows - 1U);
-    (void)SetConsoleOutputCP(437U);
-    (void)WriteConsoleOutputA(output, characters, size, origin, &rectangle);
-    origin.X = 0;
-    origin.Y = (SHORT)wg_text_rows;
-    (void)SetConsoleCursorPosition(output, origin);
+    WG_WriteWindowsTextScreen(wg_text_screen, wg_text_columns, wg_text_rows);
     wg_text_columns = 0U;
     wg_text_rows = 0U;
 }

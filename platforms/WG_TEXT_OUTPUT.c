@@ -1,9 +1,11 @@
 #include "WG_TEXT_OUTPUT.h"
 
 #include <stddef.h>
+#include <stdlib.h>
 
 #ifdef _WIN32
 #include <io.h>
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif
@@ -99,14 +101,163 @@ static unsigned WG_ANSIBackground(unsigned color)
     return normal[color & 7U];
 }
 
+uint16_t WG_TextScreenContentRows(const uint8_t *cells,
+                                  uint16_t columns, uint16_t rows)
+{
+    uint16_t content_rows = 0U;
+    uint16_t y;
+
+    if (cells == NULL || columns == 0U)
+    {
+        return 0U;
+    }
+    for (y = 0U; y < rows; ++y)
+    {
+        uint16_t x;
+
+        for (x = 0U; x < columns; ++x)
+        {
+            uint8_t character = cells[((size_t)y * columns + x) * 2U];
+
+            if (character != 0U && character != ' ')
+            {
+                content_rows = (uint16_t)(y + 1U);
+                break;
+            }
+        }
+    }
+    return content_rows;
+}
+
+#ifdef _WIN32
+void WG_WriteWindowsTextScreen(const uint8_t *cells,
+                               uint16_t columns, uint16_t rows)
+{
+    HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD mode;
+    CHAR_INFO *characters;
+    CHAR_INFO *prompt = NULL;
+    CONSOLE_SCREEN_BUFFER_INFO console_info;
+    COORD size;
+    COORD origin = { 0, 0 };
+    SMALL_RECT rectangle;
+    SHORT prompt_length = 0;
+    uint16_t content_rows;
+    UINT previous_output_code_page;
+    size_t cell_count;
+    size_t index;
+
+    if (cells == NULL || columns == 0U || rows == 0U)
+    {
+        return;
+    }
+    if (output == NULL || output == INVALID_HANDLE_VALUE
+        || !GetConsoleMode(output, &mode))
+    {
+        (void)AttachConsole(ATTACH_PARENT_PROCESS);
+        output = CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                             OPEN_EXISTING, 0, NULL);
+    }
+    if (output == NULL || output == INVALID_HANDLE_VALUE)
+    {
+        WG_WriteTextScreen(stdout, cells, columns, rows, 0);
+        return;
+    }
+    if (GetConsoleScreenBufferInfo(output, &console_info)
+        && console_info.dwCursorPosition.X > 0)
+    {
+        COORD prompt_size;
+        COORD prompt_origin = { 0, 0 };
+        SMALL_RECT prompt_rectangle;
+
+        prompt_length = console_info.dwCursorPosition.X;
+        prompt = (CHAR_INFO *)malloc((size_t)prompt_length * sizeof(*prompt));
+        prompt_size.X = prompt_length;
+        prompt_size.Y = 1;
+        prompt_rectangle.Left = 0;
+        prompt_rectangle.Top = console_info.dwCursorPosition.Y;
+        prompt_rectangle.Right = (SHORT)(prompt_length - 1);
+        prompt_rectangle.Bottom = console_info.dwCursorPosition.Y;
+        if (prompt == NULL
+            || !ReadConsoleOutputW(output, prompt, prompt_size, prompt_origin,
+                                   &prompt_rectangle))
+        {
+            free(prompt);
+            prompt = NULL;
+            prompt_length = 0;
+        }
+    }
+    cell_count = (size_t)columns * rows;
+    characters = (CHAR_INFO *)malloc(cell_count * sizeof(*characters));
+    if (characters == NULL)
+    {
+        free(prompt);
+        return;
+    }
+    for (index = 0U; index < cell_count; ++index)
+    {
+        characters[index].Char.AsciiChar = (CHAR)cells[index * 2U];
+        characters[index].Attributes = cells[index * 2U + 1U];
+    }
+    size.X = (SHORT)columns;
+    size.Y = (SHORT)rows;
+    rectangle.Left = 0;
+    rectangle.Top = 0;
+    rectangle.Right = (SHORT)(columns - 1U);
+    rectangle.Bottom = (SHORT)(rows - 1U);
+    previous_output_code_page = GetConsoleOutputCP();
+    (void)SetConsoleOutputCP(437U);
+    (void)WriteConsoleOutputA(output, characters, size, origin, &rectangle);
+    free(characters);
+
+    content_rows = WG_TextScreenContentRows(cells, columns, rows);
+    origin.X = 0;
+    origin.Y = (SHORT)(content_rows != 0U ? content_rows : 1U);
+    if (GetConsoleScreenBufferInfo(output, &console_info)
+        && origin.Y >= console_info.dwSize.Y)
+    {
+        origin.Y = (SHORT)(console_info.dwSize.Y - 1);
+    }
+    if (prompt != NULL)
+    {
+        COORD prompt_size;
+        COORD prompt_origin = { 0, 0 };
+        SMALL_RECT prompt_rectangle;
+
+        prompt_size.X = prompt_length;
+        prompt_size.Y = 1;
+        prompt_rectangle.Left = 0;
+        prompt_rectangle.Top = origin.Y;
+        prompt_rectangle.Right = (SHORT)(prompt_length - 1);
+        prompt_rectangle.Bottom = origin.Y;
+        (void)WriteConsoleOutputW(output, prompt, prompt_size, prompt_origin,
+                                  &prompt_rectangle);
+        origin.X = prompt_length;
+    }
+    (void)SetConsoleCursorPosition(output, origin);
+    if (previous_output_code_page != 0U)
+    {
+        (void)SetConsoleOutputCP(previous_output_code_page);
+    }
+    free(prompt);
+}
+#endif
+
 void WG_WriteTextScreen(FILE *stream, const uint8_t *cells,
                         uint16_t columns, uint16_t rows, int color)
 {
+    uint16_t content_rows;
     uint16_t y;
 
     if (stream == NULL || cells == NULL || columns == 0U || rows == 0U)
     {
         return;
+    }
+    content_rows = WG_TextScreenContentRows(cells, columns, rows);
+    if (content_rows == 0U)
+    {
+        content_rows = 1U;
     }
     if (color)
     {
@@ -145,7 +296,7 @@ void WG_WriteTextScreen(FILE *stream, const uint8_t *cells,
             }
             WG_WriteUTF8(stream, WG_CP437CodePoint(cells[offset]));
         }
-        if (!color)
+        if (!color && y < content_rows)
         {
             (void)fputc('\n', stream);
         }
@@ -153,7 +304,8 @@ void WG_WriteTextScreen(FILE *stream, const uint8_t *cells,
     if (color)
     {
         (void)fprintf(stream, "\x1b[0m\x1b[%u;1H",
-                      rows > 1U ? (unsigned)rows - 1U : 1U);
+                      content_rows < rows ? (unsigned)content_rows + 1U
+                                          : (unsigned)rows);
     }
     (void)fflush(stream);
 }

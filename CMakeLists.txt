@@ -457,8 +457,12 @@ endif()
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     add_test(NAME headless-smoke COMMAND wolf3dgeneric-headless --headless-smoke)
 
-    add_executable(wg-tests tests/WG_TESTS.c)
+    add_executable(wg-tests
+        platforms/WG_TEXT_OUTPUT.c
+        tests/WG_TESTS.c
+    )
     wg_configure_host(wg-tests wolf3dgeneric-internal)
+    target_include_directories(wg-tests PRIVATE platforms)
     add_test(NAME unit-tests COMMAND wg-tests)
 
     set(WG_TEST_WL1_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL1 data")
