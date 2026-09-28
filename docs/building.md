@@ -119,6 +119,10 @@ Replace `x64` with `x86` as needed. The package contains
 `SDL3.dll`. The selected static or dynamic MSVC runtime policy applies to all
 locally compiled binaries.
 
+Both Windows GUI hosts accept `--fullscreen` and toggle borderless desktop
+fullscreen at runtime with Alt+Enter. The SDL3 shortcut and option behave the
+same way on Linux desktop systems.
+
 ## Linux with GNU Make
 
 GCC is the default compiler:

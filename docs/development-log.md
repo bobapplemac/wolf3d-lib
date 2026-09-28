@@ -1,5 +1,14 @@
 # Development log
 
+## 2026-09-27: Toggleable GUI fullscreen
+
+- Added host-owned borderless desktop fullscreen without changing the generic
+  engine's native framebuffer or aspect-correct presentation.
+- Both the native Win32 and cross-platform SDL3 hosts accept `--fullscreen`
+  and toggle between fullscreen and their prior window with Alt+Enter.
+- The shortcut is consumed by the host so its Enter keystroke cannot activate
+  a game menu item; returning to windowed mode restores the prior placement.
+
 ## 2026-09-27: Data-driven exit-screen prompt placement
 
 - Replaced the assumed 25-row prompt position with a scan for the final

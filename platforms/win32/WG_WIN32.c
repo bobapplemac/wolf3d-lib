@@ -17,6 +17,11 @@ static uint32_t wg_pixels[WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT];
 static LARGE_INTEGER wg_counter_frequency;
 static LARGE_INTEGER wg_counter_start;
 static int wg_quit_pending;
+static int wg_start_fullscreen;
+static int wg_fullscreen;
+static int wg_fullscreen_enter_down;
+static LONG_PTR wg_windowed_style;
+static WINDOWPLACEMENT wg_windowed_placement = { sizeof(WINDOWPLACEMENT) };
 static uint8_t wg_text_screen[WG_TEXT_COLUMNS * WG_TEXT_ROWS
                               * WG_TEXT_CELL_BYTES];
 static uint16_t wg_text_columns;
@@ -247,11 +252,56 @@ static void wg_poll_joysticks(void)
     }
 }
 
+static int WG_Win32SetFullscreen(int fullscreen)
+{
+    if (wg_window == NULL || fullscreen == wg_fullscreen)
+    {
+        return 1;
+    }
+    if (fullscreen)
+    {
+        MONITORINFO monitor = { sizeof(MONITORINFO) };
+
+        wg_windowed_style = GetWindowLongPtrW(wg_window, GWL_STYLE);
+        wg_windowed_placement.length = sizeof(wg_windowed_placement);
+        if (!GetWindowPlacement(wg_window, &wg_windowed_placement)
+            || !GetMonitorInfoW(MonitorFromWindow(
+                                    wg_window, MONITOR_DEFAULTTONEAREST),
+                                &monitor))
+        {
+            return 0;
+        }
+        SetWindowLongPtrW(wg_window, GWL_STYLE,
+                          wg_windowed_style
+                              & ~(LONG_PTR)WS_OVERLAPPEDWINDOW);
+        if (!SetWindowPos(wg_window, HWND_TOP,
+                          monitor.rcMonitor.left, monitor.rcMonitor.top,
+                          monitor.rcMonitor.right - monitor.rcMonitor.left,
+                          monitor.rcMonitor.bottom - monitor.rcMonitor.top,
+                          SWP_NOOWNERZORDER | SWP_FRAMECHANGED))
+        {
+            SetWindowLongPtrW(wg_window, GWL_STYLE, wg_windowed_style);
+            return 0;
+        }
+    }
+    else
+    {
+        SetWindowLongPtrW(wg_window, GWL_STYLE, wg_windowed_style);
+        if (!SetWindowPlacement(wg_window, &wg_windowed_placement)
+            || !SetWindowPos(wg_window, NULL, 0, 0, 0, 0,
+                             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER
+                                 | SWP_NOOWNERZORDER | SWP_FRAMECHANGED))
+        {
+            return 0;
+        }
+    }
+    wg_fullscreen = fullscreen;
+    return 1;
+}
+
 static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
                                        WPARAM wparam, LPARAM lparam)
 {
-    (void)wparam;
-
     switch (message)
     {
         case WM_KEYDOWN:
@@ -260,9 +310,30 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
         case WM_SYSKEYUP:
         {
             wg_event_t event = { 0 };
+            int pressed = message == WM_KEYDOWN
+                       || message == WM_SYSKEYDOWN;
+            int alt_enter = wparam == VK_RETURN
+                         && (wg_fullscreen_enter_down
+                             || (pressed
+                                 && (GetKeyState(VK_MENU) & 0x8000) != 0));
+
+            if (alt_enter)
+            {
+                if (pressed && !wg_fullscreen_enter_down
+                    && (lparam & ((LPARAM)1U << 30)) == 0)
+                {
+                    (void)WG_Win32SetFullscreen(!wg_fullscreen);
+                    wg_fullscreen_enter_down = 1;
+                }
+                else if (!pressed)
+                {
+                    wg_fullscreen_enter_down = 0;
+                }
+                return 0;
+            }
 
             event.type = WG_EVENT_KEY;
-            event.pressed = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+            event.pressed = pressed;
             event.key = wparam == VK_PAUSE
                             ? WG_KEY_PAUSE
                             : (uint16_t)((lparam >> 16) & 0xff);
@@ -397,12 +468,20 @@ static int WG_Win32Init(void)
     wg_event_read = 0;
     wg_event_write = 0;
     wg_quit_pending = 0;
+    wg_fullscreen = 0;
+    wg_fullscreen_enter_down = 0;
     ZeroMemory(wg_joystick_x, sizeof(wg_joystick_x));
     ZeroMemory(wg_joystick_y, sizeof(wg_joystick_y));
     ZeroMemory(wg_joystick_buttons, sizeof(wg_joystick_buttons));
     ZeroMemory(wg_joystick_connected, sizeof(wg_joystick_connected));
     wg_load_xinput();
     ShowWindow(wg_window, SW_SHOW);
+    if (wg_start_fullscreen && !WG_Win32SetFullscreen(1))
+    {
+        DestroyWindow(wg_window);
+        wg_window = NULL;
+        return 0;
+    }
     return 1;
 }
 
@@ -833,6 +912,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
         }
         WideCharToMultiByte(CP_UTF8, 0, wide_argument, -1,
                             argv[index], bytes, NULL, NULL);
+        if (index > 0 && strcmp(argv[index], "--fullscreen") == 0)
+        {
+            wg_start_fullscreen = 1;
+        }
     }
 
     result = wolf3dgeneric_Create(argc, argv);

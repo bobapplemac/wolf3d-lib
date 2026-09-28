@@ -168,6 +168,9 @@ wolf3dgeneric-win32 --data "C:\path\to\Wolf3D data"
 The Win32 host displays the library's native 320x200 framebuffer in a 4:3
 viewport, reproducing the non-square-pixel proportions of the original VGA
 display. Resizing keeps the image centered at 4:3 with black bars as needed.
+The native Win32 and cross-platform SDL3 hosts both toggle borderless desktop
+fullscreen with Alt+Enter while retaining that presentation. Pass
+`--fullscreen` to either host to start in fullscreen mode.
 
 When a directory contains more than one supported data set, select its data
 extension explicitly. The value is case-insensitive and may include its leading

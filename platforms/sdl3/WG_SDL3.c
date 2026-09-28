@@ -32,6 +32,25 @@ static uint8_t wg_text_screen[WG_TEXT_COLUMNS * WG_TEXT_ROWS
 static uint16_t wg_text_columns;
 static uint16_t wg_text_rows;
 static int wg_mouse_enabled;
+static int wg_start_fullscreen;
+static int wg_fullscreen;
+static int wg_fullscreen_enter_down;
+
+static int WG_SDLSetFullscreen(int fullscreen)
+{
+    if (wg_window == NULL || fullscreen == wg_fullscreen)
+    {
+        return 1;
+    }
+    if (!SDL_SetWindowFullscreen(wg_window, fullscreen != 0))
+    {
+        fprintf(stderr, "wolf3dgeneric: could not change fullscreen mode: %s\n",
+                SDL_GetError());
+        return 0;
+    }
+    wg_fullscreen = fullscreen;
+    return 1;
+}
 
 static int16_t WG_SDLClampMotion(float value)
 {
@@ -235,6 +254,15 @@ static int WG_SDLInit(void)
         SDL_Quit();
         return 0;
     }
+    wg_fullscreen = 0;
+    wg_fullscreen_enter_down = 0;
+    if (wg_start_fullscreen && !WG_SDLSetFullscreen(1))
+    {
+        SDL_DestroyWindow(wg_window);
+        wg_window = NULL;
+        SDL_Quit();
+        return 0;
+    }
     wg_renderer = SDL_CreateRenderer(wg_window, NULL);
     if (wg_renderer == NULL)
     {
@@ -365,6 +393,24 @@ static int WG_SDLPollEvent(wg_event_t *event)
                 return 1;
             case SDL_EVENT_KEY_DOWN:
             case SDL_EVENT_KEY_UP:
+                if ((sdl_event.key.scancode == SDL_SCANCODE_RETURN
+                     || sdl_event.key.scancode == SDL_SCANCODE_KP_ENTER)
+                    && (wg_fullscreen_enter_down
+                        || (sdl_event.key.down
+                            && (sdl_event.key.mod & SDL_KMOD_ALT) != 0U)))
+                {
+                    if (sdl_event.key.down && !sdl_event.key.repeat
+                        && !wg_fullscreen_enter_down)
+                    {
+                        (void)WG_SDLSetFullscreen(!wg_fullscreen);
+                        wg_fullscreen_enter_down = 1;
+                    }
+                    else if (!sdl_event.key.down)
+                    {
+                        wg_fullscreen_enter_down = 0;
+                    }
+                    break;
+                }
                 event->key = WG_SDLScanCode(sdl_event.key.scancode);
                 if (event->key != 0U && !sdl_event.key.repeat)
                 {
@@ -556,7 +602,9 @@ static void WG_SDLPrintHelp(const char *program)
     printf("Usage: %s [game options]\n\n", program != NULL ? program
            : "wolf3dgeneric-sdl3");
     printf("SDL3 host options:\n");
-    printf("  --sdl3-help  Show this help and exit\n\n");
+    printf("  --fullscreen  Start in borderless fullscreen mode\n");
+    printf("  --sdl3-help   Show this help and exit\n\n");
+    printf("Press Alt+Enter to toggle windowed/fullscreen mode.\n");
     printf("Pass --mouse to expose relative mouse input to the game.\n");
 }
 
@@ -575,6 +623,10 @@ int main(int argc, char **argv)
         if (strcmp(argv[index], "--mouse") == 0)
         {
             wg_mouse_enabled = 1;
+        }
+        if (strcmp(argv[index], "--fullscreen") == 0)
+        {
+            wg_start_fullscreen = 1;
         }
     }
     if (!WG_InstallPlatform())

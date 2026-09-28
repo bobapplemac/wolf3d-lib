@@ -2,6 +2,8 @@
 
 ## 1.4.0 - 2026-09-27
 
+- Added borderless desktop fullscreen to the native Win32 and SDL3 hosts,
+  selectable at startup with `--fullscreen` and toggleable with Alt+Enter.
 - Restored the original live-versus-demo random initialization: live levels
   use the host clock's hundredths phase, while demos use index zero, and the
   selected index is installed before map actors consume random values.
