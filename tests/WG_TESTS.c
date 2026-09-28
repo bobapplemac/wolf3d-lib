@@ -2753,6 +2753,15 @@ static void TestIntermission(void)
 
 static void TestMenuMovement(void)
 {
+    CHECK(WL_MainMenuDefaultItemForVariant(
+              WG_GAME_WOLF3D_FULL_APOGEE_14)
+          == WL_MAIN_MENU_DEFAULT_ITEM);
+    CHECK(WL_MainMenuDefaultItemForVariant(WG_GAME_WOLF3D_FULL_GT_14)
+          == WL_MAIN_MENU_NEW_GAME_ITEM);
+    CHECK(WL_MainMenuDefaultItemForVariant(WG_GAME_SPEAR_FULL_SOD)
+          == WL_MAIN_MENU_NEW_GAME_ITEM);
+    CHECK(WL_MainMenuDefaultItemForVariant(WG_GAME_SPEAR_DEMO_SDM)
+          == WL_MAIN_MENU_NEW_GAME_ITEM);
     CHECK(WL_MainMenuMove(0U, -1, 0) == 9U);
     CHECK(WL_MainMenuMove(9U, 1, 0) == 0U);
     CHECK(WL_MainMenuMove(3U, 1, 0) == 5U);

@@ -82,6 +82,14 @@ static int WL_MainMenuOmitsReadThis(wg_game_variant_t variant)
         || WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR;
 }
 
+unsigned WL_MainMenuDefaultItemForVariant(wg_game_variant_t variant)
+{
+    /* SPEAR and GOODTIMES define STARTITEM as newgame; the original
+     * Apogee Wolf3D executable defines it as readthis. */
+    return WL_MainMenuOmitsReadThis(variant)
+               ? WL_MAIN_MENU_NEW_GAME_ITEM : WL_MAIN_MENU_DEFAULT_ITEM;
+}
+
 static int WL_MenuChunks(wg_game_variant_t variant, wl_menu_chunks_t *chunks)
 {
     if (chunks == NULL)

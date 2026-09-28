@@ -6,6 +6,7 @@
 #include "WG_GRAPHICS.h"
 
 #define WL_MAIN_MENU_ITEMS 10U
+#define WL_MAIN_MENU_NEW_GAME_ITEM 0U
 #define WL_MAIN_MENU_DEFAULT_ITEM 6U
 #define WL_SOUND_MENU_ITEMS 12U
 #define WL_CONTROL_MENU_ITEMS 6U
@@ -23,6 +24,7 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
 unsigned WL_MainMenuMove(unsigned selected, int direction, int in_game);
 unsigned WL_MainMenuMoveForVariant(unsigned selected, int direction,
                                    int in_game, wg_game_variant_t variant);
+unsigned WL_MainMenuDefaultItemForVariant(wg_game_variant_t variant);
 int WL_DrawConfirm(uint8_t framebuffer[320 * 200],
                    const wg_graphics_t *graphics, const char *message);
 int WL_DrawLoadSaveMenu(

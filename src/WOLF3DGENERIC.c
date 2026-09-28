@@ -98,13 +98,7 @@ static uint8_t wg_debug_keys_enabled;
 
 static unsigned WG_DefaultMenuSelection(void)
 {
-    if (wg_data_set.variant == WG_GAME_WOLF3D_FULL_GT_14)
-    {
-        /* GOODTIMES starts on New Game because Read This is absent. */
-        return 0U;
-    }
-    return WG_DataVariantFamily(wg_data_set.variant) == WG_GAME_FAMILY_SPEAR
-               ? 7U : WL_MAIN_MENU_DEFAULT_ITEM;
+    return WL_MainMenuDefaultItemForVariant(wg_data_set.variant);
 }
 
 static int WG_IsSpearGame(void)
