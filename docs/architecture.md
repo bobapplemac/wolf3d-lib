@@ -465,6 +465,14 @@ AdLib effects share Nuked's channel 0 with the music chip, retain original
 priority replacement and instrument programming, and consume one pitch byte at
 140 Hz (every fifth IMF service), just as the fast DOS timer ISR did.
 
+The FM bus receives a fixed 4x gain after Nuked-OPL3 synthesis and before the
+digitized and PC-speaker buses are added. This is the software counterpart of
+the original `SDL_StartSB` policy, which raised the Sound Blaster Pro FM mixer
+to maximum specifically to make FM output comparable with digitized output.
+The gain lives at the board/mixer boundary rather than in the unmodified OPL
+emulator, and therefore applies equally to music and channel-0 AdLib effects.
+The final bus additions remain signed 16-bit saturating mixes.
+
 PC-speaker effects use the parallel six-byte `PCSound` format and that same
 140 Hz service cadence. Each nonzero pitch byte selects the original
 `sample * 60` divisor for the 1,193,182 Hz PIT channel-2 square wave; zero is

@@ -1,5 +1,33 @@
 # Development log
 
+## 2026-09-29: Original M-L-I gameplay cheat
+
+- Restored the original simultaneous `M` + `L` + `I` gameplay chord across
+  every wrapper through the generic scan-code event path.
+- Matched `CheckKeys` exactly: health becomes 100, ammo 99, both keys are
+  granted, the chaingun becomes the active/best/chosen weapon when needed,
+  score is reset to zero, and 42,000 tics (ten minutes) are added to the level
+  timer. The original had no separate high-score-disqualification flag.
+- Restored the original five-line warning as a modal in-game message. A fresh
+  keyboard, mouse, or enabled-controller input dismisses it while OPL music
+  continues independently, matching the DOS acknowledgement wait.
+- Added direct regression coverage for every gameplay-state consequence.
+
+## 2026-09-29: Sound Blaster FM and digitized-output balance
+
+- Restored a mixer policy that was implicit in the original hardware path:
+  `SDL_StartSB` set the Sound Blaster Pro FM mixer to maximum with the explicit
+  intent of matching its digitized output level.
+- Kept the official Nuked-OPL3 implementation untouched and applied a named 4x
+  FM-bus gain at the portable mixer boundary, before digitized and PC-speaker
+  buses are added. Music and AdLib effects continue to share the same physical
+  OPL model and therefore receive identical gain.
+- Calibrated the gain against the available WL1 music and digitized pistol
+  data. The loudest ten-second music sample remained below clipping after
+  gain, and the combined music/AdLib-effect corpus peaked at 23,208 of 32,767.
+- Updated the deterministic music, mixed AdLib, and mixed PC-speaker PCM
+  fixtures. The digitized-only fixture remains byte-identical.
+
 ## 2026-09-28: Persistent floor HUD and original portrait updates
 
 - Fixed the active-game status construction to retain `level.map_number`.

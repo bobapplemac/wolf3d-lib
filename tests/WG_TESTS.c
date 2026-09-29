@@ -2466,6 +2466,28 @@ static void TestPlayLoop(void)
     WL_PlayStateReset(&play);
     SetPlayerMovementLevel(&level);
 
+    level.player_health = 3U;
+    level.player_ammo = 1U;
+    level.player_keys = 0U;
+    level.player_weapon = WG_WEAPON_KNIFE;
+    level.player_chosen_weapon = WG_WEAPON_KNIFE;
+    level.player_best_weapon = WG_WEAPON_KNIFE;
+    level.score = 12345U;
+    level.time_count = 70U;
+    CHECK(WL_ApplyILMCheat(&level));
+    CHECK(level.player_health == 100U);
+    CHECK(level.player_ammo == 99U);
+    CHECK(level.player_keys == 3U);
+    CHECK(level.player_weapon == WG_WEAPON_CHAINGUN);
+    CHECK(level.player_chosen_weapon == WG_WEAPON_CHAINGUN);
+    CHECK(level.player_best_weapon == WG_WEAPON_CHAINGUN);
+    CHECK(level.score == 0U);
+    CHECK(level.time_count == 42070U);
+    CHECK(!WL_ApplyILMCheat(NULL));
+
+    WL_PlayStateReset(&play);
+    SetPlayerMovementLevel(&level);
+
     start_x = level.player_x;
     input.up = 1U;
     CHECK(WL_PlayTick(&level, &tables, &play, &input));
@@ -4556,7 +4578,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s one-second OPL music FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)music_hash);
-            CHECK(music_hash == 0x201858e57f147650ULL);
+            CHECK(music_hash == 0xd5e51ab51d9c7cf5ULL);
             ID_SD_MusicDestroy(music_player);
             music_player = ID_SD_MusicCreate(48000U);
             CHECK(music_player != NULL);
@@ -4573,7 +4595,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s one-second attract music FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)front_music_hash);
-            CHECK(front_music_hash == 0xcd1e371be8679285ULL);
+            CHECK(front_music_hash == 0x52250d735f8826aeULL);
             ID_SD_MusicDestroy(music_player);
             music_player = ID_SD_MusicCreate(48000U);
             CHECK(music_player != NULL);
@@ -4590,7 +4612,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s music plus pistol FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)mixed_hash);
-            CHECK(mixed_hash == 0xbebd8fbdef66d214ULL);
+            CHECK(mixed_hash == 0xcae2d53091f3197dULL);
             ID_SD_MusicDestroy(music_player);
             music_player = ID_SD_MusicCreate(48000U);
             CHECK(music_player != NULL);
@@ -4607,7 +4629,7 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s music plus PC-speaker pistol FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)pc_mixed_hash);
-            CHECK(pc_mixed_hash == 0x67e7ee416105629aULL);
+            CHECK(pc_mixed_hash == 0x0282170eeb2bbeb5ULL);
             for (index = 0U; index < 87U; ++index)
             {
                 CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));

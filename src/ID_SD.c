@@ -8,6 +8,12 @@
 #include "WG_ENDIAN.h"
 #include "opl3.h"
 
+/* The original SDL_StartSB raised the SB Pro FM mixer to maximum so its
+   output was comparable with the digitized voice path.  Nuked-OPL3 returns
+   the chip's unamplified digital level, so reproduce that board-level gain at
+   our mixer boundary without modifying the emulator itself. */
+#define ID_SD_FM_MIX_GAIN 4
+
 struct id_sd_music
 {
     opl3_chip chip;
@@ -537,6 +543,17 @@ static int16_t ID_SD_ClampSample(int32_t sample)
     return (int16_t)sample;
 }
 
+static void ID_SD_ApplyFMMixGain(int16_t *stereo, uint32_t frame_count)
+{
+    uint32_t sample;
+
+    for (sample = 0U; sample < frame_count * 2U; ++sample)
+    {
+        stereo[sample] = ID_SD_ClampSample(
+            (int32_t)stereo[sample] * ID_SD_FM_MIX_GAIN);
+    }
+}
+
 static void ID_SD_DigitalMix(id_sd_music_t *music, int16_t *stereo,
                              uint32_t frame_count)
 {
@@ -719,6 +736,7 @@ int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
             return 0;
         }
         OPL3_GenerateStream(&music->chip, stereo, frames);
+        ID_SD_ApplyFMMixGain(stereo, frames);
         ID_SD_DigitalMix(music, stereo, frames);
         ID_SD_PCMix(music, stereo, frames);
         stereo += (size_t)frames * 2U;

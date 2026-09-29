@@ -61,6 +61,8 @@ typedef enum wg_key
     WG_KEY_G = 0x22,
     WG_KEY_H = 0x23,
     WG_KEY_I = 0x17,
+    WG_KEY_L = 0x26,
+    WG_KEY_M = 0x32,
     WG_KEY_Q = 0x10,
     WG_KEY_Y = 0x15,
     WG_KEY_BACKSPACE = 0x0e,

@@ -282,6 +282,7 @@ typedef struct wg_game_session
     uint8_t sound_positioned;
     uint8_t game_over;
     uint8_t paused;
+    uint8_t cheat_message;
     uint8_t intermission;
     uint8_t intermission_breathe_frame;
     uint16_t intermission_breathe_tics;
@@ -2541,6 +2542,34 @@ static int WG_GameSessionSetPaused(int paused)
         return WL_DrawPaused(WG_ScreenBuffer, &wg_game.graphics);
     }
     return WG_GameSessionRender();
+}
+
+static int WG_GameSessionSetCheatMessage(int visible)
+{
+    static const char message[] =
+        "You now have 100% Health,\n"
+        "99 Ammo and both Keys!\n\n"
+        "Note that you have basically\n"
+        "eliminated your chances of\n"
+        "getting a high score!";
+
+    wg_game.cheat_message = visible != 0;
+    memset(wg_game.keys, 0, sizeof(wg_game.keys));
+    wg_game.mouse_buttons = 0U;
+    wg_game.mouse_x = 0;
+    wg_game.mouse_y = 0;
+    if (!WG_GameSessionRender())
+    {
+        return 0;
+    }
+    return !wg_game.cheat_message
+        || WL_DrawConfirm(WG_ScreenBuffer, &wg_game.graphics, message);
+}
+
+static int WG_GameSessionApplyILMCheat(void)
+{
+    return WL_ApplyILMCheat(&wg_game.level)
+        && WG_GameSessionSetCheatMessage(1);
 }
 
 static int WG_GameSessionBeginIntermission(void)
@@ -5432,6 +5461,7 @@ wg_result_t wolf3dgeneric_Run(void)
                     || wg_game.demo_playback || wg_game.level.player_dead
                     || wg_game.victory || wg_game.high_scores
                     || wg_game.intermission || wg_game.paused
+                    || wg_game.cheat_message
                     || wg_confirm_action != WG_CONFIRM_NONE;
                 if (!ui_input)
                 {
@@ -5645,6 +5675,19 @@ wg_result_t wolf3dgeneric_Run(void)
                     if (wg_game.high_score_entry < 0)
                     {
                         if (!WG_GameSessionReturnToMenu())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                        last_ticks = WG_GetTicksMs();
+                        accumulator = 0U;
+                    }
+                    continue;
+                }
+                if (wg_game.active && wg_game.cheat_message)
+                {
+                    if (event.pressed)
+                    {
+                        if (!WG_GameSessionSetCheatMessage(0))
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }
@@ -6342,6 +6385,18 @@ wg_result_t wolf3dgeneric_Run(void)
                     }
                     if (event.pressed && !was_pressed)
                     {
+                        if (wg_game.keys[WG_KEY_M]
+                            && wg_game.keys[WG_KEY_L]
+                            && wg_game.keys[WG_KEY_I])
+                        {
+                            if (!WG_GameSessionApplyILMCheat())
+                            {
+                                return WG_RESULT_PLATFORM_ERROR;
+                            }
+                            last_ticks = WG_GetTicksMs();
+                            accumulator = 0U;
+                            continue;
+                        }
                         debug_result = WG_GameDebugKey(event.key);
                         if (debug_result != WG_RESULT_OK)
                         {
@@ -6731,6 +6786,19 @@ wg_result_t wolf3dgeneric_Run(void)
                 {
                     continue;
                 }
+                if (wg_game.cheat_message)
+                {
+                    if (event.pressed)
+                    {
+                        if (!WG_GameSessionSetCheatMessage(0))
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
+                        last_ticks = WG_GetTicksMs();
+                        accumulator = 0U;
+                    }
+                    continue;
+                }
                 if (wg_game.paused && event.pressed)
                 {
                     if (!WG_GameSessionSetPaused(0))
@@ -6781,7 +6849,8 @@ wg_result_t wolf3dgeneric_Run(void)
             unsigned ticks_run = 0U;
 
             last_ticks = now;
-            if (wg_game.paused || wg_game.control_panel
+            if (wg_game.paused || wg_game.cheat_message
+                || wg_game.control_panel
                 || wg_confirm_action != WG_CONFIRM_NONE)
             {
                 accumulator = 0U;

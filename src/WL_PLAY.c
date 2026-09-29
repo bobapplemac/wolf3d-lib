@@ -166,6 +166,29 @@ void WL_PlayStateReset(wl_play_state_t *state)
     }
 }
 
+int WL_ApplyILMCheat(struct wg_level *level)
+{
+    if (level == NULL)
+    {
+        return 0;
+    }
+    /* CheckKeys handled the original simultaneous M-L-I chord this way.
+       The score reset and ten-minute time penalty, rather than a separate
+       eligibility flag, are what make a subsequent high score unlikely. */
+    level->player_health = 100U;
+    level->player_ammo = 99U;
+    level->player_keys = 3U;
+    level->score = 0U;
+    level->time_count += 42000U;
+    if (level->player_best_weapon < WG_WEAPON_CHAINGUN)
+    {
+        level->player_best_weapon = WG_WEAPON_CHAINGUN;
+        level->player_weapon = WG_WEAPON_CHAINGUN;
+        level->player_chosen_weapon = WG_WEAPON_CHAINGUN;
+    }
+    return 1;
+}
+
 int WL_DemoOpen(wl_demo_t *demo, const uint8_t *data, size_t size)
 {
     size_t length;

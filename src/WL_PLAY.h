@@ -55,6 +55,7 @@ typedef struct wl_demo_command
 } wl_demo_command_t;
 
 void WL_PlayStateReset(wl_play_state_t *state);
+int WL_ApplyILMCheat(struct wg_level *level);
 int WL_DemoOpen(wl_demo_t *demo, const uint8_t *data, size_t size);
 int WL_DemoNext(wl_demo_t *demo, wl_demo_command_t *command);
 int WL_PlayDemoCommand(struct wg_level *level,
