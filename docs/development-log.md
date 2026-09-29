@@ -1,5 +1,16 @@
 # Development log
 
+## 2026-09-29: Prompt-safe F11 fullscreen toggle
+
+- Added F11 alongside Alt+Enter as a fullscreen toggle in the native Win32 and
+  cross-platform SDL3 hosts.
+- Consumed F11 key-down, repeat, and key-up events entirely at the host layer.
+  It can therefore change presentation during SIGNON, Get Psyched,
+  intermissions, cheat warnings, and other acknowledgement waits without being
+  observed as the key that dismisses them.
+- Retained Alt+Enter for platform convention and left the generic engine input
+  contract unchanged.
+
 ## 2026-09-29: Original M-L-I gameplay cheat
 
 - Restored the original simultaneous `M` + `L` + `I` gameplay chord across
@@ -1998,3 +2009,18 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Added real-resource coverage proving that the second cursor frame is
   present and visually distinct. The complete 150-test corpus passes in both
   x64 and x86 MSVC builds.
+
+## 2026-09-29: Original menu sound feedback
+
+- Verified the menu path against the original `HandleMenu`, `DrawHalfStep`,
+  `DrawGun`, `ShootSnd`, mouse-sensitivity, and customization routines.
+- Restored `MOVEGUN1SND` followed eight 70 Hz tics later by `MOVEGUN2SND` for
+  ordinary menu movement. The delay is scheduled rather than busy-waited, so
+  host input, presentation, and audio pumping remain responsive.
+- Corrected menu confirmations to use `SHOOTSND` rather than the unrelated
+  in-game pistol-attack sound and applied the feedback across keyboard,
+  controller-derived keyboard events, and mouse activation paths.
+- Restored `ESCPRESSEDSND` on the original backward-navigation paths,
+  including load/save prompts, Change View, control customization, mouse
+  sensitivity, and the main menu hierarchy; secondary mouse-button exits use
+  the same feedback.

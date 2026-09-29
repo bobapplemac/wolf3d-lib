@@ -4,6 +4,25 @@ Post-release corrections retain the `1.4` product version. They are recorded
 as separate reverse-chronological sections so each shipped v1.4 change remains
 traceable without implying a new compatibility or feature release.
 
+## 1.4 - 2026-09-29 - Original menu sound feedback
+
+- Restored the original two-part `MOVEGUN1SND`/`MOVEGUN2SND` feedback while
+  moving through menus, including the eight-tic interval between the cursor's
+  half-step and landing sounds without blocking the portable event loop.
+- Replaced the in-game pistol report previously used for several confirmations
+  with the original menu `SHOOTSND`, and restored feedback in the main,
+  load/save, control, sound, episode, difficulty, sensitivity, and control-
+  customization paths.
+- Restored `ESCPRESSEDSND` when Escape or the equivalent secondary mouse
+  button backs out of a menu or specialized control screen.
+
+## 1.4 - 2026-09-29 - Prompt-safe F11 fullscreen toggle
+
+- Added F11 alongside Alt+Enter as a fullscreen toggle in both GUI hosts and
+  consumed every F11 transition at the host boundary, allowing presentation
+  changes without satisfying SIGNON, intermission, cheat-message, or other
+  "any key" waits.
+
 ## 1.4 - 2026-09-29 - Documentation organization
 
 - Split post-release v1.4 work into individually titled changelog sections and

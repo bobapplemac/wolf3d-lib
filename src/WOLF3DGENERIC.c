@@ -66,6 +66,8 @@ static unsigned wg_saved_mouse_adjustment = 5U;
 static uint8_t wg_mouse_present;
 static uint8_t wg_mouse_enabled;
 static unsigned wg_customize_selection;
+static uint8_t wg_menu_move_sound_pending;
+static uint32_t wg_menu_move_sound_deadline;
 static int wg_customize_edit_column = -1;
 static uint8_t wg_customize_capture;
 static uint8_t wg_mouse_bindings[WL_CUSTOM_BINDINGS] =
@@ -533,9 +535,36 @@ static void WG_FrontSoundPreviewNumber(unsigned sound_number)
     }
 }
 
-static void WG_FrontSoundPreview(void)
+static void WG_MenuSelectSound(void)
 {
-    WG_FrontSoundPreviewNumber(WG_SOUND_ATTACK_PISTOL);
+    wg_menu_move_sound_pending = 0U;
+    WG_FrontSoundPreviewNumber(WG_SOUND_MENU_SELECT);
+}
+
+static void WG_MenuEscapeSound(void)
+{
+    wg_menu_move_sound_pending = 0U;
+    WG_FrontSoundPreviewNumber(WG_SOUND_MENU_ESCAPE);
+}
+
+static void WG_MenuMoveSound(void)
+{
+    /* DrawHalfStep in the DOS menu played MOVEGUN1SND, waited eight
+       70 Hz tics, and DrawGun then played MOVEGUN2SND. Keep that audible
+       cadence without blocking the portable event loop. */
+    WG_FrontSoundPreviewNumber(WG_SOUND_MENU_MOVE_1);
+    wg_menu_move_sound_deadline = WG_GetTicksMs() + 115U;
+    wg_menu_move_sound_pending = 1U;
+}
+
+static void WG_MenuMoveSoundAdvance(void)
+{
+    if (wg_menu_move_sound_pending
+        && (int32_t)(WG_GetTicksMs() - wg_menu_move_sound_deadline) >= 0)
+    {
+        wg_menu_move_sound_pending = 0U;
+        WG_FrontSoundPreviewNumber(WG_SOUND_MENU_MOVE_2);
+    }
 }
 
 static const char *WG_FindDataPath(int argc, char **argv)
@@ -5090,7 +5119,7 @@ static int WG_SoundMenuActivate(void)
     }
     if (preview != 0)
     {
-        WG_FrontSoundPreview();
+        WG_MenuSelectSound();
     }
     return 1;
 }
@@ -5109,7 +5138,7 @@ static int WG_ControlMenuActivate(void)
             {
                 return 0;
             }
-            WG_FrontSoundPreview();
+            WG_MenuSelectSound();
             return 1;
         case 1U:
             if (!ID_IN_JoystickPresent(0U)
@@ -5126,7 +5155,7 @@ static int WG_ControlMenuActivate(void)
             {
                 return 0;
             }
-            WG_FrontSoundPreview();
+            WG_MenuSelectSound();
             return 1;
         case 2U:
             wg_joystick_port ^= 1U;
@@ -5134,7 +5163,7 @@ static int WG_ControlMenuActivate(void)
             {
                 return 0;
             }
-            WG_FrontSoundPreview();
+            WG_MenuSelectSound();
             return 1;
         case 3U:
             wg_gamepad_enabled = (uint8_t)!wg_gamepad_enabled;
@@ -5142,7 +5171,7 @@ static int WG_ControlMenuActivate(void)
             {
                 return 0;
             }
-            WG_FrontSoundPreview();
+            WG_MenuSelectSound();
             return 1;
         case 4U:
             if (!wg_mouse_present || !wg_mouse_enabled)
@@ -5150,12 +5179,14 @@ static int WG_ControlMenuActivate(void)
                 return 1;
             }
             wg_saved_mouse_adjustment = wg_mouse_adjustment;
+            WG_MenuSelectSound();
             return WG_DrawMouseSensitivityScreen();
         case 5U:
             wg_customize_selection = wg_mouse_enabled ? 0U
                                       : wg_joystick_enabled ? 3U : 6U;
             wg_customize_edit_column = -1;
             wg_customize_capture = 0U;
+            WG_MenuSelectSound();
             return WG_DrawCustomizeScreen();
         default:
             return 0;
@@ -5182,7 +5213,7 @@ static int WG_CustomizeAssignKey(uint16_t key)
         return 0;
     }
     wg_customize_capture = 0U;
-    WG_FrontSoundPreview();
+    WG_MenuSelectSound();
     return WG_DrawCustomizeScreen();
 }
 
@@ -5754,6 +5785,7 @@ wg_result_t wolf3dgeneric_Run(void)
                                 {
                                     return WG_RESULT_PLATFORM_ERROR;
                                 }
+                                WG_MenuSelectSound();
                             }
                             else if (event.key == WG_KEY_N
                                      || event.key == WG_KEY_ESCAPE)
@@ -5763,6 +5795,7 @@ wg_result_t wolf3dgeneric_Run(void)
                                 {
                                     return WG_RESULT_PLATFORM_ERROR;
                                 }
+                                WG_MenuEscapeSound();
                             }
                         }
                         else if (event.key == WG_KEY_ESCAPE)
@@ -5785,6 +5818,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if (!wg_save_editing
                                  && (event.key == WG_KEY_UP
@@ -5798,26 +5832,31 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_ENTER
                                  || event.key == WG_KEY_SPACE)
                         {
                             if (wg_load_save_screen == 1U)
                             {
-                                if (wg_save_available[wg_save_selection]
-                                    && !WG_GameSessionLoad(
-                                        wg_save_selection))
+                                if (wg_save_available[wg_save_selection])
                                 {
-                                    WG_ReportError(
-                                        "Unable to load the selected game.");
-                                    if (!WG_DrawLoadSaveScreen(1U, 1))
+                                    WG_MenuSelectSound();
+                                    if (!WG_GameSessionLoad(
+                                            wg_save_selection))
                                     {
-                                        return WG_RESULT_PLATFORM_ERROR;
+                                        WG_ReportError(
+                                            "Unable to load the selected game.");
+                                        if (!WG_DrawLoadSaveScreen(1U, 1))
+                                        {
+                                            return WG_RESULT_PLATFORM_ERROR;
+                                        }
                                     }
                                 }
                             }
                             else if (!wg_save_editing)
                             {
+                                WG_MenuSelectSound();
                                 memcpy(wg_save_original_name,
                                        wg_save_names[wg_save_selection],
                                        sizeof(wg_save_original_name));
@@ -5837,15 +5876,17 @@ wg_result_t wolf3dgeneric_Run(void)
                                 }
                             }
                             else if (wg_save_names[wg_save_selection][0]
-                                     != '\0'
-                                     && !WG_GameSessionSave(
-                                         wg_save_selection))
+                                     != '\0')
                             {
-                                WG_ReportError(
-                                    "Unable to save the current game.");
-                                if (!WG_DrawLoadSaveScreen(2U, 0))
+                                WG_MenuSelectSound();
+                                if (!WG_GameSessionSave(wg_save_selection))
                                 {
-                                    return WG_RESULT_PLATFORM_ERROR;
+                                    WG_ReportError(
+                                        "Unable to save the current game.");
+                                    if (!WG_DrawLoadSaveScreen(2U, 0))
+                                    {
+                                        return WG_RESULT_PLATFORM_ERROR;
+                                    }
                                 }
                             }
                         }
@@ -5901,6 +5942,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if (event.key == WG_KEY_LEFT
                                  || event.key == WG_KEY_UP
@@ -5967,6 +6009,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if (event.key == WG_KEY_ENTER
                                  || event.key == WG_KEY_SPACE)
@@ -5977,7 +6020,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
-                            WG_FrontSoundPreview();
+                            WG_MenuSelectSound();
                         }
                     }
                     else if (wg_customize_screen)
@@ -6015,6 +6058,8 @@ wg_result_t wolf3dgeneric_Run(void)
                                 {
                                     return WG_RESULT_PLATFORM_ERROR;
                                 }
+                                WG_FrontSoundPreviewNumber(
+                                    WG_SOUND_MENU_MOVE_1);
                             }
                             else if (event.key == WG_KEY_RIGHT)
                             {
@@ -6027,6 +6072,8 @@ wg_result_t wolf3dgeneric_Run(void)
                                 {
                                     return WG_RESULT_PLATFORM_ERROR;
                                 }
+                                WG_FrontSoundPreviewNumber(
+                                    WG_SOUND_MENU_MOVE_1);
                             }
                             else if (event.key == WG_KEY_ENTER
                                      || event.key == WG_KEY_SPACE)
@@ -6046,6 +6093,7 @@ wg_result_t wolf3dgeneric_Run(void)
                                 {
                                     return WG_RESULT_PLATFORM_ERROR;
                                 }
+                                WG_MenuEscapeSound();
                             }
                         }
                         else if (event.key == WG_KEY_UP)
@@ -6057,6 +6105,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_DOWN)
                         {
@@ -6067,6 +6116,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_ESCAPE)
                         {
@@ -6074,6 +6124,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if (event.key == WG_KEY_ENTER
                                  || event.key == WG_KEY_SPACE)
@@ -6097,6 +6148,8 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_FrontSoundPreviewNumber(
+                                WG_SOUND_MENU_MOVE_1);
                         }
                         else if ((event.key == WG_KEY_RIGHT
                                   || event.key == WG_KEY_DOWN)
@@ -6107,6 +6160,8 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_FrontSoundPreviewNumber(
+                                WG_SOUND_MENU_MOVE_1);
                         }
                         else if (event.key == WG_KEY_ESCAPE)
                         {
@@ -6116,6 +6171,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if (event.key == WG_KEY_ENTER
                                  || event.key == WG_KEY_SPACE)
@@ -6124,7 +6180,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
-                            WG_FrontSoundPreview();
+                            WG_MenuSelectSound();
                         }
                     }
                     else if (wg_control_screen)
@@ -6141,6 +6197,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_DOWN)
                         {
@@ -6154,6 +6211,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_ESCAPE)
                         {
@@ -6161,6 +6219,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if (event.key == WG_KEY_ENTER
                                  || event.key == WG_KEY_SPACE)
@@ -6181,6 +6240,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_DOWN)
                         {
@@ -6190,6 +6250,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_ESCAPE)
                         {
@@ -6197,6 +6258,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if (event.key == WG_KEY_ENTER
                                  || event.key == WG_KEY_SPACE)
@@ -6217,6 +6279,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_DOWN)
                         {
@@ -6226,6 +6289,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_ESCAPE)
                         {
@@ -6233,6 +6297,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if ((event.key == WG_KEY_ENTER
                                   || event.key == WG_KEY_SPACE)
@@ -6244,6 +6309,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuSelectSound();
                         }
                     }
                     else if (wg_new_game_screen == 2U)
@@ -6257,6 +6323,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_DOWN)
                         {
@@ -6267,6 +6334,7 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuMoveSound();
                         }
                         else if (event.key == WG_KEY_ESCAPE)
                         {
@@ -6276,10 +6344,12 @@ wg_result_t wolf3dgeneric_Run(void)
                             {
                                 return WG_RESULT_PLATFORM_ERROR;
                             }
+                            WG_MenuEscapeSound();
                         }
                         else if (event.key == WG_KEY_ENTER
                                  || event.key == WG_KEY_SPACE)
                         {
+                            WG_MenuSelectSound();
                             if (!WG_GameSessionOpen(
                                     WG_NewGameStartMap(),
                                     wg_difficulty_selection, 1))
@@ -6304,6 +6374,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }
+                        WG_MenuMoveSound();
                     }
                     else if (event.key == WG_KEY_DOWN)
                     {
@@ -6314,6 +6385,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }
+                        WG_MenuMoveSound();
                     }
                     else if (event.key == WG_KEY_ESCAPE)
                     {
@@ -6328,10 +6400,15 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }
+                        WG_MenuEscapeSound();
                     }
                     else if (event.key == WG_KEY_ENTER
                              || event.key == WG_KEY_SPACE)
                     {
+                        if (wg_menu_selection < 8U)
+                        {
+                            WG_MenuSelectSound();
+                        }
                         menu_result = WG_MainMenuActivate();
                         if (menu_result != WG_RESULT_OK)
                         {
@@ -6416,6 +6493,12 @@ wg_result_t wolf3dgeneric_Run(void)
                      && (!wg_game.active || wg_game.control_panel)
                      && event.pressed)
             {
+                if (event.button == 2U
+                    && !(wg_customize_screen && wg_customize_capture
+                         && wg_customize_selection == 0U))
+                {
+                    WG_MenuEscapeSound();
+                }
                 if (wg_load_save_screen)
                 {
                     if (event.button == 2U)
@@ -6532,7 +6615,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }
-                        WG_FrontSoundPreview();
+                        WG_MenuSelectSound();
                     }
                 }
                 else if (wg_customize_screen)
@@ -6608,7 +6691,7 @@ wg_result_t wolf3dgeneric_Run(void)
                         {
                             return WG_RESULT_PLATFORM_ERROR;
                         }
-                        WG_FrontSoundPreview();
+                        WG_MenuSelectSound();
                     }
                 }
                 else if (wg_control_screen)
@@ -6653,10 +6736,13 @@ wg_result_t wolf3dgeneric_Run(void)
                     else if (event.button == 1U
                              && (wg_data_set.variant
                                  != WG_GAME_WOLF3D_SHAREWARE_14
-                                 || wg_episode_selection == 0U)
-                             && !WG_DrawDifficultyMenuScreen())
+                                 || wg_episode_selection == 0U))
                     {
-                        return WG_RESULT_PLATFORM_ERROR;
+                        WG_MenuSelectSound();
+                        if (!WG_DrawDifficultyMenuScreen())
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
                     }
                 }
                 else if (wg_new_game_screen == 2U)
@@ -6670,12 +6756,14 @@ wg_result_t wolf3dgeneric_Run(void)
                             return WG_RESULT_PLATFORM_ERROR;
                         }
                     }
-                    else if (event.button == 1U
-                             && !WG_GameSessionOpen(
-                                 WG_NewGameStartMap(),
-                                 wg_difficulty_selection, 1))
+                    else if (event.button == 1U)
                     {
-                        return WG_RESULT_PLATFORM_ERROR;
+                        WG_MenuSelectSound();
+                        if (!WG_GameSessionOpen(WG_NewGameStartMap(),
+                                                wg_difficulty_selection, 1))
+                        {
+                            return WG_RESULT_PLATFORM_ERROR;
+                        }
                     }
                 }
                 else if (wg_front_scores || !wg_menu_active)
@@ -6701,7 +6789,13 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
                 else if (event.button == 1U)
                 {
-                    wg_result_t menu_result = WG_MainMenuActivate();
+                    wg_result_t menu_result;
+
+                    if (wg_menu_selection < 8U)
+                    {
+                        WG_MenuSelectSound();
+                    }
+                    menu_result = WG_MainMenuActivate();
 
                     if (menu_result != WG_RESULT_OK)
                     {
@@ -6830,6 +6924,7 @@ wg_result_t wolf3dgeneric_Run(void)
                 }
             }
         }
+        WG_MenuMoveSoundAdvance();
         if (!wg_game.active && wg_attract_phase != WG_ATTRACT_NONE
             && wg_attract_deadline != 0U
             && (int32_t)(WG_GetTicksMs() - wg_attract_deadline) >= 0)

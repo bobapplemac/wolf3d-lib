@@ -117,6 +117,18 @@ static void TestIMFSequencer(void)
     CHECK(WL_MusicChunkForMap(60U) == 264U);
     CHECK(ID_SD_DigitalNumberForSound(WG_SOUND_ATTACK_PISTOL) == 5);
     CHECK(ID_SD_DigitalNumberForSound(WG_SOUND_ATTACK_KNIFE) == -1);
+    CHECK(WG_SoundNumberForVariant(WG_GAME_WOLF3D_FULL_GT_14,
+                                   WG_SOUND_MENU_MOVE_1,
+                                   &sound_number)
+          && sound_number == 5U);
+    CHECK(WG_SoundNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
+                                   WG_SOUND_MENU_SELECT,
+                                   &sound_number)
+          && sound_number == 32U);
+    CHECK(WG_SoundNumberForVariant(WG_GAME_WOLF3D_SHAREWARE_14,
+                                   WG_SOUND_MENU_ESCAPE,
+                                   &sound_number)
+          && sound_number == 39U);
     CHECK(WG_SoundNumberForVariant(WG_GAME_SPEAR_FULL_SOD,
                                    WG_SOUND_MISSILE_FIRE,
                                    &sound_number)

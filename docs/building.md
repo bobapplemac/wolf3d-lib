@@ -120,7 +120,8 @@ Replace `x64` with `x86` as needed. The package contains
 locally compiled binaries.
 
 Both Windows GUI hosts accept `--fullscreen` and toggle borderless desktop
-fullscreen at runtime with Alt+Enter. The SDL3 shortcut and option behave the
+fullscreen at runtime with F11 or Alt+Enter. F11 is host-only and cannot
+acknowledge an engine "any key" wait. The SDL3 shortcuts and option behave the
 same way on Linux desktop systems.
 
 ## Linux with GNU Make

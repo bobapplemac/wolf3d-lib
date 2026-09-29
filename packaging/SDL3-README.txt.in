@@ -19,6 +19,9 @@ display aspect ratio with nearest-neighbor scaling. SDL3 provides the
 window, keyboard, optional mouse/gamepad input, and audio device access;
 game behavior remains in the separate wolf3dgeneric library.
 
+Press F11 or Alt+Enter to toggle borderless desktop fullscreen. F11 is handled
+only by the host and will not dismiss an in-game "Press a key" prompt.
+
 Run with --sdl3-help for host-specific help or --help for game options.
 
 SDL3 is distributed under the zlib license. Nuked-OPL3 is independently

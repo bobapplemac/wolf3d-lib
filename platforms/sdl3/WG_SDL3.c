@@ -398,6 +398,16 @@ static int WG_SDLPollEvent(wg_event_t *event)
                 return 1;
             case SDL_EVENT_KEY_DOWN:
             case SDL_EVENT_KEY_UP:
+                /* This is a host-only presentation command.  Neither edge nor
+                   repeats may reach an engine "any key" acknowledgement. */
+                if (sdl_event.key.scancode == SDL_SCANCODE_F11)
+                {
+                    if (sdl_event.key.down && !sdl_event.key.repeat)
+                    {
+                        (void)WG_SDLSetFullscreen(!wg_fullscreen);
+                    }
+                    break;
+                }
                 if ((sdl_event.key.scancode == SDL_SCANCODE_RETURN
                      || sdl_event.key.scancode == SDL_SCANCODE_KP_ENTER)
                     && (wg_fullscreen_enter_down
@@ -609,7 +619,7 @@ static void WG_SDLPrintHelp(const char *program)
     printf("SDL3 host options:\n");
     printf("  --fullscreen  Start in borderless fullscreen mode\n");
     printf("  --sdl3-help   Show this help and exit\n\n");
-    printf("Press Alt+Enter to toggle windowed/fullscreen mode.\n");
+    printf("Press F11 or Alt+Enter to toggle windowed/fullscreen mode.\n");
     printf("Pass --mouse to expose relative mouse input to the game.\n");
 }
 

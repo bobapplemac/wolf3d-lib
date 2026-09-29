@@ -326,6 +326,17 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
                              || (pressed
                                  && (GetKeyState(VK_MENU) & 0x8000) != 0));
 
+            /* F11 belongs entirely to the presentation host.  Consume both
+               transitions so it never satisfies an engine "any key" wait. */
+            if (wparam == VK_F11)
+            {
+                if (pressed && (lparam & ((LPARAM)1U << 30)) == 0)
+                {
+                    (void)WG_Win32SetFullscreen(!wg_fullscreen);
+                }
+                return 0;
+            }
+
             if (alt_enter)
             {
                 if (pressed && !wg_fullscreen_enter_down
