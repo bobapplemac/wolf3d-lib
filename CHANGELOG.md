@@ -1,6 +1,34 @@
 # Changelog
 
-## 1.4.0 - 2026-09-27
+Post-release corrections retain the `1.4` product version. They are recorded
+as separate reverse-chronological sections so each shipped v1.4 change remains
+traceable without implying a new compatibility or feature release.
+
+## 1.4 - 2026-09-29 - Documentation organization
+
+- Split post-release v1.4 work into individually titled changelog sections and
+  moved the completed development plan under `docs/` with the other historical
+  design material.
+- Retained `CHANGELOG.md` and `THIRD_PARTY.md` at the repository root as the
+  conventional user-facing history and distribution-facing licensing index.
+
+## 1.4 - 2026-09-29 - FM balance and original M-L-I cheat
+
+- Reproduced the original Sound Blaster Pro mixer policy by applying a fixed
+  4x gain to the FM bus after unmodified Nuked-OPL3 synthesis. Music and AdLib
+  effects now sit at a practical level beside digitized effects while retaining
+  measured 16-bit mixing headroom.
+- Restored the simultaneous `M` + `L` + `I` gameplay cheat, including 100%
+  health, 99 ammo, both keys, chaingun selection, score reset, ten-minute level
+  time penalty, and the original modal high-score warning.
+
+## 1.4 - 2026-09-29 - .NET follow-on project specification
+
+- Added a standalone development specification for a future `wolf3d-dotnet`
+  repository, preserving three independently buildable stages: native-library
+  hosts, a fidelity-first C# engine port, and a readable modern-asset engine.
+
+## 1.4 - 2026-09-28 - Menu cursor and death-transition fidelity
 
 - Restored the original two-frame menu gun animation: the highlighted cursor
   now briefly shifts to `C_CURSOR2` for nine 70 Hz tics, then holds
@@ -10,6 +38,15 @@
   the rendered view to palette-index red over 70 tics, but a surviving player
   now skips both Get Psyched pacing phases and the restarted view fizzles back
   over the retained red field in 20 tics instead of over black.
+
+## 1.4 - 2026-09-28 - Persistent floor HUD
+
+- Preserved the loaded floor number across gameplay, intermission, victory,
+  and diagnostic HUD reconstruction, so Floor 2 no longer briefly displays or
+  returns to Floor 1 around Get Psyched and subsequent redraws.
+
+## 1.4 - 2026-09-28 - Activision/GOG WL6 resource profile
+
 - Recognized the supplied GOG/Activision WL6 resource profile independently
   of its folder name and selected the embedded Activision SIGNON automatically.
   Added real-data coverage for its changed scenery sprite and its intentionally
@@ -17,18 +54,46 @@
 - Kept the level-complete BJ breathing on its original direct portrait-update
   path; confirmed the static GOG result comes from duplicated source artwork,
   not a missed engine animation callback.
-- Preserved the loaded floor number across gameplay and intermission HUD
-  redraws, so Floor 2 no longer returns to Floor 1 after Get Psyched.
+
+## 1.4 - 2026-09-27 - Intermission portrait and fullscreen cursor
+
+- Revalidated the original direct two-frame BJ intermission portrait update
+  and removed the unnecessary full-screen rebuild used while investigating the
+  static GOG artwork.
 - Hid the native pointer while either GUI host is fullscreen and restored it
   on return to windowed mode.
-- Added borderless desktop fullscreen to the native Win32 and SDL3 hosts,
-  selectable at startup with `--fullscreen` and toggleable with Alt+Enter.
+
+## 1.4 - 2026-09-27 - Live Change View projection
+
 - Applied accepted Change View sizes to the active renderer immediately,
   matching the original `NewViewSize` path instead of deferring the new
   projection until another game or level was started.
+
+## 1.4 - 2026-09-27 - Toggleable GUI fullscreen
+
+- Added borderless desktop fullscreen to the native Win32 and SDL3 hosts,
+  selectable at startup with `--fullscreen` and toggleable with Alt+Enter.
+
+## 1.4 - 2026-09-27 - Spear main-menu default
+
+- Restored the original `STARTITEM` behavior for Spear and GOODTIMES data:
+  their first main-menu visit now selects New Game, while Apogee Wolf3D retains
+  its Read This default.
+
+## 1.4 - 2026-09-27 - Windows shell-prompt restoration
+
+- Positioned the shell after each exit screen's actual final content row and,
+  for Windows GUI hosts, preserved and restored the parent shell's real prompt
+  instead of overwriting it or requiring an extra Enter key.
+
+## 1.4 - 2026-09-27 - Live random initialization
+
 - Restored the original live-versus-demo random initialization: live levels
   use the host clock's hundredths phase, while demos use index zero, and the
   selected index is installed before map actors consume random values.
+
+## 1.4 - 2026-09-27 - Independent audit corrections
+
 - Rejected legacy portable saves whose actor coordinates fall outside the
   64x64 occupancy grid instead of using those coordinates as array indices.
 - Prevented the native Win32 message pump from filling its translated-event
@@ -36,6 +101,9 @@
 - Made generated DOS data filenames resolve case-insensitively on
   case-sensitive hosts, matching DOS/Windows behavior and the documented
   data-file contract.
+
+## 1.4.0 - 2026-09-27
+
 - Restored the data-driven DOS `ORDERSCREEN` and `ERRORSCREEN` console output,
   including CP437 line art and VGA colors through a portable text-cell host
   callback with native Win32 and ANSI terminal implementations.
@@ -58,9 +126,8 @@
 - Restored visible fast-host startup pacing: SIGNON now preserves its initial
   status and green `Working...` beats, while Get Psyched visibly fills its
   preload bar before the original completed-bar hold.
-- Positioned the shell after each exit screen's actual final content row and,
-  for Windows GUI hosts, preserved and restored the parent shell's real prompt
-  instead of overwriting it or leaving only an unlabelled input cursor.
+- Kept the DOS exit screen above the returned Windows command prompt so the
+  shell no longer overwrites the final line of the original colored output.
 
 ## 1.3.0 - 2026-09-27
 

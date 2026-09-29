@@ -16,7 +16,9 @@ files live under `build/` or `dist/` and are ignored by Git.
 | `Makefile` | GNU Make convenience wrapper around the authoritative CMake targets. |
 | `wolf3dgeneric.sln` | Source-owned Visual Studio entry point for Win32/x64 Debug and Release builds. |
 | `ide/visual-studio/` | Maintained Visual Studio project metadata; compilation delegates to CMake. |
-| `docs/` | Architecture, porting, provenance, development, and release notes. |
+| `docs/` | Architecture, porting, provenance, completed development plan, development log, and release notes. |
+| `CHANGELOG.md` | Root-level, user-facing release and post-release history. |
+| `THIRD_PARTY.md` | Root-level dependency and licensing index copied into every staged package. |
 | `build/` | All local compiler output and generated diagnostic artifacts. |
 | `dist/` | Clean folders produced by `win32-release`, `linux-console-release`, and `library-release`. |
 

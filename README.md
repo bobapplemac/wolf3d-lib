@@ -13,8 +13,8 @@ Wolfenstein 3D assets.
 The released scope includes the Apogee shareware (`WL1`) and
 GT/ID/Activision full (`WL6`) v1.4 data sets, Spear of Destiny (`SOD`), its
 demo (`SDM`), and the three mission data extensions (`SD1`, `SD2`, and `SD3`).
-Disney Sound Source output remains outside the project scope. See
-[`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) for the completed staged plan.
+Disney Sound Source output remains outside the project scope. See the completed
+[`development plan`](docs/development-plan.md) for the staged project history.
 [`docs/source-layout.md`](docs/source-layout.md) maps each
 portable translation unit to its original Wolfenstein 3D source owner, and the
 [`development log`](docs/development-log.md) records deterministic visual
