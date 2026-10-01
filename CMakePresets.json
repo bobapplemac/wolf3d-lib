@@ -10,30 +10,43 @@
       "name": "windows-base",
       "hidden": true,
       "generator": "Visual Studio 16 2019",
+      "toolset": "v142",
       "cacheVariables": {
         "WG_WARNINGS_AS_ERRORS": "ON",
-        "WG_STATIC_MSVC_RUNTIME": "ON"
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v142"
+      }
+    },
+    {
+      "name": "windows-vs2022-base",
+      "hidden": true,
+      "generator": "Visual Studio 17 2022",
+      "toolset": "v143",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v143"
       }
     },
     {
       "name": "windows-dev-x64",
       "displayName": "Windows library development (x64)",
       "inherits": "windows-base",
-      "binaryDir": "${sourceDir}/build/windows-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2019-dev-x64",
       "architecture": "x64"
     },
     {
       "name": "windows-dev-x86",
       "displayName": "Windows library development (x86)",
       "inherits": "windows-base",
-      "binaryDir": "${sourceDir}/build/windows-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2019-dev-x86",
       "architecture": "Win32"
     },
     {
       "name": "windows-library-x64",
       "displayName": "Windows library release (x64)",
       "inherits": "windows-dev-x64",
-      "binaryDir": "${sourceDir}/build/windows-library-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2019-library-x64",
       "cacheVariables": {
         "BUILD_TESTING": "OFF",
         "WG_BUILD_HEADLESS": "OFF"
@@ -43,7 +56,41 @@
       "name": "windows-library-x86",
       "displayName": "Windows library release (x86)",
       "inherits": "windows-dev-x86",
-      "binaryDir": "${sourceDir}/build/windows-library-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2019-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2022-dev-x64",
+      "displayName": "Visual Studio 2022 library development (x64)",
+      "inherits": "windows-vs2022-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2022-dev-x86",
+      "displayName": "Visual Studio 2022 library development (x86)",
+      "inherits": "windows-vs2022-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2022-library-x64",
+      "displayName": "Visual Studio 2022 library release (x64)",
+      "inherits": "windows-vs2022-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2022-library-x86",
+      "displayName": "Visual Studio 2022 library release (x86)",
+      "inherits": "windows-vs2022-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-library-x86",
       "cacheVariables": {
         "BUILD_TESTING": "OFF",
         "WG_BUILD_HEADLESS": "OFF"
@@ -99,6 +146,28 @@
       "targets": ["library-release"]
     },
     {
+      "name": "windows-vs2022-dev-x64",
+      "configurePreset": "windows-vs2022-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2022-dev-x86",
+      "configurePreset": "windows-vs2022-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2022-library-x64",
+      "configurePreset": "windows-vs2022-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2022-library-x86",
+      "configurePreset": "windows-vs2022-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
       "name": "linux-dev",
       "configurePreset": "linux-dev"
     },
@@ -120,6 +189,22 @@
     {
       "name": "windows-dev-x86",
       "configurePreset": "windows-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2022-dev-x64",
+      "configurePreset": "windows-vs2022-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2022-dev-x86",
+      "configurePreset": "windows-vs2022-dev-x86",
       "configuration": "Release",
       "output": {
         "outputOnFailure": true

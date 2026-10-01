@@ -72,9 +72,10 @@ cmake --build --preset linux-library
 
 ## Windows with Visual Studio
 
-Open `wolf3d-lib.sln`. The project supports Win32/x64, Debug/Release, and
+Open `wolf3d-lib.sln` in Visual Studio 2019 or 2022. The same project selects
+v142 or v143 to match the IDE and supports Win32/x64, Debug/Release, and
 static/dynamic MSVC runtime configurations. It delegates compilation to CMake
-and writes into the same `build/windows-dev-*` directories as the CLI.
+and writes into generation-specific directories under `build/`.
 
 The static MSVC runtime is the release default. This does not make the engine
 a static library: `wolf3d.dll` remains a separate DLL, while its Microsoft C
@@ -91,6 +92,19 @@ cmake --preset windows-library-x64
 cmake --build --preset windows-library-x64
 ```
 
+The historical `windows-*` preset names explicitly use Visual Studio 2019 and
+v142 and write to `build/windows-vs2019-*`. For Visual Studio 2022 and v143,
+use the parallel names, which write to `build/windows-vs2022-*`:
+
+```powershell
+cmake --preset windows-vs2022-dev-x64
+cmake --build --preset windows-vs2022-dev-x64 --config Release
+ctest --preset windows-vs2022-dev-x64
+
+cmake --preset windows-vs2022-library-x64
+cmake --build --preset windows-vs2022-library-x64
+```
+
 Use `windows-*-x86` for 32-bit output. For a dynamic MSVC runtime add
 `-DWG_STATIC_MSVC_RUNTIME=OFF` and use a distinct binary directory.
 
@@ -104,6 +118,7 @@ Use `windows-*-x86` for 32-bit output. For a dynamic MSVC runtime add
 | `WG_AUDIO_BACKEND` | `standard` | `standard` emits PCM; `silent` advances identical logical audio state while emitting zero samples. |
 | `WG_OPL_BACKEND` | `nuked` | Select `nuked` or the pure-C `dbopl` implementation for standard audio. |
 | `WG_LINUX_LIBC` | empty | Optional `glibc`/`musl` package label used by reproducible Linux builds. |
+| `WG_COMPILER_LABEL` | empty | Optional compiler/toolset label appended to a staged package directory. Windows presets set this automatically. |
 | `WG_DIST_ROOT` | `<source>/dist` | Destination root for staged packages. |
 | `WG_TEST_WL1_PATH` and related paths | empty | Enable external-data regression groups. |
 | `WG_ORIGINAL_SOURCE_PATH` | empty | Original-source input for the optional call-graph audit. |

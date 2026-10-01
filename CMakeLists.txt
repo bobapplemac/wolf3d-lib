@@ -50,6 +50,8 @@ set_property(CACHE WG_OPL_BACKEND PROPERTY STRINGS nuked dbopl)
 set(WG_LINUX_LIBC "" CACHE STRING
     "Optional Linux package ABI label, such as glibc or musl")
 set_property(CACHE WG_LINUX_LIBC PROPERTY STRINGS "" glibc musl)
+set(WG_COMPILER_LABEL "" CACHE STRING
+    "Optional compiler/toolset label appended to staged package names")
 set(WG_DIST_ROOT "${CMAKE_SOURCE_DIR}/dist" CACHE PATH
     "Directory used by release staging targets")
 
@@ -205,6 +207,10 @@ set(WG_RELEASE_RUNTIME_SUFFIX "")
 if(MSVC AND NOT WG_STATIC_MSVC_RUNTIME)
     set(WG_RELEASE_RUNTIME_SUFFIX "-dynamic-crt")
 endif()
+set(WG_RELEASE_COMPILER_SUFFIX "")
+if(WG_COMPILER_LABEL)
+    set(WG_RELEASE_COMPILER_SUFFIX "-${WG_COMPILER_LABEL}")
+endif()
 set(WG_RELEASE_AUDIO_SUFFIX "")
 if(WG_AUDIO_BACKEND STREQUAL "silent")
     set(WG_RELEASE_AUDIO_SUFFIX "-silent")
@@ -212,13 +218,15 @@ elseif(NOT WG_OPL_BACKEND STREQUAL "nuked")
     set(WG_RELEASE_AUDIO_SUFFIX "-${WG_OPL_BACKEND}")
 endif()
 set(WG_LIBRARY_RELEASE_DIR
-    "${WG_DIST_ROOT}/wolf3d-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_RUNTIME_SUFFIX}${WG_RELEASE_AUDIO_SUFFIX}")
+    "${WG_DIST_ROOT}/wolf3d-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_COMPILER_SUFFIX}${WG_RELEASE_RUNTIME_SUFFIX}${WG_RELEASE_AUDIO_SUFFIX}")
 
 set(WG_LIBRARY_RELEASE_COMMANDS
     COMMAND ${CMAKE_COMMAND} -E remove_directory
         "${WG_LIBRARY_RELEASE_DIR}"
     COMMAND ${CMAKE_COMMAND} -E make_directory
         "${WG_LIBRARY_RELEASE_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${WG_LIBRARY_RELEASE_DIR}/LICENSES"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:wolf3d>"
         "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3d>"
@@ -227,10 +235,10 @@ set(WG_LIBRARY_RELEASE_COMMANDS
         "${WG_LIBRARY_RELEASE_DIR}/WOLF3D.h"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/LICENSE"
-        "${WG_LIBRARY_RELEASE_DIR}/COPYING.txt"
+        "${WG_LIBRARY_RELEASE_DIR}/LICENSE.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/THIRD_PARTY.md"
-        "${WG_LIBRARY_RELEASE_DIR}/THIRD_PARTY.md"
+        "${WG_LIBRARY_RELEASE_DIR}/THIRD_PARTY_NOTICES.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt"
         "${WG_LIBRARY_RELEASE_DIR}/README.txt"
@@ -242,14 +250,14 @@ if(WG_OPL_LIBRARY_TARGET STREQUAL "nuked-opl3")
             "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
-            "${WG_LIBRARY_RELEASE_DIR}/COPYING.Nuked-OPL3.txt"
+            "${WG_LIBRARY_RELEASE_DIR}/LICENSES/Nuked-OPL3-LGPL-2.1.txt"
     )
 elseif(WG_AUDIO_BACKEND STREQUAL "standard"
        AND WG_OPL_BACKEND STREQUAL "dbopl")
     list(APPEND WG_LIBRARY_RELEASE_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/third_party/DBOPL/README.wolf3d-lib.md"
-            "${WG_LIBRARY_RELEASE_DIR}/README.DBOPL.md"
+            "${WG_LIBRARY_RELEASE_DIR}/README.DBOPL.txt"
     )
 endif()
 if(WIN32)
@@ -304,6 +312,14 @@ if(WG_BUILD_HEADLESS)
     )
     wg_configure_host(wolf3dgeneric-headless wolf3d-internal)
     target_include_directories(wolf3dgeneric-headless PRIVATE src)
+endif()
+
+if(BUILD_TESTING)
+    add_executable(wolf3d-public-api-consumer
+        tests/WOLF3D_CONSUMER.c
+    )
+    wg_configure_host(wolf3d-public-api-consumer wolf3d)
+    add_test(NAME public-api-consumer COMMAND wolf3d-public-api-consumer)
 endif()
 
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)

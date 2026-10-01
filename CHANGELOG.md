@@ -6,6 +6,19 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.23 - 2026-10-01 - Visual Studio 2022 compiler checkpoint
+
+- Added explicit Visual Studio 2022/v143 x86 and x64 CMake presets while
+  retaining the established Visual Studio 2019/v142 preset names.
+- Made the checked-in solution select v142 or v143 and isolated build trees
+  automatically according to the Visual Studio generation opening it.
+- Added a public-header-only consumer executable to every test-enabled build,
+  verifying that an external program can compile, link, load, and call the
+  shared-library API without access to private engine headers.
+- Added compiler-labeled Windows SDK directories, aligned their text-only
+  licensing layout with the portable distributions, and documented the
+  validated compiler matrix and future checkpoint policy.
+
 ## 1.4.22 - 2026-10-01 - Neutral library window title
 
 - Replaced the obsolete `wolf3dgeneric` window-title branding with the
