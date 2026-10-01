@@ -14,6 +14,21 @@ this library.
 Original Wolfenstein 3D or Spear of Destiny game data is required and is not
 distributed here.
 
+## Shareware data
+
+The freely distributed shareware/demo data sets are a convenient way to try a
+host built against this library or to supply external regression data:
+
+- [Wolfenstein 3D v1.4 shareware data (`WL1`)](https://download.sourceforge.net/wolfgl/wolfdata.zip)  
+  SHA-256: `A32EE97C515B6E182597A06F2326D15CC4C343DDC70558CE5FE76C870B7A0027`
+- [Spear of Destiny demo data (`SDM`)](https://download.sourceforge.net/wolfgl/sdmdata.zip)  
+  SHA-256: `054590923CD35CE7C0BFAE98C23BE81AB70C28E11FD0E562B5253523FCD7B91F`
+
+Both ZIPs contain only the eight corresponding game-data files. They are
+linked from the archived [WolfGL download page](https://wolfgl.sourceforge.net/files.htm)
+and are not redistributed by this project. Registered `WL6`, `SOD`, `SD1`,
+`SD2`, and `SD3` data must still come from a legitimately obtained game copy.
+
 ## Public contract
 
 Hosts include `WOLF3D.h`, fill a `wolf3d_platform_api_t`, then call:

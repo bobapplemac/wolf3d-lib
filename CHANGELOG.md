@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.26 - 2026-10-01 - Shareware data references
+
+- Added stable mirror links for the freely distributed Wolfenstein 3D
+  shareware (`WL1`) and Spear of Destiny demo (`SDM`) data-only archives,
+  including verified archive contents and SHA-256 hashes.
+
 ## 1.4.25 - 2026-10-01 - Interactive build guidance
 
 - Made no-argument Windows builds interactive, with guided compiler,
