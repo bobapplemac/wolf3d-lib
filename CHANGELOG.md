@@ -4,6 +4,36 @@ Post-release corrections retain the `1.4` product version. They are recorded
 as separate reverse-chronological sections so each shipped v1.4 change remains
 traceable without implying a new compatibility or feature release.
 
+## 1.4 - 2026-10-01 - Linux release workflow and SDL 3.2 baseline
+
+- Added comprehensive `make help` output and made plain `make` stage the
+  dependency-light shared-library distribution. Library, direct-console, and
+  SDL3 releases now use isolated compiler-specific build trees with short
+  distribution aliases and configurable parallelism.
+- Made core development/tests independent of optional DRM, ALSA, and SDL
+  development packages; each release path now requests only its own host
+  dependencies.
+- Lowered the supported system-SDL baseline to the first stable SDL3 series,
+  SDL 3.2, while retaining pinned SDL 3.4.16 as the reproducible default.
+- Added an explicit `make dependencies` bootstrap target and an actionable
+  pinned-SDL preflight check without implicit network access.
+- Added a digest-pinned Debian 10 container release target and automatic ELF
+  symbol-version gate. The validated pinned-SDL package requires at most
+  `GLIBC_2.27` and runs on both Debian 10 and current Debian releases. A
+  checksum-pinned Wayland 1.18 build toolchain enables SDL's native Wayland
+  backend without raising that ABI floor.
+- Extended `make clean` with project-scoped portable-build cleanup, including
+  all portable CMake trees and the named Docker builder image, without pruning
+  unrelated Docker caches.
+- Added Debian 10/glibc 2.28 release paths for the shared-library and direct-
+  console packages alongside SDL3, plus a `make portable` aggregate and
+  consistently prefixed `portable-library`, `portable-console`, and
+  `portable-sdl3` aliases. The public native console target is now the shorter
+  `console-release`; `linux-console-release` remains compatible.
+- Documented pinned-versus-system tradeoffs, including system-SDL backend
+  dependencies, and the precise portability scope of the locally bundled
+  Linux SDL3 distribution.
+
 ## 1.4 - 2026-09-29 - Original menu sound feedback
 
 - Restored the original two-part `MOVEGUN1SND`/`MOVEGUN2SND` feedback while

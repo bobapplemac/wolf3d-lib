@@ -42,7 +42,7 @@ configure_file(packaging/SDL3-README.txt.in
 option(WG_BUILD_HEADLESS "Build the deterministic headless host" ON)
 option(WG_BUILD_WIN32 "Build the dependency-free Win32 host" ON)
 option(WG_BUILD_LINUX_CONSOLE
-    "Build the direct DRM/evdev/ALSA Linux console host" ON)
+    "Build the direct DRM/evdev/ALSA Linux console host" OFF)
 option(WG_BUILD_SDL3 "Build the cross-platform SDL3 GUI host" OFF)
 option(WG_USE_SYSTEM_SDL3
     "Use an installed SDL3 package instead of the pinned submodule" OFF)
@@ -59,11 +59,15 @@ endif()
 
 if(WG_BUILD_SDL3)
     if(WG_USE_SYSTEM_SDL3)
-        find_package(SDL3 3.4 REQUIRED CONFIG COMPONENTS SDL3-shared)
+        # SDL 3.2 is the first stable SDL3 release and already provides the
+        # small video, input, gamepad, and audio surface used by this host.
+        find_package(SDL3 3.2 REQUIRED CONFIG COMPONENTS SDL3-shared)
+        set(WG_SDL3_LICENSE_FILE
+            "${CMAKE_SOURCE_DIR}/packaging/COPYING.SDL3.txt")
     else()
         if(NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/SDL3/CMakeLists.txt")
             message(FATAL_ERROR
-                "SDL3 submodule missing; run git submodule update --init")
+                "SDL3 submodule missing; run git submodule update --init --recursive -- third_party/SDL3, or use WG_USE_SYSTEM_SDL3=ON")
         endif()
         set(SDL_SHARED ON CACHE BOOL "Build SDL shared library" FORCE)
         set(SDL_STATIC OFF CACHE BOOL "Do not build SDL static library" FORCE)
@@ -77,6 +81,8 @@ if(WG_BUILD_SDL3)
         set(SDL_RENDER_D3D11 OFF CACHE BOOL
             "Keep SDL compatible with the VS 2019 SDK baseline" FORCE)
         add_subdirectory(third_party/SDL3 EXCLUDE_FROM_ALL)
+        set(WG_SDL3_LICENSE_FILE
+            "${CMAKE_SOURCE_DIR}/third_party/SDL3/LICENSE.txt")
     endif()
 endif()
 
@@ -367,7 +373,7 @@ if(WG_BUILD_SDL3)
             "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
             "${WG_SDL3_RELEASE_DIR}/COPYING.Nuked-OPL3.txt"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/third_party/SDL3/LICENSE.txt"
+            "${WG_SDL3_LICENSE_FILE}"
             "${WG_SDL3_RELEASE_DIR}/COPYING.SDL3.txt"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/THIRD_PARTY.md"

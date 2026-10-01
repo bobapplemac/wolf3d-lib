@@ -5,6 +5,15 @@ This folder is a minimal cross-platform GUI build. Keep the executable,
 wolf3dgeneric shared library, Nuked-OPL3 shared library, and SDL3 shared
 library together.
 
+On Linux, the local shared libraries are discovered relative to this
+executable, so SDL3 does not need to be installed separately. The package
+still requires a compatible CPU architecture, ELF loader and libc baseline,
+and the normal Linux desktop facilities used by SDL; it is not a universal
+cross-distribution static binary. A build made against a distribution's SDL
+package may additionally require the matching X11, Wayland, audio, or graphics
+runtime libraries; the default pinned-SDL build minimizes those direct
+dependencies and is recommended for redistribution.
+
 Copy the files from one supported original game installation beside the
 executable, then run wolf3dgeneric-sdl3. Alternatively, leave the data
 elsewhere and pass --data PATH. Use --game WL1, WL6, SDM, SOD, SD1, SD2,

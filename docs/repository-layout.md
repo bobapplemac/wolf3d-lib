@@ -11,8 +11,8 @@ files live under `build/` or `dist/` and are ignored by Git.
 | `platforms/` | Thin platform hosts and their callback implementations. |
 | `tests/` | Deterministic unit and archive regression suite. |
 | `third_party/` | Vendored, independently licensed dependencies. |
-| `packaging/` | Templates copied into staged runtime and library packages. |
-| `tools/` | Maintainer-side source generators, including reproducible SIGNON embedding. |
+| `packaging/` | Staged-package templates and the digest-pinned Debian 10 portable-release container. |
+| `tools/` | Maintainer-side generators and release audits, including reproducible SIGNON embedding and the glibc symbol-floor gate. |
 | `Makefile` | GNU Make convenience wrapper around the authoritative CMake targets. |
 | `wolf3dgeneric.sln` | Source-owned Visual Studio entry point for Win32/x64 Debug and Release builds. |
 | `ide/visual-studio/` | Maintained Visual Studio project metadata; compilation delegates to CMake. |
@@ -20,7 +20,7 @@ files live under `build/` or `dist/` and are ignored by Git.
 | `CHANGELOG.md` | Root-level, user-facing release and post-release history. |
 | `THIRD_PARTY.md` | Root-level dependency and licensing index copied into every staged package. |
 | `build/` | All local compiler output and generated diagnostic artifacts. |
-| `dist/` | Clean folders produced by `win32-release`, `linux-console-release`, and `library-release`. |
+| `dist/` | Clean folders produced by the Win32, SDL3, Linux-console, and library release targets. |
 
 ## Preset build trees
 

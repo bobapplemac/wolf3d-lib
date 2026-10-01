@@ -96,7 +96,8 @@
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "WG_WARNINGS_AS_ERRORS": "ON"
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_BUILD_LINUX_CONSOLE": "OFF"
       }
     },
     {
@@ -123,7 +124,8 @@
       "binaryDir": "${sourceDir}/build/linux-console",
       "cacheVariables": {
         "BUILD_TESTING": "OFF",
-        "WG_BUILD_HEADLESS": "OFF"
+        "WG_BUILD_HEADLESS": "OFF",
+        "WG_BUILD_LINUX_CONSOLE": "ON"
       }
     },
     {

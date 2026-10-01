@@ -27,4 +27,16 @@ SDL3 is an optional host-layer dependency used only by the portable GUI
 wrapper. It remains a separate shared library in staged SDL3 packages. The
 native Win32, Linux direct-console, headless, and engine-library targets do
 not require it. Configure with `WG_USE_SYSTEM_SDL3=ON` to use an installed
-SDL3 package instead of the pinned submodule.
+SDL 3.2-or-newer package instead of the pinned submodule. SDL release packages
+include the zlib notice; system-SDL packaging uses the vendored copy at
+`packaging/COPYING.SDL3.txt` so the source submodule need not be initialized.
+
+## Wayland 1.18 build toolchain
+
+The optional Debian 10 portable-release container downloads the official
+Wayland 1.18.0 source archive by pinned SHA-256 and builds its scanner and
+development files under an isolated prefix. This supplies SDL's minimum
+native-Wayland build interface without raising the Debian 10 glibc baseline.
+Wayland uses the MIT license. No Wayland shared library is copied into a
+wolf3dgeneric distribution; SDL dynamically uses the destination system's
+Wayland runtime when that backend is selected.

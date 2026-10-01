@@ -66,18 +66,19 @@ generator internally, keeping the CMake target graph as the single source of
 truth:
 
 ```text
-make
+make help
+make                         # stages the library package
 make test
-make library-release
+make console-release
+make sdl3-release
 ```
 
-Override `BUILD_DIR`, `BUILD_TYPE`, or append configuration settings through
-`CMAKE_ARGS` when needed. For example, an asset-backed validation build can use
-`make test CMAKE_ARGS="-DWG_TEST_WL1_PATH=/path/to/WL1"`. The Win32 host is
-automatically omitted on non-Windows systems. Linux builds also include a
-direct-console host using DRM/KMS, evdev, and ALSA. On Debian and Ubuntu, its
-development dependencies are supplied by `pkgconf`, `libdrm-dev`, and
-`libasound2-dev`.
+Plain `make` follows the most dependency-light release path and stages the
+shared-library package. Each runtime host has its own compiler-specific build
+tree and distribution target, so a library-only build does not require the
+DRM/ALSA console dependencies. `make help` documents all targets and variables.
+An asset-backed validation build can use `make test
+CMAKE_ARGS="-DWG_TEST_WL1_PATH=/path/to/WL1"`.
 
 GCC and Clang are both supported and tested. Select a compiler before the
 first configure of a build directory using the conventional `CC` variable;
@@ -93,15 +94,33 @@ The portable core targets ISO C99 and does not contain compiler-specific game
 logic. Other CMake-supported C compilers may work, but GCC, Clang, and MSVC are
 the maintained validation set.
 
-An additional SDL3 desktop host is available on both Windows and Linux. SDL is
-pinned as a Git submodule, so initialize dependencies after cloning with
-`git submodule update --init`. Build and stage the Windows GUI package with
+An additional SDL3 desktop host is available on both Windows and Linux. SDL
+3.4.16 is pinned as the reproducible default, so initialize it after cloning
+with `make dependencies` (or `git submodule update --init --recursive --
+third_party/SDL3`). Pinned-SDL Make targets detect a missing checkout and
+print these recovery choices rather than silently accessing the network. An
+installed SDL 3.2-or-newer development
+package is also supported with `make sdl3-release USE_SYSTEM_SDL3=ON`. Build
+and stage the Windows GUI package with
 the `windows-sdl3-x64` or `windows-sdl3-x86` configure/build preset. On Linux,
 use `make sdl3-release` (optionally with `CC=clang`) or the `linux-sdl3`
 preset. The staged folder contains the SDL executable and separate
 wolf3dgeneric, Nuked-OPL3, and SDL3 runtime libraries. It provides the same
 intended 4:3 presentation, opt-in `--mouse` behavior, audio, and two-controller
-support on either desktop platform.
+support on either desktop platform. The copied Linux folder does not require
+SDL itself to be installed at runtime. The pinned-SDL build is preferred for
+redistribution; a system-SDL build can retain dependencies on that
+distribution's X11, Wayland, audio, and graphics runtime libraries. Both still
+require a compatible ELF/glibc baseline and normal Linux desktop facilities.
+For the broadest validated glibc compatibility, `make portable` builds the
+library, direct-console, and pinned-SDL packages in a digest-pinned Debian 10
+container and automatically rejects any staged ELF requiring newer than glibc
+2.28. Use `make portable-library`, `make portable-console`, or `make
+portable-sdl3` for one package. The current SDL package actually requires no
+newer than `GLIBC_2.27` while retaining native Wayland, X11/XWayland, and
+KMS/DRM video backends; see
+`docs/building.md` for setup, runtime requirements, and measured component
+floors.
 
 Run the console host from an active virtual console, normally as root or as a
 user with permission for the DRM, input, and audio devices:
@@ -116,7 +135,7 @@ evdev, and sends PCM to ALSA. It has no X11, Wayland, SDL, or desktop-session
 dependency. Use `--linux-console-help` for device overrides; audio failure is
 non-fatal and `--no-audio` disables ALSA explicitly.
 
-Create a minimal console runtime folder with `make linux-console-release`, or
+Create a minimal console runtime folder with `make console-release`, or
 use `cmake --preset linux-console` followed by
 `cmake --build --preset linux-console`. The result is staged under
 `dist/wolf3dgeneric-1.4.0-linux-console-<architecture>`.

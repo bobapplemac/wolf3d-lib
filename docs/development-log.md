@@ -2024,3 +2024,58 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   including load/save prompts, Change View, control customization, mouse
   sensitivity, and the main menu hierarchy; secondary mouse-button exits use
   the same feedback.
+
+## 2026-10-01: Linux release workflow and SDL compatibility
+
+- Added self-documenting GNU Make help, explicit distribution aliases, and
+  independent compiler-qualified build trees for the library, console, and
+  SDL3 packages. Plain `make` now stages the dependency-light library package.
+- Removed the direct-console dependency from ordinary core development and
+  library configuration. DRM/ALSA packages are now required only when the
+  console release is actually requested.
+- Accepted system SDL releases from the first stable SDL3 ABI series (3.2 or
+  newer), while retaining pinned SDL 3.4.16 as the reproducible package
+  default. System-SDL packaging no longer requires an initialized submodule
+  merely to obtain its license notice.
+- Added `make dependencies` to fetch the recorded SDL submodule revision.
+  Pinned builds now stop before configuration with exact recovery instructions
+  when SDL is absent, while system-SDL builds remain submodule-independent.
+- Documented that the Linux SDL package bundles SDL and uses `$ORIGIN`, but
+  remains tied to its CPU, ELF/libc build baseline, and ordinary Linux desktop
+  facilities rather than promising a universal static binary. Debian 13
+  validation also showed why the pinned build remains the redistributable
+  default: its SDL has only libc/libm direct dependencies, whereas Debian's
+  system SDL retains its distribution X11, Wayland, audio, and graphics
+  runtime dependencies.
+- Measured the Debian 13 pinned-package symbol floors independently: SDL host
+  `GLIBC_2.34`, engine `GLIBC_2.14`, Nuked-OPL3 `GLIBC_2.2.5`, and SDL itself
+  `GLIBC_2.38`. Documented older-container builds as the correct way to lower
+  that floor rather than attempting to bundle or override glibc.
+- Added and validated a digest-pinned Debian 10 portable-release container.
+  It uses GCC 8.3 and glibc 2.28 while supplying checksum-pinned CMake 3.31.6
+  only as a build tool. The staged package runs on Debian 10 and Debian 13;
+  its highest actual symbol requirement is SDL's `GLIBC_2.27`, enforced by an
+  automatic post-stage audit capped at the container's `GLIBC_2.28` baseline.
+- Supplemented Debian 10's Wayland 1.16 development files with a
+  checksum-pinned Wayland 1.18 scanner/header build. Confirmed that the
+  compatibility SDL now includes dynamically loaded native Wayland, X11,
+  KMS/DRM, ALSA, and PulseAudio backends without adding a Wayland library to
+  the staged package or raising its `GLIBC_2.27` symbol floor.
+- Forced `SDL_VIDEODRIVER=wayland` and ran the packaged WL1 game for eight
+  seconds against a disposable headless Weston compositor on Debian 13. The
+  runtime test remained live until its intentional timeout, proving that the
+  native Wayland path initializes without silently falling back to X11.
+- Extended `make clean` with project-scoped portable cleanup. It removes the
+  container-generated portable CMake trees and named Debian 10 builder image,
+  is harmless when Docker or those artifacts are absent, and refuses unsafe
+  portable-tree paths rather than applying a broad Docker cache prune.
+- Extended the Debian 10 builder to stage and ABI-audit the shared-library and
+  direct-console distributions as well as SDL3. Added a `portable` aggregate,
+  `portable-{library,console,sdl3}` aliases, and matching explicit release
+  names. Shortened the public native Make target to `console-release` while
+  preserving `linux-console-release` as a compatibility alias and retaining
+  the explicit Linux platform name in the staged artifact. Full container
+  builds measured package floors of `GLIBC_2.14`, `GLIBC_2.17`, and
+  `GLIBC_2.27`, respectively, and packaged console/SDL help smoke tests passed.
+- Re-ran the complete 149-test asset-backed suite successfully with both GCC
+  and Clang on the Debian build host after the workflow changes.
