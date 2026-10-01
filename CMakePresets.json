@@ -7,6 +7,17 @@
   },
   "configurePresets": [
     {
+      "name": "windows-vs2015-xp-base",
+      "hidden": true,
+      "generator": "Visual Studio 14 2015",
+      "toolset": "v140_xp",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v140-xp"
+      }
+    },
+    {
       "name": "windows-vs2015-base",
       "hidden": true,
       "generator": "Visual Studio 14 2015",
@@ -49,6 +60,34 @@
         "WG_STATIC_MSVC_RUNTIME": "ON",
         "WG_COMPILER_LABEL": "msvc-v143"
       }
+    },
+    {
+      "name": "windows-vs2015-xp-dev-x64",
+      "displayName": "Visual Studio 2015 XP-targeting library development (x64)",
+      "inherits": "windows-vs2015-xp-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-xp-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2015-xp-dev-x86",
+      "displayName": "Visual Studio 2015 XP-targeting library development (x86)",
+      "inherits": "windows-vs2015-xp-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-xp-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2015-xp-library-x64",
+      "displayName": "Visual Studio 2015 XP-targeting library release (x64)",
+      "inherits": "windows-vs2015-xp-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-xp-library-x64",
+      "cacheVariables": { "BUILD_TESTING": "OFF", "WG_BUILD_HEADLESS": "OFF" }
+    },
+    {
+      "name": "windows-vs2015-xp-library-x86",
+      "displayName": "Visual Studio 2015 XP-targeting library release (x86)",
+      "inherits": "windows-vs2015-xp-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-xp-library-x86",
+      "cacheVariables": { "BUILD_TESTING": "OFF", "WG_BUILD_HEADLESS": "OFF" }
     },
     {
       "name": "windows-vs2015-dev-x64",
@@ -213,6 +252,10 @@
     }
   ],
   "buildPresets": [
+    { "name": "windows-vs2015-xp-dev-x64", "configurePreset": "windows-vs2015-xp-dev-x64", "configuration": "Release" },
+    { "name": "windows-vs2015-xp-dev-x86", "configurePreset": "windows-vs2015-xp-dev-x86", "configuration": "Release" },
+    { "name": "windows-vs2015-xp-library-x64", "configurePreset": "windows-vs2015-xp-library-x64", "configuration": "Release", "targets": ["library-release"] },
+    { "name": "windows-vs2015-xp-library-x86", "configurePreset": "windows-vs2015-xp-library-x86", "configuration": "Release", "targets": ["library-release"] },
     {
       "name": "windows-vs2015-dev-x64",
       "configurePreset": "windows-vs2015-dev-x64",
@@ -312,6 +355,18 @@
     }
   ],
   "testPresets": [
+    {
+      "name": "windows-vs2015-xp-dev-x64",
+      "configurePreset": "windows-vs2015-xp-dev-x64",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2015-xp-dev-x86",
+      "configurePreset": "windows-vs2015-xp-dev-x86",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
     {
       "name": "windows-vs2015-dev-x64",
       "configurePreset": "windows-vs2015-dev-x64",

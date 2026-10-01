@@ -11,6 +11,7 @@ than assuming that one successful modern build establishes portability.
 | Visual Studio 2019 16.11 | v142 / MSVC 19.29 | x86, x64 | static, dynamic | Validated |
 | VS2017 toolset hosted by VS2019 16.11 | v141 / MSVC 19.16 | x86, x64 | static, dynamic | Validated |
 | Visual Studio 2015 14.0 | v140 / MSVC 19.00.23506 | x86, x64 | static, dynamic | Validated |
+| Visual Studio 2015 14.0, XP SDK | v140_xp / MSVC 19.00.23506 | x86, x64 | static, dynamic | Build/test validated; target OS pending |
 
 Each checkpoint must configure and compile the shared library with warnings as
 errors, run the internal tests and the public-header consumer, and stage an SDK
@@ -25,6 +26,8 @@ include the toolset label, so artifacts from different checkpoints can coexist.
 Older toolsets and IDEs will be introduced one checkpoint at a time, with
 separate project files only when an older MSBuild format actually requires
 them. Visual Studio 2015 is currently the oldest validated Windows checkpoint.
+The `v140_xp` profile is also compiler- and test-validated, but is not promoted
+to runtime-validated support until its packages execute on real XP test hosts.
 
 The root `build.ps1` is the stable modern command-line dispatcher. The root
 solution remains while one format is genuinely accepted by the validated IDE

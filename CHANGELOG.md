@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.29 - 2026-10-01 - Windows XP targeting candidate
+
+- Added compiler-qualified v140_xp presets and dispatcher support for x86 and
+  x64 library builds with static or dynamic CRT selection.
+- Passed the complete internal and public-consumer test suite and staged SDKs
+  for both architectures; execution on actual XP systems remains pending.
+
 ## 1.4.28 - 2026-10-01 - Visual Studio 2015 and 2017 checkpoints
 
 - Added first-class CMake presets and Windows dispatcher support for native

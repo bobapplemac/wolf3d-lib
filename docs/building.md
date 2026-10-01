@@ -97,6 +97,7 @@ dry-run output:
 .\build.ps1 -Compiler vs2019 -Action package -Opl dbopl
 .\build.ps1 -Compiler vs2017 -Architecture x86 -Action package
 .\build.ps1 -Compiler vs2015 -Architecture x86 -Action test
+.\build.ps1 -Compiler vs2015-xp -Architecture x86 -Action package
 .\build.ps1 -Action test -Audio silent -Runtime dynamic
 ```
 
