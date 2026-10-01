@@ -36,14 +36,20 @@ if(Python3_Interpreter_FOUND
         VERBATIM)
 endif()
 
-configure_file(packaging/LIBRARY-README.txt.in
-               ${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt @ONLY)
-
 option(WG_BUILD_HEADLESS
     "Build the internal deterministic validation host and tests" ON)
 option(WG_WARNINGS_AS_ERRORS "Treat project warnings as errors" ON)
 option(WG_STATIC_MSVC_RUNTIME
     "Link the MSVC runtime statically for self-contained Windows releases" ON)
+set(WG_AUDIO_BACKEND "standard" CACHE STRING
+    "Audio output backend: standard or silent")
+set_property(CACHE WG_AUDIO_BACKEND PROPERTY STRINGS standard silent)
+set(WG_OPL_BACKEND "nuked" CACHE STRING
+    "OPL emulator used by the standard audio backend: nuked or dbopl")
+set_property(CACHE WG_OPL_BACKEND PROPERTY STRINGS nuked dbopl)
+set(WG_LINUX_LIBC "" CACHE STRING
+    "Optional Linux package ABI label, such as glibc or musl")
+set_property(CACHE WG_LINUX_LIBC PROPERTY STRINGS "" glibc musl)
 set(WG_DIST_ROOT "${CMAKE_SOURCE_DIR}/dist" CACHE PATH
     "Directory used by release staging targets")
 
@@ -52,14 +58,45 @@ if(MSVC AND WG_STATIC_MSVC_RUNTIME)
         "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-# Keep the LGPL component independently replaceable on every platform.
-add_library(nuked-opl3 SHARED third_party/Nuked-OPL3/opl3.c)
-set_target_properties(nuked-opl3 PROPERTIES
-    OUTPUT_NAME "Nuked-OPL3"
-    WINDOWS_EXPORT_ALL_SYMBOLS ON
-)
-target_include_directories(nuked-opl3 PUBLIC third_party/Nuked-OPL3)
-target_compile_features(nuked-opl3 PUBLIC c_std_99)
+set(WG_OPL_SOURCE "")
+set(WG_OPL_LIBRARY_TARGET "")
+if(WG_AUDIO_BACKEND STREQUAL "silent")
+    set(WG_OPL_SOURCE src/WG_OPL_SILENT.c)
+elseif(WG_AUDIO_BACKEND STREQUAL "standard")
+    if(WG_OPL_BACKEND STREQUAL "nuked")
+        set(WG_OPL_SOURCE src/WG_OPL_NUKED.c)
+        # Keep the LGPL component independently replaceable on every platform.
+        add_library(nuked-opl3 SHARED third_party/Nuked-OPL3/opl3.c)
+        set_target_properties(nuked-opl3 PROPERTIES
+            OUTPUT_NAME "Nuked-OPL3"
+            WINDOWS_EXPORT_ALL_SYMBOLS ON
+        )
+        target_include_directories(nuked-opl3 PUBLIC third_party/Nuked-OPL3)
+        target_compile_features(nuked-opl3 PUBLIC c_std_99)
+        set(WG_OPL_LIBRARY_TARGET nuked-opl3)
+    elseif(WG_OPL_BACKEND STREQUAL "dbopl")
+        set(WG_OPL_SOURCE
+            src/WG_OPL_DBOPL.c
+            third_party/DBOPL/dbopl.c
+        )
+        # Preserve the imported implementation unchanged. Its intentional
+        # fixed-width truncations trigger host-specific conversion warnings.
+        if(MSVC)
+            set_source_files_properties(third_party/DBOPL/dbopl.c
+                PROPERTIES COMPILE_OPTIONS "/W0")
+        else()
+            set_source_files_properties(third_party/DBOPL/dbopl.c
+                PROPERTIES COMPILE_OPTIONS "-w")
+        endif()
+    else()
+        message(FATAL_ERROR "Unsupported WG_OPL_BACKEND: ${WG_OPL_BACKEND}")
+    endif()
+else()
+    message(FATAL_ERROR "Unsupported WG_AUDIO_BACKEND: ${WG_AUDIO_BACKEND}")
+endif()
+
+configure_file(packaging/LIBRARY-README.txt.in
+               ${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt @ONLY)
 
 set(WG_CORE_SOURCES
     src/WG_ASSETS.c
@@ -76,6 +113,7 @@ set(WG_CORE_SOURCES
     src/WG_MAPS.c
     src/ID_PM.c
     src/ID_SD.c
+    ${WG_OPL_SOURCE}
     src/WG_PALETTE.c
     src/WG_PLATFORM.c
     src/ID_US_1.c
@@ -115,11 +153,19 @@ if(WG_BUILD_HEADLESS)
 endif()
 
 function(wg_configure_core target)
-    target_link_libraries(${target} PRIVATE nuked-opl3)
+    if(WG_OPL_LIBRARY_TARGET)
+        target_link_libraries(${target} PRIVATE ${WG_OPL_LIBRARY_TARGET})
+    endif()
+
+    if(WG_AUDIO_BACKEND STREQUAL "silent")
+        target_compile_definitions(${target} PRIVATE WG_AUDIO_SILENT=1)
+    elseif(WG_OPL_BACKEND STREQUAL "dbopl")
+        target_compile_definitions(${target} PRIVATE WG_OPL_DBOPL=1)
+    endif()
 
     target_include_directories(${target}
         PUBLIC include
-        PRIVATE src
+        PRIVATE src third_party/DBOPL
     )
 
     target_compile_features(${target} PUBLIC c_std_99)
@@ -152,12 +198,21 @@ else()
     set(WG_RELEASE_ARCH x86)
 endif()
 string(TOLOWER "${CMAKE_SYSTEM_NAME}" WG_RELEASE_SYSTEM)
+if(WG_RELEASE_SYSTEM STREQUAL "linux" AND WG_LINUX_LIBC)
+    set(WG_RELEASE_SYSTEM "linux-${WG_LINUX_LIBC}")
+endif()
 set(WG_RELEASE_RUNTIME_SUFFIX "")
 if(MSVC AND NOT WG_STATIC_MSVC_RUNTIME)
     set(WG_RELEASE_RUNTIME_SUFFIX "-dynamic-crt")
 endif()
+set(WG_RELEASE_AUDIO_SUFFIX "")
+if(WG_AUDIO_BACKEND STREQUAL "silent")
+    set(WG_RELEASE_AUDIO_SUFFIX "-silent")
+elseif(NOT WG_OPL_BACKEND STREQUAL "nuked")
+    set(WG_RELEASE_AUDIO_SUFFIX "-${WG_OPL_BACKEND}")
+endif()
 set(WG_LIBRARY_RELEASE_DIR
-    "${WG_DIST_ROOT}/wolf3d-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_RUNTIME_SUFFIX}")
+    "${WG_DIST_ROOT}/wolf3d-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_RUNTIME_SUFFIX}${WG_RELEASE_AUDIO_SUFFIX}")
 
 set(WG_LIBRARY_RELEASE_COMMANDS
     COMMAND ${CMAKE_COMMAND} -E remove_directory
@@ -168,17 +223,11 @@ set(WG_LIBRARY_RELEASE_COMMANDS
         "$<TARGET_FILE:wolf3d>"
         "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3d>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:nuked-opl3>"
-        "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/include/WOLF3D.h"
         "${WG_LIBRARY_RELEASE_DIR}/WOLF3D.h"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/LICENSE"
         "${WG_LIBRARY_RELEASE_DIR}/COPYING.txt"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
-        "${WG_LIBRARY_RELEASE_DIR}/COPYING.Nuked-OPL3.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/THIRD_PARTY.md"
         "${WG_LIBRARY_RELEASE_DIR}/THIRD_PARTY.md"
@@ -186,6 +235,23 @@ set(WG_LIBRARY_RELEASE_COMMANDS
         "${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt"
         "${WG_LIBRARY_RELEASE_DIR}/README.txt"
 )
+if(WG_OPL_LIBRARY_TARGET STREQUAL "nuked-opl3")
+    list(APPEND WG_LIBRARY_RELEASE_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:nuked-opl3>"
+            "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
+            "${WG_LIBRARY_RELEASE_DIR}/COPYING.Nuked-OPL3.txt"
+    )
+elseif(WG_AUDIO_BACKEND STREQUAL "standard"
+       AND WG_OPL_BACKEND STREQUAL "dbopl")
+    list(APPEND WG_LIBRARY_RELEASE_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/third_party/DBOPL/README.wolf3d-lib.md"
+            "${WG_LIBRARY_RELEASE_DIR}/README.DBOPL.md"
+    )
+endif()
 if(WIN32)
     list(APPEND WG_LIBRARY_RELEASE_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -202,9 +268,13 @@ elseif(UNIX AND NOT APPLE)
             "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_LINKER_FILE_NAME:wolf3d>"
     )
 endif()
+set(WG_LIBRARY_RELEASE_DEPENDS wolf3d)
+if(WG_OPL_LIBRARY_TARGET)
+    list(APPEND WG_LIBRARY_RELEASE_DEPENDS ${WG_OPL_LIBRARY_TARGET})
+endif()
 add_custom_target(library-release
     ${WG_LIBRARY_RELEASE_COMMANDS}
-    DEPENDS wolf3d nuked-opl3
+    DEPENDS ${WG_LIBRARY_RELEASE_DEPENDS}
     COMMENT "Staging ${WG_RELEASE_ARCH} wolf3d shared library"
     VERBATIM
 )
@@ -243,6 +313,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
         platforms/WG_TEXT_OUTPUT.c
         tests/WG_TESTS.c
     )
+    if(WG_AUDIO_BACKEND STREQUAL "silent")
+        target_compile_definitions(wg-tests PRIVATE WG_AUDIO_SILENT=1)
+    elseif(WG_OPL_BACKEND STREQUAL "dbopl")
+        target_compile_definitions(wg-tests PRIVATE WG_OPL_DBOPL=1)
+    endif()
     wg_configure_host(wg-tests wolf3d-internal)
     target_include_directories(wg-tests PRIVATE platforms src)
     add_test(NAME unit-tests COMMAND wg-tests)

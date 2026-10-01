@@ -24,8 +24,9 @@ Hosts include `WOLF3D.h`, fill a `wolf3d_platform_api_t`, then call:
 4. `wolf3d_Shutdown()`
 
 The library exports only those four functions plus the indexed 320x200
-`wolf3d_ScreenBuffer` and 256-color `wolf3d_Palette`. Nuked-OPL3 remains a
-separate, replaceable LGPL shared library.
+`wolf3d_ScreenBuffer` and 256-color `wolf3d_Palette`. The reference Nuked-OPL3
+backend remains a separate, replaceable LGPL shared library; pure-C DBOPL and
+timing-preserving silent builds are also available.
 
 The in-tree `wolf3d::wolf3d` CMake target is the supported target for a
 parent project. The public header is under `include/`; private `src/`
@@ -40,6 +41,9 @@ make                    # native shared-library package
 make test               # library, internal headless oracle, and tests
 make test CC=clang      # same validation with Clang
 make portable JOBS=8    # Debian 10 / glibc 2.28 package in Docker
+make musl JOBS=8        # Alpine/musl package in Docker
+make test OPL_BACKEND=dbopl
+make test AUDIO_BACKEND=silent
 make help               # complete command and variable reference
 ```
 
@@ -61,7 +65,8 @@ ctest --preset windows-dev-x64 -C Release
 
 Release presets stage clean SDK folders containing `wolf3d.dll` and
 `wolf3d.lib` on Windows, or the versioned `libwolf3d.so` SONAME chain on
-Linux, together with `WOLF3D.h`, Nuked-OPL3, licenses, and package notes.
+Linux, together with `WOLF3D.h`, the selected audio backend, licenses, and
+package notes.
 See [docs/building.md](docs/building.md) for all supported configurations.
 
 ## Validation host

@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "WG_ENDIAN.h"
-#include "opl3.h"
+#include "WG_OPL.h"
 
 /* The original SDL_StartSB raised the SB Pro FM mixer to maximum so its
    output was comparable with the digitized voice path.  Nuked-OPL3 returns
@@ -16,7 +16,7 @@
 
 struct id_sd_music
 {
-    opl3_chip chip;
+    wg_opl_t *opl;
     id_sd_imf_t sequence;
     id_sd_sample_clock_t clock;
     uint32_t sample_rate;
@@ -151,7 +151,7 @@ static void ID_SD_MusicWrite(void *user, uint16_t register_number,
 {
     id_sd_music_t *music = (id_sd_music_t *)user;
 
-    OPL3_WriteRegBuffered(&music->chip, register_number, value);
+    WG_OPL_WriteRegisterBuffered(music->opl, register_number, value);
 }
 
 id_sd_music_t *ID_SD_MusicCreate(uint32_t sample_rate)
@@ -168,9 +168,11 @@ id_sd_music_t *ID_SD_MusicCreate(uint32_t sample_rate)
         return NULL;
     }
     music->sample_rate = sample_rate;
-    OPL3_Reset(&music->chip, sample_rate);
-    if (!ID_SD_SampleClockStart(&music->clock, sample_rate))
+    music->opl = WG_OPL_Create(sample_rate);
+    if (music->opl == NULL
+        || !ID_SD_SampleClockStart(&music->clock, sample_rate))
     {
+        WG_OPL_Destroy(music->opl);
         free(music);
         return NULL;
     }
@@ -182,6 +184,7 @@ void ID_SD_MusicDestroy(id_sd_music_t *music)
     if (music != NULL)
     {
         free(music->digital_data);
+        WG_OPL_Destroy(music->opl);
     }
     free(music);
 }
@@ -198,11 +201,11 @@ static void ID_SD_EffectWriteInstrument(id_sd_music_t *music,
 
     for (index = 0U; index < 10U; ++index)
     {
-        OPL3_WriteRegBuffered(&music->chip, registers[index],
-                              instrument[index]);
+        WG_OPL_WriteRegisterBuffered(music->opl, registers[index],
+                                     instrument[index]);
     }
     /* The Wolf3D source deliberately uses zero rather than inst.nConn. */
-    OPL3_WriteRegBuffered(&music->chip, 0xc0U, 0U);
+    WG_OPL_WriteRegisterBuffered(music->opl, 0xc0U, 0U);
 }
 
 int ID_SD_EffectStart(id_sd_music_t *music, const uint8_t *chunk,
@@ -245,7 +248,7 @@ void ID_SD_EffectStop(id_sd_music_t *music)
     music->effect_length = 0U;
     music->effect_position = 0U;
     music->effect_priority = 0U;
-    OPL3_WriteRegBuffered(&music->chip, 0xb0U, 0U);
+    WG_OPL_WriteRegisterBuffered(music->opl, 0xb0U, 0U);
 }
 
 int ID_SD_EffectPlaying(const id_sd_music_t *music)
@@ -595,12 +598,13 @@ static void ID_SD_EffectService(id_sd_music_t *music)
     sample = music->effect_data[music->effect_position++];
     if (sample == 0U)
     {
-        OPL3_WriteRegBuffered(&music->chip, 0xb0U, 0U);
+        WG_OPL_WriteRegisterBuffered(music->opl, 0xb0U, 0U);
     }
     else
     {
-        OPL3_WriteRegBuffered(&music->chip, 0xa0U, sample);
-        OPL3_WriteRegBuffered(&music->chip, 0xb0U, music->effect_block);
+        WG_OPL_WriteRegisterBuffered(music->opl, 0xa0U, sample);
+        WG_OPL_WriteRegisterBuffered(music->opl, 0xb0U,
+                                     music->effect_block);
     }
     if (music->effect_position == music->effect_length)
     {
@@ -687,10 +691,11 @@ void ID_SD_MusicStop(id_sd_music_t *music)
         return;
     }
     ID_SD_IMFStop(&music->sequence);
-    OPL3_WriteReg(&music->chip, 0xbdU, 0U);
+    WG_OPL_WriteRegister(music->opl, 0xbdU, 0U);
     for (channel = 1U; channel < 9U; ++channel)
     {
-        OPL3_WriteReg(&music->chip, (uint16_t)(0xb0U + channel), 0U);
+        WG_OPL_WriteRegister(music->opl,
+                             (uint16_t)(0xb0U + channel), 0U);
     }
 }
 
@@ -710,10 +715,11 @@ void ID_SD_MusicSetPaused(id_sd_music_t *music, int paused)
 
     /* SD_MusicOff silenced the rhythm register and music channels while
        leaving the sequencer position intact for SD_MusicOn. */
-    OPL3_WriteReg(&music->chip, 0xbdU, 0U);
+    WG_OPL_WriteRegister(music->opl, 0xbdU, 0U);
     for (channel = 1U; channel < 9U; ++channel)
     {
-        OPL3_WriteReg(&music->chip, (uint16_t)(0xb0U + channel), 0U);
+        WG_OPL_WriteRegister(music->opl,
+                             (uint16_t)(0xb0U + channel), 0U);
     }
 }
 
@@ -735,10 +741,15 @@ int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
         {
             return 0;
         }
-        OPL3_GenerateStream(&music->chip, stereo, frames);
+        WG_OPL_Generate(music->opl, stereo, frames);
         ID_SD_ApplyFMMixGain(stereo, frames);
         ID_SD_DigitalMix(music, stereo, frames);
         ID_SD_PCMix(music, stereo, frames);
+#ifdef WG_AUDIO_SILENT
+        /* Keep every original audio clock and completion transition active,
+           but deliberately expose silence to hosts without audio output. */
+        memset(stereo, 0, (size_t)frames * 2U * sizeof(*stereo));
+#endif
         stereo += (size_t)frames * 2U;
         frame_count -= frames;
         ticks = ID_SD_SampleClockAdvance(&music->clock, frames);

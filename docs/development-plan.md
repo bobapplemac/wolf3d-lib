@@ -35,7 +35,8 @@ out of scope.
    replacement specification.
 4. Use Doom and doomgeneric only for port-boundary and packaging patterns.
 5. Use the official Nuked-OPL3 implementation as the OPL behavioral reference
-   and initial emulator. Do not use the MAME or DOSBox OPL implementations.
+   and default emulator. Permit the PrBoom+ C DBOPL port as an explicitly
+   selected lower-resource backend; do not use historical MAME FMOPL.
 6. Keep porting changes traceable. Nontrivial replacements should name the
    original routine and, when useful, the reference implementation consulted.
 7. Do not include commercial game data in the repository.
@@ -192,11 +193,12 @@ played; save/load, death/restart, secret levels, and victory paths work.
 - Keep Nuked-OPL3 isolated under `third_party`, retain its LGPL-2.1-or-later
   notices, and make upgrades or local changes independently reviewable.
 - Benchmark the official implementation during realistic gameplay and dense
-  IMF playback on supported hosts. Pivot to `tgies/Nuked-OPL3-fast` only if
-  measured audio deadlines cannot be met. Before pivoting, require sample-exact
-  A/B tests for Wolf3D's complete IMF and AdLib-effect corpus as well as the
-  project's selected upstream revision.
-- Do not integrate the MAME or DOSBox OPL implementations.
+  IMF playback on supported hosts. Keep DBOPL and any future Nuked-fast backend
+  behind the same private register-write/sample-generation boundary and label
+  their output independently from the Nuked reference.
+- Provide a silent backend that advances the same IMF, AdLib-effect,
+  PC-speaker, and digitized-sound clocks while emitting zero PCM.
+- Do not integrate historical MAME FMOPL.
 - Generate PCM in the core and keep device transport in each host backend.
 - Validate event timing and rendered audio hashes independently of the physical
   output device.

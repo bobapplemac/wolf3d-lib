@@ -9,9 +9,11 @@ consult Wolf4SDL and Chocolate Wolfenstein 3D; copied or adapted routines must
 retain applicable notices and remain compatible with GPL-2.0-only.
 
 Nuked-OPL3 is maintained as a separately identified LGPL-2.1-or-later
-third-party component. Its exact upstream source, license, and local provenance
-notice accompany the tree. The MAME and DOSBox OPL implementations are not
-used.
+third-party component and remains the default preservation reference. The
+optional DBOPL backend comes from PrBoom+'s GPL-2.0-or-later C conversion of
+DOSBox DBOPL revision 3635 at commit
+`969515162c5aebea4ad7a125ee178dcad3d576ad`; its provenance notice accompanies
+the vendored source. Historical MAME FMOPL is not used.
 
 `src/WOLFPAL.inc` is the original Wolfenstein 3D 256-color VGA palette in the
 portable initializer format used by Chocolate Wolfenstein 3D. Its 6-bit channel

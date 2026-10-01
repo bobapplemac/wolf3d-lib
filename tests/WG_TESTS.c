@@ -215,7 +215,11 @@ static void TestIMFSequencer(void)
         }
         printf("PC speaker PCM FNV-1a: %016llx\n",
                (unsigned long long)pc_hash);
+#ifdef WG_AUDIO_SILENT
+        CHECK(pc_hash == 0x39b4650a96201983ULL);
+#else
         CHECK(pc_hash == 0x27841e7de4f37983ULL);
+#endif
         ID_SD_MusicDestroy(music);
     }
     music = ID_SD_MusicCreate(48000U);
@@ -230,8 +234,13 @@ static void TestIMFSequencer(void)
         CHECK(ID_SD_DigitalSetPosition(music, 3U, 7U));
         CHECK(!ID_SD_DigitalSetPosition(music, 15U, 15U));
         CHECK(ID_SD_MusicRender(music, effect_pcm, 20U));
+#ifdef WG_AUDIO_SILENT
+        CHECK(effect_pcm[0] == 0);
+        CHECK(effect_pcm[1] == 0);
+#else
         CHECK(effect_pcm[0] == -26214);
         CHECK(effect_pcm[1] == -17476);
+#endif
         CHECK(!ID_SD_DigitalPlaying(music));
         ID_SD_MusicDestroy(music);
     }
@@ -4590,7 +4599,13 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s one-second OPL music FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)music_hash);
+#if defined(WG_AUDIO_SILENT)
+            CHECK(music_hash == 0xf36cbe2231ce2b83ULL);
+#elif defined(WG_OPL_DBOPL)
+            CHECK(music_hash == 0xa9649d816ee2b353ULL);
+#else
             CHECK(music_hash == 0xd5e51ab51d9c7cf5ULL);
+#endif
             ID_SD_MusicDestroy(music_player);
             music_player = ID_SD_MusicCreate(48000U);
             CHECK(music_player != NULL);
@@ -4607,7 +4622,13 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s one-second attract music FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)front_music_hash);
+#if defined(WG_AUDIO_SILENT)
+            CHECK(front_music_hash == 0xf36cbe2231ce2b83ULL);
+#elif defined(WG_OPL_DBOPL)
+            CHECK(front_music_hash == 0xad2eb1e059b661b3ULL);
+#else
             CHECK(front_music_hash == 0x52250d735f8826aeULL);
+#endif
             ID_SD_MusicDestroy(music_player);
             music_player = ID_SD_MusicCreate(48000U);
             CHECK(music_player != NULL);
@@ -4624,7 +4645,13 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s music plus pistol FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)mixed_hash);
+#if defined(WG_AUDIO_SILENT)
+            CHECK(mixed_hash == 0x4b66313d0e238783ULL);
+#elif defined(WG_OPL_DBOPL)
+            CHECK(mixed_hash == 0xd97747a95944913bULL);
+#else
             CHECK(mixed_hash == 0xcae2d53091f3197dULL);
+#endif
             ID_SD_MusicDestroy(music_player);
             music_player = ID_SD_MusicCreate(48000U);
             CHECK(music_player != NULL);
@@ -4641,7 +4668,13 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             printf("%s music plus PC-speaker pistol FNV-1a: %016llx\n",
                    WG_DataVariantName(data_set.variant),
                    (unsigned long long)pc_mixed_hash);
+#if defined(WG_AUDIO_SILENT)
+            CHECK(pc_mixed_hash == 0x4b66313d0e238783ULL);
+#elif defined(WG_OPL_DBOPL)
+            CHECK(pc_mixed_hash == 0x9763175e6333e953ULL);
+#else
             CHECK(pc_mixed_hash == 0x0282170eeb2bbeb5ULL);
+#endif
             for (index = 0U; index < 87U; ++index)
             {
                 CHECK(WG_AudioGetChunk(&audio, index, &page_data, &page_size));
@@ -4699,7 +4732,11 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                 printf("%s one-second digital pistol FNV-1a: %016llx\n",
                        WG_DataVariantName(data_set.variant),
                        (unsigned long long)digital_hash);
+#ifdef WG_AUDIO_SILENT
+                CHECK(digital_hash == 0xf36cbe2231ce2b83ULL);
+#else
                 CHECK(digital_hash == 0x44dc84b3f78798a3ULL);
+#endif
                 free(digital_data);
                 WG_PagesClose(&pages);
             }

@@ -123,6 +123,9 @@ Paths:
 - `opl\Nuked-OPL3-fast` — bit-exact performance fork, origin
   `https://github.com/tgies/Nuked-OPL3-fast.git`, commit
   `f44bacb1143cd78d36bacf69fbec8c60a125b3c9` (`1.8-fast.3`).
+- PrBoom+ `prboom2/src/MUSIC/dbopl.c` and `dbopl.h` — DOSBox DBOPL r3635
+  converted to C, upstream commit
+  `969515162c5aebea4ad7a125ee178dcad3d576ad`.
 
 The official implementation consists of `opl3.c` and `opl3.h` and is the
 required initial emulator and behavioral reference. Its public API provides chip
@@ -137,8 +140,9 @@ LGPL-2.1-or-later and may be used only if profiling shows the official emulator
 cannot meet real-time deadlines and project-specific sample-exact tests confirm
 equivalence for all Wolf3D music and AdLib effects.
 
-MAME and DOSBox OPL sources included in the older Wolf ports are not candidates
-for integration.
+PrBoom+'s pure-C DBOPL is the supported lower-resource alternative. Its output
+is not expected to be sample-identical to Nuked and it does not replace Nuked
+as the behavioral reference. Historical MAME FMOPL remains excluded.
 
 ## Game Engine Black Book
 

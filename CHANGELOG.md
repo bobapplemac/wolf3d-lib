@@ -6,6 +6,21 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.21 - 2026-10-01 - Portable audio backends and musl SDK
+
+- Introduced a private OPL boundary while retaining official Nuked-OPL3 as the
+  default, independently replaceable reference implementation.
+- Added PrBoom+'s GPL-compatible pure-C port of DOSBox DBOPL as an optional
+  lower-resource backend with pinned provenance and no SDL dependency.
+- Added a timing-preserving silent audio profile: IMF, AdLib-effect,
+  PC-speaker, and digitized-sound state advances normally while output samples
+  remain silent.
+- Added backend-specific Make/CMake selection, isolated package names, and
+  regression coverage for reference, DBOPL, and silent configurations.
+- Added a digest-pinned Alpine 3.20 musl build environment, musl-specific SDK
+  packaging, ELF auditing, and GCC/Clang entry points in preparation for the
+  companion repository's relocatable Linux application bundle.
+
 ## 1.4.20 - 2026-10-01 - Library and host repository separation
 
 - Completed the rename to `wolf3d-lib` and made this repository exclusively

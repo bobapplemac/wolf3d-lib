@@ -2,8 +2,11 @@ wolf3d @PROJECT_VERSION@ - shared engine library
 =====================================================
 
 This is the platform-neutral wolf3d-lib distribution. It contains the shared
-engine, its public C99 header, the replaceable Nuked-OPL3 shared library, and
-the applicable license and provenance files.
+engine, its public C99 header, and the applicable license and provenance
+files.
+
+Audio backend: @WG_AUDIO_BACKEND@
+OPL backend:   @WG_OPL_BACKEND@
 
 A host populates wolf3d_platform_api_t with video, input, timing, error, and
 PCM callbacks, calls wolf3d_SetPlatform(), and then calls wolf3d_Create(),
@@ -17,5 +20,7 @@ Official Windows packages embed the MSVC runtime and do not require the Visual
 C++ Redistributable. Custom WG_STATIC_MSVC_RUNTIME=OFF builds require the
 matching Redistributable.
 
-Nuked-OPL3 is LGPL-2.1-or-later and remains a separate, replaceable shared
-library. See COPYING.Nuked-OPL3.txt and THIRD_PARTY.md.
+The default Nuked-OPL3 build keeps the LGPL component as a separate,
+replaceable shared library. DBOPL builds incorporate the GPL-compatible C
+implementation into wolf3d. Silent builds retain original logical audio
+timing while emitting zero PCM. See THIRD_PARTY.md for provenance.
