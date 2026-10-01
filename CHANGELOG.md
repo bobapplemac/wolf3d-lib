@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.22 - 2026-10-01 - Neutral library window title
+
+- Replaced the obsolete `wolf3dgeneric` window-title branding with the
+  host-neutral `wolf3d` library identity, including the selected data-set
+  description once game data is loaded.
+
 ## 1.4.21 - 2026-10-01 - Portable audio backends and musl SDK
 
 - Introduced a private OPL boundary while retaining official Nuked-OPL3 as the

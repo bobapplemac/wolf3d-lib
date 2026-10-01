@@ -1357,7 +1357,7 @@ static int WG_LoadTitleScreen(const char *data_path,
         WG_ReportFatalError("Unable to open the Wolf3D graphics resources.");
         return 0;
     }
-    title_length = snprintf(title, sizeof(title), "wolf3dgeneric - %s",
+    title_length = snprintf(title, sizeof(title), "wolf3d - %s",
                             WG_DataVariantName(wg_data_set.variant));
     if (title_length >= 0 && (size_t)title_length < sizeof(title))
     {
@@ -4720,7 +4720,7 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
         return WOLF3D_RESULT_PLATFORM_ERROR;
     }
 
-    WG_SetWindowTitle("wolf3dgeneric");
+    WG_SetWindowTitle("wolf3d");
     wg_initialized = 1;
     wg_next_demo = 0U;
     wg_mouse_present = (uint8_t)WG_HasArgument(argc, argv, "--mouse");
