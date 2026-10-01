@@ -7,6 +7,28 @@
   },
   "configurePresets": [
     {
+      "name": "windows-vs2015-base",
+      "hidden": true,
+      "generator": "Visual Studio 14 2015",
+      "toolset": "v140",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v140"
+      }
+    },
+    {
+      "name": "windows-vs2017-base",
+      "hidden": true,
+      "generator": "Visual Studio 16 2019",
+      "toolset": "v141",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v141"
+      }
+    },
+    {
       "name": "windows-base",
       "hidden": true,
       "generator": "Visual Studio 16 2019",
@@ -26,6 +48,74 @@
         "WG_WARNINGS_AS_ERRORS": "ON",
         "WG_STATIC_MSVC_RUNTIME": "ON",
         "WG_COMPILER_LABEL": "msvc-v143"
+      }
+    },
+    {
+      "name": "windows-vs2015-dev-x64",
+      "displayName": "Visual Studio 2015 library development (x64)",
+      "inherits": "windows-vs2015-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2015-dev-x86",
+      "displayName": "Visual Studio 2015 library development (x86)",
+      "inherits": "windows-vs2015-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2015-library-x64",
+      "displayName": "Visual Studio 2015 library release (x64)",
+      "inherits": "windows-vs2015-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2015-library-x86",
+      "displayName": "Visual Studio 2015 library release (x86)",
+      "inherits": "windows-vs2015-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2017-dev-x64",
+      "displayName": "Visual Studio 2017 toolset library development (x64)",
+      "inherits": "windows-vs2017-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2017-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2017-dev-x86",
+      "displayName": "Visual Studio 2017 toolset library development (x86)",
+      "inherits": "windows-vs2017-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2017-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2017-library-x64",
+      "displayName": "Visual Studio 2017 toolset library release (x64)",
+      "inherits": "windows-vs2017-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2017-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2017-library-x86",
+      "displayName": "Visual Studio 2017 toolset library release (x86)",
+      "inherits": "windows-vs2017-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2017-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
       }
     },
     {
@@ -124,6 +214,50 @@
   ],
   "buildPresets": [
     {
+      "name": "windows-vs2015-dev-x64",
+      "configurePreset": "windows-vs2015-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2015-dev-x86",
+      "configurePreset": "windows-vs2015-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2015-library-x64",
+      "configurePreset": "windows-vs2015-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2015-library-x86",
+      "configurePreset": "windows-vs2015-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2017-dev-x64",
+      "configurePreset": "windows-vs2017-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2017-dev-x86",
+      "configurePreset": "windows-vs2017-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2017-library-x64",
+      "configurePreset": "windows-vs2017-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2017-library-x86",
+      "configurePreset": "windows-vs2017-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
       "name": "windows-dev-x64",
       "configurePreset": "windows-dev-x64",
       "configuration": "Release"
@@ -178,6 +312,38 @@
     }
   ],
   "testPresets": [
+    {
+      "name": "windows-vs2015-dev-x64",
+      "configurePreset": "windows-vs2015-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2015-dev-x86",
+      "configurePreset": "windows-vs2015-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2017-dev-x64",
+      "configurePreset": "windows-vs2017-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2017-dev-x86",
+      "configurePreset": "windows-vs2017-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
     {
       "name": "windows-dev-x64",
       "configurePreset": "windows-dev-x64",

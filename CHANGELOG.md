@@ -6,6 +6,14 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.28 - 2026-10-01 - Visual Studio 2015 and 2017 checkpoints
+
+- Added first-class CMake presets and Windows dispatcher support for native
+  Visual Studio 2015/v140 and the v141 compiler toolset hosted by VS2019.
+- Validated x86 and x64 library builds, both MSVC runtime modes, internal tests,
+  public-header consumption, and compiler-qualified SDK staging with MSVC 19.0
+  and MSVC 19.16.
+
 ## 1.4.27 - 2026-10-01 - Shareware reference formatting
 
 - Normalized the new archive checksum layout so the documentation remains

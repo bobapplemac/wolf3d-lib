@@ -72,10 +72,11 @@ cmake --build --preset linux-library
 
 ## Windows with Visual Studio
 
-Open `wolf3d-lib.sln` in Visual Studio 2019 or 2022. The same project selects
-v142 or v143 to match the IDE and supports Win32/x64, Debug/Release, and
-static/dynamic MSVC runtime configurations. It delegates compilation to CMake
-and writes into generation-specific directories under `build/`.
+Open `wolf3d-lib.sln` in Visual Studio 2015, 2019, or 2022. The same project
+selects v140, v142, or v143 to match the IDE and supports Win32/x64,
+Debug/Release, and static/dynamic MSVC runtime configurations. It delegates
+compilation to CMake and writes into generation-specific directories under
+`build/`.
 
 The static MSVC runtime is the release default. This does not make the engine
 a static library: `wolf3d.dll` remains a separate DLL, while its Microsoft C
@@ -94,6 +95,8 @@ dry-run output:
 .\build.ps1
 .\build.ps1 -Compiler vs2022 -Architecture x86 -Action test
 .\build.ps1 -Compiler vs2019 -Action package -Opl dbopl
+.\build.ps1 -Compiler vs2017 -Architecture x86 -Action package
+.\build.ps1 -Compiler vs2015 -Architecture x86 -Action test
 .\build.ps1 -Action test -Audio silent -Runtime dynamic
 ```
 
@@ -103,6 +106,11 @@ for confirmation. Explicit arguments remain suitable for automation;
 launcher delegates to `scripts/windows/build.ps1`, which prints every CMake
 command and contains no independent build graph. Run
 `Get-Help .\scripts\windows\build.ps1 -Detailed` for the full interface.
+
+Visual Studio 2015 does not bundle CMake. The dispatcher and checked-in solution
+use a CMake 3.20-or-newer installation from `PATH`, or the CMake bundled with a
+newer installed Visual Studio, while still generating and building native v140
+projects with MSBuild 14 and MSVC 19.0.
 
 ## Windows with CMake
 

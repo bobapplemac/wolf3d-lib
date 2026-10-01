@@ -39,8 +39,10 @@
     <Keyword>MakeFileProj</Keyword>
     <RootNamespace>wolf3d_lib</RootNamespace>
     <ProjectName>wolf3d-lib</ProjectName>
-    <WGVisualStudioGeneration>2019</WGVisualStudioGeneration>
-    <WGPlatformToolset>v142</WGPlatformToolset>
+    <WGVisualStudioGeneration>2015</WGVisualStudioGeneration>
+    <WGPlatformToolset>v140</WGPlatformToolset>
+    <WGVisualStudioGeneration Condition="'$(VisualStudioVersion)'=='16.0'">2019</WGVisualStudioGeneration>
+    <WGPlatformToolset Condition="'$(VisualStudioVersion)'=='16.0'">v142</WGPlatformToolset>
     <WGVisualStudioGeneration Condition="'$(VisualStudioVersion)'=='17.0'">2022</WGVisualStudioGeneration>
     <WGPlatformToolset Condition="'$(VisualStudioVersion)'=='17.0'">v143</WGPlatformToolset>
   </PropertyGroup>
@@ -83,19 +85,23 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <WGCMake>cmake</WGCMake>
+    <WGCMake>$(SolutionDir)scripts\windows\cmake-driver.cmd</WGCMake>
     <WGBundledCMake>$(VsInstallRoot)\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe</WGBundledCMake>
     <WGCMake Condition="Exists('$(WGBundledCMake)')">$(WGBundledCMake)</WGCMake>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)'=='Win32'">
-    <WGPreset>windows-dev-x86</WGPreset>
-    <WGBuildDir>$(SolutionDir)build\windows-vs2019-dev-x86</WGBuildDir>
+    <WGPreset>windows-vs2015-dev-x86</WGPreset>
+    <WGBuildDir>$(SolutionDir)build\windows-vs2015-dev-x86</WGBuildDir>
+    <WGPreset Condition="'$(WGVisualStudioGeneration)'=='2019'">windows-dev-x86</WGPreset>
+    <WGBuildDir Condition="'$(WGVisualStudioGeneration)'=='2019'">$(SolutionDir)build\windows-vs2019-dev-x86</WGBuildDir>
     <WGPreset Condition="'$(WGVisualStudioGeneration)'=='2022'">windows-vs2022-dev-x86</WGPreset>
     <WGBuildDir Condition="'$(WGVisualStudioGeneration)'=='2022'">$(SolutionDir)build\windows-vs2022-dev-x86</WGBuildDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)'=='x64'">
-    <WGPreset>windows-dev-x64</WGPreset>
-    <WGBuildDir>$(SolutionDir)build\windows-vs2019-dev-x64</WGBuildDir>
+    <WGPreset>windows-vs2015-dev-x64</WGPreset>
+    <WGBuildDir>$(SolutionDir)build\windows-vs2015-dev-x64</WGBuildDir>
+    <WGPreset Condition="'$(WGVisualStudioGeneration)'=='2019'">windows-dev-x64</WGPreset>
+    <WGBuildDir Condition="'$(WGVisualStudioGeneration)'=='2019'">$(SolutionDir)build\windows-vs2019-dev-x64</WGBuildDir>
     <WGPreset Condition="'$(WGVisualStudioGeneration)'=='2022'">windows-vs2022-dev-x64</WGPreset>
     <WGBuildDir Condition="'$(WGVisualStudioGeneration)'=='2022'">$(SolutionDir)build\windows-vs2022-dev-x64</WGBuildDir>
   </PropertyGroup>

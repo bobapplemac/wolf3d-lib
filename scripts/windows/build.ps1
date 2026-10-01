@@ -12,8 +12,8 @@ choices onto the authoritative CMake presets and targets.
 Packages the x64 SDK with the newest supported installed compiler.
 
 .EXAMPLE
-.\build.ps1 -Compiler vs2019 -Architecture x86 -Action test
-Builds and tests the 32-bit library with Visual Studio 2019/v142.
+.\build.ps1 -Compiler vs2015 -Architecture x86 -Action test
+Builds and tests the 32-bit library with Visual Studio 2015/v140.
 
 .EXAMPLE
 .\build.ps1 -Action test -Audio silent
@@ -25,7 +25,7 @@ Stages a DBOPL SDK linked to the dynamic MSVC runtime.
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('auto', 'vs2022', 'vs2019')]
+    [ValidateSet('auto', 'vs2022', 'vs2019', 'vs2017', 'vs2015')]
     [string]$Compiler = 'auto',
     [ValidateSet('x64', 'x86')]
     [string]$Architecture = 'x64',
@@ -58,13 +58,15 @@ function Find-VisualStudio {
         [string]$VersionRange,
         [string]$FallbackPath,
         [string]$Toolset,
-        [string]$PresetPrefix
+        [string]$PresetPrefix,
+        [string]$RequiredComponent = 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
+        [string]$CMakeFallbackDirectory = ''
     )
 
     $installation = $null
     if (Test-Path -LiteralPath $vswhere) {
         $result = & $vswhere -latest -products '*' -version $VersionRange `
-            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -requires $RequiredComponent `
             -property installationPath
         if ($LASTEXITCODE -eq 0 -and $result) {
             $installation = ($result | Select-Object -Last 1).Trim()
@@ -88,6 +90,18 @@ function Find-VisualStudio {
             $ctest = $ctestCandidate
         }
     }
+    if (-not $cmake -and $CMakeFallbackDirectory) {
+        $cmakeCandidate = Join-Path $CMakeFallbackDirectory 'cmake.exe'
+        $ctestCandidate = Join-Path $CMakeFallbackDirectory 'ctest.exe'
+        if (Test-Path -LiteralPath $cmakeCandidate) { $cmake = $cmakeCandidate }
+        if (Test-Path -LiteralPath $ctestCandidate) { $ctest = $ctestCandidate }
+    }
+    if (-not $cmake) {
+        $pathCMake = Get-Command cmake.exe -ErrorAction SilentlyContinue
+        $pathCTest = Get-Command ctest.exe -ErrorAction SilentlyContinue
+        if ($pathCMake) { $cmake = $pathCMake.Source }
+        if ($pathCTest) { $ctest = $pathCTest.Source }
+    }
 
     [pscustomobject]@{
         Name = $Name
@@ -100,6 +114,23 @@ function Find-VisualStudio {
     }
 }
 
+$legacyCMakeDirectory = ''
+if (Test-Path -LiteralPath $vswhere) {
+    foreach ($versionRange in @('[16.0,17.0)', '[17.0,18.0)', '[18.0,19.0)')) {
+        $modernInstallation = & $vswhere -latest -products '*' `
+            -version $versionRange -property installationPath
+        if ($modernInstallation) {
+            $candidate = Join-Path $modernInstallation.Trim() `
+                'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin'
+            if ((Test-Path -LiteralPath (Join-Path $candidate 'cmake.exe')) -and
+                (Test-Path -LiteralPath (Join-Path $candidate 'ctest.exe'))) {
+                $legacyCMakeDirectory = $candidate
+                break
+            }
+        }
+    }
+}
+
 $toolchains = @(
     Find-VisualStudio -Name 'vs2022' -VersionRange '[17.0,18.0)' `
         -FallbackPath 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise' `
@@ -107,6 +138,13 @@ $toolchains = @(
     Find-VisualStudio -Name 'vs2019' -VersionRange '[16.0,17.0)' `
         -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise' `
         -Toolset 'v142' -PresetPrefix 'windows'
+    Find-VisualStudio -Name 'vs2017' -VersionRange '[16.0,17.0)' `
+        -FallbackPath '' -Toolset 'v141' -PresetPrefix 'windows-vs2017' `
+        -RequiredComponent 'Microsoft.VisualStudio.Component.VC.v141.x86.x64'
+    Find-VisualStudio -Name 'vs2015' -VersionRange '[14.0,15.0)' `
+        -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio 14.0' `
+        -Toolset 'v140' -PresetPrefix 'windows-vs2015' `
+        -CMakeFallbackDirectory $legacyCMakeDirectory
 )
 
 function Read-BuildChoice {
