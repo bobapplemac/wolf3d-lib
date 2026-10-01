@@ -81,6 +81,25 @@ The static MSVC runtime is the release default. This does not make the engine
 a static library: `wolf3d.dll` remains a separate DLL, while its Microsoft C
 runtime dependency is embedded.
 
+### Windows build dispatcher
+
+The root `build.ps1` detects the supported Visual Studio installations and is
+the human-facing entry point for selecting one configuration. It exposes
+compiler, architecture, Debug/Release, static/dynamic CRT, standard/silent
+audio, Nuked-OPL3/DBOPL, build/test/package/clean actions, parallelism, and
+dry-run output:
+
+```powershell
+.\build.ps1 -List
+.\build.ps1
+.\build.ps1 -Compiler vs2022 -Architecture x86 -Action test
+.\build.ps1 -Compiler vs2019 -Action package -Opl dbopl
+.\build.ps1 -Action test -Audio silent -Runtime dynamic
+```
+
+The dispatcher prints every CMake command and contains no independent build
+graph. Run `Get-Help .\build.ps1 -Detailed` for the full interface.
+
 ## Windows with CMake
 
 ```powershell

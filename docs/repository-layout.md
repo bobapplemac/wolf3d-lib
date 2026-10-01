@@ -16,7 +16,8 @@ tests, and library packaging. Production host wrappers live in the companion
 | `tools/` | Maintainer generators and release/audit tools. |
 | `docs/` | Architecture, building, porting, provenance, supported-data, and historical development records. |
 | `VERSION` | Authoritative `1.4.REVISION` library identity. |
-| `wolf3d-lib.sln` | Source-owned Visual Studio entry point. |
+| `wolf3d-lib.sln` | Current shared Visual Studio entry point; compatibility-banded solutions move under `ide/visual-studio/` only when empirically required. |
+| `build.ps1` | Modern Windows toolchain detector and human-facing build dispatcher. |
 | `build/` | Ignored compiler output and local diagnostics. |
 | `dist/` | Ignored clean library SDK packages. |
 
@@ -24,10 +25,14 @@ tests, and library packaging. Production host wrappers live in the companion
 
 | Preset or command | Directory |
 | --- | --- |
-| `windows-dev-x64` | `build/windows-dev-x64` |
-| `windows-dev-x86` | `build/windows-dev-x86` |
-| `windows-library-x64` | `build/windows-library-x64` |
-| `windows-library-x86` | `build/windows-library-x86` |
+| `windows-dev-x64` | `build/windows-vs2019-dev-x64` |
+| `windows-dev-x86` | `build/windows-vs2019-dev-x86` |
+| `windows-library-x64` | `build/windows-vs2019-library-x64` |
+| `windows-library-x86` | `build/windows-vs2019-library-x86` |
+| `windows-vs2022-dev-x64` | `build/windows-vs2022-dev-x64` |
+| `windows-vs2022-dev-x86` | `build/windows-vs2022-dev-x86` |
+| `windows-vs2022-library-x64` | `build/windows-vs2022-library-x64` |
+| `windows-vs2022-library-x86` | `build/windows-vs2022-library-x86` |
 | `linux-dev` | `build/linux-dev` |
 | `linux-library` | `build/linux-library` |
 | `make ... CC=gcc` | `build/linux-gcc` or `build/linux-library-gcc` |

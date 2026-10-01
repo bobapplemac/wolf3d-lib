@@ -6,6 +6,18 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.24 - 2026-10-01 - Human-facing Windows build dispatcher
+
+- Added a Windows PowerShell dispatcher that detects supported Visual Studio
+  installations and selects compiler, architecture, configuration, CRT,
+  audio/OPL backend, and build/test/package/clean actions while delegating to
+  the authoritative CMake presets and targets.
+- Defined the future Visual Studio compatibility-band policy: retain one
+  solution while formats remain compatible, then add empirically required
+  solution/project sets that all reference the same root source tree.
+- Established period-appropriate `.cmd` launchers as the fallback for legacy
+  Windows environments where PowerShell or modern CMake is unavailable.
+
 ## 1.4.23 - 2026-10-01 - Visual Studio 2022 compiler checkpoint
 
 - Added explicit Visual Studio 2022/v143 x86 and x64 CMake presets while

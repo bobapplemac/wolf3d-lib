@@ -26,8 +26,24 @@ time, with separate project files only when an older MSBuild format actually
 requires them. The v140 compiler is not currently installed and is therefore
 not claimed as supported.
 
+The root `build.ps1` is the stable modern command-line dispatcher. The root
+solution remains while one format is genuinely accepted by the validated IDE
+range. When testing finds a real compatibility boundary, solution and project
+files will move into explicit bands under `ide/visual-studio/`, for example
+`vs2019-vs2022` or `vs2015-vs2017`; every band references the same root source
+files. No speculative duplicate solutions or source forks are created.
+
+Legacy Windows systems are not required to provide PowerShell or modern
+CMake. A compatibility band may include a small period-appropriate `.cmd`
+launcher that invokes its native `vcbuild`, `devenv`, or `msbuild` workflow.
+Those launchers remain local to the band instead of accumulating into one
+unmaintainable universal batch file.
+
 ## Linux checkpoints
 
 Native glibc builds are maintained with GCC and Clang. Reproducible Debian 10
 packages enforce a GLIBC 2.28 ceiling, and Alpine packages exercise GCC and
 Clang against musl. See `building.md` for the corresponding Make targets.
+GNU Make is the stable human-facing Linux dispatcher (`make help`); it selects
+compiler, backend, test, native package, glibc-portable, and musl workflows
+while CMake remains the underlying build graph.

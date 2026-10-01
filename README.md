@@ -63,6 +63,16 @@ cmake --build --preset windows-dev-x64 --config Release
 ctest --preset windows-dev-x64 -C Release
 ```
 
+The root `build.ps1` provides a guided alternative that detects VS2019/v142
+and VS2022/v143 and exposes the complete library build selection:
+
+```powershell
+.\build.ps1 -List
+.\build.ps1
+.\build.ps1 -Compiler vs2019 -Architecture x86 -Action test
+.\build.ps1 -Action package -Opl dbopl -Runtime dynamic
+```
+
 Release presets stage clean SDK folders containing `wolf3d.dll` and
 `wolf3d.lib` on Windows, or the versioned `libwolf3d.so` SONAME chain on
 Linux, together with `WOLF3D.h`, the selected audio backend, licenses, and
