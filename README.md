@@ -64,7 +64,8 @@ ctest --preset windows-dev-x64 -C Release
 ```
 
 The root `build.ps1` provides a guided alternative that detects VS2019/v142
-and VS2022/v143 and exposes the complete library build selection:
+and VS2022/v143 and exposes the complete library build selection. Run it with
+no arguments for an interactive wizard:
 
 ```powershell
 .\build.ps1 -List

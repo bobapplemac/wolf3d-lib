@@ -18,6 +18,7 @@ tests, and library packaging. Production host wrappers live in the companion
 | `VERSION` | Authoritative `1.4.REVISION` library identity. |
 | `wolf3d-lib.sln` | Current shared Visual Studio entry point; compatibility-banded solutions move under `ide/visual-studio/` only when empirically required. |
 | `build.ps1` | Modern Windows toolchain detector and human-facing build dispatcher. |
+| `scripts/` | Implementation of modern build dispatchers; legacy launchers remain with their compatibility-banded solutions. |
 | `build/` | Ignored compiler output and local diagnostics. |
 | `dist/` | Ignored clean library SDK packages. |
 

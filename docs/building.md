@@ -97,8 +97,12 @@ dry-run output:
 .\build.ps1 -Action test -Audio silent -Runtime dynamic
 ```
 
-The dispatcher prints every CMake command and contains no independent build
-graph. Run `Get-Help .\build.ps1 -Detailed` for the full interface.
+With no arguments it interactively prompts for each relevant choice and asks
+for confirmation. Explicit arguments remain suitable for automation;
+`-NonInteractive` applies documented defaults without prompting. The root
+launcher delegates to `scripts/windows/build.ps1`, which prints every CMake
+command and contains no independent build graph. Run
+`Get-Help .\scripts\windows\build.ps1 -Detailed` for the full interface.
 
 ## Windows with CMake
 

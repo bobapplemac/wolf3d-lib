@@ -6,6 +6,16 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.25 - 2026-10-01 - Interactive build guidance
+
+- Made no-argument Windows builds interactive, with guided compiler,
+  architecture, action, configuration, CRT, audio, and OPL choices plus a
+  final confirmation; explicit arguments and `-NonInteractive` retain
+  deterministic automation.
+- Kept the root `build.ps1` as a stable, discoverable launcher while moving
+  its implementation under `scripts/windows/` and documenting how that
+  structure relates to Linux Make and future legacy solution bands.
+
 ## 1.4.24 - 2026-10-01 - Human-facing Windows build dispatcher
 
 - Added a Windows PowerShell dispatcher that detects supported Visual Studio
