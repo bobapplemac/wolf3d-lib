@@ -2079,3 +2079,16 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   `GLIBC_2.27`, respectively, and packaged console/SDL help smoke tests passed.
 - Re-ran the complete 149-test asset-backed suite successfully with both GCC
   and Clang on the Debian build host after the workflow changes.
+
+## 2026-10-01: Authoritative 1.4 revision sequence
+
+- Added a root `VERSION` file and made CMake, GNU Make, generated package
+  metadata, and distribution paths consume it as their single version source.
+- Assigned revisions 1.4.1 through 1.4.16 retrospectively to the sixteen dated
+  milestones after the original 1.4.0 promotion, then established 1.4.17 as
+  the first strictly incremented main-branch revision.
+- Added configure-time and `make check-version` validation for the required
+  `1.4.REVISION` form and matching changelog entry.
+- Validated 1.4.17 with all 150 configured Windows tests, all 149 Linux tests
+  under both GCC and Clang, and a Debian 10 library package whose ELF symbols
+  require no newer than `GLIBC_2.14`.

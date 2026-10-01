@@ -4,7 +4,13 @@ if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
 
-project(wolf3dgeneric VERSION 1.4.0 LANGUAGES C)
+include(cmake/WGVersion.cmake)
+project(wolf3dgeneric VERSION "${WG_PROJECT_VERSION}" LANGUAGES C)
+
+if(NOT PROJECT_VERSION STREQUAL WG_PROJECT_VERSION)
+    message(FATAL_ERROR
+        "Configured project version does not match the authoritative VERSION file")
+endif()
 
 include(CTest)
 

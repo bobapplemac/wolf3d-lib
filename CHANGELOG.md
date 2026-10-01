@@ -1,10 +1,21 @@
 # Changelog
 
-Post-release corrections retain the `1.4` product version. They are recorded
-as separate reverse-chronological sections so each shipped v1.4 change remains
-traceable without implying a new compatibility or feature release.
+Wolfenstein 3D's historically meaningful `1.4` product identity remains
+stable. The third component is a monotonically increasing library revision;
+beginning with 1.4.17, every commit to the library main branch advances it.
+Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
+post-promotion milestones below without rewriting Git history.
 
-## 1.4 - 2026-10-01 - Linux release workflow and SDL 3.2 baseline
+## 1.4.17 - 2026-10-01 - Authoritative library revision
+
+- Added a root `VERSION` file as the single source for CMake, GNU Make,
+  generated package metadata, and staged distribution names.
+- Established the `1.4.REVISION` policy and build-time validation that the
+  current revision is well formed and represented in this changelog.
+- Retrospectively numbered the sixteen post-v1.4.0 milestones as revisions
+  1.4.1 through 1.4.16.
+
+## 1.4.16 - 2026-10-01 - Linux release workflow and SDL 3.2 baseline
 
 - Added comprehensive `make help` output and made plain `make` stage the
   dependency-light shared-library distribution. Library, direct-console, and
@@ -34,7 +45,7 @@ traceable without implying a new compatibility or feature release.
   dependencies, and the precise portability scope of the locally bundled
   Linux SDL3 distribution.
 
-## 1.4 - 2026-09-29 - Original menu sound feedback
+## 1.4.15 - 2026-09-29 - Original menu sound feedback
 
 - Restored the original two-part `MOVEGUN1SND`/`MOVEGUN2SND` feedback while
   moving through menus, including the eight-tic interval between the cursor's
@@ -46,14 +57,14 @@ traceable without implying a new compatibility or feature release.
 - Restored `ESCPRESSEDSND` when Escape or the equivalent secondary mouse
   button backs out of a menu or specialized control screen.
 
-## 1.4 - 2026-09-29 - Prompt-safe F11 fullscreen toggle
+## 1.4.14 - 2026-09-29 - Prompt-safe F11 fullscreen toggle
 
 - Added F11 alongside Alt+Enter as a fullscreen toggle in both GUI hosts and
   consumed every F11 transition at the host boundary, allowing presentation
   changes without satisfying SIGNON, intermission, cheat-message, or other
   "any key" waits.
 
-## 1.4 - 2026-09-29 - Documentation organization
+## 1.4.13 - 2026-09-29 - Documentation organization
 
 - Split post-release v1.4 work into individually titled changelog sections and
   moved the completed development plan under `docs/` with the other historical
@@ -61,7 +72,7 @@ traceable without implying a new compatibility or feature release.
 - Retained `CHANGELOG.md` and `THIRD_PARTY.md` at the repository root as the
   conventional user-facing history and distribution-facing licensing index.
 
-## 1.4 - 2026-09-29 - FM balance and original M-L-I cheat
+## 1.4.12 - 2026-09-29 - FM balance and original M-L-I cheat
 
 - Reproduced the original Sound Blaster Pro mixer policy by applying a fixed
   4x gain to the FM bus after unmodified Nuked-OPL3 synthesis. Music and AdLib
@@ -71,13 +82,13 @@ traceable without implying a new compatibility or feature release.
   health, 99 ammo, both keys, chaingun selection, score reset, ten-minute level
   time penalty, and the original modal high-score warning.
 
-## 1.4 - 2026-09-29 - .NET follow-on project specification
+## 1.4.11 - 2026-09-29 - .NET follow-on project specification
 
 - Added a standalone development specification for a future `wolf3d-dotnet`
   repository, preserving three independently buildable stages: native-library
   hosts, a fidelity-first C# engine port, and a readable modern-asset engine.
 
-## 1.4 - 2026-09-28 - Menu cursor and death-transition fidelity
+## 1.4.10 - 2026-09-28 - Menu cursor and death-transition fidelity
 
 - Restored the original two-frame menu gun animation: the highlighted cursor
   now briefly shifts to `C_CURSOR2` for nine 70 Hz tics, then holds
@@ -88,13 +99,13 @@ traceable without implying a new compatibility or feature release.
   now skips both Get Psyched pacing phases and the restarted view fizzles back
   over the retained red field in 20 tics instead of over black.
 
-## 1.4 - 2026-09-28 - Persistent floor HUD
+## 1.4.9 - 2026-09-28 - Persistent floor HUD
 
 - Preserved the loaded floor number across gameplay, intermission, victory,
   and diagnostic HUD reconstruction, so Floor 2 no longer briefly displays or
   returns to Floor 1 around Get Psyched and subsequent redraws.
 
-## 1.4 - 2026-09-28 - Activision/GOG WL6 resource profile
+## 1.4.8 - 2026-09-28 - Activision/GOG WL6 resource profile
 
 - Recognized the supplied GOG/Activision WL6 resource profile independently
   of its folder name and selected the embedded Activision SIGNON automatically.
@@ -104,7 +115,7 @@ traceable without implying a new compatibility or feature release.
   path; confirmed the static GOG result comes from duplicated source artwork,
   not a missed engine animation callback.
 
-## 1.4 - 2026-09-27 - Intermission portrait and fullscreen cursor
+## 1.4.7 - 2026-09-27 - Intermission portrait and fullscreen cursor
 
 - Revalidated the original direct two-frame BJ intermission portrait update
   and removed the unnecessary full-screen rebuild used while investigating the
@@ -112,36 +123,36 @@ traceable without implying a new compatibility or feature release.
 - Hid the native pointer while either GUI host is fullscreen and restored it
   on return to windowed mode.
 
-## 1.4 - 2026-09-27 - Live Change View projection
+## 1.4.6 - 2026-09-27 - Live Change View projection
 
 - Applied accepted Change View sizes to the active renderer immediately,
   matching the original `NewViewSize` path instead of deferring the new
   projection until another game or level was started.
 
-## 1.4 - 2026-09-27 - Toggleable GUI fullscreen
+## 1.4.5 - 2026-09-27 - Toggleable GUI fullscreen
 
 - Added borderless desktop fullscreen to the native Win32 and SDL3 hosts,
   selectable at startup with `--fullscreen` and toggleable with Alt+Enter.
 
-## 1.4 - 2026-09-27 - Spear main-menu default
+## 1.4.4 - 2026-09-27 - Spear main-menu default
 
 - Restored the original `STARTITEM` behavior for Spear and GOODTIMES data:
   their first main-menu visit now selects New Game, while Apogee Wolf3D retains
   its Read This default.
 
-## 1.4 - 2026-09-27 - Windows shell-prompt restoration
+## 1.4.3 - 2026-09-27 - Windows shell-prompt restoration
 
 - Positioned the shell after each exit screen's actual final content row and,
   for Windows GUI hosts, preserved and restored the parent shell's real prompt
   instead of overwriting it or requiring an extra Enter key.
 
-## 1.4 - 2026-09-27 - Live random initialization
+## 1.4.2 - 2026-09-27 - Live random initialization
 
 - Restored the original live-versus-demo random initialization: live levels
   use the host clock's hundredths phase, while demos use index zero, and the
   selected index is installed before map actors consume random values.
 
-## 1.4 - 2026-09-27 - Independent audit corrections
+## 1.4.1 - 2026-09-27 - Independent audit corrections
 
 - Rejected legacy portable saves whose actor coordinates fall outside the
   64x64 occupancy grid instead of using those coordinates as array indices.

@@ -25,7 +25,8 @@ workflows are collected in the [`build guide`](docs/building.md), and exact
 tested asset hashes are in
 [`supported data`](docs/supported-data.md). Release changes and final acceptance
 gates are recorded in [`CHANGELOG.md`](CHANGELOG.md) and the
-[`release checklist`](docs/release-checklist.md).
+[`release checklist`](docs/release-checklist.md). The stable `1.4` identity and
+per-commit revision policy are defined in [`versioning`](docs/versioning.md).
 
 ## Build on Windows
 
@@ -138,7 +139,7 @@ non-fatal and `--no-audio` disables ALSA explicitly.
 Create a minimal console runtime folder with `make console-release`, or
 use `cmake --preset linux-console` followed by
 `cmake --build --preset linux-console`. The result is staged under
-`dist/wolf3dgeneric-1.4.0-linux-console-<architecture>`.
+`dist/wolf3dgeneric-<version>-linux-console-<architecture>`.
 
 Create a minimal redistributable folder from a Release-configured x86 or x64
 build with:
@@ -148,7 +149,7 @@ cmake --preset windows-release-x64
 cmake --build --preset windows-release-x64
 ```
 
-The result is under `dist/wolf3dgeneric-1.4.0-win32-x86` or `-x64`.
+The result is under `dist/wolf3dgeneric-<version>-win32-x86` or `-x64`.
 It contains the small Win32 executable, `wolf3dgeneric.dll`, replaceable
 `Nuked-OPL3.dll`, license notices, and a short usage guide, but no tests, object
 files, or headless tools. Copy the original game data files into that folder

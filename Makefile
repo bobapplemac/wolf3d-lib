@@ -6,7 +6,7 @@ CC := gcc
 endif
 
 COMPILER_NAME := $(notdir $(firstword $(CC)))
-PROJECT_VERSION := $(shell awk '/^project.wolf3dgeneric VERSION/ { print $$3 }' CMakeLists.txt)
+PROJECT_VERSION := $(shell awk 'NR == 1 { print; exit }' VERSION)
 CMAKE ?= cmake
 CTEST ?= ctest
 GIT ?= git
@@ -37,7 +37,7 @@ PARALLEL_ARG := --parallel $(JOBS)
 
 .DEFAULT_GOAL := all
 
-.PHONY: all help dependencies check-sdl3 dist releases configure build test \
+.PHONY: all help dependencies check-version check-sdl3 dist releases configure build test \
 	library library-release console console-release linux-console-release \
 	sdl3 sdl3-configure sdl3-build sdl3-release \
 	portable portable-library portable-library-release \
@@ -76,6 +76,7 @@ help:
 		'' \
 		'Development and validation targets:' \
 		'  make dependencies            Fetch the pinned SDL3 Git submodule.' \
+		'  make check-version           Validate VERSION and its changelog entry.' \
 		'  make configure               Configure the core/headless development tree.' \
 		'  make build                   Build the core/headless development tree.' \
 		'  make test                    Build and run its CTest suite.' \
@@ -120,6 +121,7 @@ help:
 print-config:
 	@printf '%s\n' \
 		'CC=$(CC)' \
+		'PROJECT_VERSION=$(PROJECT_VERSION)' \
 		'BUILD_TYPE=$(BUILD_TYPE)' \
 		'BUILD_DIR=$(BUILD_DIR)' \
 		'LIBRARY_BUILD_DIR=$(LIBRARY_BUILD_DIR)' \
@@ -146,6 +148,10 @@ dependencies:
 		$(GIT) submodule update --init --recursive -- third_party/SDL3; \
 	fi
 
+check-version:
+	$(CMAKE) -DWG_EXPECTED_VERSION="$(PROJECT_VERSION)" \
+		-P cmake/WGVersion.cmake
+
 check-sdl3:
 	@if [ "$(USE_SYSTEM_SDL3)" != "ON" ] && \
 	    [ ! -f "third_party/SDL3/CMakeLists.txt" ]; then \
@@ -157,7 +163,7 @@ check-sdl3:
 		exit 2; \
 	fi
 
-configure:
+configure: check-version
 	$(CMAKE) -S . -B "$(BUILD_DIR)" -G "$(CMAKE_GENERATOR)" \
 		-DCMAKE_BUILD_TYPE="$(BUILD_TYPE)" \
 		-DWG_WARNINGS_AS_ERRORS=ON \
