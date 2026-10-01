@@ -6,6 +6,11 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.27 - 2026-10-01 - Shareware reference formatting
+
+- Normalized the new archive checksum layout so the documentation remains
+  clean under Git whitespace validation.
+
 ## 1.4.26 - 2026-10-01 - Shareware data references
 
 - Added stable mirror links for the freely distributed Wolfenstein 3D
