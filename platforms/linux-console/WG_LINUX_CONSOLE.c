@@ -1,4 +1,4 @@
-#include "WG_PLATFORM.h"
+#include "WOLF3DGENERIC.h"
 #include "../WG_HOST.h"
 #include "../WG_TEXT_OUTPUT.h"
 #include "WG_LINUX_CONSOLE.h"

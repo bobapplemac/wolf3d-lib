@@ -6,6 +6,15 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.18 - 2026-10-01 - Public host boundary
+
+- Removed the private engine source directory from every production host's
+  include path and made Win32, SDL3, and Linux-console consume only the public
+  library header and its transitive CMake interface.
+- Kept private header access explicit and confined to the internal headless
+  diagnostic and regression-test targets in preparation for repository
+  separation.
+
 ## 1.4.17 - 2026-10-01 - Authoritative library revision
 
 - Added a root `VERSION` file as the single source for CMake, GNU Make,

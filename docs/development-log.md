@@ -2092,3 +2092,19 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Validated 1.4.17 with all 150 configured Windows tests, all 149 Linux tests
   under both GCC and Clang, and a Debian 10 library package whose ELF symbols
   require no newer than `GLIBC_2.14`.
+
+## 2026-10-01: Public host boundary
+
+- Removed the private `src/` include path from the shared production-host
+  configuration and changed the Win32 and direct-console wrappers to include
+  only the public `WOLF3DGENERIC.h` interface.
+- Retained explicit private-header access for the headless validation host and
+  asset-backed test executable, whose purpose is to exercise internal engine
+  behavior rather than serve as an example library consumer.
+- Inspected generated compiler flags on both platforms: the Win32 wrapper sees
+  only `include/`, the Linux console wrapper sees `include/` plus libdrm, and
+  SDL3 sees `include/` plus SDL's public/generated headers. None of the three
+  production wrappers can include the engine's private `src/` headers.
+- Rebuilt the Win32, SDL3, console, and headless hosts successfully. All 150
+  configured Windows tests pass, as do all 149 Linux tests under both GCC and
+  Clang.

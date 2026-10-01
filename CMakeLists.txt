@@ -247,7 +247,6 @@ add_custom_target(library-release
 
 function(wg_configure_host target engine_target)
     target_link_libraries(${target} PRIVATE ${engine_target})
-    target_include_directories(${target} PRIVATE src)
     target_compile_features(${target} PRIVATE c_std_99)
 
     if(MSVC)
@@ -270,6 +269,7 @@ if(WG_BUILD_HEADLESS)
         platforms/headless/WG_HEADLESS.c
     )
     wg_configure_host(wolf3dgeneric-headless wolf3dgeneric-internal)
+    target_include_directories(wolf3dgeneric-headless PRIVATE src)
 endif()
 
 if(WG_BUILD_WIN32)
@@ -474,7 +474,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
         tests/WG_TESTS.c
     )
     wg_configure_host(wg-tests wolf3dgeneric-internal)
-    target_include_directories(wg-tests PRIVATE platforms)
+    target_include_directories(wg-tests PRIVATE platforms src)
     add_test(NAME unit-tests COMMAND wg-tests)
 
     set(WG_TEST_WL1_PATH "" CACHE PATH "Path to external Wolf3D v1.4 WL1 data")
