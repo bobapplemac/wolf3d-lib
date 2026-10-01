@@ -94,7 +94,7 @@ surface is small and resembles this responsibility set:
 - open an audio sink or accept core-generated signed PCM.
 
 The first implementation should preserve Wolf3D's naturally blocking control
-flow and expose `wolf3dgeneric_Create(...)` plus `wolf3dgeneric_Run()`. Unlike
+flow and expose `wolf3d_Create(...)` plus `wolf3d_Run()`. Unlike
 Doom, Wolf3D's attract loop, menus, intermissions, fades, and play loop are deeply
 nested blocking state machines. Forcing a public one-frame `Tick()` API at the
 start would require a broad behavioral rewrite. Once fidelity is established,

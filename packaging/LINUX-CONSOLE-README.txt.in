@@ -29,6 +29,6 @@ or unavailable audio produces a warning and the game continues silently.
 The host preserves the engine's 320x200 indexed framebuffer and displays it
 at the original monitor-intended 4:3 aspect ratio with letterboxing as needed.
 
-libwolf3dgeneric.so is the generic engine library. libNuked-OPL3.so is kept
+libwolf3d.so is the generic engine library. libNuked-OPL3.so is kept
 separate and replaceable under the LGPL-2.1 license. System libdrm, ALSA, libc,
 and their dependencies must be supplied by the target Linux installation.

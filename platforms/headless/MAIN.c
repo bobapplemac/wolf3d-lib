@@ -1,4 +1,4 @@
-#include "WOLF3DGENERIC.h"
+#include "WOLF3D.h"
 #include "../WG_HOST.h"
 
 #include <stdio.h>
@@ -233,9 +233,9 @@ static unsigned long long WG_FrameHash(void)
     unsigned long long hash = 1469598103934665603ULL;
     size_t index;
 
-    for (index = 0; index < WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT; ++index)
+    for (index = 0; index < WOLF3D_SCREEN_WIDTH * WOLF3D_SCREEN_HEIGHT; ++index)
     {
-        hash ^= WG_ScreenBuffer[index];
+        hash ^= wolf3d_ScreenBuffer[index];
         hash *= 1099511628211ULL;
     }
     return hash;
@@ -246,9 +246,9 @@ static unsigned long long WG_PaletteHash(void)
     unsigned long long hash = 1469598103934665603ULL;
     size_t index;
 
-    for (index = 0U; index < WG_PALETTE_COLORS * 3U; ++index)
+    for (index = 0U; index < WOLF3D_PALETTE_COLORS * 3U; ++index)
     {
-        hash ^= WG_Palette[index];
+        hash ^= wolf3d_Palette[index];
         hash *= 1099511628211ULL;
     }
     return hash;
@@ -272,16 +272,16 @@ static int WG_WriteFrame(const char *path)
         return 0;
     }
 #endif
-    if (fprintf(stream, "P6\n%d %d\n255\n", WG_SCREEN_WIDTH,
-                WG_SCREEN_HEIGHT) < 0)
+    if (fprintf(stream, "P6\n%d %d\n255\n", WOLF3D_SCREEN_WIDTH,
+                WOLF3D_SCREEN_HEIGHT) < 0)
     {
         fclose(stream);
         return 0;
     }
-    for (index = 0; index < WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT; ++index)
+    for (index = 0; index < WOLF3D_SCREEN_WIDTH * WOLF3D_SCREEN_HEIGHT; ++index)
     {
-        size_t color = (size_t)WG_ScreenBuffer[index] * 3U;
-        if (fwrite(WG_Palette + color, 1, 3, stream) != 3U)
+        size_t color = (size_t)wolf3d_ScreenBuffer[index] * 3U;
+        if (fwrite(wolf3d_Palette + color, 1, 3, stream) != 3U)
         {
             fclose(stream);
             return 0;
@@ -292,7 +292,7 @@ static int WG_WriteFrame(const char *path)
 
 int main(int argc, char **argv)
 {
-    wg_result_t result;
+    wolf3d_result_t result;
     int smoke_test;
     const char *dump_path;
     const char *music_path;
@@ -362,14 +362,14 @@ int main(int argc, char **argv)
         fprintf(stderr, "Sound positions must be 0-15 and not both 15.\n");
         return 1;
     }
-    result = wolf3dgeneric_Create(argc, argv);
-    if (result != WG_RESULT_OK)
+    result = wolf3d_Create(argc, argv);
+    if (result != WOLF3D_RESULT_OK)
     {
         fprintf(stderr, "Initialization failed with result %d.\n", (int)result);
         return 1;
     }
 
-    result = wolf3dgeneric_Run();
+    result = wolf3d_Run();
     if (WG_HasArgument(argc, argv, "--frame-hash"))
     {
         printf("%016llx\n", WG_FrameHash());
@@ -381,7 +381,7 @@ int main(int argc, char **argv)
     if (dump_path != NULL && !WG_WriteFrame(dump_path))
     {
         fprintf(stderr, "Unable to write frame dump: %s\n", dump_path);
-        wolf3dgeneric_Shutdown();
+        wolf3d_Shutdown();
         return 1;
     }
     if (music_path != NULL
@@ -391,14 +391,14 @@ int main(int argc, char **argv)
                               left_position, right_position, music_path)))
     {
         fprintf(stderr, "Unable to write music dump: %s\n", music_path);
-        wolf3dgeneric_Shutdown();
+        wolf3d_Shutdown();
         return 1;
     }
-    wolf3dgeneric_Shutdown();
+    wolf3d_Shutdown();
 
     if (smoke_test)
     {
-        if (result != WG_RESULT_NOT_IMPLEMENTED)
+        if (result != WOLF3D_RESULT_NOT_IMPLEMENTED)
         {
             fprintf(stderr, "Unexpected headless result %d.\n", (int)result);
             return 1;
@@ -410,5 +410,5 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Headless run completed with result %d.\n", (int)result);
     }
-    return result == WG_RESULT_NOT_IMPLEMENTED ? 0 : 1;
+    return result == WOLF3D_RESULT_NOT_IMPLEMENTED ? 0 : 1;
 }

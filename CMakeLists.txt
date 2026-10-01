@@ -5,7 +5,7 @@ if(POLICY CMP0091)
 endif()
 
 include(cmake/WGVersion.cmake)
-project(wolf3dgeneric VERSION "${WG_PROJECT_VERSION}" LANGUAGES C)
+project(wolf3d VERSION "${WG_PROJECT_VERSION}" LANGUAGES C)
 
 if(NOT PROJECT_VERSION STREQUAL WG_PROJECT_VERSION)
     message(FATAL_ERROR
@@ -142,21 +142,24 @@ set(WG_CORE_SOURCES
     src/ID_VL.c
     src/WL_MAIN.c
     src/WL_MENU.c
-    src/WOLF3DGENERIC.c
+    src/WOLF3D.c
 )
 
-add_library(wolf3dgeneric SHARED ${WG_CORE_SOURCES})
-set_target_properties(wolf3dgeneric PROPERTIES
-    OUTPUT_NAME "wolf3dgeneric"
+add_library(wolf3d SHARED ${WG_CORE_SOURCES})
+add_library(wolf3d::wolf3d ALIAS wolf3d)
+set_target_properties(wolf3d PROPERTIES
+    OUTPUT_NAME "wolf3d"
+    VERSION "${PROJECT_VERSION}"
+    SOVERSION "1"
     C_VISIBILITY_PRESET hidden
     BUILD_RPATH_USE_ORIGIN ON
 )
-target_compile_definitions(wolf3dgeneric PRIVATE WOLF3DGENERIC_BUILD)
+target_compile_definitions(wolf3d PRIVATE WOLF3D_BUILD)
 
 if(WG_BUILD_HEADLESS)
-    add_library(wolf3dgeneric-internal STATIC ${WG_CORE_SOURCES})
-    target_compile_definitions(wolf3dgeneric-internal
-        PUBLIC WOLF3DGENERIC_STATIC)
+    add_library(wolf3d-internal STATIC ${WG_CORE_SOURCES})
+    target_compile_definitions(wolf3d-internal
+        PUBLIC WOLF3D_STATIC)
 endif()
 
 function(wg_configure_core target)
@@ -186,9 +189,9 @@ function(wg_configure_core target)
     endif()
 endfunction()
 
-wg_configure_core(wolf3dgeneric)
+wg_configure_core(wolf3d)
 if(WG_BUILD_HEADLESS)
-    wg_configure_core(wolf3dgeneric-internal)
+    wg_configure_core(wolf3d-internal)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -202,7 +205,7 @@ if(MSVC AND NOT WG_STATIC_MSVC_RUNTIME)
     set(WG_RELEASE_RUNTIME_SUFFIX "-dynamic-crt")
 endif()
 set(WG_LIBRARY_RELEASE_DIR
-    "${WG_DIST_ROOT}/wolf3dgeneric-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_RUNTIME_SUFFIX}")
+    "${WG_DIST_ROOT}/wolf3d-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_RUNTIME_SUFFIX}")
 
 set(WG_LIBRARY_RELEASE_COMMANDS
     COMMAND ${CMAKE_COMMAND} -E remove_directory
@@ -210,14 +213,14 @@ set(WG_LIBRARY_RELEASE_COMMANDS
     COMMAND ${CMAKE_COMMAND} -E make_directory
         "${WG_LIBRARY_RELEASE_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:wolf3dgeneric>"
-        "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3dgeneric>"
+        "$<TARGET_FILE:wolf3d>"
+        "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3d>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:nuked-opl3>"
         "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/include/WOLF3DGENERIC.h"
-        "${WG_LIBRARY_RELEASE_DIR}/WOLF3DGENERIC.h"
+        "${CMAKE_SOURCE_DIR}/include/WOLF3D.h"
+        "${WG_LIBRARY_RELEASE_DIR}/WOLF3D.h"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/LICENSE"
         "${WG_LIBRARY_RELEASE_DIR}/COPYING.txt"
@@ -234,14 +237,23 @@ set(WG_LIBRARY_RELEASE_COMMANDS
 if(WIN32)
     list(APPEND WG_LIBRARY_RELEASE_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_LINKER_FILE:wolf3dgeneric>"
-            "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_LINKER_FILE_NAME:wolf3dgeneric>"
+            "$<TARGET_LINKER_FILE:wolf3d>"
+            "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_LINKER_FILE_NAME:wolf3d>"
+    )
+elseif(UNIX AND NOT APPLE)
+    list(APPEND WG_LIBRARY_RELEASE_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "$<TARGET_FILE_NAME:wolf3d>"
+            "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_SONAME_FILE_NAME:wolf3d>"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "$<TARGET_SONAME_FILE_NAME:wolf3d>"
+            "${WG_LIBRARY_RELEASE_DIR}/$<TARGET_LINKER_FILE_NAME:wolf3d>"
     )
 endif()
 add_custom_target(library-release
     ${WG_LIBRARY_RELEASE_COMMANDS}
-    DEPENDS wolf3dgeneric nuked-opl3
-    COMMENT "Staging ${WG_RELEASE_ARCH} wolf3dgeneric shared library"
+    DEPENDS wolf3d nuked-opl3
+    COMMENT "Staging ${WG_RELEASE_ARCH} wolf3d shared library"
     VERBATIM
 )
 
@@ -268,7 +280,7 @@ if(WG_BUILD_HEADLESS)
         platforms/headless/MAIN.c
         platforms/headless/WG_HEADLESS.c
     )
-    wg_configure_host(wolf3dgeneric-headless wolf3dgeneric-internal)
+    wg_configure_host(wolf3dgeneric-headless wolf3d-internal)
     target_include_directories(wolf3dgeneric-headless PRIVATE src)
 endif()
 
@@ -277,7 +289,7 @@ if(WG_BUILD_WIN32)
         platforms/WG_TEXT_OUTPUT.c
         platforms/win32/WG_WIN32.c
     )
-    wg_configure_host(wolf3dgeneric-win32 wolf3dgeneric)
+    wg_configure_host(wolf3dgeneric-win32 wolf3d::wolf3d)
     target_compile_definitions(wolf3dgeneric-win32 PRIVATE
         WIN32_LEAN_AND_MEAN
         UNICODE
@@ -296,8 +308,8 @@ if(WG_BUILD_WIN32)
             "$<TARGET_FILE:wolf3dgeneric-win32>"
             "${WG_WIN32_RELEASE_DIR}/wolf3dgeneric.exe"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:wolf3dgeneric>"
-            "${WG_WIN32_RELEASE_DIR}/wolf3dgeneric.dll"
+            "$<TARGET_FILE:wolf3d>"
+            "${WG_WIN32_RELEASE_DIR}/wolf3d.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:nuked-opl3>"
             "${WG_WIN32_RELEASE_DIR}/Nuked-OPL3.dll"
@@ -313,7 +325,7 @@ if(WG_BUILD_WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_CURRENT_BINARY_DIR}/WIN32-README.txt"
             "${WG_WIN32_RELEASE_DIR}/README.txt"
-        DEPENDS wolf3dgeneric-win32 wolf3dgeneric nuked-opl3
+        DEPENDS wolf3dgeneric-win32 wolf3d nuked-opl3
         COMMENT "Staging ${WG_RELEASE_ARCH} Win32 release folder"
         VERBATIM
     )
@@ -331,7 +343,7 @@ if(WG_BUILD_SDL3)
             platforms/sdl3/WG_SDL3.c
         )
     endif()
-    wg_configure_host(wolf3dgeneric-sdl3 wolf3dgeneric)
+    wg_configure_host(wolf3dgeneric-sdl3 wolf3d::wolf3d)
     target_link_libraries(wolf3dgeneric-sdl3 PRIVATE SDL3::SDL3-shared)
     set_target_properties(wolf3dgeneric-sdl3 PROPERTIES
         BUILD_RPATH "$ORIGIN"
@@ -364,8 +376,8 @@ if(WG_BUILD_SDL3)
             "$<TARGET_FILE:wolf3dgeneric-sdl3>"
             "${WG_SDL3_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3dgeneric-sdl3>"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:wolf3dgeneric>"
-            "${WG_SDL3_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3dgeneric>"
+            "$<TARGET_FILE:wolf3d>"
+            "${WG_SDL3_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3d>"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:nuked-opl3>"
             "${WG_SDL3_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
@@ -390,6 +402,12 @@ if(WG_BUILD_SDL3)
     )
     if(UNIX AND NOT APPLE)
         list(APPEND WG_SDL3_RELEASE_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -E create_symlink
+                "$<TARGET_FILE_NAME:wolf3d>"
+                "${WG_SDL3_RELEASE_DIR}/$<TARGET_SONAME_FILE_NAME:wolf3d>"
+            COMMAND ${CMAKE_COMMAND} -E create_symlink
+                "$<TARGET_SONAME_FILE_NAME:wolf3d>"
+                "${WG_SDL3_RELEASE_DIR}/$<TARGET_LINKER_FILE_NAME:wolf3d>"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "$<TARGET_SONAME_FILE:SDL3::SDL3-shared>"
                 "${WG_SDL3_RELEASE_DIR}/$<TARGET_SONAME_FILE_NAME:SDL3::SDL3-shared>"
@@ -397,7 +415,7 @@ if(WG_BUILD_SDL3)
     endif()
     add_custom_target(sdl3-release
         ${WG_SDL3_RELEASE_COMMANDS}
-        DEPENDS wolf3dgeneric-sdl3 wolf3dgeneric nuked-opl3 SDL3::SDL3-shared
+        DEPENDS wolf3dgeneric-sdl3 wolf3d nuked-opl3 SDL3::SDL3-shared
         COMMENT "Staging ${WG_RELEASE_ARCH} SDL3 GUI release folder"
         VERBATIM
     )
@@ -417,7 +435,7 @@ if(WG_BUILD_LINUX_CONSOLE)
         platforms/linux-console/MAIN.c
         platforms/linux-console/WG_LINUX_CONSOLE.c
     )
-    wg_configure_host(wolf3dgeneric-linux-console wolf3dgeneric)
+    wg_configure_host(wolf3dgeneric-linux-console wolf3d::wolf3d)
     target_link_libraries(wolf3dgeneric-linux-console PRIVATE
         PkgConfig::LIBDRM
         PkgConfig::ALSA
@@ -438,8 +456,14 @@ if(WG_BUILD_LINUX_CONSOLE)
             "$<TARGET_FILE:wolf3dgeneric-linux-console>"
             "${WG_LINUX_CONSOLE_RELEASE_DIR}/wolf3dgeneric"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:wolf3dgeneric>"
-            "${WG_LINUX_CONSOLE_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3dgeneric>"
+            "$<TARGET_FILE:wolf3d>"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/$<TARGET_FILE_NAME:wolf3d>"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "$<TARGET_FILE_NAME:wolf3d>"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/$<TARGET_SONAME_FILE_NAME:wolf3d>"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "$<TARGET_SONAME_FILE_NAME:wolf3d>"
+            "${WG_LINUX_CONSOLE_RELEASE_DIR}/$<TARGET_LINKER_FILE_NAME:wolf3d>"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:nuked-opl3>"
             "${WG_LINUX_CONSOLE_RELEASE_DIR}/$<TARGET_FILE_NAME:nuked-opl3>"
@@ -455,7 +479,7 @@ if(WG_BUILD_LINUX_CONSOLE)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_CURRENT_BINARY_DIR}/LINUX-CONSOLE-README.txt"
             "${WG_LINUX_CONSOLE_RELEASE_DIR}/README.txt"
-        DEPENDS wolf3dgeneric-linux-console wolf3dgeneric nuked-opl3
+        DEPENDS wolf3dgeneric-linux-console wolf3d nuked-opl3
         COMMENT "Staging ${WG_RELEASE_ARCH} Linux console release folder"
         VERBATIM
     )
@@ -473,7 +497,7 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
         platforms/WG_TEXT_OUTPUT.c
         tests/WG_TESTS.c
     )
-    wg_configure_host(wg-tests wolf3dgeneric-internal)
+    wg_configure_host(wg-tests wolf3d-internal)
     target_include_directories(wg-tests PRIVATE platforms src)
     add_test(NAME unit-tests COMMAND wg-tests)
 

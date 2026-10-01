@@ -2,12 +2,12 @@
 
 #include <string.h>
 
-static wg_platform_api_t wg_platform;
+static wolf3d_platform_api_t wg_platform;
 
-wg_result_t wolf3dgeneric_SetPlatform(const wg_platform_api_t *platform)
+wolf3d_result_t wolf3d_SetPlatform(const wolf3d_platform_api_t *platform)
 {
     if (platform == NULL
-        || platform->api_version != WG_PLATFORM_API_VERSION
+        || platform->api_version != WOLF3D_PLATFORM_API_VERSION
         || platform->struct_size < sizeof(*platform)
         || platform->init == NULL
         || platform->shutdown == NULL
@@ -25,10 +25,10 @@ wg_result_t wolf3dgeneric_SetPlatform(const wg_platform_api_t *platform)
         || platform->pcm_writable_frames == NULL
         || platform->pcm_submit == NULL)
     {
-        return WG_RESULT_INVALID_ARGUMENT;
+        return WOLF3D_RESULT_INVALID_ARGUMENT;
     }
     memcpy(&wg_platform, platform, sizeof(wg_platform));
-    return WG_RESULT_OK;
+    return WOLF3D_RESULT_OK;
 }
 
 int WG_Init(void)
@@ -66,7 +66,7 @@ void WG_SleepMs(uint32_t milliseconds)
     }
 }
 
-int WG_PollEvent(wg_event_t *event)
+int WG_PollEvent(wolf3d_event_t *event)
 {
     return wg_platform.poll_event != NULL
                && wg_platform.poll_event(event);

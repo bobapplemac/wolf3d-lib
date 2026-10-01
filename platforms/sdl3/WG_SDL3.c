@@ -1,4 +1,4 @@
-#include "WOLF3DGENERIC.h"
+#include "WOLF3D.h"
 #include "../WG_HOST.h"
 #include "../WG_TEXT_OUTPUT.h"
 
@@ -20,15 +20,15 @@ static SDL_Renderer *wg_renderer;
 static SDL_Texture *wg_texture;
 static SDL_AudioStream *wg_audio;
 static uint16_t wg_audio_channels;
-static uint32_t wg_rgba[WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT];
-static SDL_Gamepad *wg_gamepads[WG_MAX_JOYSTICKS];
-static int16_t wg_joystick_x[WG_MAX_JOYSTICKS];
-static int16_t wg_joystick_y[WG_MAX_JOYSTICKS];
-static uint32_t wg_joystick_buttons[WG_MAX_JOYSTICKS];
-static uint8_t wg_joystick_connected[WG_MAX_JOYSTICKS];
-static uint8_t wg_joystick_dirty[WG_MAX_JOYSTICKS];
-static uint8_t wg_text_screen[WG_TEXT_COLUMNS * WG_TEXT_ROWS
-                              * WG_TEXT_CELL_BYTES];
+static uint32_t wg_rgba[WOLF3D_SCREEN_WIDTH * WOLF3D_SCREEN_HEIGHT];
+static SDL_Gamepad *wg_gamepads[WOLF3D_MAX_JOYSTICKS];
+static int16_t wg_joystick_x[WOLF3D_MAX_JOYSTICKS];
+static int16_t wg_joystick_y[WOLF3D_MAX_JOYSTICKS];
+static uint32_t wg_joystick_buttons[WOLF3D_MAX_JOYSTICKS];
+static uint8_t wg_joystick_connected[WOLF3D_MAX_JOYSTICKS];
+static uint8_t wg_joystick_dirty[WOLF3D_MAX_JOYSTICKS];
+static uint8_t wg_text_screen[WOLF3D_TEXT_COLUMNS * WOLF3D_TEXT_ROWS
+                              * WOLF3D_TEXT_CELL_BYTES];
 static uint16_t wg_text_columns;
 static uint16_t wg_text_rows;
 static int wg_mouse_enabled;
@@ -147,7 +147,7 @@ static uint16_t WG_SDLScanCode(SDL_Scancode code)
         case SDL_SCANCODE_KP_PERIOD: return 0x53;
         case SDL_SCANCODE_F11: return 0x57;
         case SDL_SCANCODE_F12: return 0x58;
-        case SDL_SCANCODE_PAUSE: return WG_KEY_PAUSE;
+        case SDL_SCANCODE_PAUSE: return WOLF3D_KEY_PAUSE;
         default: return 0;
     }
 }
@@ -155,7 +155,7 @@ static uint16_t WG_SDLScanCode(SDL_Scancode code)
 static void WG_SDLCloseGamepads(void)
 {
     unsigned int slot;
-    for (slot = 0U; slot < WG_MAX_JOYSTICKS; ++slot)
+    for (slot = 0U; slot < WOLF3D_MAX_JOYSTICKS; ++slot)
     {
         if (wg_gamepads[slot] != NULL)
         {
@@ -173,7 +173,7 @@ static void WG_SDLRefreshGamepads(void)
 
     WG_SDLCloseGamepads();
     identifiers = SDL_GetGamepads(&count);
-    for (slot = 0U; slot < WG_MAX_JOYSTICKS; ++slot)
+    for (slot = 0U; slot < WOLF3D_MAX_JOYSTICKS; ++slot)
     {
         uint8_t connected = 0U;
         if (identifiers != NULL && (int)slot < count)
@@ -193,7 +193,7 @@ static void WG_SDLRefreshGamepads(void)
 static void WG_SDLPollGamepads(void)
 {
     unsigned int slot;
-    for (slot = 0U; slot < WG_MAX_JOYSTICKS; ++slot)
+    for (slot = 0U; slot < WOLF3D_MAX_JOYSTICKS; ++slot)
     {
         int16_t x;
         int16_t y;
@@ -220,16 +220,16 @@ static void WG_SDLPollGamepads(void)
     }
 }
 
-static int WG_SDLEmitGamepad(wg_event_t *event)
+static int WG_SDLEmitGamepad(wolf3d_event_t *event)
 {
     unsigned int slot;
     WG_SDLPollGamepads();
-    for (slot = 0U; slot < WG_MAX_JOYSTICKS; ++slot)
+    for (slot = 0U; slot < WOLF3D_MAX_JOYSTICKS; ++slot)
     {
         if (wg_joystick_dirty[slot])
         {
             memset(event, 0, sizeof(*event));
-            event->type = WG_EVENT_JOYSTICK;
+            event->type = WOLF3D_EVENT_JOYSTICK;
             event->joystick = (uint8_t)slot;
             event->connected = wg_joystick_connected[slot];
             event->x = wg_joystick_x[slot];
@@ -280,7 +280,7 @@ static int WG_SDLInit(void)
     }
     wg_texture = SDL_CreateTexture(wg_renderer, SDL_PIXELFORMAT_RGBA8888,
                                    SDL_TEXTUREACCESS_STREAMING,
-                                   WG_SCREEN_WIDTH, WG_SCREEN_HEIGHT);
+                                   WOLF3D_SCREEN_WIDTH, WOLF3D_SCREEN_HEIGHT);
     if (wg_texture == NULL
         || !SDL_SetTextureScaleMode(wg_texture, SDL_SCALEMODE_NEAREST)
         || !SDL_SetRenderLogicalPresentation(wg_renderer,
@@ -352,7 +352,7 @@ static void WG_SDLPresent(const uint8_t *pixels, const uint8_t *palette)
     {
         return;
     }
-    for (index = 0U; index < WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT; ++index)
+    for (index = 0U; index < WOLF3D_SCREEN_WIDTH * WOLF3D_SCREEN_HEIGHT; ++index)
     {
         const uint8_t *color = palette + (size_t)pixels[index] * 3U;
         wg_rgba[index] = ((uint32_t)color[0] << 24)
@@ -360,7 +360,7 @@ static void WG_SDLPresent(const uint8_t *pixels, const uint8_t *palette)
                        | ((uint32_t)color[2] << 8) | 0xffU;
     }
     (void)SDL_UpdateTexture(wg_texture, NULL, wg_rgba,
-                            WG_SCREEN_WIDTH * (int)sizeof(wg_rgba[0]));
+                            WOLF3D_SCREEN_WIDTH * (int)sizeof(wg_rgba[0]));
     (void)SDL_SetRenderDrawColor(wg_renderer, 0, 0, 0, 255);
     (void)SDL_RenderClear(wg_renderer);
     (void)SDL_RenderTexture(wg_renderer, wg_texture, NULL, &destination);
@@ -377,7 +377,7 @@ static void WG_SDLSleepMs(uint32_t milliseconds)
     SDL_Delay(milliseconds);
 }
 
-static int WG_SDLPollEvent(wg_event_t *event)
+static int WG_SDLPollEvent(wolf3d_event_t *event)
 {
     SDL_Event sdl_event;
     if (event == NULL)
@@ -394,7 +394,7 @@ static int WG_SDLPollEvent(wg_event_t *event)
         switch (sdl_event.type)
         {
             case SDL_EVENT_QUIT:
-                event->type = WG_EVENT_QUIT;
+                event->type = WOLF3D_EVENT_QUIT;
                 return 1;
             case SDL_EVENT_KEY_DOWN:
             case SDL_EVENT_KEY_UP:
@@ -429,7 +429,7 @@ static int WG_SDLPollEvent(wg_event_t *event)
                 event->key = WG_SDLScanCode(sdl_event.key.scancode);
                 if (event->key != 0U && !sdl_event.key.repeat)
                 {
-                    event->type = WG_EVENT_KEY;
+                    event->type = WOLF3D_EVENT_KEY;
                     event->pressed = sdl_event.key.down;
                     return 1;
                 }
@@ -437,7 +437,7 @@ static int WG_SDLPollEvent(wg_event_t *event)
             case SDL_EVENT_MOUSE_MOTION:
                 if (wg_mouse_enabled)
                 {
-                    event->type = WG_EVENT_MOUSE_MOTION;
+                    event->type = WOLF3D_EVENT_MOUSE_MOTION;
                     event->x = WG_SDLClampMotion(sdl_event.motion.xrel);
                     event->y = WG_SDLClampMotion(sdl_event.motion.yrel);
                     return 1;
@@ -448,7 +448,7 @@ static int WG_SDLPollEvent(wg_event_t *event)
                 if (wg_mouse_enabled && sdl_event.button.button <= 3U)
                 {
                     static const uint8_t buttons[4] = { 0U, 1U, 3U, 2U };
-                    event->type = WG_EVENT_MOUSE_BUTTON;
+                    event->type = WOLF3D_EVENT_MOUSE_BUTTON;
                     event->button = buttons[sdl_event.button.button];
                     event->pressed = sdl_event.button.down;
                     return 1;
@@ -511,11 +511,11 @@ static void WG_SDLPresentText(const uint8_t *cells, uint16_t columns,
 {
     size_t bytes;
     if (cells == NULL || columns == 0U || rows == 0U
-        || columns > WG_TEXT_COLUMNS || rows > WG_TEXT_ROWS)
+        || columns > WOLF3D_TEXT_COLUMNS || rows > WOLF3D_TEXT_ROWS)
     {
         return;
     }
-    bytes = (size_t)columns * rows * WG_TEXT_CELL_BYTES;
+    bytes = (size_t)columns * rows * WOLF3D_TEXT_CELL_BYTES;
     memcpy(wg_text_screen, cells, bytes);
     wg_text_columns = columns;
     wg_text_rows = rows;
@@ -589,10 +589,10 @@ static int WG_SDLPCMSubmit(const int16_t *samples, size_t frame_count)
 
 int WG_InstallPlatform(void)
 {
-    static const wg_platform_api_t platform =
+    static const wolf3d_platform_api_t platform =
     {
-        WG_PLATFORM_API_VERSION,
-        sizeof(wg_platform_api_t),
+        WOLF3D_PLATFORM_API_VERSION,
+        sizeof(wolf3d_platform_api_t),
         WG_SDLInit,
         WG_SDLShutdown,
         WG_SDLPresent,
@@ -609,7 +609,7 @@ int WG_InstallPlatform(void)
         WG_SDLPCMWritableFrames,
         WG_SDLPCMSubmit
     };
-    return wolf3dgeneric_SetPlatform(&platform) == WG_RESULT_OK;
+    return wolf3d_SetPlatform(&platform) == WOLF3D_RESULT_OK;
 }
 
 static void WG_SDLPrintHelp(const char *program)
@@ -626,7 +626,7 @@ static void WG_SDLPrintHelp(const char *program)
 int main(int argc, char **argv)
 {
     int index;
-    wg_result_t result;
+    wolf3d_result_t result;
 
     for (index = 1; index < argc; ++index)
     {
@@ -648,12 +648,12 @@ int main(int argc, char **argv)
     {
         return 1;
     }
-    result = wolf3dgeneric_Create(argc, argv);
-    if (result == WG_RESULT_OK)
+    result = wolf3d_Create(argc, argv);
+    if (result == WOLF3D_RESULT_OK)
     {
-        result = wolf3dgeneric_Run();
-        wolf3dgeneric_Shutdown();
+        result = wolf3d_Run();
+        wolf3d_Shutdown();
     }
-    return result == WG_RESULT_QUIT || result == WG_RESULT_NOT_IMPLEMENTED
+    return result == WOLF3D_RESULT_QUIT || result == WOLF3D_RESULT_NOT_IMPLEMENTED
                ? 0 : 1;
 }

@@ -49,7 +49,7 @@ They are deliberately small portability or safety layers:
 `third_party/Nuked-OPL3` is intentionally outside both groups: it is the
 unaltered LGPL OPL emulator selected by the project, built as its own library.
 
-`WOLF3DGENERIC.c` and `WOLF3DGENERIC.h` are the new public engine boundary.
+`WOLF3D.c` and `WOLF3D.h` are the new public engine boundary.
 Routine and data names use the `WG_` namespace where exposing an original global
 would create hidden ownership or host-size assumptions. Each translated legacy
 file records the original routines it currently contains; as additional systems

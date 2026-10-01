@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "WOLF3DGENERIC.h"
+#include "WOLF3D.h"
 #include "WG_AUDIO.h"
 #include "WG_ASSETS.h"
 #include "ID_CA.h"
@@ -3087,15 +3087,15 @@ static void TestFileIO(void)
 
 static void TestTextOutput(void)
 {
-    uint8_t cells[8U * 5U * WG_TEXT_CELL_BYTES];
+    uint8_t cells[8U * 5U * WOLF3D_TEXT_CELL_BYTES];
 
     memset(cells, 0, sizeof(cells));
     CHECK(WG_TextScreenContentRows(cells, 8U, 5U) == 0U);
-    cells[(1U * 8U + 2U) * WG_TEXT_CELL_BYTES] = 'A';
+    cells[(1U * 8U + 2U) * WOLF3D_TEXT_CELL_BYTES] = 'A';
     CHECK(WG_TextScreenContentRows(cells, 8U, 5U) == 2U);
-    cells[(4U * 8U + 7U) * WG_TEXT_CELL_BYTES] = 0xdbU;
+    cells[(4U * 8U + 7U) * WOLF3D_TEXT_CELL_BYTES] = 0xdbU;
     CHECK(WG_TextScreenContentRows(cells, 8U, 5U) == 5U);
-    cells[(4U * 8U + 7U) * WG_TEXT_CELL_BYTES] = ' ';
+    cells[(4U * 8U + 7U) * WOLF3D_TEXT_CELL_BYTES] = ' ';
     CHECK(WG_TextScreenContentRows(cells, 8U, 5U) == 2U);
 }
 
@@ -3140,9 +3140,9 @@ static void TestScanCodeASCII(void)
     CHECK(ID_US_ScanToASCII(0x02U, 1, 0) == '!');
     CHECK(ID_US_ScanToASCII(0x39U, 0, 0) == ' ');
     CHECK(ID_US_ScanToASCII(0x80U, 0, 0) == 0);
-    CHECK(strcmp(ID_US_ScanName(WG_KEY_CONTROL), "Ctrl") == 0);
-    CHECK(strcmp(ID_US_ScanName(WG_KEY_RIGHT_SHIFT), "RShft") == 0);
-    CHECK(strcmp(ID_US_ScanName(WG_KEY_LEFT), "Left") == 0);
+    CHECK(strcmp(ID_US_ScanName(WOLF3D_KEY_CONTROL), "Ctrl") == 0);
+    CHECK(strcmp(ID_US_ScanName(WOLF3D_KEY_RIGHT_SHIFT), "RShft") == 0);
+    CHECK(strcmp(ID_US_ScanName(WOLF3D_KEY_LEFT), "Left") == 0);
     CHECK(strcmp(ID_US_ScanName(0x1eU), "A") == 0);
     CHECK(strcmp(ID_US_ScanName(0x0dU), "+") == 0);
     CHECK(strcmp(ID_US_ScanName(0x2bU), "|") == 0);
@@ -3693,12 +3693,12 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
         unsigned frame;
 
         CHECK(WG_GraphicsDecodeTextScreen(&graphics, 0, text_screen));
-        CHECK(WG_TextScreenContentRows(text_screen, WG_TEXT_COLUMNS,
-                                       WG_TEXT_ROWS)
+        CHECK(WG_TextScreenContentRows(text_screen, WOLF3D_TEXT_COLUMNS,
+                                       WOLF3D_TEXT_ROWS)
               == (apogee_graphics ? 24U : 7U));
         CHECK(WG_GraphicsDecodeTextScreen(&graphics, 1, text_screen));
-        CHECK(WG_TextScreenContentRows(text_screen, WG_TEXT_COLUMNS,
-                                       WG_TEXT_ROWS) == 24U);
+        CHECK(WG_TextScreenContentRows(text_screen, WOLF3D_TEXT_COLUMNS,
+                                       WOLF3D_TEXT_ROWS) == 24U);
 
         memset(&psyched_level, 0, sizeof(psyched_level));
         psyched_level.player_health = 100U;
@@ -4066,10 +4066,10 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
             static const uint8_t joystick_bindings[4] =
                 { 3U, 2U, 0U, 1U };
             static const uint16_t action_keys[4] =
-                { WG_KEY_RIGHT_SHIFT, WG_KEY_SPACE,
-                  WG_KEY_CONTROL, WG_KEY_ALT };
+                { WOLF3D_KEY_RIGHT_SHIFT, WOLF3D_KEY_SPACE,
+                  WOLF3D_KEY_CONTROL, WOLF3D_KEY_ALT };
             static const uint16_t movement_keys[4] =
-                { WG_KEY_LEFT, WG_KEY_RIGHT, WG_KEY_UP, WG_KEY_DOWN };
+                { WOLF3D_KEY_LEFT, WOLF3D_KEY_RIGHT, WOLF3D_KEY_UP, WOLF3D_KEY_DOWN };
 
             memset(framebuffer, 0, sizeof(framebuffer));
             CHECK(WL_DrawCustomizeMenu(
@@ -5213,8 +5213,8 @@ static void TestPortableConfig(void)
     source.high_scores[0].completed = 8U;
     source.high_scores[0].episode = 2U;
     memcpy(source.high_scores[0].name, "PORTABLE", 9U);
-    source.action_keys[0] = WG_KEY_ALT;
-    source.movement_keys[3] = WG_KEY_HOME;
+    source.action_keys[0] = WOLF3D_KEY_ALT;
+    source.movement_keys[3] = WOLF3D_KEY_HOME;
     source.mouse_bindings[0] = 2U;
     source.mouse_bindings[1] = UINT8_MAX;
     source.sound_mode = 1U;
@@ -5338,17 +5338,17 @@ static void TestGameSelection(void)
 
 static void TestPlatformAPI(void)
 {
-    wg_platform_api_t platform;
+    wolf3d_platform_api_t platform;
 
     memset(&platform, 0, sizeof(platform));
-    CHECK(wolf3dgeneric_SetPlatform(NULL) == WG_RESULT_INVALID_ARGUMENT);
-    platform.api_version = WG_PLATFORM_API_VERSION;
+    CHECK(wolf3d_SetPlatform(NULL) == WOLF3D_RESULT_INVALID_ARGUMENT);
+    platform.api_version = WOLF3D_PLATFORM_API_VERSION;
     platform.struct_size = sizeof(platform);
-    CHECK(wolf3dgeneric_SetPlatform(&platform)
-          == WG_RESULT_INVALID_ARGUMENT);
-    platform.api_version = WG_PLATFORM_API_VERSION + 1U;
-    CHECK(wolf3dgeneric_SetPlatform(&platform)
-          == WG_RESULT_INVALID_ARGUMENT);
+    CHECK(wolf3d_SetPlatform(&platform)
+          == WOLF3D_RESULT_INVALID_ARGUMENT);
+    platform.api_version = WOLF3D_PLATFORM_API_VERSION + 1U;
+    CHECK(wolf3d_SetPlatform(&platform)
+          == WOLF3D_RESULT_INVALID_ARGUMENT);
 }
 
 static void TestSignonAssets(void)

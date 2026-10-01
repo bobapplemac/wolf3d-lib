@@ -1,4 +1,4 @@
-#include "WOLF3DGENERIC.h"
+#include "WOLF3D.h"
 #include "../WG_HOST.h"
 #include "../WG_TEXT_OUTPUT.h"
 #include "WG_LINUX_CONSOLE.h"
@@ -23,7 +23,7 @@
 
 #define WG_PATH_CAPACITY 512U
 #define WG_INPUT_CAPACITY 32U
-#define WG_EVENT_QUEUE_CAPACITY 128U
+#define WOLF3D_EVENT_QUEUE_CAPACITY 128U
 #define WG_BITS_PER_LONG (sizeof(unsigned long) * 8U)
 #define WG_BIT_WORD(bit) ((unsigned)(bit) / WG_BITS_PER_LONG)
 #define WG_BIT_MASK(bit) (1UL << ((unsigned)(bit) % WG_BITS_PER_LONG))
@@ -86,15 +86,15 @@ static struct timespec wg_clock_start;
 static volatile sig_atomic_t wg_quit_requested;
 static int wg_quit_delivered;
 static snd_pcm_t *wg_pcm;
-static uint8_t wg_previous_pixels[WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT];
-static uint8_t wg_previous_palette[WG_PALETTE_COLORS * 3U];
+static uint8_t wg_previous_pixels[WOLF3D_SCREEN_WIDTH * WOLF3D_SCREEN_HEIGHT];
+static uint8_t wg_previous_palette[WOLF3D_PALETTE_COLORS * 3U];
 static int wg_previous_frame_valid;
-static uint8_t wg_text_screen[WG_TEXT_COLUMNS * WG_TEXT_ROWS
-                              * WG_TEXT_CELL_BYTES];
+static uint8_t wg_text_screen[WOLF3D_TEXT_COLUMNS * WOLF3D_TEXT_ROWS
+                              * WOLF3D_TEXT_CELL_BYTES];
 static uint16_t wg_text_columns;
 static uint16_t wg_text_rows;
 
-static wg_event_t wg_event_queue[WG_EVENT_QUEUE_CAPACITY];
+static wolf3d_event_t wg_event_queue[WOLF3D_EVENT_QUEUE_CAPACITY];
 static size_t wg_event_read;
 static size_t wg_event_write;
 
@@ -148,9 +148,9 @@ static int WG_TestBit(const unsigned long *bits, unsigned bit)
     return (bits[WG_BIT_WORD(bit)] & WG_BIT_MASK(bit)) != 0UL;
 }
 
-static void WG_QueueEvent(const wg_event_t *event)
+static void WG_QueueEvent(const wolf3d_event_t *event)
 {
-    size_t next = (wg_event_write + 1U) % WG_EVENT_QUEUE_CAPACITY;
+    size_t next = (wg_event_write + 1U) % WOLF3D_EVENT_QUEUE_CAPACITY;
 
     if (next != wg_event_read)
     {
@@ -214,7 +214,7 @@ static uint16_t WG_LinuxKey(unsigned code)
         case KEY_KP0: case KEY_INSERT: return 0x52;
         case KEY_KPDOT: case KEY_DELETE: return 0x53;
         case KEY_F11: return 0x57; case KEY_F12: return 0x58;
-        case KEY_PAUSE: return WG_KEY_PAUSE;
+        case KEY_PAUSE: return WOLF3D_KEY_PAUSE;
         default: return 0;
     }
 }
@@ -243,9 +243,9 @@ static int16_t WG_ScaleAbsolute(int value, const struct input_absinfo *info)
 
 static void WG_QueueJoystick(wg_input_device_t *device)
 {
-    wg_event_t event = { 0 };
+    wolf3d_event_t event = { 0 };
 
-    event.type = WG_EVENT_JOYSTICK;
+    event.type = WOLF3D_EVENT_JOYSTICK;
     event.joystick = device->joystick_index;
     event.connected = 1U;
     event.x = device->joystick_x;
@@ -276,9 +276,9 @@ static void WG_ProcessInputEvent(wg_input_device_t *device,
 
         if (key != 0U)
         {
-            wg_event_t event = { 0 };
+            wolf3d_event_t event = { 0 };
 
-            event.type = WG_EVENT_KEY;
+            event.type = WOLF3D_EVENT_KEY;
             event.pressed = source->value != 0;
             event.key = key;
             WG_QueueEvent(&event);
@@ -293,9 +293,9 @@ static void WG_ProcessInputEvent(wg_input_device_t *device,
         else if (source->code == BTN_MIDDLE) button = 3U;
         if (button != 0xffU)
         {
-            wg_event_t event = { 0 };
+            wolf3d_event_t event = { 0 };
 
-            event.type = WG_EVENT_MOUSE_BUTTON;
+            event.type = WOLF3D_EVENT_MOUSE_BUTTON;
             event.pressed = source->value != 0;
             event.button = button;
             WG_QueueEvent(&event);
@@ -349,9 +349,9 @@ static void WG_ProcessInputEvent(wg_input_device_t *device,
     {
         if (device->mouse_x != 0 || device->mouse_y != 0)
         {
-            wg_event_t event = { 0 };
+            wolf3d_event_t event = { 0 };
 
-            event.type = WG_EVENT_MOUSE_MOTION;
+            event.type = WOLF3D_EVENT_MOUSE_MOTION;
             event.x = (int16_t)(device->mouse_x < INT16_MIN ? INT16_MIN
                                 : device->mouse_x > INT16_MAX ? INT16_MAX
                                 : device->mouse_x);
@@ -428,7 +428,7 @@ static int WG_OpenInput(const char *path)
         {
             if (wg_inputs[index].joystick) ++joystick_index;
         }
-        if (joystick_index >= WG_MAX_JOYSTICKS)
+        if (joystick_index >= WOLF3D_MAX_JOYSTICKS)
         {
             device.joystick = 0;
         }
@@ -496,9 +496,9 @@ static void WG_CloseInputs(void)
     {
         if (wg_inputs[index].joystick)
         {
-            wg_event_t event = { 0 };
+            wolf3d_event_t event = { 0 };
 
-            event.type = WG_EVENT_JOYSTICK;
+            event.type = WOLF3D_EVENT_JOYSTICK;
             event.joystick = wg_inputs[index].joystick_index;
             WG_QueueEvent(&event);
         }
@@ -669,12 +669,12 @@ static int WG_OpenDRMCard(const char *path)
     for (mode_index = 0; mode_index < wg_drm.presentation_width; ++mode_index)
     {
         wg_drm.source_x[mode_index] = (uint16_t)(
-            mode_index * WG_SCREEN_WIDTH / wg_drm.presentation_width);
+            mode_index * WOLF3D_SCREEN_WIDTH / wg_drm.presentation_width);
     }
     for (mode_index = 0; mode_index < wg_drm.presentation_height; ++mode_index)
     {
         wg_drm.source_y[mode_index] = (uint16_t)(
-            mode_index * WG_SCREEN_HEIGHT / wg_drm.presentation_height);
+            mode_index * WOLF3D_SCREEN_HEIGHT / wg_drm.presentation_height);
     }
     if (drmModeSetCrtc(wg_drm.descriptor, wg_drm.crtc_id,
                        wg_drm.framebuffer_id, 0, 0, &wg_drm.connector_id, 1,
@@ -821,7 +821,7 @@ static void WG_LinuxConsoleShutdown(void)
 static void WG_LinuxConsolePresent(const uint8_t *pixels,
                                    const uint8_t *palette)
 {
-    uint32_t colors[WG_PALETTE_COLORS];
+    uint32_t colors[WOLF3D_PALETTE_COLORS];
     unsigned color;
     int y;
 
@@ -840,7 +840,7 @@ static void WG_LinuxConsolePresent(const uint8_t *pixels,
     memcpy(wg_previous_pixels, pixels, sizeof(wg_previous_pixels));
     memcpy(wg_previous_palette, palette, sizeof(wg_previous_palette));
     wg_previous_frame_valid = 1;
-    for (color = 0U; color < WG_PALETTE_COLORS; ++color)
+    for (color = 0U; color < WOLF3D_PALETTE_COLORS; ++color)
     {
         const uint8_t *rgb = palette + (size_t)color * 3U;
 
@@ -852,7 +852,7 @@ static void WG_LinuxConsolePresent(const uint8_t *pixels,
         uint32_t *row = (uint32_t *)((uint8_t *)wg_drm.pixels
             + (size_t)(wg_drm.presentation_top + y) * wg_drm.pitch);
         const uint8_t *source = pixels
-            + (size_t)wg_drm.source_y[y] * WG_SCREEN_WIDTH;
+            + (size_t)wg_drm.source_y[y] * WOLF3D_SCREEN_WIDTH;
         int x;
 
         for (x = 0; x < wg_drm.presentation_width; ++x)
@@ -895,7 +895,7 @@ static void WG_LinuxConsoleSleepMs(uint32_t milliseconds)
     }
 }
 
-static int WG_LinuxConsolePollEvent(wg_event_t *event)
+static int WG_LinuxConsolePollEvent(wolf3d_event_t *event)
 {
     size_t index;
 
@@ -903,13 +903,13 @@ static int WG_LinuxConsolePollEvent(wg_event_t *event)
     if (wg_event_read != wg_event_write)
     {
         *event = wg_event_queue[wg_event_read];
-        wg_event_read = (wg_event_read + 1U) % WG_EVENT_QUEUE_CAPACITY;
+        wg_event_read = (wg_event_read + 1U) % WOLF3D_EVENT_QUEUE_CAPACITY;
         return 1;
     }
     if (wg_quit_requested && !wg_quit_delivered)
     {
         memset(event, 0, sizeof(*event));
-        event->type = WG_EVENT_QUIT;
+        event->type = WOLF3D_EVENT_QUIT;
         wg_quit_delivered = 1;
         return 1;
     }
@@ -933,7 +933,7 @@ static int WG_LinuxConsolePollEvent(wg_event_t *event)
     }
     if (wg_event_read == wg_event_write) return 0;
     *event = wg_event_queue[wg_event_read];
-    wg_event_read = (wg_event_read + 1U) % WG_EVENT_QUEUE_CAPACITY;
+    wg_event_read = (wg_event_read + 1U) % WOLF3D_EVENT_QUEUE_CAPACITY;
     return 1;
 }
 
@@ -961,9 +961,9 @@ static void WG_LinuxConsolePrintMessage(const char *message)
 static void WG_LinuxConsolePresentText(const uint8_t *cells,
                                        uint16_t columns, uint16_t rows)
 {
-    size_t size = (size_t)columns * rows * WG_TEXT_CELL_BYTES;
+    size_t size = (size_t)columns * rows * WOLF3D_TEXT_CELL_BYTES;
 
-    if (cells == NULL || columns > WG_TEXT_COLUMNS || rows > WG_TEXT_ROWS
+    if (cells == NULL || columns > WOLF3D_TEXT_COLUMNS || rows > WOLF3D_TEXT_ROWS
         || size > sizeof(wg_text_screen))
     {
         return;
@@ -1047,10 +1047,10 @@ static int WG_LinuxConsolePCMSubmit(const int16_t *samples,
 
 int WG_InstallPlatform(void)
 {
-    static const wg_platform_api_t platform =
+    static const wolf3d_platform_api_t platform =
     {
-        WG_PLATFORM_API_VERSION,
-        sizeof(wg_platform_api_t),
+        WOLF3D_PLATFORM_API_VERSION,
+        sizeof(wolf3d_platform_api_t),
         WG_LinuxConsoleInit,
         WG_LinuxConsoleShutdown,
         WG_LinuxConsolePresent,
@@ -1068,5 +1068,5 @@ int WG_InstallPlatform(void)
         WG_LinuxConsolePCMSubmit
     };
 
-    return wolf3dgeneric_SetPlatform(&platform) == WG_RESULT_OK;
+    return wolf3d_SetPlatform(&platform) == WOLF3D_RESULT_OK;
 }

@@ -32,11 +32,11 @@ static void WG_HeadlessSleepMs(uint32_t milliseconds)
     wg_headless_ticks += milliseconds;
 }
 
-static int WG_HeadlessPollEvent(wg_event_t *event)
+static int WG_HeadlessPollEvent(wolf3d_event_t *event)
 {
     if (event != NULL)
     {
-        event->type = WG_EVENT_NONE;
+        event->type = WOLF3D_EVENT_NONE;
     }
     return 0;
 }
@@ -90,10 +90,10 @@ static int WG_HeadlessPCMSubmit(const int16_t *samples, size_t frame_count)
 
 int WG_InstallPlatform(void)
 {
-    static const wg_platform_api_t platform =
+    static const wolf3d_platform_api_t platform =
     {
-        WG_PLATFORM_API_VERSION,
-        sizeof(wg_platform_api_t),
+        WOLF3D_PLATFORM_API_VERSION,
+        sizeof(wolf3d_platform_api_t),
         WG_HeadlessInit,
         WG_HeadlessShutdown,
         WG_HeadlessPresent,
@@ -111,5 +111,5 @@ int WG_InstallPlatform(void)
         WG_HeadlessPCMSubmit
     };
 
-    return wolf3dgeneric_SetPlatform(&platform) == WG_RESULT_OK;
+    return wolf3d_SetPlatform(&platform) == WOLF3D_RESULT_OK;
 }

@@ -299,7 +299,7 @@ WinForms UI thread
   - paints only the newest published frame
 
 Engine worker thread
-  - executes wolf3dgeneric_Run
+  - executes wolf3d_Run
   - uses a monotonic Stopwatch-based clock callback
   - publishes frames through a bounded mailbox
   - submits audio independently of painting

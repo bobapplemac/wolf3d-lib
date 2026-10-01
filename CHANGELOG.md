@@ -6,6 +6,18 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.19 - 2026-10-01 - Wolf3D public library identity
+
+- Renamed the public header to `WOLF3D.h` and the exported functions, types,
+  constants, screen buffer, and palette to consistent `wolf3d_`/`WOLF3D_`
+  names while leaving historical `WL_*`, `ID_*`, and internal `WG_*` names
+  intact.
+- Renamed the shared library to `wolf3d.dll`/`libwolf3d.so`, added the in-tree
+  `wolf3d::wolf3d` CMake target, and versioned the ELF library with ABI-major
+  SONAME 1.
+- Updated every bundled host, test, SDK package, and porting document to use
+  the new public interface.
+
 ## 1.4.18 - 2026-10-01 - Public host boundary
 
 - Removed the private engine source directory from every production host's

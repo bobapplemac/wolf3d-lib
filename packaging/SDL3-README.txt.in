@@ -2,7 +2,7 @@ wolf3dgeneric @PROJECT_VERSION@ - SDL3 GUI host
 ================================================
 
 This folder is a minimal cross-platform GUI build. Keep the executable,
-wolf3dgeneric shared library, Nuked-OPL3 shared library, and SDL3 shared
+Wolf3D shared library, Nuked-OPL3 shared library, and SDL3 shared
 library together.
 
 On Linux, the local shared libraries are discovered relative to this
@@ -26,7 +26,7 @@ are detected automatically.
 The host displays the original 320x200 framebuffer at the intended 4:3
 display aspect ratio with nearest-neighbor scaling. SDL3 provides the
 window, keyboard, optional mouse/gamepad input, and audio device access;
-game behavior remains in the separate wolf3dgeneric library.
+game behavior remains in the separate Wolf3D library.
 
 Press F11 or Alt+Enter to toggle borderless desktop fullscreen. F11 is handled
 only by the host and will not dismiss an in-game "Press a key" prompt.

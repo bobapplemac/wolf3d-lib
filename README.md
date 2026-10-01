@@ -150,7 +150,7 @@ cmake --build --preset windows-release-x64
 ```
 
 The result is under `dist/wolf3dgeneric-<version>-win32-x86` or `-x64`.
-It contains the small Win32 executable, `wolf3dgeneric.dll`, replaceable
+It contains the small Win32 executable, `wolf3d.dll`, replaceable
 `Nuked-OPL3.dll`, license notices, and a short usage guide, but no tests, object
 files, or headless tools. Copy the original game data files into that folder
 and run `wolf3dgeneric.exe`; the interactive host uses its own directory when
@@ -167,10 +167,10 @@ cmake --preset windows-library-x64
 cmake --build --preset windows-library-x64
 ```
 
-That folder contains `wolf3dgeneric.dll` and its import library on Windows (or
-`libwolf3dgeneric.so` on Linux), `Nuked-OPL3` as a separate shared dependency,
-the public `WOLF3DGENERIC.h`, and the applicable notices. Hosts register the
-versioned `wg_platform_api_t` callback table before creating the engine.
+That folder contains `wolf3d.dll` and its import library on Windows (or
+`libwolf3d.so` on Linux), `Nuked-OPL3` as a separate shared dependency,
+the public `WOLF3D.h`, and the applicable notices. Hosts register the
+versioned `wolf3d_platform_api_t` callback table before creating the engine.
 Windows builds embed the MSVC runtime by default, so the Visual C++
 Redistributable is not required on the target machine. Set
 `WG_STATIC_MSVC_RUNTIME=OFF` for a smaller custom build that uses the matching

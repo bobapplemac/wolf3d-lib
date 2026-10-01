@@ -2108,3 +2108,25 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Rebuilt the Win32, SDL3, console, and headless hosts successfully. All 150
   configured Windows tests pass, as do all 149 Linux tests under both GCC and
   Clang.
+
+## 2026-10-01: Wolf3D public library identity
+
+- Renamed the public engine boundary from `WOLF3DGENERIC.h` and
+  `wolf3dgeneric_*`/`wg_*` symbols to `WOLF3D.h` and a consistent
+  `wolf3d_*`/`WOLF3D_*` ABI. The original-source `WL_*` and `ID_*` names and
+  portable implementation `WG_*` names remain unchanged.
+- Renamed the shared artifact and import library to `wolf3d`, exposed the
+  namespaced in-tree target `wolf3d::wolf3d`, and changed every production
+  wrapper to link that target exclusively.
+- Added ELF ABI versioning. Linux builds now emit `libwolf3d.so` pointing to
+  SONAME `libwolf3d.so.1`, which points to the revisioned
+  `libwolf3d.so.1.4.19`; all three names are staged in every applicable
+  library and wrapper distribution.
+- Confirmed the Windows and ELF libraries export only the intended six-symbol
+  surface: create, run, platform registration, shutdown, screen buffer, and
+  palette. Windows library and Win32 packages contain `wolf3d.dll`, and the
+  standalone SDK contains `WOLF3D.h` plus `wolf3d.lib`.
+- Rebuilt the native library, Win32, SDL3, Linux-console, and headless targets.
+  All 150 Windows tests and all 149 Linux tests under both GCC and Clang pass.
+  The Debian 10 portable package also passes its ABI audit with a maximum
+  requirement of `GLIBC_2.14`.

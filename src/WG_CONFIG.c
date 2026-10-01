@@ -6,7 +6,7 @@
 
 #include "WG_ENDIAN.h"
 #include "WG_FILE.h"
-#include "WOLF3DGENERIC.h"
+#include "WOLF3D.h"
 
 #define WG_CONFIG_VERSION 3U
 #define WG_CONFIG_LEGACY_VERSION 2U
@@ -85,9 +85,9 @@ static uint32_t WG_ConfigGet32(wg_config_cursor_t *cursor)
 void WG_ConfigDefaults(wg_config_t *config)
 {
     static const uint16_t action_keys[WL_CUSTOM_BINDINGS] =
-        { WG_KEY_RIGHT_SHIFT, WG_KEY_SPACE, WG_KEY_CONTROL, WG_KEY_ALT };
+        { WOLF3D_KEY_RIGHT_SHIFT, WOLF3D_KEY_SPACE, WOLF3D_KEY_CONTROL, WOLF3D_KEY_ALT };
     static const uint16_t movement_keys[WL_CUSTOM_BINDINGS] =
-        { WG_KEY_LEFT, WG_KEY_RIGHT, WG_KEY_UP, WG_KEY_DOWN };
+        { WOLF3D_KEY_LEFT, WOLF3D_KEY_RIGHT, WOLF3D_KEY_UP, WOLF3D_KEY_DOWN };
     static const uint8_t mouse_bindings[WL_CUSTOM_BINDINGS] =
         { UINT8_MAX, 2U, 0U, 1U };
     static const uint8_t joystick_bindings[WL_CUSTOM_BINDINGS] =

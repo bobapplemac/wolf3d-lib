@@ -121,7 +121,7 @@ cmake --build --preset windows-sdl3-x64
 ```
 
 Replace `x64` with `x86` as needed. The package contains
-`wolf3dgeneric-sdl3.exe`, `wolf3dgeneric.dll`, `Nuked-OPL3.dll`, and
+`wolf3dgeneric-sdl3.exe`, `wolf3d.dll`, `Nuked-OPL3.dll`, and
 `SDL3.dll`. The selected static or dynamic MSVC runtime policy applies to all
 locally compiled binaries.
 
@@ -218,7 +218,7 @@ Create the Linux direct-console runtime package with:
 make console-release
 ```
 
-This stages `wolf3dgeneric`, `libwolf3dgeneric.so`, the replaceable
+This stages `wolf3dgeneric`, `libwolf3d.so`, the replaceable
 `libNuked-OPL3.so`, notices, and runtime instructions under
 `dist/wolf3dgeneric-<version>-linux-console-<architecture>`. libdrm, ALSA,
 libc, and their transitive dependencies remain system-provided.
@@ -317,7 +317,7 @@ The validated packages have these actual highest symbol requirements:
 
 | Distribution | Limiting ELF | Highest required glibc symbol |
 | --- | --- | --- |
-| shared library | `libwolf3dgeneric.so` | `GLIBC_2.14` |
+| shared library | `libwolf3d.so` | `GLIBC_2.14` |
 | direct console | `wolf3dgeneric` | `GLIBC_2.17` |
 | SDL3 | pinned `libSDL3.so.0` | `GLIBC_2.27` |
 
@@ -436,8 +436,8 @@ to the initial CMake configure command.
 
 ## C-runtime linkage
 
-The wolf3dgeneric engine always remains a separate shared library:
-`wolf3dgeneric.dll` on Windows and `libwolf3dgeneric.so` on Linux.
+The Wolf3D engine always remains a separate shared library:
+`wolf3d.dll` on Windows and `libwolf3d.so` on Linux.
 
 MSVC supports a meaningful deployment choice. `WG_STATIC_MSVC_RUNTIME=ON` is
 the recommended default and links `/MT`, avoiding a separate Visual C++

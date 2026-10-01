@@ -1,4 +1,4 @@
-#include "WOLF3DGENERIC.h"
+#include "WOLF3D.h"
 #include "../WG_HOST.h"
 #include "WG_LINUX_CONSOLE.h"
 
@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     int game_argc = 0;
     int index;
     int success = 1;
-    wg_result_t result;
+    wolf3d_result_t result;
 
     game_argv = (char **)calloc((size_t)argc + 1U, sizeof(*game_argv));
     if (game_argv == NULL)
@@ -94,13 +94,13 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    result = wolf3dgeneric_Create(game_argc, game_argv);
-    if (result == WG_RESULT_OK)
+    result = wolf3d_Create(game_argc, game_argv);
+    if (result == WOLF3D_RESULT_OK)
     {
-        result = wolf3dgeneric_Run();
-        wolf3dgeneric_Shutdown();
+        result = wolf3d_Run();
+        wolf3d_Shutdown();
     }
     free(game_argv);
-    return result == WG_RESULT_QUIT || result == WG_RESULT_NOT_IMPLEMENTED
+    return result == WOLF3D_RESULT_QUIT || result == WOLF3D_RESULT_NOT_IMPLEMENTED
                ? 0 : 1;
 }

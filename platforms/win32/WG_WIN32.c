@@ -1,4 +1,4 @@
-#include "WOLF3DGENERIC.h"
+#include "WOLF3D.h"
 #include "../WG_HOST.h"
 #include "../WG_TEXT_OUTPUT.h"
 
@@ -13,7 +13,7 @@
 
 static const wchar_t wg_window_class[] = L"wolf3dgeneric-window";
 static HWND wg_window;
-static uint32_t wg_pixels[WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT];
+static uint32_t wg_pixels[WOLF3D_SCREEN_WIDTH * WOLF3D_SCREEN_HEIGHT];
 static LARGE_INTEGER wg_counter_frequency;
 static LARGE_INTEGER wg_counter_start;
 static int wg_quit_pending;
@@ -22,8 +22,8 @@ static int wg_fullscreen;
 static int wg_fullscreen_enter_down;
 static LONG_PTR wg_windowed_style;
 static WINDOWPLACEMENT wg_windowed_placement = { sizeof(WINDOWPLACEMENT) };
-static uint8_t wg_text_screen[WG_TEXT_COLUMNS * WG_TEXT_ROWS
-                              * WG_TEXT_CELL_BYTES];
+static uint8_t wg_text_screen[WOLF3D_TEXT_COLUMNS * WOLF3D_TEXT_ROWS
+                              * WOLF3D_TEXT_CELL_BYTES];
 static uint16_t wg_text_columns;
 static uint16_t wg_text_rows;
 static HANDLE wg_console_output;
@@ -31,10 +31,10 @@ static HANDLE wg_console_output;
 typedef DWORD (WINAPI *wg_xinput_get_state_t)(DWORD, XINPUT_STATE *);
 static HMODULE wg_xinput_module;
 static wg_xinput_get_state_t wg_xinput_get_state;
-static int16_t wg_joystick_x[WG_MAX_JOYSTICKS];
-static int16_t wg_joystick_y[WG_MAX_JOYSTICKS];
-static uint32_t wg_joystick_buttons[WG_MAX_JOYSTICKS];
-static uint8_t wg_joystick_connected[WG_MAX_JOYSTICKS];
+static int16_t wg_joystick_x[WOLF3D_MAX_JOYSTICKS];
+static int16_t wg_joystick_y[WOLF3D_MAX_JOYSTICKS];
+static uint32_t wg_joystick_buttons[WOLF3D_MAX_JOYSTICKS];
+static uint8_t wg_joystick_connected[WOLF3D_MAX_JOYSTICKS];
 
 #define WG_PCM_BUFFER_COUNT 4U
 #define WG_PCM_BUFFER_FRAMES 512U
@@ -130,14 +130,14 @@ static RECT wg_presentation_rectangle(const RECT *client)
     return presentation;
 }
 
-#define WG_EVENT_QUEUE_CAPACITY 64U
-static wg_event_t wg_event_queue[WG_EVENT_QUEUE_CAPACITY];
+#define WOLF3D_EVENT_QUEUE_CAPACITY 64U
+static wolf3d_event_t wg_event_queue[WOLF3D_EVENT_QUEUE_CAPACITY];
 static size_t wg_event_read;
 static size_t wg_event_write;
 
-static void wg_queue_event(const wg_event_t *event)
+static void wg_queue_event(const wolf3d_event_t *event)
 {
-    size_t next = (wg_event_write + 1U) % WG_EVENT_QUEUE_CAPACITY;
+    size_t next = (wg_event_write + 1U) % WOLF3D_EVENT_QUEUE_CAPACITY;
 
     if (next != wg_event_read)
     {
@@ -148,9 +148,9 @@ static void wg_queue_event(const wg_event_t *event)
 
 static void wg_queue_mouse_button(uint8_t button, int pressed)
 {
-    wg_event_t event = { 0 };
+    wolf3d_event_t event = { 0 };
 
-    event.type = WG_EVENT_MOUSE_BUTTON;
+    event.type = WOLF3D_EVENT_MOUSE_BUTTON;
     event.pressed = pressed;
     event.key = 0;
     event.x = 0;
@@ -192,7 +192,7 @@ static void wg_poll_joysticks(void)
     {
         return;
     }
-    for (joystick = 0U; joystick < WG_MAX_JOYSTICKS; ++joystick)
+    for (joystick = 0U; joystick < WOLF3D_MAX_JOYSTICKS; ++joystick)
     {
         XINPUT_STATE state;
         int connected;
@@ -235,13 +235,13 @@ static void wg_poll_joysticks(void)
             || y != wg_joystick_y[joystick]
             || buttons != wg_joystick_buttons[joystick])
         {
-            wg_event_t event = { 0 };
+            wolf3d_event_t event = { 0 };
 
             wg_joystick_connected[joystick] = (uint8_t)connected;
             wg_joystick_x[joystick] = x;
             wg_joystick_y[joystick] = y;
             wg_joystick_buttons[joystick] = buttons;
-            event.type = WG_EVENT_JOYSTICK;
+            event.type = WOLF3D_EVENT_JOYSTICK;
             event.joystick = (uint8_t)joystick;
             event.connected = (uint8_t)connected;
             event.x = x;
@@ -318,7 +318,7 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
         case WM_KEYUP:
         case WM_SYSKEYUP:
         {
-            wg_event_t event = { 0 };
+            wolf3d_event_t event = { 0 };
             int pressed = message == WM_KEYDOWN
                        || message == WM_SYSKEYDOWN;
             int alt_enter = wparam == VK_RETURN
@@ -352,10 +352,10 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
                 return 0;
             }
 
-            event.type = WG_EVENT_KEY;
+            event.type = WOLF3D_EVENT_KEY;
             event.pressed = pressed;
             event.key = wparam == VK_PAUSE
-                            ? WG_KEY_PAUSE
+                            ? WOLF3D_KEY_PAUSE
                             : (uint16_t)((lparam >> 16) & 0xff);
             event.x = 0;
             event.y = 0;
@@ -379,9 +379,9 @@ static LRESULT CALLBACK wg_window_proc(HWND window, UINT message,
 
                 if (x != 0 || y != 0)
                 {
-                    wg_event_t event = { 0 };
+                    wolf3d_event_t event = { 0 };
 
-                    event.type = WG_EVENT_MOUSE_MOTION;
+                    event.type = WOLF3D_EVENT_MOUSE_MOTION;
                     event.pressed = 0;
                     event.key = 0;
                     event.x = (int16_t)(x > INT16_MAX ? INT16_MAX
@@ -457,8 +457,8 @@ static int WG_Win32Init(void)
 
     rectangle.left = 0;
     rectangle.top = 0;
-    rectangle.right = WG_SCREEN_WIDTH * WG_INITIAL_SCALE;
-    rectangle.bottom = (WG_SCREEN_WIDTH * WG_DISPLAY_ASPECT_HEIGHT
+    rectangle.right = WOLF3D_SCREEN_WIDTH * WG_INITIAL_SCALE;
+    rectangle.bottom = (WOLF3D_SCREEN_WIDTH * WG_DISPLAY_ASPECT_HEIGHT
                         / WG_DISPLAY_ASPECT_WIDTH) * WG_INITIAL_SCALE;
     AdjustWindowRect(&rectangle, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -536,7 +536,7 @@ static void WG_Win32Present(const uint8_t *pixels, const uint8_t *palette)
         return;
     }
 
-    for (index = 0; index < WG_SCREEN_WIDTH * WG_SCREEN_HEIGHT; ++index)
+    for (index = 0; index < WOLF3D_SCREEN_WIDTH * WOLF3D_SCREEN_HEIGHT; ++index)
     {
         size_t color = (size_t)pixels[index] * 3U;
         wg_pixels[index] = ((uint32_t)palette[color] << 16)
@@ -546,8 +546,8 @@ static void WG_Win32Present(const uint8_t *pixels, const uint8_t *palette)
 
     ZeroMemory(&bitmap_info, sizeof(bitmap_info));
     bitmap_info.bmiHeader.biSize = sizeof(bitmap_info.bmiHeader);
-    bitmap_info.bmiHeader.biWidth = WG_SCREEN_WIDTH;
-    bitmap_info.bmiHeader.biHeight = -WG_SCREEN_HEIGHT;
+    bitmap_info.bmiHeader.biWidth = WOLF3D_SCREEN_WIDTH;
+    bitmap_info.bmiHeader.biHeight = -WOLF3D_SCREEN_HEIGHT;
     bitmap_info.bmiHeader.biPlanes = 1;
     bitmap_info.bmiHeader.biBitCount = 32;
     bitmap_info.bmiHeader.biCompression = BI_RGB;
@@ -571,7 +571,7 @@ static void WG_Win32Present(const uint8_t *pixels, const uint8_t *palette)
     StretchDIBits(device_context, presentation.left, presentation.top,
                   presentation.right - presentation.left,
                   presentation.bottom - presentation.top,
-                  0, 0, WG_SCREEN_WIDTH, WG_SCREEN_HEIGHT, wg_pixels,
+                  0, 0, WOLF3D_SCREEN_WIDTH, WOLF3D_SCREEN_HEIGHT, wg_pixels,
                   &bitmap_info, DIB_RGB_COLORS, SRCCOPY);
     ReleaseDC(wg_window, device_context);
 }
@@ -591,7 +591,7 @@ static void WG_Win32SleepMs(uint32_t milliseconds)
     Sleep(milliseconds);
 }
 
-static int WG_Win32PollEvent(wg_event_t *event)
+static int WG_Win32PollEvent(wolf3d_event_t *event)
 {
     MSG message;
 
@@ -603,7 +603,7 @@ static int WG_Win32PollEvent(wg_event_t *event)
     if (wg_quit_pending)
     {
         wg_quit_pending = 0;
-        event->type = WG_EVENT_QUIT;
+        event->type = WOLF3D_EVENT_QUIT;
         return 1;
     }
 
@@ -615,7 +615,7 @@ static int WG_Win32PollEvent(wg_event_t *event)
     if (wg_event_read != wg_event_write)
     {
         *event = wg_event_queue[wg_event_read];
-        wg_event_read = (wg_event_read + 1U) % WG_EVENT_QUEUE_CAPACITY;
+        wg_event_read = (wg_event_read + 1U) % WOLF3D_EVENT_QUEUE_CAPACITY;
         return 1;
     }
 
@@ -623,7 +623,7 @@ static int WG_Win32PollEvent(wg_event_t *event)
     {
         if (message.message == WM_QUIT)
         {
-            event->type = WG_EVENT_QUIT;
+            event->type = WOLF3D_EVENT_QUIT;
             return 1;
         }
         TranslateMessage(&message);
@@ -631,7 +631,7 @@ static int WG_Win32PollEvent(wg_event_t *event)
         if (wg_event_read != wg_event_write)
         {
             *event = wg_event_queue[wg_event_read];
-            wg_event_read = (wg_event_read + 1U) % WG_EVENT_QUEUE_CAPACITY;
+            wg_event_read = (wg_event_read + 1U) % WOLF3D_EVENT_QUEUE_CAPACITY;
             return 1;
         }
     }
@@ -641,11 +641,11 @@ static int WG_Win32PollEvent(wg_event_t *event)
     if (wg_event_read != wg_event_write)
     {
         *event = wg_event_queue[wg_event_read];
-        wg_event_read = (wg_event_read + 1U) % WG_EVENT_QUEUE_CAPACITY;
+        wg_event_read = (wg_event_read + 1U) % WOLF3D_EVENT_QUEUE_CAPACITY;
         return 1;
     }
 
-    event->type = WG_EVENT_NONE;
+    event->type = WOLF3D_EVENT_NONE;
     return 0;
 }
 
@@ -712,9 +712,9 @@ static void WG_Win32PrintMessage(const char *message)
 static void WG_Win32PresentText(const uint8_t *cells, uint16_t columns,
                                 uint16_t rows)
 {
-    size_t size = (size_t)columns * rows * WG_TEXT_CELL_BYTES;
+    size_t size = (size_t)columns * rows * WOLF3D_TEXT_CELL_BYTES;
 
-    if (cells == NULL || columns > WG_TEXT_COLUMNS || rows > WG_TEXT_ROWS
+    if (cells == NULL || columns > WOLF3D_TEXT_COLUMNS || rows > WOLF3D_TEXT_ROWS
         || size > sizeof(wg_text_screen))
     {
         return;
@@ -844,10 +844,10 @@ static int WG_Win32PCMSubmit(const int16_t *samples, size_t frame_count)
 
 int WG_InstallPlatform(void)
 {
-    static const wg_platform_api_t platform =
+    static const wolf3d_platform_api_t platform =
     {
-        WG_PLATFORM_API_VERSION,
-        sizeof(wg_platform_api_t),
+        WOLF3D_PLATFORM_API_VERSION,
+        sizeof(wolf3d_platform_api_t),
         WG_Win32Init,
         WG_Win32Shutdown,
         WG_Win32Present,
@@ -865,7 +865,7 @@ int WG_InstallPlatform(void)
         WG_Win32PCMSubmit
     };
 
-    return wolf3dgeneric_SetPlatform(&platform) == WG_RESULT_OK;
+    return wolf3d_SetPlatform(&platform) == WOLF3D_RESULT_OK;
 }
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
@@ -879,7 +879,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
     char **argv;
     int index;
     int exit_code;
-    wg_result_t result;
+    wolf3d_result_t result;
 
     (void)instance;
     (void)previous_instance;
@@ -938,13 +938,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous_instance,
         }
     }
 
-    result = wolf3dgeneric_Create(argc, argv);
-    if (result == WG_RESULT_OK)
+    result = wolf3d_Create(argc, argv);
+    if (result == WOLF3D_RESULT_OK)
     {
-        result = wolf3dgeneric_Run();
-        wolf3dgeneric_Shutdown();
+        result = wolf3d_Run();
+        wolf3d_Shutdown();
     }
-    exit_code = result == WG_RESULT_NOT_IMPLEMENTED || result == WG_RESULT_QUIT
+    exit_code = result == WOLF3D_RESULT_NOT_IMPLEMENTED || result == WOLF3D_RESULT_QUIT
                     ? 0 : 1;
 
     for (index = 0; index < argc; ++index)

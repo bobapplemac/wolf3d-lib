@@ -1,19 +1,19 @@
-wolf3dgeneric @PROJECT_VERSION@ - shared engine library
+wolf3d @PROJECT_VERSION@ - shared engine library
 =====================================================
 
-This is the platform-neutral wolf3dgeneric engine library distribution. It
+This is the platform-neutral Wolf3D engine library distribution. It
 contains the shared engine, its public C99 header, the replaceable Nuked-OPL3
 shared library, and the applicable license and provenance files.
 
-A host must populate wg_platform_api_t with its video, input, timing, error,
-and PCM callbacks, call wolf3dgeneric_SetPlatform(), and then call
-wolf3dgeneric_Create(), wolf3dgeneric_Run(), and wolf3dgeneric_Shutdown(). See
+A host must populate wolf3d_platform_api_t with its video, input, timing, error,
+and PCM callbacks, call wolf3d_SetPlatform(), and then call
+wolf3d_Create(), wolf3d_Run(), and wolf3d_Shutdown(). See
 docs/porting-guide.md in the source distribution and the headless and Win32
 hosts for complete examples.
 
-Windows distributions also include wolf3dgeneric.lib, the import library used
-to link a host against wolf3dgeneric.dll. On ELF systems the corresponding
-runtime artifact is libwolf3dgeneric.so.
+Windows distributions also include wolf3d.lib, the import library used
+to link a host against wolf3d.dll. On ELF systems the corresponding
+runtime artifact is libwolf3d.so.
 
 Official Windows packages embed the MSVC runtime and do not require the Visual
 C++ Redistributable. Custom builds made with WG_STATIC_MSVC_RUNTIME=OFF use the

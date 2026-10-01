@@ -4,7 +4,7 @@ wolf3dgeneric @PROJECT_VERSION@ - Windows release
 This folder contains:
 
   wolf3dgeneric.exe       Win32 video, input, timing, and audio host
-  wolf3dgeneric.dll       Platform-neutral wolf3dgeneric engine
+  wolf3d.dll              Platform-neutral Wolf3D engine
   Nuked-OPL3.dll          Replaceable LGPL-2.1-or-later OPL emulator
   COPYING.txt             wolf3dgeneric license
   COPYING.Nuked-OPL3.txt  Nuked-OPL3 license
@@ -45,7 +45,7 @@ Renaming the executable to a name beginning with "wolf" prefers WL1/WL6 data.
 A name beginning with "spear" or "sod" prefers SOD/SDM/SD1/SD2/SD3 data. You
 may instead keep game files elsewhere and pass --data "C:\path\to\game".
 
-wolf3dgeneric.dll and Nuked-OPL3.dll must remain beside the executable. The
+wolf3d.dll and Nuked-OPL3.dll must remain beside the executable. The
 Win32 executable is only a platform host and loads the engine from the first
 DLL. Nuked-OPL3.dll may be replaced with a compatible modified build, as
 provided for by its GNU Lesser General Public License. Corresponding source is

@@ -1,9 +1,9 @@
 # Porting wolf3dgeneric to a new host
 
-The engine is a shared C99 library (`wolf3dgeneric.dll` on Windows and
-`libwolf3dgeneric.so` on Linux). A host fills the public
-`wg_platform_api_t` callback table from `WOLF3DGENERIC.h` and passes it to
-`wolf3dgeneric_SetPlatform` before creating the engine. The library therefore
+The engine is a shared C99 library (`wolf3d.dll` on Windows and
+`libwolf3d.so` on Linux). A host fills the public
+`wolf3d_platform_api_t` callback table from `WOLF3D.h` and passes it to
+`wolf3d_SetPlatform` before creating the engine. The library therefore
 has no unresolved dependency on symbols supplied by its executable.
 `platforms/headless/WG_HEADLESS.c` is the smallest implementation. The SDL3
 host is the cross-platform desktop reference, the native Win32 host shows a
@@ -31,15 +31,15 @@ dumb-buffer video, raw evdev input, monotonic POSIX timing, and ALSA PCM.
 ## Input contract
 
 Keyboard events use IBM PC set-1 scan codes, not native virtual-key values.
-Common codes are named in `include/WOLF3DGENERIC.h`; other bindable keys may be
+Common codes are named in `include/WOLF3D.h`; other bindable keys may be
 passed as their 0–127 set-1 value. Emit both press and release events. Map a
-physical Pause key to `WG_KEY_PAUSE` because its hardware sequence is not a
+physical Pause key to `WOLF3D_KEY_PAUSE` because its hardware sequence is not a
 normal one-byte scan code.
 
 Mouse motion is relative. Mouse buttons are numbered 1 (left), 2 (right), and
 3 (middle), with press and release events.
 
-Joystick hosts emit `WG_EVENT_JOYSTICK` whenever one of the first two devices
+Joystick hosts emit `WOLF3D_EVENT_JOYSTICK` whenever one of the first two devices
 connects, disconnects, or changes state. `joystick` is zero or one, `connected`
 states whether that slot is available, `x` and `y` span `INT16_MIN` through
 `INT16_MAX` with negative Y meaning up, and the low four bits of `buttons`
@@ -70,11 +70,11 @@ clock and 140 Hz effect clock; a host must not derive either from video or the
 ## Build integration
 
 Add one executable containing the host and an entry point, link it to the
-`wolf3dgeneric` shared target, and apply C99 plus strict warnings. Initialize
-every callback, set `api_version` to `WG_PLATFORM_API_VERSION`, set
-`struct_size` to `sizeof(wg_platform_api_t)`, and call
-`wolf3dgeneric_SetPlatform`. Then call `wolf3dgeneric_Create`, followed by
-`wolf3dgeneric_Run`, and always finish with `wolf3dgeneric_Shutdown` after
+`wolf3d::wolf3d` shared target, and apply C99 plus strict warnings. Initialize
+every callback, set `api_version` to `WOLF3D_PLATFORM_API_VERSION`, set
+`struct_size` to `sizeof(wolf3d_platform_api_t)`, and call
+`wolf3d_SetPlatform`. Then call `wolf3d_Create`, followed by
+`wolf3d_Run`, and always finish with `wolf3d_Shutdown` after
 successful creation. The existing Win32 host demonstrates this exact dynamic
 library boundary.
 
