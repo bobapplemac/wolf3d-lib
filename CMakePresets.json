@@ -12,82 +12,41 @@
       "generator": "Visual Studio 16 2019",
       "cacheVariables": {
         "WG_WARNINGS_AS_ERRORS": "ON",
-        "WG_STATIC_MSVC_RUNTIME": "ON",
-        "WG_BUILD_SDL3": "ON"
+        "WG_STATIC_MSVC_RUNTIME": "ON"
       }
     },
     {
       "name": "windows-dev-x64",
-      "displayName": "Windows development (x64)",
+      "displayName": "Windows library development (x64)",
       "inherits": "windows-base",
       "binaryDir": "${sourceDir}/build/windows-dev-x64",
       "architecture": "x64"
     },
     {
       "name": "windows-dev-x86",
-      "displayName": "Windows development (x86)",
+      "displayName": "Windows library development (x86)",
       "inherits": "windows-base",
       "binaryDir": "${sourceDir}/build/windows-dev-x86",
       "architecture": "Win32"
     },
     {
-      "name": "windows-release-x64",
-      "displayName": "Windows host release (x64)",
-      "inherits": "windows-dev-x64",
-      "binaryDir": "${sourceDir}/build/windows-release-x64",
-      "cacheVariables": {
-        "BUILD_TESTING": "OFF",
-        "WG_BUILD_HEADLESS": "OFF"
-      }
-    },
-    {
-      "name": "windows-release-x86",
-      "displayName": "Windows host release (x86)",
-      "inherits": "windows-dev-x86",
-      "binaryDir": "${sourceDir}/build/windows-release-x86",
-      "cacheVariables": {
-        "BUILD_TESTING": "OFF",
-        "WG_BUILD_HEADLESS": "OFF"
-      }
-    },
-    {
       "name": "windows-library-x64",
-      "displayName": "Windows engine library (x64)",
-      "inherits": "windows-release-x64",
+      "displayName": "Windows library release (x64)",
+      "inherits": "windows-dev-x64",
       "binaryDir": "${sourceDir}/build/windows-library-x64",
       "cacheVariables": {
-        "WG_BUILD_WIN32": "OFF"
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
       }
     },
     {
       "name": "windows-library-x86",
-      "displayName": "Windows engine library (x86)",
-      "inherits": "windows-release-x86",
+      "displayName": "Windows library release (x86)",
+      "inherits": "windows-dev-x86",
       "binaryDir": "${sourceDir}/build/windows-library-x86",
       "cacheVariables": {
-        "WG_BUILD_WIN32": "OFF"
-      }
-    },
-    {
-      "name": "windows-sdl3-x64",
-      "displayName": "Windows SDL3 GUI release (x64)",
-      "inherits": "windows-dev-x64",
-      "binaryDir": "${sourceDir}/build/windows-sdl3-x64",
-      "cacheVariables": {
         "BUILD_TESTING": "OFF",
-        "WG_BUILD_HEADLESS": "OFF",
-        "WG_BUILD_WIN32": "OFF"
-      }
-    },
-    {
-      "name": "windows-sdl3-x86",
-      "displayName": "Windows SDL3 GUI release (x86)",
-      "inherits": "windows-dev-x86",
-      "binaryDir": "${sourceDir}/build/windows-sdl3-x86",
-      "cacheVariables": {
-        "BUILD_TESTING": "OFF",
-        "WG_BUILD_HEADLESS": "OFF",
-        "WG_BUILD_WIN32": "OFF"
+        "WG_BUILD_HEADLESS": "OFF"
       }
     },
     {
@@ -96,48 +55,23 @@
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "WG_WARNINGS_AS_ERRORS": "ON",
-        "WG_BUILD_LINUX_CONSOLE": "OFF"
+        "WG_WARNINGS_AS_ERRORS": "ON"
       }
     },
     {
       "name": "linux-dev",
-      "displayName": "Linux development",
+      "displayName": "Linux library development",
       "inherits": "linux-base",
       "binaryDir": "${sourceDir}/build/linux-dev"
     },
     {
       "name": "linux-library",
-      "displayName": "Linux engine library",
+      "displayName": "Linux library release",
       "inherits": "linux-base",
       "binaryDir": "${sourceDir}/build/linux-library",
       "cacheVariables": {
         "BUILD_TESTING": "OFF",
-        "WG_BUILD_HEADLESS": "OFF",
-        "WG_BUILD_LINUX_CONSOLE": "OFF"
-      }
-    },
-    {
-      "name": "linux-console",
-      "displayName": "Linux direct-console release",
-      "inherits": "linux-base",
-      "binaryDir": "${sourceDir}/build/linux-console",
-      "cacheVariables": {
-        "BUILD_TESTING": "OFF",
-        "WG_BUILD_HEADLESS": "OFF",
-        "WG_BUILD_LINUX_CONSOLE": "ON"
-      }
-    },
-    {
-      "name": "linux-sdl3",
-      "displayName": "Linux SDL3 GUI release",
-      "inherits": "linux-base",
-      "binaryDir": "${sourceDir}/build/linux-sdl3",
-      "cacheVariables": {
-        "BUILD_TESTING": "OFF",
-        "WG_BUILD_HEADLESS": "OFF",
-        "WG_BUILD_LINUX_CONSOLE": "OFF",
-        "WG_BUILD_SDL3": "ON"
+        "WG_BUILD_HEADLESS": "OFF"
       }
     }
   ],
@@ -153,18 +87,6 @@
       "configuration": "Release"
     },
     {
-      "name": "windows-release-x64",
-      "configurePreset": "windows-release-x64",
-      "configuration": "Release",
-      "targets": ["win32-release"]
-    },
-    {
-      "name": "windows-release-x86",
-      "configurePreset": "windows-release-x86",
-      "configuration": "Release",
-      "targets": ["win32-release"]
-    },
-    {
       "name": "windows-library-x64",
       "configurePreset": "windows-library-x64",
       "configuration": "Release",
@@ -177,18 +99,6 @@
       "targets": ["library-release"]
     },
     {
-      "name": "windows-sdl3-x64",
-      "configurePreset": "windows-sdl3-x64",
-      "configuration": "Release",
-      "targets": ["sdl3-release"]
-    },
-    {
-      "name": "windows-sdl3-x86",
-      "configurePreset": "windows-sdl3-x86",
-      "configuration": "Release",
-      "targets": ["sdl3-release"]
-    },
-    {
       "name": "linux-dev",
       "configurePreset": "linux-dev"
     },
@@ -196,16 +106,6 @@
       "name": "linux-library",
       "configurePreset": "linux-library",
       "targets": ["library-release"]
-    },
-    {
-      "name": "linux-console",
-      "configurePreset": "linux-console",
-      "targets": ["linux-console-release"]
-    },
-    {
-      "name": "linux-sdl3",
-      "configurePreset": "linux-sdl3",
-      "targets": ["sdl3-release"]
     }
   ],
   "testPresets": [

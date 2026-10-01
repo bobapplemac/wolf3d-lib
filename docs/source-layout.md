@@ -1,6 +1,6 @@
 # Source layout and lineage
 
-wolf3dgeneric retains an original Wolfenstein 3D filename whenever a portable
+wolf3d-lib retains an original Wolfenstein 3D filename whenever a portable
 translation has a clear owner in the 1992 source tree. This makes the repository
 usable as a cross-reference: a reader can place the original and portable files
 side by side and inspect the required modernization directly.

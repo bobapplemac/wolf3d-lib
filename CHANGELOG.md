@@ -6,6 +6,18 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.20 - 2026-10-01 - Library and host repository separation
+
+- Completed the rename to `wolf3d-lib` and made this repository exclusively
+  responsible for the shared engine, public API, internal deterministic oracle,
+  regression suite, and library SDK packages.
+- Moved the production Win32, SDL3, and Linux direct-console wrappers to the
+  history-preserving companion `wolf3d-portable` repository, where every build
+  compiles a pinned `wolf3d-lib` submodule revision.
+- Removed SDL3 and OS-wrapper dependencies from the core build, simplified the
+  Make/CMake/Visual Studio entry points around library development and release,
+  and retained the Debian 10 / glibc 2.28 portable library package.
+
 ## 1.4.19 - 2026-10-01 - Wolf3D public library identity
 
 - Renamed the public header to `WOLF3D.h` and the exported functions, types,

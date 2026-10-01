@@ -7,10 +7,10 @@ Wolfenstein as corroborating evidence, and compares both with the production
 reachability graph of the generic library. Reviewed renames and structural
 substitutions live in `tools/callgraph-overrides.json`.
 
-wolf3dgeneric keeps the original game's indexed 320x200 presentation and game
+wolf3d-lib keeps the original game's indexed 320x200 presentation and game
 rules while replacing assumptions that only hold in 16-bit DOS. The portable
 core is C99 and communicates with a host through the deliberately small
-`WG_PLATFORM.h` contract.
+public `WOLF3D.h` contract.
 
 Translated files retain their original uppercase `ID_*` and `WL_*` basenames
 when they have a clear historical owner. New generic boundaries use uppercase
@@ -40,7 +40,7 @@ boundary instead of propagating unchecked pointers into game code.
 The generated headers assign an implicit 4,608-byte expanded size to the TILE8
 chunk. The supplied v1.4 streams do not produce that many bytes before their
 record boundary under the otherwise verified Huffman tree. The original cache
-routine has no input bound and can read into its scratch buffer. wolf3dgeneric
+routine has no input bound and can read into its scratch buffer. wolf3d-lib
 does not reproduce that unsafe over-read: TILE8 remains isolated pending a
 reference-behavior capture. All explicit-size graphics chunks used by the title,
 menus, status bar, and game flow are decoded and corpus-tested.
@@ -49,13 +49,14 @@ menus, status bar, and game flow are decoded and corpus-tested.
 
 The core owns one 320x200 byte-per-pixel framebuffer and a 256-entry RGB
 palette. A host presents that pair, reports input events, supplies monotonic
-time and sleeping, and reports fatal errors. The Win32 reference host uses GDI;
-the headless host supplies deterministic virtual time for tests.
+time and sleeping, and reports fatal errors. The internal headless oracle
+supplies deterministic virtual time for tests; production hosts are maintained
+in the companion `wolf3d-portable` repository.
 
-The Win32 host treats the framebuffer as original VGA output rather than as
-square pixels. It scales the complete 320x200 image into a centered 4:3
-viewport and owns any letterboxing required by the client area. The portable
-library performs no aspect correction.
+Production hosts treat the framebuffer as original VGA output rather than as
+square pixels. They scale the complete 320x200 image into a centered 4:3
+viewport and own any letterboxing required by the client area. The library
+performs no aspect correction.
 
 The portable video layer implements clipped plots, bars, picture blits,
 proportional bitmap fonts, VGA-precision palette interpolation, and the
@@ -424,15 +425,14 @@ the same high scores, sound choices, mouse and joystick settings, bindings, and
 view size. Edition tagging, bounds checks, and a checksum reject incompatible
 or damaged files; version-2 files gain the original joystick defaults when read.
 
-Win32 supplies relative mouse packets through the generic event contract rather
+Hosts supply relative mouse packets through the generic event contract rather
 than exposing window coordinates to the engine. `WL_PLAY.c` applies the original
 default `PollMouseMove` scale (`x * 10 / 8`, `y * 20 / 8`) before the same
 per-tic ±100 control clamp used by keyboard/demo input. The original default
 button mapping is retained: left attacks, right strafes, and middle uses.
 The same contract carries two normalized joystick slots. `ID_IN.c` owns the
-original calibration curve, port selection, and four-button state; Win32
-dynamically loads XInput and maps its left stick/D-pad and A/B/X/Y without
-making that API a dependency of the engine core.
+original calibration curve, port selection, and four-button state; wrappers
+map native controller APIs without making them dependencies of the engine.
 
 The DOS Pause interrupt remains a distinct generic key rather than masquerading
 as an ordinary scan code. While paused, the host continues pumping PCM so sound
@@ -459,8 +459,8 @@ batches and end-of-sequence looping, and services it at 700 Hz. A rational
 sample accumulator splits Nuked-OPL3 generation at exact event boundaries; it
 therefore produces 700 services over 48,000 output frames without making the
 70 Hz gameplay loop run ten times faster. The generic layer submits signed
-48 kHz stereo PCM, while Win32 transports it through four reusable `waveOut`
-buffers and headless mode can emit the identical samples as a WAV fixture.
+48 kHz stereo PCM, while production hosts transport it through native audio
+APIs and headless mode can emit the identical samples as a WAV fixture.
 AdLib effects share Nuked's channel 0 with the music chip, retain original
 priority replacement and instrument programming, and consume one pitch byte at
 140 Hz (every fifth IMF service), just as the fast DOS timer ISR did.

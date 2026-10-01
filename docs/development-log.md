@@ -1,5 +1,17 @@
 # Development log
 
+## 2026-10-01: wolf3d-lib repository boundary
+
+- Renamed the engine repository to `wolf3d-lib` and advanced it to 1.4.20.
+- Extracted production Win32, SDL3, and Linux direct-console hosts into the
+  history-preserving `wolf3d-portable` companion repository.
+- Kept the headless executable as an explicitly internal deterministic oracle
+  for regression tests, while production wrappers now compile and link only
+  through the public `WOLF3D.h` ABI.
+- Removed SDL3 and wrapper packaging from the engine repository and reduced its
+  CMake, GNU Make, Visual Studio, and Debian 10 release paths to library-focused
+  workflows.
+
 ## 2026-09-29: Prompt-safe F11 fullscreen toggle
 
 - Added F11 alongside Alt+Enter as a fullscreen toggle in the native Win32 and

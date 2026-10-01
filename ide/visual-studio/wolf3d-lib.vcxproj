@@ -37,8 +37,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F6F21D5A-C02A-4A69-9F21-0198E475D9A4}</ProjectGuid>
     <Keyword>MakeFileProj</Keyword>
-    <RootNamespace>wolf3dgeneric</RootNamespace>
-    <ProjectName>wolf3dgeneric</ProjectName>
+    <RootNamespace>wolf3d_lib</RootNamespace>
+    <ProjectName>wolf3d-lib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -111,25 +111,18 @@
     <NMakeBuildCommandLine>cd /d "$(SolutionDir)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)"</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>cd /d "$(SolutionDir)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)" --clean-first</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>cd /d "$(SolutionDir)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)" --target clean</NMakeCleanCommandLine>
-    <NMakeOutput>$(WGBuildDir)\$(WGCMakeConfig)\wolf3dgeneric-win32.exe</NMakeOutput>
-    <NMakeIncludeSearchPath>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)third_party\Nuked-OPL3;$(SolutionDir)third_party\SDL3\include</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;%(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <LocalDebuggerCommand>$(NMakeOutput)</LocalDebuggerCommand>
-    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <NMakeOutput>$(WGBuildDir)\$(WGCMakeConfig)\wolf3d.dll</NMakeOutput>
+    <NMakeIncludeSearchPath>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)third_party\Nuked-OPL3</NMakeIncludeSearchPath>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)src\*.c" />
     <ClCompile Include="$(SolutionDir)platforms\*.c" />
     <ClCompile Include="$(SolutionDir)platforms\headless\*.c" />
-    <ClCompile Include="$(SolutionDir)platforms\linux-console\*.c" />
-    <ClCompile Include="$(SolutionDir)platforms\sdl3\*.c" />
-    <ClCompile Include="$(SolutionDir)platforms\win32\*.c" />
     <ClCompile Include="$(SolutionDir)tests\*.c" />
     <ClCompile Include="$(SolutionDir)third_party\Nuked-OPL3\*.c" />
     <ClInclude Include="$(SolutionDir)include\*.h" />
     <ClInclude Include="$(SolutionDir)src\*.h" />
     <ClInclude Include="$(SolutionDir)platforms\*.h" />
-    <ClInclude Include="$(SolutionDir)platforms\linux-console\*.h" />
     <ClInclude Include="$(SolutionDir)third_party\Nuked-OPL3\*.h" />
     <None Include="$(SolutionDir)CMakeLists.txt" />
     <None Include="$(SolutionDir)CMakePresets.json" />

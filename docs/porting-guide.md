@@ -1,15 +1,13 @@
-# Porting wolf3dgeneric to a new host
+# Porting wolf3d-lib to a new host
 
 The engine is a shared C99 library (`wolf3d.dll` on Windows and
 `libwolf3d.so` on Linux). A host fills the public
 `wolf3d_platform_api_t` callback table from `WOLF3D.h` and passes it to
 `wolf3d_SetPlatform` before creating the engine. The library therefore
 has no unresolved dependency on symbols supplied by its executable.
-`platforms/headless/WG_HEADLESS.c` is the smallest implementation. The SDL3
-host is the cross-platform desktop reference, the native Win32 host shows a
-dependency-free platform implementation, and `platforms/linux-console/`
-demonstrates a complete interactive host without a window system: DRM/KMS
-dumb-buffer video, raw evdev input, monotonic POSIX timing, and ALSA PCM.
+`platforms/headless/WG_HEADLESS.c` is the smallest internal implementation.
+The companion `wolf3d-portable` repository contains production SDL3, native
+Win32, and Linux direct-console examples using only this public boundary.
 
 ## Required boundary
 
@@ -75,8 +73,8 @@ every callback, set `api_version` to `WOLF3D_PLATFORM_API_VERSION`, set
 `struct_size` to `sizeof(wolf3d_platform_api_t)`, and call
 `wolf3d_SetPlatform`. Then call `wolf3d_Create`, followed by
 `wolf3d_Run`, and always finish with `wolf3d_Shutdown` after
-successful creation. The existing Win32 host demonstrates this exact dynamic
-library boundary.
+successful creation. The companion hosts demonstrate this exact dynamic
+library boundary and build the library as a pinned submodule.
 
 Game data is external. Pass its directory through `--data`; never compile or
 package the commercial files into a host. A new platform should first reproduce

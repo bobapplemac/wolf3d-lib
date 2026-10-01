@@ -1,6 +1,6 @@
 # Supported game data
 
-wolf3dgeneric requires original Wolfenstein 3D data and does not distribute it.
+wolf3d-lib requires original Wolfenstein 3D data and does not distribute it.
 The first release is validated against the following exact v1.4 sets. Filename
 matching is case-insensitive; SHA-256 values identify the file contents.
 

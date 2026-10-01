@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28701.123
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wolf3dgeneric", "ide\visual-studio\wolf3dgeneric.vcxproj", "{F6F21D5A-C02A-4A69-9F21-0198E475D9A4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wolf3d-lib", "ide\visual-studio\wolf3d-lib.vcxproj", "{F6F21D5A-C02A-4A69-9F21-0198E475D9A4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
