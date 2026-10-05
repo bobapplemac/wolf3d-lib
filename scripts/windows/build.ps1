@@ -25,7 +25,8 @@ Stages a DBOPL SDK linked to the dynamic MSVC runtime.
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('auto', 'vs2022', 'vs2019', 'vs2017', 'vs2015', 'vs2015-xp')]
+    [ValidateSet('auto', 'vs2022', 'vs2019', 'vs2017', 'vs2015', 'vs2015-xp',
+        'vs2013', 'vs2012', 'vs2010', 'vs2008')]
     [string]$Compiler = 'auto',
     [ValidateSet('x64', 'x86')]
     [string]$Architecture = 'x64',
@@ -73,7 +74,8 @@ function Find-VisualStudio {
             $installation = ($result | Select-Object -Last 1).Trim()
         }
     }
-    if (-not $installation -and (Test-Path -LiteralPath $FallbackPath)) {
+    if (-not $installation -and $FallbackPath -and
+        (Test-Path -LiteralPath $FallbackPath)) {
         $installation = $FallbackPath
     }
     if ($installation -and $RequiredFile -and
@@ -155,6 +157,26 @@ $toolchains = @(
         -Toolset 'v140_xp' -PresetPrefix 'windows-vs2015-xp' `
         -CMakeFallbackDirectory $legacyCMakeDirectory `
         -RequiredFile 'C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Platforms\Win32\PlatformToolsets\v140_xp\Toolset.props'
+    Find-VisualStudio -Name 'vs2013' -VersionRange '[12.0,13.0)' `
+        -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio 12.0' `
+        -Toolset 'v120' -PresetPrefix 'windows-vs2013' `
+        -CMakeFallbackDirectory $legacyCMakeDirectory `
+        -RequiredFile 'C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\cl.exe'
+    Find-VisualStudio -Name 'vs2012' -VersionRange '[11.0,12.0)' `
+        -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio 11.0' `
+        -Toolset 'v110' -PresetPrefix 'windows-vs2012' `
+        -CMakeFallbackDirectory $legacyCMakeDirectory `
+        -RequiredFile 'C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\cl.exe'
+    Find-VisualStudio -Name 'vs2010' -VersionRange '[10.0,11.0)' `
+        -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio 10.0' `
+        -Toolset 'v100' -PresetPrefix 'windows-vs2010' `
+        -CMakeFallbackDirectory $legacyCMakeDirectory `
+        -RequiredFile 'C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\cl.exe'
+    Find-VisualStudio -Name 'vs2008' -VersionRange '[9.0,10.0)' `
+        -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio 9.0' `
+        -Toolset 'v90' -PresetPrefix 'windows-vs2008' `
+        -CMakeFallbackDirectory $legacyCMakeDirectory `
+        -RequiredFile 'C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\cl.exe'
 )
 
 function Read-BuildChoice {

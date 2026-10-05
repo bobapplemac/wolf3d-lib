@@ -8,7 +8,12 @@ without arguments for the guided wizard, or pass explicit arguments for
 automation.
 #>
 $driver = Join-Path $PSScriptRoot 'scripts\windows\build.ps1'
-& $driver @args
-if (-not $?) {
-    exit 1
+Push-Location -LiteralPath $PSScriptRoot
+try {
+    & $driver @args
+    if (-not $?) {
+        exit 1
+    }
+} finally {
+    Pop-Location
 }

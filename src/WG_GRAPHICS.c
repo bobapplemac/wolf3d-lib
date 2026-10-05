@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
+
 #include "WG_ENDIAN.h"
 #include "WG_PALETTE.h"
 

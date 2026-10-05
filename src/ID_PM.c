@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
+
 #include "WG_ENDIAN.h"
 
 static int WG_PagesPath(char *destination, size_t destination_size,

@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
+
 #include "WG_DATA.h"
 #include "WG_AUDIO.h"
 #include "WG_CONFIG.h"
@@ -3739,6 +3741,7 @@ static int WG_GameSessionTick(unsigned live_tics)
                 &wg_game.level.sound_events[sound];
             unsigned sound_number;
             int digital_number;
+            size_t chunk;
 
             if (!WG_SoundNumberForVariant(wg_data_set.variant,
                                           (wg_sound_t)event->sound,
@@ -3746,9 +3749,9 @@ static int WG_GameSessionTick(unsigned live_tics)
             {
                 continue;
             }
-            size_t chunk = (wg_sound_mode == 1U ? 0U
-                                : WG_DataSoundCount(wg_data_set.variant))
-                           + sound_number;
+            chunk = (wg_sound_mode == 1U ? 0U
+                         : WG_DataSoundCount(wg_data_set.variant))
+                    + sound_number;
             digital_number = ID_SD_DigitalNumberForSoundForVariant(
                 wg_data_set.variant, sound_number);
 

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
+
 #include "ID_VL.h"
 #include "ID_VH.h"
 #include "WL_AGENT.h"

@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
+
 #include "WG_ENDIAN.h"
 #include "WG_FILE.h"
 
@@ -532,11 +534,13 @@ void WG_DataClose(wg_data_set_t *data_set)
 
 const char *WG_DataVariantName(wg_game_variant_t variant)
 {
+    const wg_data_profile_t *profile;
+
     if (variant == WG_GAME_WOLF3D_FULL_APOGEE_14)
     {
         return "Wolfenstein 3D v1.4 Apogee";
     }
-    const wg_data_profile_t *profile = WG_DataProfile(variant);
+    profile = WG_DataProfile(variant);
     return profile != NULL ? profile->name : "unknown game data";
 }
 

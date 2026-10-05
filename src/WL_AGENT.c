@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
 #include "WG_FIXED.h"
 #include "WL_ACT1.h"
 #include "WL_GAME.h"

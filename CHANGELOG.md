@@ -6,6 +6,23 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.30 - 2026-10-05 - Legacy MSVC compiler span
+
+- Added first-class PowerShell-dispatcher and CMake-preset support for Visual
+  Studio 2013/v120, 2012/v110, 2010/v100, and 2008/v90 on x86 and x64.
+- Validated the shared library, public API consumer, deterministic headless
+  host, and complete unit suite with warnings as errors under every added
+  compiler and architecture.
+- Added narrowly scoped pre-C99 MSVC compatibility for fixed-width integers,
+  integer constants, `inline`, and bounded formatting without changing game
+  logic or arithmetic.
+- Made the staged SDK's public header self-contained for VS2008 consumers by
+  including its compatibility integer header.
+- Validated Nuked-OPL3, pure-C DBOPL, timing-preserving silent audio, and both
+  static and dynamic CRT modes at the oldest VS2008 boundary.
+- Made root PowerShell launchers independent of the caller's working directory
+  and corrected legacy-install detection under Windows PowerShell 5.1.
+
 ## 1.4.29 - 2026-10-01 - Windows XP targeting candidate
 
 - Added compiler-qualified v140_xp presets and dispatcher support for x86 and

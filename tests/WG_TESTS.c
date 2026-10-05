@@ -4952,10 +4952,11 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
                         }
                     }
                     fprintf(stderr,
-                            "%s map %zu (%s) did not build: players=%zu, "
+                            "%s map %lu (%s) did not build: players=%lu, "
                             "statics=%u, actors=%u, doors=%u\n",
-                            WG_DataVariantName(variant), index, map.name,
-                            player_starts, (unsigned)level.static_count,
+                            WG_DataVariantName(variant), (unsigned long)index,
+                            map.name, (unsigned long)player_starts,
+                            (unsigned)level.static_count,
                             (unsigned)level.actor_count,
                             (unsigned)level.door_count);
                     CHECK(0);

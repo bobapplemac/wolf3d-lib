@@ -7,6 +7,11 @@ endif()
 include(cmake/WGVersion.cmake)
 project(wolf3d VERSION "${WG_PROJECT_VERSION}" LANGUAGES C)
 
+set(WG_MSVC_COMPAT_INCLUDE "")
+if(MSVC AND MSVC_VERSION LESS 1800)
+    set(WG_MSVC_COMPAT_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/compat/msvc")
+endif()
+
 if(NOT PROJECT_VERSION STREQUAL WG_PROJECT_VERSION)
     message(FATAL_ERROR
         "Configured project version does not match the authoritative VERSION file")
@@ -73,7 +78,14 @@ elseif(WG_AUDIO_BACKEND STREQUAL "standard")
             OUTPUT_NAME "Nuked-OPL3"
             WINDOWS_EXPORT_ALL_SYMBOLS ON
         )
+        if(MSVC AND MSVC_VERSION LESS 1900)
+            target_compile_definitions(nuked-opl3 PRIVATE inline=__inline)
+        endif()
         target_include_directories(nuked-opl3 PUBLIC third_party/Nuked-OPL3)
+        if(WG_MSVC_COMPAT_INCLUDE)
+            target_include_directories(nuked-opl3 PRIVATE
+                "${WG_MSVC_COMPAT_INCLUDE}")
+        endif()
         target_compile_features(nuked-opl3 PUBLIC c_std_99)
         set(WG_OPL_LIBRARY_TARGET nuked-opl3)
     elseif(WG_OPL_BACKEND STREQUAL "dbopl")
@@ -169,6 +181,10 @@ function(wg_configure_core target)
         PUBLIC include
         PRIVATE src third_party/DBOPL
     )
+    if(WG_MSVC_COMPAT_INCLUDE)
+        target_include_directories(${target} PRIVATE
+            "${WG_MSVC_COMPAT_INCLUDE}")
+    endif()
 
     target_compile_features(${target} PUBLIC c_std_99)
 
@@ -178,6 +194,9 @@ function(wg_configure_core target)
 
     if(MSVC)
         target_compile_options(${target} PRIVATE /W4)
+        if(MSVC_VERSION LESS 1900)
+            target_compile_definitions(${target} PRIVATE inline=__inline)
+        endif()
         if(MSVC_VERSION GREATER_EQUAL 1910)
             target_compile_options(${target} PRIVATE /permissive-)
         endif()
@@ -237,6 +256,9 @@ set(WG_LIBRARY_RELEASE_COMMANDS
         "${CMAKE_SOURCE_DIR}/include/WOLF3D.h"
         "${WG_LIBRARY_RELEASE_DIR}/WOLF3D.h"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/include/WOLF3D_STDINT.h"
+        "${WG_LIBRARY_RELEASE_DIR}/WOLF3D_STDINT.h"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/LICENSE"
         "${WG_LIBRARY_RELEASE_DIR}/LICENSE.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -293,9 +315,16 @@ add_custom_target(library-release
 function(wg_configure_host target engine_target)
     target_link_libraries(${target} PRIVATE ${engine_target})
     target_compile_features(${target} PRIVATE c_std_99)
+    if(WG_MSVC_COMPAT_INCLUDE)
+        target_include_directories(${target} PRIVATE
+            "${WG_MSVC_COMPAT_INCLUDE}")
+    endif()
 
     if(MSVC)
         target_compile_options(${target} PRIVATE /W4)
+        if(MSVC_VERSION LESS 1900)
+            target_compile_definitions(${target} PRIVATE inline=__inline)
+        endif()
         if(MSVC_VERSION GREATER_EQUAL 1910)
             target_compile_options(${target} PRIVATE /permissive-)
         endif()
@@ -341,6 +370,11 @@ if(BUILD_TESTING AND WG_BUILD_HEADLESS)
         target_compile_definitions(wg-tests PRIVATE WG_OPL_DBOPL=1)
     endif()
     wg_configure_host(wg-tests wolf3d-internal)
+    if(MSVC AND MSVC_VERSION LESS 1900)
+        # The assertion macros intentionally use do/while (0). Older MSVC
+        # diagnoses every expansion as a constant conditional at /W4.
+        target_compile_options(wg-tests PRIVATE /wd4127)
+    endif()
     target_include_directories(wg-tests PRIVATE platforms src)
     add_test(NAME unit-tests COMMAND wg-tests)
 

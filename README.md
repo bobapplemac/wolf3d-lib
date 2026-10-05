@@ -78,21 +78,23 @@ cmake --build --preset windows-dev-x64 --config Release
 ctest --preset windows-dev-x64 -C Release
 ```
 
-The root `build.ps1` provides a guided alternative that detects VS2019/v142
-and VS2022/v143 and exposes the complete library build selection. Run it with
-no arguments for an interactive wizard:
+The root `build.ps1` provides a guided alternative that detects supported
+Visual Studio installations from VS2008/v90 through VS2022/v143 and exposes
+the complete library build selection. Run it with no arguments for an
+interactive wizard:
 
 ```powershell
 .\build.ps1 -List
 .\build.ps1
 .\build.ps1 -Compiler vs2019 -Architecture x86 -Action test
+.\build.ps1 -Compiler vs2008 -Architecture x86 -Action test
 .\build.ps1 -Action package -Opl dbopl -Runtime dynamic
 ```
 
 Release presets stage clean SDK folders containing `wolf3d.dll` and
 `wolf3d.lib` on Windows, or the versioned `libwolf3d.so` SONAME chain on
-Linux, together with `WOLF3D.h`, the selected audio backend, licenses, and
-package notes.
+Linux, together with `WOLF3D.h` (and the VS2008 compatibility header where
+applicable), the selected audio backend, licenses, and package notes.
 See [docs/building.md](docs/building.md) for all supported configurations.
 
 ## Validation host

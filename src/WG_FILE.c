@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
+
 #ifndef _WIN32
 #include <dirent.h>
 

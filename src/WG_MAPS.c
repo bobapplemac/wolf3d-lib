@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
+
 #include "ID_CA.h"
 #include "WG_ENDIAN.h"
 

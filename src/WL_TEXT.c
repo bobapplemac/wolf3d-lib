@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "WG_COMPAT.h"
+
 #include "ID_VH.h"
 #include "ID_VL.h"
 
