@@ -112,7 +112,18 @@ typedef struct wolf3d_event
     uint32_t buttons;
 } wolf3d_event_t;
 
-#define WOLF3D_PLATFORM_API_VERSION 2U
+#define WOLF3D_PLATFORM_API_VERSION 3U
+
+typedef struct wolf3d_pcm_format
+{
+    uint32_t sample_rate;
+    uint16_t channels;
+    uint16_t bits_per_sample;
+} wolf3d_pcm_format_t;
+
+#define WOLF3D_OPL_CAP_PCM_RENDER 0x01U
+#define WOLF3D_OPL_CAP_SILENT 0x02U
+#define WOLF3D_OPL_CAP_HARDWARE 0x04U
 
 typedef struct wolf3d_platform_api
 {
@@ -134,6 +145,8 @@ typedef struct wolf3d_platform_api
     void (*pcm_shutdown)(void);
     size_t (*pcm_writable_frames)(void);
     int (*pcm_submit)(const int16_t *samples, size_t frame_count);
+    int (*pcm_init_ex)(const wolf3d_pcm_format_t *requested,
+                       wolf3d_pcm_format_t *obtained);
 } wolf3d_platform_api_t;
 
 WOLF3D_API extern uint8_t *wolf3d_ScreenBuffer;
@@ -144,6 +157,10 @@ WOLF3D_API wolf3d_result_t wolf3d_SetPlatform(
 WOLF3D_API wolf3d_result_t wolf3d_Create(int argc, char **argv);
 WOLF3D_API wolf3d_result_t wolf3d_Run(void);
 WOLF3D_API void wolf3d_Shutdown(void);
+WOLF3D_API size_t wolf3d_GetOPLDriverCount(void);
+WOLF3D_API const char *wolf3d_GetOPLDriverName(size_t index);
+WOLF3D_API uint32_t wolf3d_GetOPLDriverCapabilities(size_t index);
+WOLF3D_API const char *wolf3d_GetSelectedOPLDriver(void);
 
 #ifdef __cplusplus
 }

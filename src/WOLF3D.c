@@ -20,6 +20,7 @@
 #include "WL_ACT1.h"
 #include "WL_GAME.h"
 #include "WG_MAPS.h"
+#include "WG_OPL.h"
 #include "WG_PALETTE.h"
 #include "ID_PM.h"
 #include "ID_SD.h"
@@ -99,6 +100,11 @@ static uint8_t wg_digitized_effects = 1U;
 static uint8_t wg_music_enabled = 1U;
 static uint8_t wg_debug_parameter;
 static uint8_t wg_debug_keys_enabled;
+
+#ifndef WG_DEFAULT_SAMPLE_RATE
+#define WG_DEFAULT_SAMPLE_RATE 48000U
+#endif
+static uint32_t wg_preferred_sample_rate = WG_DEFAULT_SAMPLE_RATE;
 
 static unsigned WG_DefaultMenuSelection(void)
 {
@@ -402,6 +408,7 @@ static void WG_FrontMusicStart(unsigned song)
 {
     const uint8_t *data;
     size_t size;
+    uint32_t sample_rate;
 
     if (wg_game.active)
     {
@@ -417,8 +424,13 @@ static void WG_FrontMusicStart(unsigned song)
         WG_FrontMusicClose();
         return;
     }
-    wg_front_music = ID_SD_MusicCreate(48000U);
-    if (wg_front_music == NULL || !WG_PCMInit(48000U, 2U)
+    if (!WG_PCMInit(wg_preferred_sample_rate, 2U, &sample_rate))
+    {
+        WG_FrontMusicClose();
+        return;
+    }
+    wg_front_music = ID_SD_MusicCreate(sample_rate);
+    if (wg_front_music == NULL
         || (wg_music_enabled
             && (!WG_AudioGetChunk(&wg_front_audio,
                                   WG_DataMusicBase(wg_data_set.variant) + song,
@@ -3278,8 +3290,15 @@ static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty,
     {
         goto cleanup;
     }
-    wg_game.music = ID_SD_MusicCreate(48000U);
-    if (wg_game.music != NULL && WG_PCMInit(48000U, 2U))
+    {
+        uint32_t sample_rate;
+
+        if (WG_PCMInit(wg_preferred_sample_rate, 2U, &sample_rate))
+        {
+            wg_game.music = ID_SD_MusicCreate(sample_rate);
+        }
+    }
+    if (wg_game.music != NULL)
     {
         wg_game.audio_active = 1U;
         if (wg_music_enabled
@@ -4660,6 +4679,8 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     wg_game_family_t signon_palette_family;
     const char *signon_path;
     const char *signon_palette;
+    const char *opl_driver;
+    unsigned sample_rate;
     int argument_index;
 
     if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL))
@@ -4680,6 +4701,10 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
         || !WG_FindStringArgument(argc, argv, "--signon", &signon_path)
         || !WG_FindStringArgument(argc, argv, "--signon-palette",
                                   &signon_palette)
+        || !WG_FindStringArgument(argc, argv, "--opl", &opl_driver)
+        || !WG_FindUnsignedArgument(argc, argv, "--sample-rate",
+                                    WG_DEFAULT_SAMPLE_RATE, 192000U,
+                                    &sample_rate)
         || !WG_ParseSignonPalette(signon_palette,
                                   &signon_palette_family)
         || !WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
@@ -4705,6 +4730,12 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     {
         return WOLF3D_RESULT_INVALID_ARGUMENT;
     }
+    if (sample_rate < 8000U
+        || !WG_OPL_SelectDriver(opl_driver != NULL ? opl_driver : "auto"))
+    {
+        return WOLF3D_RESULT_INVALID_ARGUMENT;
+    }
+    wg_preferred_sample_rate = (uint32_t)sample_rate;
 
     framebuffer_size = (size_t)WOLF3D_SCREEN_WIDTH * (size_t)WOLF3D_SCREEN_HEIGHT;
     wolf3d_ScreenBuffer = (uint8_t *)calloc(framebuffer_size, sizeof(*wolf3d_ScreenBuffer));
@@ -7045,6 +7076,26 @@ wolf3d_result_t wolf3d_Run(void)
         WG_Present(wolf3d_ScreenBuffer, wolf3d_Palette);
         WG_SleepMs(wg_game.active ? 1U : 10U);
     }
+}
+
+size_t wolf3d_GetOPLDriverCount(void)
+{
+    return WG_OPL_DriverCount();
+}
+
+const char *wolf3d_GetOPLDriverName(size_t index)
+{
+    return WG_OPL_DriverName(index);
+}
+
+uint32_t wolf3d_GetOPLDriverCapabilities(size_t index)
+{
+    return WG_OPL_DriverCapabilities(index);
+}
+
+const char *wolf3d_GetSelectedOPLDriver(void)
+{
+    return WG_OPL_SelectedDriver();
 }
 
 void wolf3d_Shutdown(void)

@@ -63,17 +63,26 @@ if [[ $target != portable-* && $target != musl-* && $target != clean ]]; then
     compiler=$(choose 'C compiler' "${compilers[@]}")
 fi
 
-audio=standard
-opl=nuked
+drivers=all
+default_opl=nuked
+sample_rate=48000
 if [[ $target != clean ]]; then
-    audio=$(choose 'Audio profile' standard silent)
-    if [ "$audio" = standard ]; then opl=$(choose 'OPL implementation' nuked dbopl); fi
+    drivers=$(choose 'Compiled OPL drivers' all nuked-dbopl nuked-silent dbopl-silent nuked dbopl silent)
+    if [ "$drivers" = all ]; then
+        default_opl=$(choose 'Default OPL driver' nuked dbopl silent)
+    else
+        IFS=- read -r -a defaults <<< "$drivers"
+        default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
+    fi
+    sample_rate=$(choose 'Preferred PCM sample rate' 48000 44100)
 fi
 read -r -p 'Parallel jobs (blank lets the build tool decide): ' jobs
 
-args=("$target" "CC=$compiler" "AUDIO_BACKEND=$audio" "OPL_BACKEND=$opl")
+opl_drivers=${drivers//-/,}
+[ "$drivers" = all ] && opl_drivers=nuked,dbopl,silent
+args=("$target" "CC=$compiler" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
 [ -n "$jobs" ] && args+=("JOBS=$jobs")
-printf '\nBuild plan:\n  Target:   %s\n  Compiler: %s\n  Audio:    %s / %s\n' "$target" "$compiler" "$audio" "$opl"
+printf '\nBuild plan:\n  Target:      %s\n  Compiler:    %s\n  OPL drivers: %s (default: %s)\n  Sample rate: %s Hz\n' "$target" "$compiler" "$opl_drivers" "$default_opl" "$sample_rate"
 printf '\nReproducible command:\n  ./scripts/linux/invoke-build.sh'
 printf ' %q' "${args[@]}"
 printf '\n\n'

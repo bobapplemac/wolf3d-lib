@@ -14,7 +14,8 @@ void WG_SetWindowTitle(const char *title);
 void WG_PrintMessage(const char *message);
 void WG_ReportError(const char *message);
 void WG_PresentText(const uint8_t *cells, uint16_t columns, uint16_t rows);
-int WG_PCMInit(uint32_t sample_rate, uint16_t channels);
+int WG_PCMInit(uint32_t requested_rate, uint16_t channels,
+               uint32_t *obtained_rate);
 void WG_PCMShutdown(void);
 size_t WG_PCMWritableFrames(void);
 int WG_PCMSubmit(const int16_t *samples, size_t frame_count);

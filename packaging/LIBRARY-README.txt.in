@@ -5,8 +5,10 @@ This is the platform-neutral wolf3d-lib distribution. It contains the shared
 engine, its public C99 header, and the applicable license and provenance
 files.
 
-Audio backend: @WG_AUDIO_BACKEND@
-OPL backend:   @WG_OPL_BACKEND@
+Compiled OPL drivers: Nuked=@WG_ENABLE_OPL_NUKED@, DBOPL=@WG_ENABLE_OPL_DBOPL@,
+                      silent=@WG_ENABLE_OPL_SILENT@
+Default OPL driver:   @WG_DEFAULT_OPL_DRIVER@
+Preferred PCM rate:   @WG_DEFAULT_SAMPLE_RATE@ Hz
 
 A host populates wolf3d_platform_api_t with video, input, timing, error, and
 PCM callbacks, calls wolf3d_SetPlatform(), and then calls wolf3d_Create(),
@@ -20,7 +22,8 @@ Official Windows packages embed the MSVC runtime and do not require the Visual
 C++ Redistributable. Custom WG_STATIC_MSVC_RUNTIME=OFF builds require the
 matching Redistributable.
 
-The default Nuked-OPL3 build keeps the LGPL component as a separate,
-replaceable shared library. DBOPL builds incorporate the GPL-compatible C
-implementation into wolf3d. Silent builds retain original logical audio
-timing while emitting zero PCM. See THIRD_PARTY.md for provenance.
+Nuked-OPL3 remains a separate, replaceable LGPL shared library. DBOPL and the
+timing-preserving silent driver are built into wolf3d when enabled. Select an
+included driver at runtime with --opl nuked, --opl dbopl, or --opl silent;
+use --sample-rate HZ to change the preferred host PCM rate. See
+THIRD_PARTY_NOTICES.txt for provenance.

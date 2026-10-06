@@ -1,5 +1,21 @@
 # Development log
 
+## 2026-10-06: Compile-time audio sets and runtime selection
+
+- Added a small OPL-driver registry around the existing common register/write/
+  render contract. Nuked-OPL3, DBOPL, and timing-preserving silence are all
+  compiled by default, while constrained targets can omit any driver and choose
+  the initial implementation at build time.
+- Added `--opl` runtime selection without divergent game or IMF sequencer paths.
+  Silent mode zeros the completed mixed bus, retaining FM, PC-speaker, digital,
+  priority, duration, and 700/140 Hz state transitions.
+- Extended the platform API with negotiated signed-16-bit PCM initialization.
+  The host opens its stream first and the engine constructs the selected OPL
+  implementation at the obtained application-facing rate. `--sample-rate`
+  selects the preferred 8--192 kHz rate; 48 kHz remains the modern default.
+- Updated native, container, modern Windows, and XP-era build interfaces to
+  configure compiled driver sets independently of the runtime default.
+
 ## 2026-10-01: wolf3d-lib repository boundary
 
 - Renamed the engine repository to `wolf3d-lib` and advanced it to 1.4.20.

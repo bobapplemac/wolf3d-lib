@@ -110,10 +110,39 @@ void WG_PresentText(const uint8_t *cells, uint16_t columns, uint16_t rows)
     }
 }
 
-int WG_PCMInit(uint32_t sample_rate, uint16_t channels)
+int WG_PCMInit(uint32_t requested_rate, uint16_t channels,
+               uint32_t *obtained_rate)
 {
-    return wg_platform.pcm_init != NULL
-               && wg_platform.pcm_init(sample_rate, channels);
+    wolf3d_pcm_format_t requested;
+    wolf3d_pcm_format_t obtained;
+
+    if (obtained_rate == NULL)
+    {
+        return 0;
+    }
+    requested.sample_rate = requested_rate;
+    requested.channels = channels;
+    requested.bits_per_sample = 16U;
+    obtained = requested;
+    if (wg_platform.pcm_init_ex != NULL)
+    {
+        if (!wg_platform.pcm_init_ex(&requested, &obtained)
+            || obtained.sample_rate == 0U
+            || obtained.channels != channels
+            || obtained.bits_per_sample != 16U)
+        {
+            return 0;
+        }
+        *obtained_rate = obtained.sample_rate;
+        return 1;
+    }
+    if (wg_platform.pcm_init != NULL
+        && wg_platform.pcm_init(requested_rate, channels))
+    {
+        *obtained_rate = requested_rate;
+        return 1;
+    }
+    return 0;
 }
 
 void WG_PCMShutdown(void)

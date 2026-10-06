@@ -22,7 +22,7 @@ Win32, and Linux direct-console examples using only this public boundary.
 | `set_window_title` | Publish the current game/profile name in the host's normal way. |
 | `print_message`, `report_error` | Write ordinary console/debug text and report errors. `report_error` may additionally use a native dialog. |
 | `present_text` | Preserve an 80x25 DOS text-mode screen supplied as interleaved CP437 character/VGA-attribute bytes. Native console cells are ideal; ANSI color plus CP437-to-Unicode conversion is the portable fallback. Copy the cells if presentation is deferred until shutdown. |
-| `pcm_init`, `pcm_shutdown` | Open/close signed 16-bit stereo PCM at the requested sample rate. |
+| `pcm_init`, `pcm_init_ex`, `pcm_shutdown` | Open/close signed 16-bit stereo PCM. `pcm_init_ex` reports the application-facing rate actually obtained; retain `pcm_init` as the compatibility callback. |
 | `pcm_writable_frames` | Report how many frames can be submitted immediately without blocking. |
 | `pcm_submit` | Queue interleaved signed 16-bit frames and return nonzero on success. |
 
@@ -64,6 +64,13 @@ iteration. `WG_PCMSubmit` must copy or consume the supplied samples before it
 returns because the buffer is temporary. Audio rendering owns the 700 Hz IMF
 clock and 140 Hz effect clock; a host must not derive either from video or the
 70 Hz game loop.
+
+The engine requests the configured preferred rate (48 kHz by default), then
+constructs the active OPL driver at the rate returned by `pcm_init_ex`. A host
+that performs transparent device-side resampling should report the rate at
+which it accepts application samples, normally the requested rate. A direct
+hardware host may instead report a nearby negotiated rate. The engine's
+rational 700 Hz sample clock remains exact at either rate.
 
 ## Build integration
 

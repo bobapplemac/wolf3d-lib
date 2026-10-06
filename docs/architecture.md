@@ -448,19 +448,20 @@ and decays both counters at the 70 Hz game rate. Only the host-facing 8-bit RGB
 palette changes; the indexed framebuffer therefore remains untouched. The
 headless host exposes a separate palette hash for this distinction.
 
-Audio will follow the same model: the core will produce PCM through the host
-contract. AdLib synthesis will use the upstream Nuked OPL3 implementation,
-with its LGPL terms and source separation preserved. The fast fork remains a
-measured-performance fallback, not the default.
+Audio follows the same model: the core produces PCM through the host contract.
+An internal registry makes the faithful upstream Nuked OPL3 implementation,
+the lower-resource pure-C DBOPL implementation, and timing-preserving silence
+runtime-selectable when compiled. Nuked remains the default, with its LGPL
+terms and shared-library separation preserved.
 
 The first music slice now follows that design. `ID_SD.c` parses the original
 length-prefixed IMF event stream, preserves same-tic zero-delay register
 batches and end-of-sequence looping, and services it at 700 Hz. A rational
-sample accumulator splits Nuked-OPL3 generation at exact event boundaries; it
-therefore produces 700 services over 48,000 output frames without making the
-70 Hz gameplay loop run ten times faster. The generic layer submits signed
-48 kHz stereo PCM, while production hosts transport it through native audio
-APIs and headless mode can emit the identical samples as a WAV fixture.
+sample accumulator splits OPL generation at exact event boundaries; it
+therefore produces exactly 700 services per second at any negotiated PCM rate
+without making the 70 Hz gameplay loop run ten times faster. The generic layer
+submits signed stereo PCM at a preferred 48 kHz (or a runtime override), while
+production hosts transport or resample it through native audio APIs.
 AdLib effects share Nuked's channel 0 with the music chip, retain original
 priority replacement and instrument programming, and consume one pitch byte at
 140 Hz (every fifth IMF service), just as the fast DOS timer ISR did.
@@ -483,7 +484,7 @@ Digitized effects retain the original VSWAP layout and `wolfdigimap` selection.
 `ID_SD.c` reads the terminal `(start page, byte length)` table, joins each
 page-spanning unsigned 8-bit sample, applies the original priority rules and
 Sound Blaster Pro 0-15 stereo attenuation, and mixes it into the same signed
-48 kHz stream. The zero-order hold advances at 7,042 Hz, matching the effective
+PCM stream. The zero-order hold advances at 7,042 Hz, matching the effective
 rate produced by the original integer DSP time constant for its nominal 7 kHz
 configuration. Missing sample pages in the shareware archive fall back to the
 corresponding AdLib effect at runtime.

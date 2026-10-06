@@ -24,24 +24,23 @@ set /p "CONFIG=Configuration - Release or Debug [Release]: "
 if "%CONFIG%"=="" set "CONFIG=Release"
 set /p "RUNTIME=Compiler runtime - static or dynamic [static]: "
 if "%RUNTIME%"=="" set "RUNTIME=static"
-set /p "AUDIO=Audio profile - standard or silent [standard]: "
-if "%AUDIO%"=="" set "AUDIO=standard"
-set "OPL=nuked"
-if /I "%AUDIO%"=="standard" set /p "OPL=OPL implementation - nuked or dbopl [nuked]: "
-if "%OPL%"=="" set "OPL=nuked"
+set /p "DRIVERS=Compiled OPL drivers - all, a name, or hyphenated pair [all]: "
+if "%DRIVERS%"=="" set "DRIVERS=all"
+set /p "DEFAULT_OPL=Default OPL driver - nuked, dbopl, or silent [nuked]: "
+if "%DEFAULT_OPL%"=="" set "DEFAULT_OPL=nuked"
 
 echo.
 echo Build plan:
 echo   %COMPILER% x86, %CONFIG%, %ACTION%
-echo   runtime=%RUNTIME%, audio=%AUDIO%, opl=%OPL%
+echo   runtime=%RUNTIME%, drivers=%DRIVERS%, default=%DEFAULT_OPL%
 echo.
 echo Reproducible command:
-echo   scripts\windows\legacy\build.cmd %COMPILER% %CONFIG% %AUDIO% %OPL% %RUNTIME% %ACTION%
+echo   scripts\windows\legacy\build.cmd %COMPILER% %CONFIG% %DRIVERS% %DEFAULT_OPL% %RUNTIME% %ACTION%
 echo.
 set /p "CONFIRM=Run this build now? [Y/n]: "
 if /I "%CONFIRM%"=="n" exit /b 0
 if /I "%CONFIRM%"=="no" exit /b 0
-call "%~dp0build.cmd" %COMPILER% %CONFIG% %AUDIO% %OPL% %RUNTIME% %ACTION%
+call "%~dp0build.cmd" %COMPILER% %CONFIG% %DRIVERS% %DEFAULT_OPL% %RUNTIME% %ACTION%
 exit /b %ERRORLEVEL%
 
 :detect

@@ -15,9 +15,9 @@ operating systems. This document supplies the detailed commands and options.
 - GNU Make for the Linux convenience commands
 - Docker only for the optional glibc 2.28 and musl packages
 
-Nuked-OPL3 is the default and builds as a separate shared library. The
-GPL-compatible PrBoom+ C port of DBOPL and a timing-preserving silent backend
-are selectable alternatives.
+Default builds include all three runtime-selectable drivers: Nuked-OPL3,
+the GPL-compatible PrBoom+ C port of DBOPL, and timing-preserving silence.
+Nuked remains the default and builds as a separate shared library.
 
 ## Linux with GNU Make
 
@@ -33,8 +33,8 @@ make                         # package with GCC
 make library-release CC=clang
 make test
 make test CC=clang
-make test OPL_BACKEND=dbopl
-make test AUDIO_BACKEND=silent
+make test OPL_DEFAULT=dbopl
+make test OPL_DRIVERS=silent OPL_DEFAULT=silent
 ```
 
 The native package is staged at
@@ -58,7 +58,7 @@ separately from glibc output:
 ```sh
 make musl JOBS=8
 make musl CC=clang JOBS=8
-make musl OPL_BACKEND=dbopl JOBS=8
+make musl OPL_DEFAULT=dbopl JOBS=8
 ```
 
 It stages `dist/wolf3d-<version>-library-linux-musl-<architecture>` and audits
@@ -99,15 +99,15 @@ runtime dependency is embedded.
 
 The root `build.ps1` detects supported Visual Studio installations and MSYS2
 UCRT64 and is the human-facing entry point for selecting one configuration. It exposes
-compiler, architecture, Debug/Release, static/dynamic CRT, standard/silent
-audio, Nuked-OPL3/DBOPL, build/test/package/clean actions, parallelism, and
-dry-run output:
+compiler, architecture, Debug/Release, static/dynamic CRT, compiled OPL driver
+set, runtime default, preferred sample rate, build/test/package/clean actions,
+parallelism, and dry-run output:
 
 ```powershell
 .\build.ps1 -List
 .\build.ps1
 .\build.ps1 -Compiler vs2022 -Architecture x86 -Action test
-.\build.ps1 -Compiler vs2019 -Action package -Opl dbopl
+.\build.ps1 -Compiler vs2019 -Action package -DefaultOpl dbopl
 .\build.ps1 -Compiler vs2017 -Architecture x86 -Action package
 .\build.ps1 -Compiler vs2015 -Architecture x86 -Action test
 .\build.ps1 -Compiler vs2015-xp -Architecture x86 -Action package
@@ -117,7 +117,7 @@ dry-run output:
 .\build.ps1 -Compiler vs2008 -Architecture x86 -Action test
 .\build.ps1 -Compiler mingw-ucrt64 -Action test
 .\build.ps1 -Compiler mingw-ucrt64 -Action package
-.\build.ps1 -Action test -Audio silent -Runtime dynamic
+.\build.ps1 -Action test -Drivers silent -DefaultOpl silent -Runtime dynamic
 ```
 
 With no arguments it runs `scripts/windows/configure-build.ps1`, reports every
@@ -151,15 +151,16 @@ dispatcher remain unchanged.
 ```bat
 build.cmd
 scripts\windows\legacy\build.cmd vc6
-scripts\windows\legacy\build.cmd vs2002 Release standard nuked static test
-scripts\windows\legacy\build.cmd vs2003 Release silent nuked static package
-scripts\windows\legacy\build.cmd vs2005 Release standard dbopl dynamic package
+scripts\windows\legacy\build.cmd vs2002 Release all nuked static test
+scripts\windows\legacy\build.cmd vs2003 Release silent silent static package
+scripts\windows\legacy\build.cmd vs2005 Release all dbopl dynamic package
 ```
 
 Run root `build.cmd` without arguments for the XP-compatible guided scanner.
 Arguments passed to it are forwarded to the deterministic legacy executor.
-Those arguments are compiler, configuration, audio mode, OPL backend, CRT
-mode, and action. Run the executor without arguments for its usage summary.
+Those arguments are compiler, configuration, compiled driver set, default OPL
+driver, CRT mode, and action. Run the executor without arguments for its usage
+summary.
 `build` is the default action, `test` executes a public-header/DLL consumer,
 and `package` stages a clean compiler-labeled SDK under `dist/`.
 
@@ -213,8 +214,11 @@ Use `windows-*-x86` for 32-bit output. For a dynamic MSVC runtime add
 | `WG_WARNINGS_AS_ERRORS` | `ON` | Treat project warnings as errors. |
 | `WG_STATIC_MSVC_RUNTIME` | `ON` | Embed the MSVC runtime in Windows artifacts. |
 | `WG_STATIC_GNU_RUNTIME` | `ON` | Statically link GCC support code in MinGW artifacts. |
-| `WG_AUDIO_BACKEND` | `standard` | `standard` emits PCM; `silent` advances identical logical audio state while emitting zero samples. |
-| `WG_OPL_BACKEND` | `nuked` | Select `nuked` or the pure-C `dbopl` implementation for standard audio. |
+| `WG_ENABLE_OPL_NUKED` | `ON` | Compile the faithful Nuked-OPL3 runtime driver. |
+| `WG_ENABLE_OPL_DBOPL` | `ON` | Compile the lower-resource pure-C DBOPL runtime driver. |
+| `WG_ENABLE_OPL_SILENT` | `ON` | Compile timing-preserving silence. |
+| `WG_DEFAULT_OPL_DRIVER` | `nuked` | Select the initial driver; `--opl` may select any compiled driver at runtime. |
+| `WG_DEFAULT_SAMPLE_RATE` | `48000` | Preferred host PCM rate; `--sample-rate` overrides it and the host reports the rate obtained. |
 | `WG_LINUX_LIBC` | empty | Optional `glibc`/`musl` package label used by reproducible Linux builds. |
 | `WG_COMPILER_LABEL` | empty | Optional compiler/toolset label appended to a staged package directory. Windows presets set this automatically. |
 | `WG_DIST_ROOT` | `<source>/dist` | Destination root for staged packages. |
@@ -229,8 +233,8 @@ A staged package contains:
 - `WOLF3D.h`
 - `WOLF3D_STDINT.h` for public-header consumers using VS2008 and older MSVC
 - `wolf3d.dll` and `wolf3d.lib`, or the `libwolf3d.so` SONAME chain
-- the replaceable Nuked-OPL3 shared library for default builds, or embedded
-  DBOPL/silent backend selected at configure time
+- the replaceable Nuked-OPL3 shared library when compiled, plus embedded
+  DBOPL and silent drivers enabled for that build
 - project and third-party licensing/provenance notes
 
 Production executables and OS-specific dependencies deliberately belong to

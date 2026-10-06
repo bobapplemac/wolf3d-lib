@@ -745,11 +745,12 @@ int ID_SD_MusicRender(id_sd_music_t *music, int16_t *stereo,
         ID_SD_ApplyFMMixGain(stereo, frames);
         ID_SD_DigitalMix(music, stereo, frames);
         ID_SD_PCMix(music, stereo, frames);
-#ifdef WG_AUDIO_SILENT
-        /* Keep every original audio clock and completion transition active,
-           but deliberately expose silence to hosts without audio output. */
-        memset(stereo, 0, (size_t)frames * 2U * sizeof(*stereo));
-#endif
+        if ((WG_OPL_SelectedCapabilities() & WG_OPL_CAP_SILENT) != 0U)
+        {
+            /* Keep every original audio clock and completion transition
+               active, but deliberately expose silence to the host. */
+            memset(stereo, 0, (size_t)frames * 2U * sizeof(*stereo));
+        }
         stereo += (size_t)frames * 2U;
         frame_count -= frames;
         ticks = ID_SD_SampleClockAdvance(&music->clock, frames);

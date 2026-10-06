@@ -74,6 +74,20 @@ static int WG_HeadlessPCMInit(uint32_t sample_rate, uint16_t channels)
     return sample_rate != 0U && channels != 0U;
 }
 
+static int WG_HeadlessPCMInitEx(const wolf3d_pcm_format_t *requested,
+                                wolf3d_pcm_format_t *obtained)
+{
+    if (requested == NULL || obtained == NULL
+        || requested->bits_per_sample != 16U
+        || !WG_HeadlessPCMInit(requested->sample_rate,
+                               requested->channels))
+    {
+        return 0;
+    }
+    *obtained = *requested;
+    return 1;
+}
+
 static void WG_HeadlessPCMShutdown(void)
 {
 }
@@ -108,7 +122,8 @@ int WG_InstallPlatform(void)
         WG_HeadlessPCMInit,
         WG_HeadlessPCMShutdown,
         WG_HeadlessPCMWritableFrames,
-        WG_HeadlessPCMSubmit
+        WG_HeadlessPCMSubmit,
+        WG_HeadlessPCMInitEx
     };
 
     return wolf3d_SetPlatform(&platform) == WOLF3D_RESULT_OK;

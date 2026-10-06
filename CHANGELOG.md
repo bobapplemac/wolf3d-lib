@@ -6,6 +6,19 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.38 - 2026-10-06 - Runtime audio-driver selection
+
+- Replaced mutually exclusive audio builds with a compiled-driver registry;
+  default builds include Nuked-OPL3, DBOPL, and timing-preserving silence and
+  accept `--opl nuked|dbopl|silent` at runtime.
+- Added compile-time inclusion controls and default-driver selection to modern
+  and legacy CMake, GNU Make, and the guided Windows/Linux build frontends.
+- Added `--sample-rate`, a compile-time preferred rate, and platform API v3
+  PCM negotiation so OPL synthesis and the exact rational 700 Hz sequencer use
+  the application-facing rate actually accepted by the host.
+- Exposed read-only driver discovery through the public API and added runtime
+  coverage for each compiled driver at both 44.1 and 48 kHz.
+
 ## 1.4.37 - 2026-10-06 - Guided cross-platform build configuration
 
 - Split the modern Windows build interface into a dependency-free guided

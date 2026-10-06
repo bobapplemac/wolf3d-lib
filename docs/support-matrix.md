@@ -28,7 +28,7 @@ library. MinGW still uses the Windows-provided UCRT dynamically.
 | Windows, VS2002--VS2022 | Visual Studio | Open `ide/visual-studio/vsYYYY/wolf3d-lib.sln` in the matching IDE | Same CMake-backed SDK |
 | Windows, VC6 | Visual C++ 6.0 | Open `ide/visual-studio/vc6/wolf3d-lib.dsw` | Same legacy-CMake SDK |
 | Windows, modern CMake | CMake presets | `cmake --preset windows-vs2022-library-x64` then `cmake --build --preset windows-vs2022-library-x64` | Selected x86/x64 SDK |
-| Windows XP, VC6--VS2005 | Guided CMD configurator / native dispatcher | `build.cmd` or `scripts\windows\legacy\build.cmd vc6 Release standard nuked static package` | XP-era x86 SDK |
+| Windows XP, VC6--VS2005 | Guided CMD configurator / native dispatcher | `build.cmd` or `scripts\windows\legacy\build.cmd vc6 Release all nuked static package` | XP-era x86 SDK |
 
 Run `./build.sh`, `make help`, `.\build.ps1`, or `build.cmd` without
 arguments for the complete option list. See [building.md](building.md) for
@@ -80,16 +80,17 @@ The musl output is an SDK, not a standalone executable; the companion
 
 ## Audio/backend matrix
 
-Every supported compiler profile can select:
+Every modern compiler profile includes all three drivers by default and can
+omit unneeded implementations at compile time:
 
-| Audio mode | OPL implementation | Packaging |
+| Runtime selection | Implementation | Packaging |
 | --- | --- | --- |
-| `standard` | Nuked-OPL3 (default) | Separate LGPL shared library |
-| `standard` | DBOPL | Embedded pure-C implementation |
-| `silent` | None executed | Timing and register activity retained; PCM is silent |
+| `--opl nuked` | Nuked-OPL3 (default) | Separate LGPL shared library |
+| `--opl dbopl` | DBOPL | Embedded pure-C implementation |
+| `--opl silent` | Silent timing driver | Timing and register activity retained; all PCM is silent |
 
-Use `OPL_BACKEND=nuked|dbopl` and `AUDIO_BACKEND=standard|silent` with Make,
-or the corresponding dispatcher/CMake options documented in
+Use `OPL_DRIVERS`, `OPL_DEFAULT`, and `SAMPLE_RATE` with Make, or the
+corresponding dispatcher/CMake options documented in
 [building.md](building.md).
 
 ## Planned, not currently supported

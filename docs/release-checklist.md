@@ -21,7 +21,7 @@
 - [x] Official Nuked-OPL3 source and LGPL terms retained separately.
 - [x] Win32 release staging produces a minimal x86/x64 folder with a
   replaceable Nuked-OPL3 DLL, complete license notices, and no build artifacts.
-- [x] The generic engine builds as a shared library with a six-symbol public
+- [x] The generic engine builds as a shared library with a ten-symbol public
   ABI, a versioned host callback table, and its own clean release target.
 - [x] The Win32 executable imports the engine DLL instead of embedding it.
 - [x] Staged executables use the adjacent folder for game data by default and

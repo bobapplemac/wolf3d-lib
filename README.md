@@ -38,14 +38,26 @@ Hosts include `WOLF3D.h`, fill a `wolf3d_platform_api_t`, then call:
 3. `wolf3d_Run()`
 4. `wolf3d_Shutdown()`
 
-The library exports only those four functions plus the indexed 320x200
-`wolf3d_ScreenBuffer` and 256-color `wolf3d_Palette`. The reference Nuked-OPL3
-backend remains a separate, replaceable LGPL shared library; pure-C DBOPL and
-timing-preserving silent builds are also available.
+The library also exports read-only OPL-driver discovery functions plus the
+indexed 320x200 `wolf3d_ScreenBuffer` and 256-color `wolf3d_Palette`. Default
+builds include Nuked-OPL3, pure-C DBOPL, and timing-preserving silent drivers;
+`--opl nuked|dbopl|silent` selects among the compiled choices at runtime.
+Nuked-OPL3 remains a separate, replaceable LGPL shared library.
 
 The in-tree `wolf3d::wolf3d` CMake target is the supported target for a
 parent project. The public header is under `include/`; private `src/`
 headers are not a host interface.
+
+Runtime audio selection is intentionally host-independent:
+
+```text
+--opl nuked|dbopl|silent  Select an implementation compiled into the library
+--sample-rate HZ          Request 8000--192000 Hz PCM (default: 48000)
+```
+
+The host may negotiate another application-facing PCM rate. The library then
+constructs the selected emulator at that obtained rate while preserving the
+exact rational 700 Hz IMF clock and 140 Hz effect clock.
 
 ## Build
 
@@ -65,8 +77,8 @@ make test               # library, internal headless oracle, and tests
 make test CC=clang      # same validation with Clang
 make portable JOBS=8    # Debian 10 / glibc 2.28 package in Docker
 make musl JOBS=8        # Alpine/musl package in Docker
-make test OPL_BACKEND=dbopl
-make test AUDIO_BACKEND=silent
+make test OPL_DEFAULT=dbopl
+make test OPL_DRIVERS=silent OPL_DEFAULT=silent
 make help               # complete command and variable reference
 ```
 
@@ -98,7 +110,7 @@ UCRT64 MinGW. Run it with no arguments for an interactive wizard:
 .\build.ps1 -Compiler vs2019 -Architecture x86 -Action test
 .\build.ps1 -Compiler vs2008 -Architecture x86 -Action test
 .\build.ps1 -Compiler mingw-ucrt64 -Action package
-.\build.ps1 -Action package -Opl dbopl -Runtime dynamic
+.\build.ps1 -Action package -DefaultOpl dbopl -Runtime dynamic
 ```
 
 Windows XP-era x86 builds use an isolated CMake 3.5 definition and native CMD
@@ -106,8 +118,8 @@ dispatcher, preserving compatibility with VC6 SP6 through VS2005 SP1:
 
 ```bat
 build.cmd
-scripts\windows\legacy\build.cmd vc6 Release standard nuked static test
-scripts\windows\legacy\build.cmd vs2002 Release standard nuked static package
+scripts\windows\legacy\build.cmd vc6 Release all nuked static test
+scripts\windows\legacy\build.cmd vs2002 Release all nuked static package
 scripts\windows\legacy\build.cmd vs2003
 scripts\windows\legacy\build.cmd vs2005
 ```
@@ -116,7 +128,7 @@ Release presets stage clean SDK folders containing `wolf3d.dll` and the
 compiler-appropriate import library on Windows, or the versioned
 `libwolf3d.so` SONAME chain on Linux, together with `WOLF3D.h` (and the
 legacy-MSVC compatibility header where
-applicable), the selected audio backend, licenses, and package notes.
+applicable), the compiled audio drivers, licenses, and package notes.
 See the [build and compatibility matrix](docs/support-matrix.md) for supported
 compilers, build entry points, artifacts, and validated destination operating
 systems. [docs/building.md](docs/building.md) contains the complete command and

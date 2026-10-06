@@ -12,18 +12,14 @@ CTEST ?= ctest
 DOCKER ?= docker
 CMAKE_GENERATOR ?= Unix Makefiles
 BUILD_TYPE ?= Release
-AUDIO_BACKEND ?= standard
-OPL_BACKEND ?= nuked
+OPL_DRIVERS ?= nuked,dbopl,silent
+OPL_DEFAULT ?= nuked
+SAMPLE_RATE ?= 48000
 CMAKE_ARGS ?=
 TEST_ARGS ?=
 JOBS ?=
 
 BACKEND_SUFFIX :=
-ifeq ($(AUDIO_BACKEND),silent)
-BACKEND_SUFFIX := -silent
-else ifneq ($(OPL_BACKEND),nuked)
-BACKEND_SUFFIX := -$(OPL_BACKEND)
-endif
 
 BUILD_DIR ?= build/linux-$(COMPILER_NAME)$(BACKEND_SUFFIX)
 RELEASE_BUILD_DIR ?= build/linux-library-$(COMPILER_NAME)$(BACKEND_SUFFIX)
@@ -37,8 +33,12 @@ MUSL_BUILD_IMAGE ?= wolf3d-lib-build-alpine-musl
 DOCKER_RUN_ARGS ?=
 
 CMAKE_COMPILER_ARG := -DCMAKE_C_COMPILER="$(CC)"
-CMAKE_BACKEND_ARGS := -DWG_AUDIO_BACKEND="$(AUDIO_BACKEND)" \
-	-DWG_OPL_BACKEND="$(OPL_BACKEND)"
+CMAKE_BACKEND_ARGS := \
+	-DWG_ENABLE_OPL_NUKED=$(if $(findstring nuked,$(OPL_DRIVERS)),ON,OFF) \
+	-DWG_ENABLE_OPL_DBOPL=$(if $(findstring dbopl,$(OPL_DRIVERS)),ON,OFF) \
+	-DWG_ENABLE_OPL_SILENT=$(if $(findstring silent,$(OPL_DRIVERS)),ON,OFF) \
+	-DWG_DEFAULT_OPL_DRIVER="$(OPL_DEFAULT)" \
+	-DWG_DEFAULT_SAMPLE_RATE="$(SAMPLE_RATE)"
 PARALLEL_ARG := --parallel $(JOBS)
 
 .DEFAULT_GOAL := all
@@ -84,8 +84,9 @@ help:
 		'Common variables:' \
 		'  CC=gcc|clang                 C compiler (default: gcc).' \
 		'  BUILD_TYPE=Release|Debug     CMake build type (default: Release).' \
-		'  AUDIO_BACKEND=standard|silent Audio output profile (default: standard).' \
-		'  OPL_BACKEND=nuked|dbopl      Standard-audio OPL emulator (default: nuked).' \
+		'  OPL_DRIVERS=nuked,dbopl,silent Drivers compiled into the library (default: all).' \
+		'  OPL_DEFAULT=nuked|dbopl|silent Runtime default (default: nuked).' \
+		'  SAMPLE_RATE=Hz               Preferred host PCM rate (default: 48000).' \
 		'  JOBS=N                       Parallel job limit.' \
 		'  CMAKE_ARGS="..."             Extra CMake -D settings.' \
 		'  TEST_ARGS="..."              Extra arguments passed to CTest.' \
@@ -94,18 +95,19 @@ help:
 		'Examples:' \
 		'  make' \
 		'  make test CC=clang JOBS=8' \
-		'  make test OPL_BACKEND=dbopl' \
-		'  make test AUDIO_BACKEND=silent' \
+		'  make test OPL_DEFAULT=dbopl' \
+		'  make test OPL_DRIVERS=silent OPL_DEFAULT=silent' \
 		'  make portable JOBS=8' \
-		'  make musl OPL_BACKEND=dbopl JOBS=8'
+		'  make musl OPL_DEFAULT=dbopl JOBS=8'
 
 print-config:
 	@printf '%s\n' \
 		'CC=$(CC)' \
 		'PROJECT_VERSION=$(PROJECT_VERSION)' \
 		'BUILD_TYPE=$(BUILD_TYPE)' \
-		'AUDIO_BACKEND=$(AUDIO_BACKEND)' \
-		'OPL_BACKEND=$(OPL_BACKEND)' \
+		'OPL_DRIVERS=$(OPL_DRIVERS)' \
+		'OPL_DEFAULT=$(OPL_DEFAULT)' \
+		'SAMPLE_RATE=$(SAMPLE_RATE)' \
 		'BUILD_DIR=$(BUILD_DIR)' \
 		'RELEASE_BUILD_DIR=$(RELEASE_BUILD_DIR)' \
 		'PORTABLE_BUILD_DIR=$(PORTABLE_BUILD_DIR)' \
@@ -153,7 +155,8 @@ portable-library-release: portable-image
 		$(DOCKER_RUN_ARGS) \
 		"$(PORTABLE_BUILD_IMAGE)" \
 		make library-release CC=gcc \
-			AUDIO_BACKEND="$(AUDIO_BACKEND)" OPL_BACKEND="$(OPL_BACKEND)" \
+			OPL_DRIVERS="$(OPL_DRIVERS)" OPL_DEFAULT="$(OPL_DEFAULT)" \
+			SAMPLE_RATE="$(SAMPLE_RATE)" \
 			RELEASE_BUILD_DIR="$(PORTABLE_BUILD_DIR)" JOBS="$(JOBS)"
 	$(DOCKER) run --rm \
 		--volume "$(CURDIR):/src:ro" \
@@ -183,7 +186,8 @@ musl-library-release: musl-image
 		$(DOCKER_RUN_ARGS) \
 		"$(MUSL_BUILD_IMAGE)" \
 		make library-release CC="$(CC)" \
-			AUDIO_BACKEND="$(AUDIO_BACKEND)" OPL_BACKEND="$(OPL_BACKEND)" \
+			OPL_DRIVERS="$(OPL_DRIVERS)" OPL_DEFAULT="$(OPL_DEFAULT)" \
+			SAMPLE_RATE="$(SAMPLE_RATE)" \
 			RELEASE_BUILD_DIR="$(MUSL_BUILD_DIR)" JOBS="$(JOBS)" \
 			CMAKE_ARGS="-DWG_LINUX_LIBC=musl $(CMAKE_ARGS)"
 	$(DOCKER) run --rm \

@@ -48,12 +48,14 @@ option(WG_STATIC_MSVC_RUNTIME
     "Link the MSVC runtime statically for self-contained Windows releases" ON)
 option(WG_STATIC_GNU_RUNTIME
     "Link the GCC support runtime statically in MinGW artifacts" ON)
-set(WG_AUDIO_BACKEND "standard" CACHE STRING
-    "Audio output backend: standard or silent")
-set_property(CACHE WG_AUDIO_BACKEND PROPERTY STRINGS standard silent)
-set(WG_OPL_BACKEND "nuked" CACHE STRING
-    "OPL emulator used by the standard audio backend: nuked or dbopl")
-set_property(CACHE WG_OPL_BACKEND PROPERTY STRINGS nuked dbopl)
+option(WG_ENABLE_OPL_NUKED "Compile the Nuked OPL3 runtime driver" ON)
+option(WG_ENABLE_OPL_DBOPL "Compile the DBOPL runtime driver" ON)
+option(WG_ENABLE_OPL_SILENT "Compile the timing-preserving silent driver" ON)
+set(WG_DEFAULT_OPL_DRIVER "nuked" CACHE STRING
+    "Default runtime OPL driver: nuked, dbopl, or silent")
+set_property(CACHE WG_DEFAULT_OPL_DRIVER PROPERTY STRINGS nuked dbopl silent)
+set(WG_DEFAULT_SAMPLE_RATE "48000" CACHE STRING
+    "Preferred PCM sample rate; the host may negotiate another rate")
 set(WG_LINUX_LIBC "" CACHE STRING
     "Optional Linux package ABI label, such as glibc or musl")
 set_property(CACHE WG_LINUX_LIBC PROPERTY STRINGS "" glibc musl)
@@ -67,13 +69,10 @@ if(MSVC AND WG_STATIC_MSVC_RUNTIME)
         "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-set(WG_OPL_SOURCE "")
-set(WG_OPL_LIBRARY_TARGET "")
-if(WG_AUDIO_BACKEND STREQUAL "silent")
-    set(WG_OPL_SOURCE src/WG_OPL_SILENT.c)
-elseif(WG_AUDIO_BACKEND STREQUAL "standard")
-    if(WG_OPL_BACKEND STREQUAL "nuked")
-        set(WG_OPL_SOURCE src/WG_OPL_NUKED.c)
+set(WG_OPL_SOURCES src/WG_OPL.c)
+set(WG_OPL_LIBRARY_TARGETS "")
+if(WG_ENABLE_OPL_NUKED)
+        list(APPEND WG_OPL_SOURCES src/WG_OPL_NUKED.c)
         # Keep the LGPL component independently replaceable on every platform.
         add_library(nuked-opl3 SHARED third_party/Nuked-OPL3/opl3.c)
         set_target_properties(nuked-opl3 PROPERTIES
@@ -95,9 +94,10 @@ elseif(WG_AUDIO_BACKEND STREQUAL "standard")
                 "${WG_MSVC_COMPAT_INCLUDE}")
         endif()
         target_compile_features(nuked-opl3 PUBLIC c_std_99)
-        set(WG_OPL_LIBRARY_TARGET nuked-opl3)
-    elseif(WG_OPL_BACKEND STREQUAL "dbopl")
-        set(WG_OPL_SOURCE
+        list(APPEND WG_OPL_LIBRARY_TARGETS nuked-opl3)
+endif()
+if(WG_ENABLE_OPL_DBOPL)
+        list(APPEND WG_OPL_SOURCES
             src/WG_OPL_DBOPL.c
             third_party/DBOPL/dbopl.c
         )
@@ -110,11 +110,24 @@ elseif(WG_AUDIO_BACKEND STREQUAL "standard")
             set_source_files_properties(third_party/DBOPL/dbopl.c
                 PROPERTIES COMPILE_OPTIONS "-w")
         endif()
-    else()
-        message(FATAL_ERROR "Unsupported WG_OPL_BACKEND: ${WG_OPL_BACKEND}")
-    endif()
-else()
-    message(FATAL_ERROR "Unsupported WG_AUDIO_BACKEND: ${WG_AUDIO_BACKEND}")
+endif()
+if(WG_ENABLE_OPL_SILENT)
+    list(APPEND WG_OPL_SOURCES src/WG_OPL_SILENT.c)
+endif()
+if(NOT WG_ENABLE_OPL_NUKED AND NOT WG_ENABLE_OPL_DBOPL
+   AND NOT WG_ENABLE_OPL_SILENT)
+    message(FATAL_ERROR "At least one OPL driver must be enabled")
+endif()
+string(TOUPPER "${WG_DEFAULT_OPL_DRIVER}" WG_DEFAULT_OPL_DRIVER_UPPER)
+if(NOT DEFINED WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER}
+   OR NOT WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER})
+    message(FATAL_ERROR
+        "WG_DEFAULT_OPL_DRIVER '${WG_DEFAULT_OPL_DRIVER}' is not enabled")
+endif()
+if(NOT WG_DEFAULT_SAMPLE_RATE MATCHES "^[0-9]+$"
+   OR WG_DEFAULT_SAMPLE_RATE LESS 8000
+   OR WG_DEFAULT_SAMPLE_RATE GREATER 192000)
+    message(FATAL_ERROR "WG_DEFAULT_SAMPLE_RATE must be between 8000 and 192000")
 endif()
 
 configure_file(packaging/LIBRARY-README.txt.in
@@ -135,7 +148,7 @@ set(WG_CORE_SOURCES
     src/WG_MAPS.c
     src/ID_PM.c
     src/ID_SD.c
-    ${WG_OPL_SOURCE}
+    ${WG_OPL_SOURCES}
     src/WG_PALETTE.c
     src/WG_PLATFORM.c
     src/ID_US_1.c
@@ -178,15 +191,22 @@ if(WG_BUILD_HEADLESS)
 endif()
 
 function(wg_configure_core target)
-    if(WG_OPL_LIBRARY_TARGET)
-        target_link_libraries(${target} PRIVATE ${WG_OPL_LIBRARY_TARGET})
+    if(WG_OPL_LIBRARY_TARGETS)
+        target_link_libraries(${target} PRIVATE ${WG_OPL_LIBRARY_TARGETS})
     endif()
 
-    if(WG_AUDIO_BACKEND STREQUAL "silent")
-        target_compile_definitions(${target} PRIVATE WG_AUDIO_SILENT=1)
-    elseif(WG_OPL_BACKEND STREQUAL "dbopl")
-        target_compile_definitions(${target} PRIVATE WG_OPL_DBOPL=1)
+    if(WG_ENABLE_OPL_NUKED)
+        target_compile_definitions(${target} PRIVATE WG_OPL_ENABLE_NUKED=1)
     endif()
+    if(WG_ENABLE_OPL_DBOPL)
+        target_compile_definitions(${target} PRIVATE WG_OPL_ENABLE_DBOPL=1)
+    endif()
+    if(WG_ENABLE_OPL_SILENT)
+        target_compile_definitions(${target} PRIVATE WG_OPL_ENABLE_SILENT=1)
+    endif()
+    target_compile_definitions(${target} PRIVATE
+        WG_DEFAULT_OPL_DRIVER="${WG_DEFAULT_OPL_DRIVER}"
+        WG_DEFAULT_SAMPLE_RATE=${WG_DEFAULT_SAMPLE_RATE}U)
 
     target_include_directories(${target}
         PUBLIC include
@@ -251,11 +271,6 @@ if(WG_COMPILER_LABEL)
     set(WG_RELEASE_COMPILER_SUFFIX "-${WG_COMPILER_LABEL}")
 endif()
 set(WG_RELEASE_AUDIO_SUFFIX "")
-if(WG_AUDIO_BACKEND STREQUAL "silent")
-    set(WG_RELEASE_AUDIO_SUFFIX "-silent")
-elseif(NOT WG_OPL_BACKEND STREQUAL "nuked")
-    set(WG_RELEASE_AUDIO_SUFFIX "-${WG_OPL_BACKEND}")
-endif()
 set(WG_LIBRARY_RELEASE_DIR
     "${WG_DIST_ROOT}/wolf3d-${PROJECT_VERSION}-library-${WG_RELEASE_SYSTEM}-${WG_RELEASE_ARCH}${WG_RELEASE_COMPILER_SUFFIX}${WG_RELEASE_RUNTIME_SUFFIX}${WG_RELEASE_AUDIO_SUFFIX}")
 
@@ -285,7 +300,7 @@ set(WG_LIBRARY_RELEASE_COMMANDS
         "${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt"
         "${WG_LIBRARY_RELEASE_DIR}/README.txt"
 )
-if(WG_OPL_LIBRARY_TARGET STREQUAL "nuked-opl3")
+if(WG_ENABLE_OPL_NUKED)
     list(APPEND WG_LIBRARY_RELEASE_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:nuked-opl3>"
@@ -294,8 +309,8 @@ if(WG_OPL_LIBRARY_TARGET STREQUAL "nuked-opl3")
             "${CMAKE_SOURCE_DIR}/third_party/Nuked-OPL3/LICENSE"
             "${WG_LIBRARY_RELEASE_DIR}/LICENSES/Nuked-OPL3-LGPL-2.1.txt"
     )
-elseif(WG_AUDIO_BACKEND STREQUAL "standard"
-       AND WG_OPL_BACKEND STREQUAL "dbopl")
+endif()
+if(WG_ENABLE_OPL_DBOPL)
     list(APPEND WG_LIBRARY_RELEASE_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/third_party/DBOPL/README.wolf3d-lib.md"
@@ -319,8 +334,8 @@ elseif(UNIX AND NOT APPLE)
     )
 endif()
 set(WG_LIBRARY_RELEASE_DEPENDS wolf3d)
-if(WG_OPL_LIBRARY_TARGET)
-    list(APPEND WG_LIBRARY_RELEASE_DEPENDS ${WG_OPL_LIBRARY_TARGET})
+if(WG_OPL_LIBRARY_TARGETS)
+    list(APPEND WG_LIBRARY_RELEASE_DEPENDS ${WG_OPL_LIBRARY_TARGETS})
 endif()
 add_custom_target(library-release
     ${WG_LIBRARY_RELEASE_COMMANDS}
@@ -379,14 +394,26 @@ endif()
 
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)
     add_test(NAME headless-smoke COMMAND wolf3dgeneric-headless --headless-smoke)
+    if(WG_ENABLE_OPL_NUKED)
+        add_test(NAME runtime-opl-nuked COMMAND wolf3dgeneric-headless
+            --headless-smoke --opl nuked --sample-rate 44100)
+    endif()
+    if(WG_ENABLE_OPL_DBOPL)
+        add_test(NAME runtime-opl-dbopl COMMAND wolf3dgeneric-headless
+            --headless-smoke --opl dbopl --sample-rate 48000)
+    endif()
+    if(WG_ENABLE_OPL_SILENT)
+        add_test(NAME runtime-opl-silent COMMAND wolf3dgeneric-headless
+            --headless-smoke --opl silent --sample-rate 44100)
+    endif()
 
     add_executable(wg-tests
         platforms/WG_TEXT_OUTPUT.c
         tests/WG_TESTS.c
     )
-    if(WG_AUDIO_BACKEND STREQUAL "silent")
+    if(WG_DEFAULT_OPL_DRIVER STREQUAL "silent")
         target_compile_definitions(wg-tests PRIVATE WG_AUDIO_SILENT=1)
-    elseif(WG_OPL_BACKEND STREQUAL "dbopl")
+    elseif(WG_DEFAULT_OPL_DRIVER STREQUAL "dbopl")
         target_compile_definitions(wg-tests PRIVATE WG_OPL_DBOPL=1)
     endif()
     wg_configure_host(wg-tests wolf3d-internal)

@@ -5,7 +5,8 @@ Build one wolf3d-lib Windows configuration with Visual Studio or MinGW.
 .DESCRIPTION
 This modern Windows dispatcher detects supported Visual Studio and MSYS2
 UCRT64 installations and maps human-readable compiler, architecture, runtime,
-audio, OPL, and action choices onto the authoritative CMake presets and targets.
+OPL driver-set, default-driver, sample-rate, and action choices onto the
+authoritative CMake presets and targets.
 
 .EXAMPLE
 .\build.ps1
@@ -16,12 +17,12 @@ Packages the x64 SDK with the newest supported installed compiler.
 Builds and tests the 32-bit library with Visual Studio 2015/v140.
 
 .EXAMPLE
-.\build.ps1 -Action test -Audio silent
-Validates the timing-preserving silent backend.
+.\build.ps1 -Action test -Drivers silent -DefaultOpl silent
+Validates a timing-preserving silent-only build.
 
 .EXAMPLE
-.\build.ps1 -Action package -Opl dbopl -Runtime dynamic
-Stages a DBOPL SDK linked to the dynamic MSVC runtime.
+.\build.ps1 -Action package -DefaultOpl dbopl -Runtime dynamic
+Stages the all-driver SDK with DBOPL as its runtime default.
 #>
 [CmdletBinding()]
 param(
@@ -34,10 +35,13 @@ param(
     [string]$Configuration = 'Release',
     [ValidateSet('static', 'dynamic')]
     [string]$Runtime = 'static',
-    [ValidateSet('standard', 'silent')]
-    [string]$Audio = 'standard',
-    [ValidateSet('nuked', 'dbopl')]
-    [string]$Opl = 'nuked',
+    [ValidateSet('all', 'nuked', 'dbopl', 'silent', 'nuked-dbopl',
+        'nuked-silent', 'dbopl-silent')]
+    [string]$Drivers = 'all',
+    [ValidateSet('nuked', 'dbopl', 'silent')]
+    [string]$DefaultOpl = 'nuked',
+    [ValidateRange(8000, 192000)]
+    [int]$SampleRate = 48000,
     [ValidateSet('package', 'build', 'test', 'clean')]
     [string]$Action = 'package',
     [ValidateRange(0, 256)]
@@ -253,10 +257,9 @@ if ($PSBoundParameters.Count -eq 0 -and -not $NonInteractive -and $canPrompt) {
     }
     if ($Compiler -eq 'mingw-ucrt64') { $Runtime = 'static' }
     else { $Runtime = Read-BuildChoice 'MSVC runtime' @('static', 'dynamic') }
-    $Audio = Read-BuildChoice 'Audio backend' @('standard', 'silent')
-    if ($Audio -eq 'standard') {
-        $Opl = Read-BuildChoice 'OPL emulator' @('nuked', 'dbopl')
-    }
+    $Drivers = Read-BuildChoice 'Compiled OPL drivers' @('all', 'nuked', 'dbopl', 'silent', 'nuked-dbopl', 'nuked-silent', 'dbopl-silent')
+    $availableDefaults = if ($Drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } else { @($Drivers -split '-') }
+    $DefaultOpl = Read-BuildChoice 'Default OPL driver' $availableDefaults
     Write-Host ''
     $confirmation = Read-Host 'Continue with this build? [Y/n]'
     if ($confirmation -and $confirmation -notmatch '^[Yy]') { exit 0 }
@@ -273,9 +276,9 @@ if ($List) {
 if ($Action -eq 'package' -and $Configuration -ne 'Release') {
     throw 'Packaging is restricted to Release builds. Use -Action build or test for Debug.'
 }
-if ($Audio -eq 'silent' -and $Opl -ne 'nuked') {
-    Write-Warning '-Opl is ignored by the silent audio backend.'
-    $Opl = 'nuked'
+$driverList = if ($Drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } else { @($Drivers -split '-') }
+if ($driverList -notcontains $DefaultOpl) {
+    throw "Default driver '$DefaultOpl' is not included by -Drivers $Drivers."
 }
 
 if ($Compiler -eq 'auto') {
@@ -302,7 +305,8 @@ $archPreset = if ($Architecture -eq 'x86') { 'x86' } else { 'x64' }
 $devPreset = "$($selected.PresetPrefix)-dev-$archPreset"
 $libraryPreset = "$($selected.PresetPrefix)-library-$archPreset"
 $useDedicatedPreset = ($Action -eq 'package' -or $Action -eq 'clean') `
-    -and $Runtime -eq 'static' -and $Audio -eq 'standard' -and $Opl -eq 'nuked'
+    -and $Runtime -eq 'static' -and $Drivers -eq 'all' `
+    -and $DefaultOpl -eq 'nuked' -and $SampleRate -eq 48000
 $preset = if ($useDedicatedPreset) { $libraryPreset } else { $devPreset }
 
 if ($useDedicatedPreset) {
@@ -311,8 +315,9 @@ if ($useDedicatedPreset) {
     $parts = @('windows', $selected.Name, 'dispatch', 'library', $archPreset)
     if ($Configuration -eq 'Debug') { $parts += 'debug' }
     if ($Runtime -eq 'dynamic') { $parts += 'dynamic-crt' }
-    if ($Audio -eq 'silent') { $parts += 'silent' }
-    elseif ($Opl -ne 'nuked') { $parts += $Opl }
+    if ($Drivers -ne 'all') { $parts += $Drivers }
+    if ($DefaultOpl -ne 'nuked') { $parts += "default-$DefaultOpl" }
+    if ($SampleRate -ne 48000) { $parts += "$SampleRate-hz" }
     $buildDir = Join-Path $root ('build\' + ($parts -join '-'))
 }
 
@@ -333,8 +338,9 @@ Write-Host "  Compiler:      $($selected.Name) / $($selected.Toolset)"
 Write-Host "  Architecture:  $Architecture"
 Write-Host "  Configuration: $Configuration"
 Write-Host "  Compiler CRT:  $Runtime"
-Write-Host "  Audio:         $Audio"
-Write-Host "  OPL:           $Opl"
+Write-Host "  OPL drivers:   $($driverList -join ', ')"
+Write-Host "  OPL default:   $DefaultOpl"
+Write-Host "  Sample rate:   $SampleRate Hz"
 Write-Host "  Action:        $Action"
 
 if ($Action -eq 'clean' -and $buildDir -and
@@ -350,8 +356,11 @@ if ($Action -ne 'clean') {
             '-B', $buildDir,
             "-DWG_STATIC_MSVC_RUNTIME=$(if ($Runtime -eq 'static') { 'ON' } else { 'OFF' })",
             "-DWG_STATIC_GNU_RUNTIME=$(if ($Runtime -eq 'static') { 'ON' } else { 'OFF' })",
-            "-DWG_AUDIO_BACKEND=$Audio",
-            "-DWG_OPL_BACKEND=$Opl"
+            "-DWG_ENABLE_OPL_NUKED=$(if ($driverList -contains 'nuked') { 'ON' } else { 'OFF' })",
+            "-DWG_ENABLE_OPL_DBOPL=$(if ($driverList -contains 'dbopl') { 'ON' } else { 'OFF' })",
+            "-DWG_ENABLE_OPL_SILENT=$(if ($driverList -contains 'silent') { 'ON' } else { 'OFF' })",
+            "-DWG_DEFAULT_OPL_DRIVER=$DefaultOpl",
+            "-DWG_DEFAULT_SAMPLE_RATE=$SampleRate"
         )
     }
     Invoke-DisplayedCommand -Executable $selected.CMake -Arguments $configureArguments
