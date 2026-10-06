@@ -11,6 +11,7 @@ compiler-checkpoint policy and evidence.
 
 | Environment | Toolset | Architectures | Runtime modes | Status |
 | --- | --- | --- | --- | --- |
+| MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Build/package/tests validated; destination runtime pending |
 | Visual Studio 2022 17.14 | v143 / MSVC 19.44 | x86, x64 | static, dynamic | Validated |
 | Visual Studio 2019 16.11 | v142 / MSVC 19.29 | x86, x64 | static, dynamic | Validated |
 | VS2017 toolset hosted by VS2019 16.11 | v141 / MSVC 19.16 | x86, x64 | static, dynamic | Validated |
@@ -33,7 +34,7 @@ Each checked-in solution/workspace from VC6 through VS2022 is native to exactly 
 IDE generation and selects its matching explicit CMake generator, preset, and
 platform toolset. Import/upgrade compatibility is not treated as support. The
 PowerShell dispatcher and direct presets cover the complete VS2008--VS2022
-command-line matrix.
+command-line matrix plus MinGW UCRT64/GCC x64.
 An XP-native CMD dispatcher and separate CMake 3.5 definition cover the
 x86-only VC6--VS2005 band. Package directory names include the compiler label,
 so artifacts from different checkpoints can coexist.
@@ -50,7 +51,8 @@ files live under `ide/visual-studio/vsYYYY/` (and `vc6/`); every generation has
 its own solution/project pair even where a newer IDE could import an older format.
 Every band references the same root source files, so there are no source forks.
 
-PowerShell is the supported human-facing dispatcher for VS2008 and newer. The
+PowerShell is the supported human-facing dispatcher for VS2008 and newer and
+for MinGW UCRT64. The
 XP-era band uses `scripts/windows/legacy/build.cmd` because PowerShell is not a native
 VC6-era dependency. Both paths compile the same canonical source files; period
 IDE bands will not introduce source forks.

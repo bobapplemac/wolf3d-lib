@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-Build one wolf3d-lib Windows configuration with an installed Visual Studio toolchain.
+Build one wolf3d-lib Windows configuration with Visual Studio or MinGW.
 
 .DESCRIPTION
-This modern Windows dispatcher detects supported Visual Studio installations
-and maps human-readable compiler, architecture, runtime, audio, OPL, and action
-choices onto the authoritative CMake presets and targets.
+This modern Windows dispatcher detects supported Visual Studio and MSYS2
+UCRT64 installations and maps human-readable compiler, architecture, runtime,
+audio, OPL, and action choices onto the authoritative CMake presets and targets.
 
 .EXAMPLE
 .\build.ps1
@@ -25,8 +25,8 @@ Stages a DBOPL SDK linked to the dynamic MSVC runtime.
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('auto', 'vs2022', 'vs2019', 'vs2017', 'vs2015', 'vs2015-xp',
-        'vs2013', 'vs2012', 'vs2010', 'vs2008')]
+    [ValidateSet('auto', 'mingw-ucrt64', 'vs2022', 'vs2019', 'vs2017',
+        'vs2015', 'vs2015-xp', 'vs2013', 'vs2012', 'vs2010', 'vs2008')]
     [string]$Compiler = 'auto',
     [ValidateSet('x64', 'x86')]
     [string]$Architecture = 'x64',
@@ -42,6 +42,7 @@ param(
     [string]$Action = 'package',
     [ValidateRange(0, 256)]
     [int]$Jobs = 0,
+    [string]$Msys2Root = 'C:\msys64',
     [switch]$List,
     [switch]$DryRun,
     [switch]$NonInteractive
@@ -52,6 +53,29 @@ $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+
+function Find-MinGW {
+    param([string]$Root)
+
+    $bin = Join-Path $Root 'ucrt64\bin'
+    $gcc = Join-Path $bin 'gcc.exe'
+    $cmake = Join-Path $bin 'cmake.exe'
+    $ctest = Join-Path $bin 'ctest.exe'
+    $ninja = Join-Path $bin 'ninja.exe'
+    [pscustomobject]@{
+        Name = 'mingw-ucrt64'
+        Toolset = 'GCC/UCRT64'
+        PresetPrefix = 'windows-mingw-ucrt64'
+        Installation = $Root
+        CMake = $cmake
+        CTest = $ctest
+        Bin = $bin
+        Available = [bool]((Test-Path -LiteralPath $gcc) -and
+            (Test-Path -LiteralPath $cmake) -and
+            (Test-Path -LiteralPath $ctest) -and
+            (Test-Path -LiteralPath $ninja))
+    }
+}
 
 function Find-VisualStudio {
     param(
@@ -177,6 +201,7 @@ $toolchains = @(
         -Toolset 'v90' -PresetPrefix 'windows-vs2008' `
         -CMakeFallbackDirectory $legacyCMakeDirectory `
         -RequiredFile 'C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\cl.exe'
+    Find-MinGW -Root $Msys2Root
 )
 
 function Read-BuildChoice {
@@ -219,12 +244,14 @@ if ($PSBoundParameters.Count -eq 0 -and -not $NonInteractive -and $canPrompt) {
         throw 'No supported Visual Studio installation was detected.'
     }
     $Compiler = Read-BuildChoice 'Compiler' $availableCompilers
-    $Architecture = Read-BuildChoice 'Architecture' @('x64', 'x86')
+    if ($Compiler -eq 'mingw-ucrt64') { $Architecture = 'x64' }
+    else { $Architecture = Read-BuildChoice 'Architecture' @('x64', 'x86') }
     $Action = Read-BuildChoice 'Action' @('package', 'build', 'test', 'clean')
     if ($Action -ne 'package') {
         $Configuration = Read-BuildChoice 'Configuration' @('Release', 'Debug')
     }
-    $Runtime = Read-BuildChoice 'MSVC runtime' @('static', 'dynamic')
+    if ($Compiler -eq 'mingw-ucrt64') { $Runtime = 'static' }
+    else { $Runtime = Read-BuildChoice 'MSVC runtime' @('static', 'dynamic') }
     $Audio = Read-BuildChoice 'Audio backend' @('standard', 'silent')
     if ($Audio -eq 'standard') {
         $Opl = Read-BuildChoice 'OPL emulator' @('nuked', 'dbopl')
@@ -252,8 +279,18 @@ if ($Compiler -eq 'auto') {
     $selected = $toolchains | Where-Object { $_.Name -eq $Compiler } | Select-Object -First 1
 }
 if (-not $selected -or -not $selected.Available) {
-    $requested = if ($Compiler -eq 'auto') { 'a supported Visual Studio installation' } else { $Compiler }
-    throw "Could not find $requested with C++ tools and bundled CMake. Run .\build.ps1 -List."
+    $requested = if ($Compiler -eq 'auto') { 'a supported Windows compiler' } else { $Compiler }
+    throw "Could not find $requested. Run .\build.ps1 -List; for MinGW, pass -Msys2Root if MSYS2 is not under C:\msys64."
+}
+if ($selected.Name -eq 'mingw-ucrt64' -and $Architecture -ne 'x64') {
+    throw 'The MSYS2 UCRT64 profile supports x64 only.'
+}
+if ($selected.Name -eq 'mingw-ucrt64' -and $Runtime -ne 'static') {
+    throw 'MinGW packages require the statically linked GCC support runtime.'
+}
+if ($selected.Name -eq 'mingw-ucrt64') {
+    $env:PATH = $selected.Bin + ';' +
+        (Join-Path $selected.Installation 'usr\bin') + ';' + $env:PATH
 }
 
 $archPreset = if ($Architecture -eq 'x86') { 'x86' } else { 'x64' }
@@ -290,7 +327,7 @@ Write-Host 'wolf3d-lib Windows build'
 Write-Host "  Compiler:      $($selected.Name) / $($selected.Toolset)"
 Write-Host "  Architecture:  $Architecture"
 Write-Host "  Configuration: $Configuration"
-Write-Host "  CRT:           $Runtime"
+Write-Host "  Compiler CRT:  $Runtime"
 Write-Host "  Audio:         $Audio"
 Write-Host "  OPL:           $Opl"
 Write-Host "  Action:        $Action"
@@ -307,6 +344,7 @@ if ($Action -ne 'clean') {
         $configureArguments += @(
             '-B', $buildDir,
             "-DWG_STATIC_MSVC_RUNTIME=$(if ($Runtime -eq 'static') { 'ON' } else { 'OFF' })",
+            "-DWG_STATIC_GNU_RUNTIME=$(if ($Runtime -eq 'static') { 'ON' } else { 'OFF' })",
             "-DWG_AUDIO_BACKEND=$Audio",
             "-DWG_OPL_BACKEND=$Opl"
         )

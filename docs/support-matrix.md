@@ -11,8 +11,9 @@ This document is the authoritative user-facing matrix for building
   support.
 
 The engine is always built as a shared library (`wolf3d.dll` or
-`libwolf3d.so`). On Windows, "static" and "dynamic" below describe the MSVC C
-runtime linked into that DLL; they do not turn wolf3d into a static library.
+`libwolf3d.so`). On Windows, "static" and "dynamic" describe the compiler
+support runtime linked into that DLL; they do not turn wolf3d into a static
+library. MinGW still uses the Windows-provided UCRT dynamically.
 
 ## Build entry points
 
@@ -23,6 +24,7 @@ runtime linked into that DLL; they do not turn wolf3d into a static library.
 | Linux + Docker | GNU Make | `make musl` or `make musl CC=clang` | Alpine/musl x86-64 SDK |
 | Linux | CMake presets | `cmake --preset linux-library` then `cmake --build --preset linux-library` | Native library build/package |
 | Windows, VS2008--VS2022 | Guided PowerShell dispatcher | `.\build.ps1` or `.\build.ps1 -Compiler vs2019 -Action package` | Compiler-labelled SDK under `dist/` |
+| Windows, MinGW UCRT64 | Guided PowerShell dispatcher | `.\build.ps1 -Compiler mingw-ucrt64 -Action package` | Native x64 SDK with static GCC support runtime |
 | Windows, VS2002--VS2022 | Visual Studio | Open `ide/visual-studio/vsYYYY/wolf3d-lib.sln` in the matching IDE | Same CMake-backed SDK |
 | Windows, VC6 | Visual C++ 6.0 | Open `ide/visual-studio/vc6/wolf3d-lib.dsw` | Same legacy-CMake SDK |
 | Windows, modern CMake | CMake presets | `cmake --preset windows-vs2022-library-x64` then `cmake --build --preset windows-vs2022-library-x64` | Selected x86/x64 SDK |
@@ -36,6 +38,7 @@ backend, test-data, and direct-CMake details.
 
 | Compiler environment | Toolset | Architecture | CRT modes | Build status | Destination validation |
 | --- | --- | --- | --- | --- | --- |
+| MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Validated | Build, package, API, and deterministic tests on current Windows host; destination runtime pending |
 | Visual Studio 2022 17.14 | v143 / MSVC 19.44 | x86, x64 | static, dynamic | Validated | Current Windows development host |
 | Visual Studio 2019 16.11 | v142 / MSVC 19.29 | x86, x64 | static, dynamic | Validated | Current Windows development host |
 | VS2017 toolset hosted by VS2019 | v141 / MSVC 19.16 | x86, x64 | static, dynamic | Validated | No legacy-OS minimum claimed |
@@ -58,8 +61,8 @@ also records a runtime test on that OS.
 Native checked-in solutions/workspaces are first-class for VC6--VS2022. Each
 is pinned 1:1 to its named IDE and toolset; opening an older solution through
 a newer IDE's upgrade path is not the supported workflow. The PowerShell
-dispatcher/direct CMake path remains first-class for VS2008--VS2022; the
-XP-native CMD dispatcher backs the VC6--VS2005 IDE projects.
+dispatcher/direct CMake path remains first-class for VS2008--VS2022 and
+MinGW UCRT64; the XP-native CMD dispatcher backs the VC6--VS2005 IDE projects.
 
 ## Linux compiler and libc matrix
 
@@ -93,7 +96,6 @@ or the corresponding dispatcher/CMake options documented in
 
 | Target | Intended direction | Current status |
 | --- | --- | --- |
-| MinGW-w64 Windows | Additional independent Windows compiler family | Planned; no supported build command yet |
 | Open Watcom DOS extender | Linux/Docker cross-build targeting 32-bit DOS with DOS/32A | Planned; no supported build command or runtime claim yet |
 | Real AdLib/OPL hardware backend | Replaceable hardware register-output component | Design discussion only |
 

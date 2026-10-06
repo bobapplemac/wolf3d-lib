@@ -75,7 +75,7 @@ cmake --build --preset linux-library
 `linux-dev` includes the internal headless validation executable and tests.
 `linux-library` stages only the redistributable library SDK.
 
-## Windows with Visual Studio
+## Windows with Visual Studio or MinGW
 
 Open `ide/visual-studio/vsYYYY/wolf3d-lib.sln` in the matching Visual Studio
 generation. Every IDE from VS2002 through VS2022 has its own native project
@@ -91,8 +91,8 @@ runtime dependency is embedded.
 
 ### Windows build dispatcher
 
-The root `build.ps1` detects the supported Visual Studio installations and is
-the human-facing entry point for selecting one configuration. It exposes
+The root `build.ps1` detects supported Visual Studio installations and MSYS2
+UCRT64 and is the human-facing entry point for selecting one configuration. It exposes
 compiler, architecture, Debug/Release, static/dynamic CRT, standard/silent
 audio, Nuked-OPL3/DBOPL, build/test/package/clean actions, parallelism, and
 dry-run output:
@@ -109,6 +109,8 @@ dry-run output:
 .\build.ps1 -Compiler vs2012 -Architecture x86 -Action test
 .\build.ps1 -Compiler vs2010 -Architecture x86 -Action test
 .\build.ps1 -Compiler vs2008 -Architecture x86 -Action test
+.\build.ps1 -Compiler mingw-ucrt64 -Action test
+.\build.ps1 -Compiler mingw-ucrt64 -Action package
 .\build.ps1 -Action test -Audio silent -Runtime dynamic
 ```
 
@@ -118,6 +120,14 @@ for confirmation. Explicit arguments remain suitable for automation;
 launcher delegates to `scripts/windows/build.ps1`, which prints every CMake
 command and contains no independent build graph. Run
 `Get-Help .\scripts\windows\build.ps1 -Detailed` for the full interface.
+
+The MinGW profile requires MSYS2's UCRT64 GCC toolchain, native CMake, and
+Ninja packages. The default root is `C:\msys64`; pass
+`-Msys2Root C:\path\to\msys64` for a portable or non-default installation.
+It currently targets x64. The dispatcher modifies `PATH` only for its own
+process, and release binaries statically link GCC support code; the resulting
+SDK imports Windows UCRT API sets but no MSYS, Cygwin, libgcc, libstdc++, or
+winpthread runtime DLLs.
 
 Visual Studio 2015 and older do not bundle CMake. The dispatcher uses a CMake
 3.20-or-newer installation from `PATH`, or the CMake bundled with a newer
@@ -171,6 +181,17 @@ cmake --preset windows-vs2022-library-x64
 cmake --build --preset windows-vs2022-library-x64
 ```
 
+From an MSYS2 UCRT64 shell, the corresponding native-GCC presets are:
+
+```text
+cmake --preset windows-mingw-ucrt64-dev-x64
+cmake --build --preset windows-mingw-ucrt64-dev-x64
+ctest --preset windows-mingw-ucrt64-dev-x64
+
+cmake --preset windows-mingw-ucrt64-library-x64
+cmake --build --preset windows-mingw-ucrt64-library-x64
+```
+
 Use `windows-*-x86` for 32-bit output. For a dynamic MSVC runtime add
 `-DWG_STATIC_MSVC_RUNTIME=OFF` and use a distinct binary directory.
 
@@ -181,6 +202,7 @@ Use `windows-*-x86` for 32-bit output. For a dynamic MSVC runtime add
 | `WG_BUILD_HEADLESS` | `ON` | Build the internal deterministic validation host and tests. |
 | `WG_WARNINGS_AS_ERRORS` | `ON` | Treat project warnings as errors. |
 | `WG_STATIC_MSVC_RUNTIME` | `ON` | Embed the MSVC runtime in Windows artifacts. |
+| `WG_STATIC_GNU_RUNTIME` | `ON` | Statically link GCC support code in MinGW artifacts. |
 | `WG_AUDIO_BACKEND` | `standard` | `standard` emits PCM; `silent` advances identical logical audio state while emitting zero samples. |
 | `WG_OPL_BACKEND` | `nuked` | Select `nuked` or the pure-C `dbopl` implementation for standard audio. |
 | `WG_LINUX_LIBC` | empty | Optional `glibc`/`musl` package label used by reproducible Linux builds. |

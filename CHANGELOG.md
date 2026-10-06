@@ -6,6 +6,18 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.36 - 2026-10-06 - MinGW UCRT64 support
+
+- Added first-class MSYS2 UCRT64/GCC x64 CMake presets and PowerShell
+  dispatcher support, including custom portable installations through
+  `-Msys2Root`.
+- Preserved the public Windows DLL names under MinGW and statically linked the
+  GCC support runtime while retaining the separate `wolf3d.dll` and
+  replaceable `Nuked-OPL3.dll` architecture.
+- Built and packaged with GCC 16.2 under UCRT64, passed all three library
+  tests, and verified that the artifacts import no MSYS, Cygwin, libgcc,
+  libstdc++, or winpthread runtime DLLs.
+
 ## 1.4.35 - 2026-10-06 - VC6 Windows 11 runtime validation
 
 - Recorded a successful manual run of the VC6-built x86 library as part of

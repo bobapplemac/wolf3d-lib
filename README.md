@@ -81,15 +81,15 @@ ctest --preset windows-dev-x64 -C Release
 ```
 
 The root `build.ps1` provides a guided alternative that detects supported
-Visual Studio installations from VS2008/v90 through VS2022/v143 and exposes
-the complete modern library build selection. Run it with no arguments for an
-interactive wizard:
+Visual Studio installations from VS2008/v90 through VS2022/v143 and MSYS2
+UCRT64 MinGW. Run it with no arguments for an interactive wizard:
 
 ```powershell
 .\build.ps1 -List
 .\build.ps1
 .\build.ps1 -Compiler vs2019 -Architecture x86 -Action test
 .\build.ps1 -Compiler vs2008 -Architecture x86 -Action test
+.\build.ps1 -Compiler mingw-ucrt64 -Action package
 .\build.ps1 -Action package -Opl dbopl -Runtime dynamic
 ```
 
@@ -103,9 +103,10 @@ scripts\windows\legacy\build.cmd vs2003
 scripts\windows\legacy\build.cmd vs2005
 ```
 
-Release presets stage clean SDK folders containing `wolf3d.dll` and
-`wolf3d.lib` on Windows, or the versioned `libwolf3d.so` SONAME chain on
-Linux, together with `WOLF3D.h` (and the legacy-MSVC compatibility header where
+Release presets stage clean SDK folders containing `wolf3d.dll` and the
+compiler-appropriate import library on Windows, or the versioned
+`libwolf3d.so` SONAME chain on Linux, together with `WOLF3D.h` (and the
+legacy-MSVC compatibility header where
 applicable), the selected audio backend, licenses, and package notes.
 See the [build and compatibility matrix](docs/support-matrix.md) for supported
 compilers, build entry points, artifacts, and validated destination operating

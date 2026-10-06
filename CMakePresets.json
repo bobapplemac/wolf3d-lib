@@ -405,6 +405,33 @@
       }
     },
     {
+      "name": "windows-mingw-ucrt64-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_GNU_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "mingw-ucrt-gcc"
+      }
+    },
+    {
+      "name": "windows-mingw-ucrt64-dev-x64",
+      "displayName": "MinGW UCRT64 library development (x64)",
+      "inherits": "windows-mingw-ucrt64-base",
+      "binaryDir": "${sourceDir}/build/windows-mingw-ucrt64-dev-x64"
+    },
+    {
+      "name": "windows-mingw-ucrt64-library-x64",
+      "displayName": "MinGW UCRT64 library release (x64)",
+      "inherits": "windows-mingw-ucrt64-base",
+      "binaryDir": "${sourceDir}/build/windows-mingw-ucrt64-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
       "name": "linux-base",
       "hidden": true,
       "generator": "Ninja",
@@ -612,6 +639,15 @@
       "targets": ["library-release"]
     },
     {
+      "name": "windows-mingw-ucrt64-dev-x64",
+      "configurePreset": "windows-mingw-ucrt64-dev-x64"
+    },
+    {
+      "name": "windows-mingw-ucrt64-library-x64",
+      "configurePreset": "windows-mingw-ucrt64-library-x64",
+      "targets": ["library-release"]
+    },
+    {
       "name": "linux-dev",
       "configurePreset": "linux-dev"
     },
@@ -742,6 +778,13 @@
       "name": "windows-vs2022-dev-x86",
       "configurePreset": "windows-vs2022-dev-x86",
       "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-mingw-ucrt64-dev-x64",
+      "configurePreset": "windows-mingw-ucrt64-dev-x64",
       "output": {
         "outputOnFailure": true
       }

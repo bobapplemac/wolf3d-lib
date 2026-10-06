@@ -46,6 +46,8 @@ option(WG_BUILD_HEADLESS
 option(WG_WARNINGS_AS_ERRORS "Treat project warnings as errors" ON)
 option(WG_STATIC_MSVC_RUNTIME
     "Link the MSVC runtime statically for self-contained Windows releases" ON)
+option(WG_STATIC_GNU_RUNTIME
+    "Link the GCC support runtime statically in MinGW artifacts" ON)
 set(WG_AUDIO_BACKEND "standard" CACHE STRING
     "Audio output backend: standard or silent")
 set_property(CACHE WG_AUDIO_BACKEND PROPERTY STRINGS standard silent)
@@ -78,6 +80,12 @@ elseif(WG_AUDIO_BACKEND STREQUAL "standard")
             OUTPUT_NAME "Nuked-OPL3"
             WINDOWS_EXPORT_ALL_SYMBOLS ON
         )
+        if(MINGW)
+            set_target_properties(nuked-opl3 PROPERTIES PREFIX "")
+            if(WG_STATIC_GNU_RUNTIME)
+                target_link_options(nuked-opl3 PRIVATE -static-libgcc)
+            endif()
+        endif()
         if(MSVC AND MSVC_VERSION LESS 1900)
             target_compile_definitions(nuked-opl3 PRIVATE inline=__inline)
         endif()
@@ -158,6 +166,9 @@ set_target_properties(wolf3d PROPERTIES
     C_VISIBILITY_PRESET hidden
     BUILD_RPATH_USE_ORIGIN ON
 )
+if(MINGW)
+    set_target_properties(wolf3d PROPERTIES PREFIX "")
+endif()
 target_compile_definitions(wolf3d PRIVATE WOLF3D_BUILD)
 
 if(WG_BUILD_HEADLESS)
@@ -190,6 +201,10 @@ function(wg_configure_core target)
 
     if(NOT MSVC)
         target_link_libraries(${target} PRIVATE m)
+    endif()
+
+    if(MINGW AND WG_STATIC_GNU_RUNTIME)
+        target_link_options(${target} PRIVATE -static-libgcc)
     endif()
 
     if(MSVC)
@@ -228,6 +243,8 @@ endif()
 set(WG_RELEASE_RUNTIME_SUFFIX "")
 if(MSVC AND NOT WG_STATIC_MSVC_RUNTIME)
     set(WG_RELEASE_RUNTIME_SUFFIX "-dynamic-crt")
+elseif(MINGW AND NOT WG_STATIC_GNU_RUNTIME)
+    set(WG_RELEASE_RUNTIME_SUFFIX "-dynamic-gcc-runtime")
 endif()
 set(WG_RELEASE_COMPILER_SUFFIX "")
 if(WG_COMPILER_LABEL)
@@ -315,6 +332,9 @@ add_custom_target(library-release
 function(wg_configure_host target engine_target)
     target_link_libraries(${target} PRIVATE ${engine_target})
     target_compile_features(${target} PRIVATE c_std_99)
+    if(MINGW AND WG_STATIC_GNU_RUNTIME)
+        target_link_options(${target} PRIVATE -static-libgcc)
+    endif()
     if(WG_MSVC_COMPAT_INCLUDE)
         target_include_directories(${target} PRIVATE
             "${WG_MSVC_COMPAT_INCLUDE}")
