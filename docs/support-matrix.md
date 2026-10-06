@@ -23,7 +23,8 @@ runtime linked into that DLL; they do not turn wolf3d into a static library.
 | Linux + Docker | GNU Make | `make musl` or `make musl CC=clang` | Alpine/musl x86-64 SDK |
 | Linux | CMake presets | `cmake --preset linux-library` then `cmake --build --preset linux-library` | Native library build/package |
 | Windows, VS2008--VS2022 | Guided PowerShell dispatcher | `.\build.ps1` or `.\build.ps1 -Compiler vs2019 -Action package` | Compiler-labelled SDK under `dist/` |
-| Windows, VS2015/2019/2022 | Visual Studio | Open `ide/visual-studio/vs2015-vs2022/wolf3d-lib.sln` | Same CMake-backed SDK |
+| Windows, VS2002--VS2022 | Visual Studio | Open `ide/visual-studio/vsYYYY/wolf3d-lib.sln` in the matching IDE | Same CMake-backed SDK |
+| Windows, VC6 | Visual C++ 6.0 | Open `ide/visual-studio/vc6/wolf3d-lib.dsw` | Same legacy-CMake SDK |
 | Windows, modern CMake | CMake presets | `cmake --preset windows-vs2022-library-x64` then `cmake --build --preset windows-vs2022-library-x64` | Selected x86/x64 SDK |
 | Windows XP, VC6--VS2005 | Native CMD dispatcher | `scripts\windows\legacy\build.cmd vc6 Release standard nuked static package` | XP-era x86 SDK |
 
@@ -54,10 +55,11 @@ Windows binary's actual OS floor. Consequently, a successful historical
 compiler build is not presented as an older-OS guarantee unless the matrix
 also records a runtime test on that OS.
 
-The root solution is first-class for VS2015, VS2019, and VS2022. The
-PowerShell dispatcher/direct CMake path is first-class for VS2008--VS2022.
-Native checked-in IDE files for additional format bands will be added only
-where empirical IDE compatibility requires them.
+Native checked-in solutions/workspaces are first-class for VC6--VS2022. Each
+is pinned 1:1 to its named IDE and toolset; opening an older solution through
+a newer IDE's upgrade path is not the supported workflow. The PowerShell
+dispatcher/direct CMake path remains first-class for VS2008--VS2022; the
+XP-native CMD dispatcher backs the VC6--VS2005 IDE projects.
 
 ## Linux compiler and libc matrix
 

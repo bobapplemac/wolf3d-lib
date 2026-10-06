@@ -34,8 +34,10 @@ if /I "%RUNTIME%"=="dynamic" set "STATIC_RUNTIME=OFF"
 for %%I in ("%~dp0..\..\..") do set "ROOT=%%~fI"
 set "BUILD_DIR=%ROOT%\build\legacy-%COMPILER%-%AUDIO%-%OPL%-%RUNTIME%"
 
-if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
-if errorlevel 1 goto failed
+if not exist "%BUILD_DIR%" (
+    mkdir "%BUILD_DIR%"
+    if errorlevel 1 goto failed
+)
 
 pushd "%BUILD_DIR%"
 cmake -G "%GENERATOR%" -DWG_AUDIO_BACKEND=%AUDIO% -DWG_OPL_BACKEND=%OPL% -DWG_STATIC_MSVC_RUNTIME=%STATIC_RUNTIME% "%ROOT%\cmake\legacy"

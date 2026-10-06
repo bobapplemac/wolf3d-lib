@@ -1,14 +1,29 @@
 # Visual Studio compatibility bands
 
-Each directory contains solution/project files known to share one Visual
-Studio file format and CMake-backed workflow. All bands reference the same
-root source tree; none contains an engine fork.
+Each directory contains the native solution/project pair for exactly one
+Visual Studio IDE generation. All projects reference the same root source
+tree and invoke the matching CMake generator/toolset; none contains an engine
+fork.
 
-| Directory | Supported IDEs/toolsets |
-| --- | --- |
-| `vs2015-vs2022/` | Visual Studio 2015/v140, 2019/v142, and 2022/v143 |
+| Directory | IDE | Toolset |
+| --- | --- | --- |
+| `vs2022/` | Visual Studio 2022 | v143 |
+| `vs2019/` | Visual Studio 2019 | v142 |
+| `vs2017/` | Visual Studio 2017 | v141 |
+| `vs2015/` | Visual Studio 2015 | v140 |
+| `vs2013/` | Visual Studio 2013 | v120 |
+| `vs2012/` | Visual Studio 2012 | v110 |
+| `vs2010/` | Visual Studio 2010 | v100 |
+| `vs2008/` | Visual Studio 2008 | v90 |
+| `vs2005/` | Visual Studio 2005 | MSVC 14.00 |
+| `vs2003/` | Visual Studio .NET 2003 | MSVC 13.10 |
+| `vs2002/` | Visual Studio .NET 2002 | MSVC 13.00 |
+| `vc6/` | Visual C++ 6.0 | MSVC 12.00 |
 
-VS2008--VS2013 are currently supported through the root PowerShell dispatcher
-and CMake-generated solutions. VC6--VS2005 use the XP-native dispatcher under
-`scripts/windows/legacy/`. A checked-in IDE band is added only when empirical
-testing establishes a useful compatible file-format range.
+"Supported" here means that the solution opens and builds in the named IDE
+without an upgrade/conversion prompt. Newer IDEs may be able to import an
+older project, but that compatibility path is deliberately not the supported
+workflow. VS2008 and newer use `.sln` plus the native project format for that
+generation. VC6 uses its period `.dsw`/`.dsp` pair. The pre-VS2008 projects
+delegate compilation to the XP-native dispatcher under `scripts/windows/`
+while remaining directly buildable from their matching IDE.

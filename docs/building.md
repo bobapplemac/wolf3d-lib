@@ -77,17 +77,13 @@ cmake --build --preset linux-library
 
 ## Windows with Visual Studio
 
-Open `ide/visual-studio/vs2015-vs2022/wolf3d-lib.sln` in Visual Studio 2015,
-2019, or 2022. This compatibility-banded solution selects v140, v142, or v143
-to match the IDE and supports Win32/x64, Debug/Release, and static/dynamic MSVC
-runtime configurations. It delegates compilation to CMake and writes into
-generation-specific directories under `build/`.
-
-The PowerShell dispatcher and CMake presets additionally support native
-VS2013/v120, VS2012/v110, VS2010/v100, and VS2008/v90 builds. Checked-in IDE
-solutions for those older format bands are tracked separately from compiler
-support; until those solution bands are added, use the dispatcher or open the
-CMake-generated solution in its compiler-specific `build/` directory.
+Open `ide/visual-studio/vsYYYY/wolf3d-lib.sln` in the matching Visual Studio
+generation. Every IDE from VS2002 through VS2022 has its own native project
+format and compiler-pinned build; VC6 uses
+`ide/visual-studio/vc6/wolf3d-lib.dsw`. Importing an older solution through a
+newer IDE's conversion path is not the supported workflow. VS2008 and newer
+delegate to their exact CMake generator; VC6--VS2005 delegate to the same
+XP-native CMD workflow documented below.
 
 The static MSVC runtime is the release default. This does not make the engine
 a static library: `wolf3d.dll` remains a separate DLL, while its Microsoft C

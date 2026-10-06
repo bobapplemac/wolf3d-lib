@@ -1,0 +1,22 @@
+Microsoft Visual Studio Solution File, Format Version 7.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wolf3d-lib", "wolf3d-lib.vcproj", "{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}"
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		ConfigName.0 = Debug
+		ConfigName.1 = Release
+		ConfigName.2 = Publish
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Debug.ActiveCfg = Debug|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Debug.Build.0 = Debug|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release.ActiveCfg = Release|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release.Build.0 = Release|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Publish.ActiveCfg = Publish|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Publish.Build.0 = Publish|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

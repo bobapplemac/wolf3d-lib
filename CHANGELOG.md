@@ -6,6 +6,23 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.34 - 2026-10-06 - Native Visual Studio generation matrix
+
+- Replaced the shared compatibility-band solution with one native, toolset-
+  pinned solution/project pair for every IDE generation from VS2002 through
+  VS2022, plus a period-correct VC6 `.dsw`/`.dsp` workspace.
+- Validated the checked-in VS2008--VS2013 projects on Windows 7 and the VC6--
+  VS2005 projects on Windows XP through their exact IDE command-line hosts;
+  retained the already-validated exact VS2015, VS2019, and VS2022 workflows.
+- Pinned the VS2017 IDE project to the actual Visual Studio 15 generator rather
+  than hosting v141 under VS2019; native VS2017 IDE smoke testing remains
+  pending a matching installation.
+- Made the XP-native dispatcher independent of an inherited nonzero
+  `ERRORLEVEL`, which prevented makefile projects from rebuilding an existing
+  build tree reliably.
+- Documented that upgrade/import compatibility is not considered a supported
+  substitute for opening each solution in its matching IDE.
+
 ## 1.4.33 - 2026-10-06 - Compatibility-banded build layout
 
 - Moved the shared VS2015/VS2019/VS2022 solution and project into an explicit

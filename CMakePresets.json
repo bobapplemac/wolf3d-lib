@@ -74,7 +74,7 @@
     {
       "name": "windows-vs2017-base",
       "hidden": true,
-      "generator": "Visual Studio 16 2019",
+      "generator": "Visual Studio 15 2017",
       "toolset": "v141",
       "cacheVariables": {
         "WG_WARNINGS_AS_ERRORS": "ON",

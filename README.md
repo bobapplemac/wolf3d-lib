@@ -70,8 +70,9 @@ cmake --build --preset linux-dev
 ctest --preset linux-dev
 ```
 
-On Windows, open
-`ide/visual-studio/vs2015-vs2022/wolf3d-lib.sln`, or use CMake:
+On Windows, open `ide/visual-studio/vsYYYY/wolf3d-lib.sln` in the matching
+Visual Studio generation (or `ide/visual-studio/vc6/wolf3d-lib.dsw` in VC6),
+or use CMake:
 
 ```powershell
 cmake --preset windows-dev-x64

@@ -29,26 +29,26 @@ Each checkpoint must configure and compile the shared library with warnings as
 errors, run the internal tests and the public-header consumer, and stage an SDK
 containing the DLL, import library, public header, and license notices.
 
-The checked-in modern solution detects VS2015, VS2019, or VS2022 and selects
-the matching explicit CMake preset and platform toolset. The PowerShell
-dispatcher and direct presets cover the complete VS2008--VS2022 matrix.
+Each checked-in solution/workspace from VC6 through VS2022 is native to exactly one
+IDE generation and selects its matching explicit CMake generator, preset, and
+platform toolset. Import/upgrade compatibility is not treated as support. The
+PowerShell dispatcher and direct presets cover the complete VS2008--VS2022
+command-line matrix.
 An XP-native CMD dispatcher and separate CMake 3.5 definition cover the
 x86-only VC6--VS2005 band. Package directory names include the compiler label,
 so artifacts from different checkpoints can coexist.
 
-## Planned Windows checkpoints
+## Remaining Windows validation
 
-The v90 through v120 compilers are validated, but their checked-in native IDE
-solution bands remain follow-up work. The `v140_xp` profile is also compiler-
-and test-validated, but is not promoted to runtime-validated support until its
-packages execute on real XP test hosts.
+The `v140_xp` profile is compiler- and test-validated, but is not promoted to
+runtime-validated support until its packages execute on real XP test hosts.
+The native VS2017 files select the real VS2017 generator, while their period-
+IDE smoke test remains pending access to a VS2017 IDE installation.
 
-The root `build.ps1` is the stable modern command-line dispatcher. The root
-solution remains while one format is genuinely accepted by the validated IDE
-range. When testing finds a real compatibility boundary, solution and project
-files will move into explicit bands under `ide/visual-studio/`, for example
-`vs2019-vs2022` or `vs2015-vs2017`; every band references the same root source
-files. No speculative duplicate solutions or source forks are created.
+The root `build.ps1` is the stable modern command-line dispatcher. Native IDE
+files live under `ide/visual-studio/vsYYYY/` (and `vc6/`); every generation has
+its own solution/project pair even where a newer IDE could import an older format.
+Every band references the same root source files, so there are no source forks.
 
 PowerShell is the supported human-facing dispatcher for VS2008 and newer. The
 XP-era band uses `scripts/windows/legacy/build.cmd` because PowerShell is not a native
