@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.39 - 2026-10-06 - Collision-free custom audio packages
+
+- Added deterministic package-directory suffixes for non-default compiled
+  driver sets, runtime defaults, and preferred sample rates so custom audio
+  builds cannot overwrite the canonical all-driver/Nuked/48 kHz package.
+
 ## 1.4.38 - 2026-10-06 - Runtime audio-driver selection
 
 - Replaced mutually exclusive audio builds with a compiled-driver registry;
