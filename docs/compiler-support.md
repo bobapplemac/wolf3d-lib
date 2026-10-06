@@ -3,6 +3,10 @@
 wolf3d-lib treats compiler support as a tested compatibility matrix rather
 than assuming that one successful modern build establishes portability.
 
+For the user-facing cross-platform build, artifact, and destination-OS table,
+see [support-matrix.md](support-matrix.md). This file retains the detailed
+compiler-checkpoint policy and evidence.
+
 ## Validated Windows checkpoints
 
 | Environment | Toolset | Architectures | Runtime modes | Status |

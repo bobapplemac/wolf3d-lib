@@ -6,6 +6,18 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.32 - 2026-10-06 - Build and compatibility matrices
+
+- Added one authoritative user-facing matrix covering every supported build
+  entry point, compiler/toolset band, architecture, CRT/libc choice, packaged
+  artifact, and validated destination operating system.
+- Clearly separated compile validation from destination runtime validation so
+  historical compiler success is not mistaken for an untested legacy-OS
+  guarantee.
+- Documented native glibc, audited glibc 2.28, and musl compatibility models,
+  and identified MinGW and Open Watcom/DOS32A work as planned rather than
+  currently supported.
+
 ## 1.4.31 - 2026-10-05 - Windows XP-era compiler band
 
 - Added an isolated CMake 3.5 legacy build definition and native CMD dispatcher

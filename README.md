@@ -105,7 +105,10 @@ Release presets stage clean SDK folders containing `wolf3d.dll` and
 `wolf3d.lib` on Windows, or the versioned `libwolf3d.so` SONAME chain on
 Linux, together with `WOLF3D.h` (and the legacy-MSVC compatibility header where
 applicable), the selected audio backend, licenses, and package notes.
-See [docs/building.md](docs/building.md) for all supported configurations.
+See the [build and compatibility matrix](docs/support-matrix.md) for supported
+compilers, build entry points, artifacts, and validated destination operating
+systems. [docs/building.md](docs/building.md) contains the complete command and
+option reference.
 
 ## Validation host
 
