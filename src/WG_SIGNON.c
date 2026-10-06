@@ -15,7 +15,7 @@
 typedef struct wg_signon_asset
 {
     const char *name;
-    const uint8_t *pixels;
+    const char *pixels;
     wg_game_family_t family;
 } wg_signon_asset_t;
 

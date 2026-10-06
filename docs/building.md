@@ -5,7 +5,8 @@ the presets are maintained entry points around the same targets.
 
 ## Requirements
 
-- CMake 3.16 or newer (3.20 or newer for presets)
+- CMake 3.16 or newer (3.20 or newer for presets) for modern builds
+- CMake 3.5 for the isolated VC6--VS2005 legacy build definition
 - A C99 compiler
 - GNU Make for the Linux convenience commands
 - Docker only for the optional glibc 2.28 and musl packages
@@ -123,6 +124,29 @@ Visual Studio 2015 and older do not bundle CMake. The dispatcher uses a CMake
 installed Visual Studio, while still generating projects for the selected
 native compiler and MSBuild generation.
 
+### Windows XP-era compiler band
+
+VC6 SP6, VS2002 SP1, VS2003 SP1, and VS2005 SP1 are supported as x86-only
+historical checkpoints. They use `cmake/legacy/CMakeLists.txt` with CMake 3.5
+and the XP-native CMD dispatcher; the modern root CMake project and PowerShell
+dispatcher remain unchanged.
+
+```bat
+scripts\build-legacy.cmd vc6
+scripts\build-legacy.cmd vs2002 Release standard nuked static test
+scripts\build-legacy.cmd vs2003 Release silent nuked static package
+scripts\build-legacy.cmd vs2005 Release standard dbopl dynamic package
+```
+
+Arguments are compiler, configuration, audio mode, OPL backend, CRT mode, and
+action. Run the command without arguments for its complete usage summary.
+`build` is the default action, `test` executes a public-header/DLL consumer,
+and `package` stages a clean compiler-labeled SDK under `dist/`.
+
+The legacy definition compiles the canonical `src/` tree; it contains no fork
+of the engine. SDL3 is deliberately outside this compiler band. Production
+applications use the companion repository's Win32/GDI wrapper.
+
 ## Windows with CMake
 
 ```powershell
@@ -171,7 +195,7 @@ Use `windows-*-x86` for 32-bit output. For a dynamic MSVC runtime add
 A staged package contains:
 
 - `WOLF3D.h`
-- `WOLF3D_STDINT.h` for public-header consumers using VS2008
+- `WOLF3D_STDINT.h` for public-header consumers using VS2008 and older MSVC
 - `wolf3d.dll` and `wolf3d.lib`, or the `libwolf3d.so` SONAME chain
 - the replaceable Nuked-OPL3 shared library for default builds, or embedded
   DBOPL/silent backend selected at configure time

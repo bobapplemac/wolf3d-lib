@@ -55,6 +55,14 @@ typedef uint64_t uintmax_t;
 #define UINT32_MAX 0xffffffffU
 #define UINT64_MAX 0xffffffffffffffffui64
 
+#ifndef SIZE_MAX
+#ifdef _WIN64
+#define SIZE_MAX UINT64_MAX
+#else
+#define SIZE_MAX UINT32_MAX
+#endif
+#endif
+
 #define INT8_C(value) value
 #define UINT8_C(value) value##U
 #define INT16_C(value) value

@@ -105,7 +105,7 @@ static FILE *WG_OpenFileCaseInsensitive(const char *path, const char *mode)
 
 static FILE *WG_OpenFile(const char *path, const char *mode)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER >= 1400
     FILE *stream = NULL;
     if (fopen_s(&stream, path, mode) != 0)
     {

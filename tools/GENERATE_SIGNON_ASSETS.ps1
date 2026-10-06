@@ -20,7 +20,7 @@ foreach ($entry in $assets.GetEnumerator()) {
     if ($bytes.Length -ne 64000) {
         throw "$source must contain exactly 64000 bytes"
     }
-    [void]$builder.AppendLine("static const uint8_t $($entry.Key)[] =")
+    [void]$builder.AppendLine("static const char $($entry.Key)[] =")
     for ($offset = 0; $offset -lt $bytes.Length; $offset += 32) {
         $last = [Math]::Min($offset + 31, $bytes.Length - 1)
         $values = $bytes[$offset..$last] | ForEach-Object { "\x{0:x2}" -f $_ }

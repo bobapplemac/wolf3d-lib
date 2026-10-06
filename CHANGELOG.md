@@ -6,6 +6,26 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.31 - 2026-10-05 - Windows XP-era compiler band
+
+- Added an isolated CMake 3.5 legacy build definition and native CMD dispatcher
+  for VC6 SP6, VS2002 SP1, VS2003 SP1, and VS2005 SP1 without weakening the
+  modern root CMake project.
+- Validated x86 shared-library builds and public-API execution on Windows XP
+  SP3 with all four compiler generations.
+- Validated faithful Nuked-OPL3, embedded DBOPL, timing-preserving silent
+  audio, and static/dynamic CRT variants at the oldest VC6 boundary.
+- Added clean compiler-labeled SDK staging for legacy builds, including the
+  DLL, import library, public headers, text-only notices, and replaceable
+  Nuked-OPL3 component.
+- Extended the pre-C99 compatibility layer for `SIZE_MAX`, VC6 bounded
+  formatting, pre-`fopen_s` runtimes, portable 64-bit constants, and VC6's
+  character-array initialization rules without changing game behavior.
+- Added deterministic explicit exports for Nuked-OPL3 where CMake's oldest
+  Visual Studio generator cannot synthesize an import library.
+- Re-ran the modern VS2022 warnings-as-errors build and complete unit, smoke,
+  and public-consumer suite after the compatibility work.
+
 ## 1.4.30 - 2026-10-05 - Legacy MSVC compiler span
 
 - Added first-class PowerShell-dispatcher and CMake-preset support for Visual

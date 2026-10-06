@@ -1,7 +1,8 @@
 #ifndef WOLF3D_STDINT_H
 #define WOLF3D_STDINT_H
 
-/* Fixed-width integer types for public-header consumers using MSVC 2008. */
+/* Fixed-width integer types for public-header consumers using MSVC 2008 and
+   earlier supported Microsoft compilers. */
 typedef signed __int8 int8_t;
 typedef unsigned __int8 uint8_t;
 typedef signed __int16 int16_t;

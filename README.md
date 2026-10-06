@@ -80,7 +80,7 @@ ctest --preset windows-dev-x64 -C Release
 
 The root `build.ps1` provides a guided alternative that detects supported
 Visual Studio installations from VS2008/v90 through VS2022/v143 and exposes
-the complete library build selection. Run it with no arguments for an
+the complete modern library build selection. Run it with no arguments for an
 interactive wizard:
 
 ```powershell
@@ -91,9 +91,19 @@ interactive wizard:
 .\build.ps1 -Action package -Opl dbopl -Runtime dynamic
 ```
 
+Windows XP-era x86 builds use an isolated CMake 3.5 definition and native CMD
+dispatcher, preserving compatibility with VC6 SP6 through VS2005 SP1:
+
+```bat
+scripts\build-legacy.cmd vc6 Release standard nuked static test
+scripts\build-legacy.cmd vs2002 Release standard nuked static package
+scripts\build-legacy.cmd vs2003
+scripts\build-legacy.cmd vs2005
+```
+
 Release presets stage clean SDK folders containing `wolf3d.dll` and
 `wolf3d.lib` on Windows, or the versioned `libwolf3d.so` SONAME chain on
-Linux, together with `WOLF3D.h` (and the VS2008 compatibility header where
+Linux, together with `WOLF3D.h` (and the legacy-MSVC compatibility header where
 applicable), the selected audio backend, licenses, and package notes.
 See [docs/building.md](docs/building.md) for all supported configurations.
 

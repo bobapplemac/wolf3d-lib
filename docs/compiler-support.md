@@ -16,6 +16,10 @@ than assuming that one successful modern build establishes portability.
 | Visual Studio 2012 Update 5 | v110 / MSVC 17.00.61030 | x86, x64 | static, dynamic | Validated |
 | Visual Studio 2010 SP1 | v100 / MSVC 16.00.40219 | x86, x64 | static, dynamic | Validated |
 | Visual Studio 2008 SP1 | v90 / MSVC 15.00.30729 | x86, x64 | static, dynamic | Validated |
+| Visual Studio 2005 SP1 | MSVC 14.00.50727.762 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
+| Visual Studio .NET 2003 SP1 | MSVC 13.10.6030 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
+| Visual Studio .NET 2002 SP1 | MSVC 13.00.9466 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
+| Visual C++ 6.0 SP6 | MSVC 12.00.8804 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
 
 Each checkpoint must configure and compile the shared library with warnings as
 errors, run the internal tests and the public-header consumer, and stage an SDK
@@ -24,8 +28,9 @@ containing the DLL, import library, public header, and license notices.
 The checked-in modern solution detects VS2015, VS2019, or VS2022 and selects
 the matching explicit CMake preset and platform toolset. The PowerShell
 dispatcher and direct presets cover the complete VS2008--VS2022 matrix.
-Package directory names include the toolset label, so artifacts from different
-checkpoints can coexist.
+An XP-native CMD dispatcher and separate CMake 3.5 definition cover the
+x86-only VC6--VS2005 band. Package directory names include the compiler label,
+so artifacts from different checkpoints can coexist.
 
 ## Planned Windows checkpoints
 
@@ -41,9 +46,10 @@ files will move into explicit bands under `ide/visual-studio/`, for example
 `vs2019-vs2022` or `vs2015-vs2017`; every band references the same root source
 files. No speculative duplicate solutions or source forks are created.
 
-PowerShell is the supported human-facing Windows dispatcher. Period IDE bands
-will invoke the same CMake build graph and will not introduce source forks or
-independent batch-file build systems.
+PowerShell is the supported human-facing dispatcher for VS2008 and newer. The
+XP-era band uses `scripts/build-legacy.cmd` because PowerShell is not a native
+VC6-era dependency. Both paths compile the same canonical source files; period
+IDE bands will not introduce source forks.
 
 ## Linux checkpoints
 

@@ -14,11 +14,12 @@ tests, and library packaging. Production host wrappers live in the companion
 | `third_party/Nuked-OPL3/` | Replaceable LGPL OPL emulator source. |
 | `packaging/` | Library-package template and portable Linux builder. |
 | `tools/` | Maintainer generators and release/audit tools. |
+| `cmake/legacy/` | Isolated CMake 3.5 definition for x86 VC6 through VS2005 builds. |
 | `docs/` | Architecture, building, porting, provenance, supported-data, and historical development records. |
 | `VERSION` | Authoritative `1.4.REVISION` library identity. |
 | `wolf3d-lib.sln` | Current shared Visual Studio entry point; compatibility-banded solutions move under `ide/visual-studio/` only when empirically required. |
 | `build.ps1` | Modern Windows toolchain detector and human-facing build dispatcher. |
-| `scripts/` | Implementation of modern build dispatchers; legacy launchers remain with their compatibility-banded solutions. |
+| `scripts/` | Modern PowerShell implementation plus the XP-native legacy CMD dispatcher. |
 | `build/` | Ignored compiler output and local diagnostics. |
 | `dist/` | Ignored clean library SDK packages. |
 
