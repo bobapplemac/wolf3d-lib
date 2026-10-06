@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.40 - 2026-10-06 - Custom audio package auditing
+
+- Matched the GNU Make portable glibc and musl audit paths to the deterministic
+  package suffix used by non-default driver sets, default drivers, and sample
+  rates.
+
 ## 1.4.39 - 2026-10-06 - Collision-free custom audio packages
 
 - Added deterministic package-directory suffixes for non-default compiled

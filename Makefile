@@ -19,16 +19,29 @@ CMAKE_ARGS ?=
 TEST_ARGS ?=
 JOBS ?=
 
+comma := ,
+
 BACKEND_SUFFIX :=
+
+AUDIO_SUFFIX :=
+ifneq ("$(OPL_DRIVERS)","nuked,dbopl,silent")
+AUDIO_SUFFIX := $(AUDIO_SUFFIX)-opl-$(subst $(comma),-,$(OPL_DRIVERS))
+endif
+ifneq ("$(OPL_DEFAULT)","nuked")
+AUDIO_SUFFIX := $(AUDIO_SUFFIX)-default-$(OPL_DEFAULT)
+endif
+ifneq ("$(SAMPLE_RATE)","48000")
+AUDIO_SUFFIX := $(AUDIO_SUFFIX)-$(SAMPLE_RATE)hz
+endif
 
 BUILD_DIR ?= build/linux-$(COMPILER_NAME)$(BACKEND_SUFFIX)
 RELEASE_BUILD_DIR ?= build/linux-library-$(COMPILER_NAME)$(BACKEND_SUFFIX)
 PORTABLE_BUILD_DIR ?= build/linux-library-portable-debian10-gcc
-PORTABLE_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-linux-x64$(BACKEND_SUFFIX)
+PORTABLE_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-linux-x64$(BACKEND_SUFFIX)$(AUDIO_SUFFIX)
 PORTABLE_BUILD_IMAGE ?= wolf3d-lib-build-debian10
 PORTABLE_GLIBC_MAX ?= 2.28
 MUSL_BUILD_DIR ?= build/linux-library-musl-$(COMPILER_NAME)$(BACKEND_SUFFIX)
-MUSL_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-linux-musl-x64$(BACKEND_SUFFIX)
+MUSL_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-linux-musl-x64$(BACKEND_SUFFIX)$(AUDIO_SUFFIX)
 MUSL_BUILD_IMAGE ?= wolf3d-lib-build-alpine-musl
 DOCKER_RUN_ARGS ?=
 
