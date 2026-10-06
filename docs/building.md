@@ -77,11 +77,11 @@ cmake --build --preset linux-library
 
 ## Windows with Visual Studio
 
-Open `wolf3d-lib.sln` in Visual Studio 2015, 2019, or 2022. This modern solution
-band selects v140, v142, or v143 to match the IDE and supports Win32/x64,
-Debug/Release, and static/dynamic MSVC runtime configurations. It delegates
-compilation to CMake and writes into generation-specific directories under
-`build/`.
+Open `ide/visual-studio/vs2015-vs2022/wolf3d-lib.sln` in Visual Studio 2015,
+2019, or 2022. This compatibility-banded solution selects v140, v142, or v143
+to match the IDE and supports Win32/x64, Debug/Release, and static/dynamic MSVC
+runtime configurations. It delegates compilation to CMake and writes into
+generation-specific directories under `build/`.
 
 The PowerShell dispatcher and CMake presets additionally support native
 VS2013/v120, VS2012/v110, VS2010/v100, and VS2008/v90 builds. Checked-in IDE
@@ -136,10 +136,10 @@ and the XP-native CMD dispatcher; the modern root CMake project and PowerShell
 dispatcher remain unchanged.
 
 ```bat
-scripts\build-legacy.cmd vc6
-scripts\build-legacy.cmd vs2002 Release standard nuked static test
-scripts\build-legacy.cmd vs2003 Release silent nuked static package
-scripts\build-legacy.cmd vs2005 Release standard dbopl dynamic package
+scripts\windows\legacy\build.cmd vc6
+scripts\windows\legacy\build.cmd vs2002 Release standard nuked static test
+scripts\windows\legacy\build.cmd vs2003 Release silent nuked static package
+scripts\windows\legacy\build.cmd vs2005 Release standard dbopl dynamic package
 ```
 
 Arguments are compiler, configuration, audio mode, OPL backend, CRT mode, and

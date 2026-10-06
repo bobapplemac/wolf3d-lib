@@ -31,7 +31,7 @@ if /I not "%ACTION%"=="build" if /I not "%ACTION%"=="test" if /I not "%ACTION%"=
 set "STATIC_RUNTIME=ON"
 if /I "%RUNTIME%"=="dynamic" set "STATIC_RUNTIME=OFF"
 
-for %%I in ("%~dp0..") do set "ROOT=%%~fI"
+for %%I in ("%~dp0..\..\..") do set "ROOT=%%~fI"
 set "BUILD_DIR=%ROOT%\build\legacy-%COMPILER%-%AUDIO%-%OPL%-%RUNTIME%"
 
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
@@ -70,7 +70,7 @@ popd
 goto failed_popd
 
 :usage
-echo Usage: scripts\build-legacy.cmd COMPILER [CONFIG] [AUDIO] [OPL] [RUNTIME] [ACTION]
+echo Usage: scripts\windows\legacy\build.cmd COMPILER [CONFIG] [AUDIO] [OPL] [RUNTIME] [ACTION]
 echo.
 echo   COMPILER  vc6, vs2002, vs2003, or vs2005
 echo   CONFIG    Release ^(default^) or Debug

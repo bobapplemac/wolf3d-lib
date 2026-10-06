@@ -23,9 +23,9 @@ runtime linked into that DLL; they do not turn wolf3d into a static library.
 | Linux + Docker | GNU Make | `make musl` or `make musl CC=clang` | Alpine/musl x86-64 SDK |
 | Linux | CMake presets | `cmake --preset linux-library` then `cmake --build --preset linux-library` | Native library build/package |
 | Windows, VS2008--VS2022 | Guided PowerShell dispatcher | `.\build.ps1` or `.\build.ps1 -Compiler vs2019 -Action package` | Compiler-labelled SDK under `dist/` |
-| Windows, VS2015/2019/2022 | Visual Studio | Open `wolf3d-lib.sln` and build a publish configuration | Same CMake-backed SDK |
+| Windows, VS2015/2019/2022 | Visual Studio | Open `ide/visual-studio/vs2015-vs2022/wolf3d-lib.sln` | Same CMake-backed SDK |
 | Windows, modern CMake | CMake presets | `cmake --preset windows-vs2022-library-x64` then `cmake --build --preset windows-vs2022-library-x64` | Selected x86/x64 SDK |
-| Windows XP, VC6--VS2005 | Native CMD dispatcher | `scripts\build-legacy.cmd vc6 Release standard nuked static package` | XP-era x86 SDK |
+| Windows XP, VC6--VS2005 | Native CMD dispatcher | `scripts\windows\legacy\build.cmd vc6 Release standard nuked static package` | XP-era x86 SDK |
 
 Run `make help`, `.\build.ps1 -List`, or the legacy CMD dispatcher without
 arguments for the complete option list. See [building.md](building.md) for

@@ -70,7 +70,8 @@ cmake --build --preset linux-dev
 ctest --preset linux-dev
 ```
 
-On Windows, open `wolf3d-lib.sln`, or use CMake:
+On Windows, open
+`ide/visual-studio/vs2015-vs2022/wolf3d-lib.sln`, or use CMake:
 
 ```powershell
 cmake --preset windows-dev-x64
@@ -95,10 +96,10 @@ Windows XP-era x86 builds use an isolated CMake 3.5 definition and native CMD
 dispatcher, preserving compatibility with VC6 SP6 through VS2005 SP1:
 
 ```bat
-scripts\build-legacy.cmd vc6 Release standard nuked static test
-scripts\build-legacy.cmd vs2002 Release standard nuked static package
-scripts\build-legacy.cmd vs2003
-scripts\build-legacy.cmd vs2005
+scripts\windows\legacy\build.cmd vc6 Release standard nuked static test
+scripts\windows\legacy\build.cmd vs2002 Release standard nuked static package
+scripts\windows\legacy\build.cmd vs2003
+scripts\windows\legacy\build.cmd vs2005
 ```
 
 Release presets stage clean SDK folders containing `wolf3d.dll` and

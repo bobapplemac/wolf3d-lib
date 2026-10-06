@@ -51,7 +51,7 @@ files will move into explicit bands under `ide/visual-studio/`, for example
 files. No speculative duplicate solutions or source forks are created.
 
 PowerShell is the supported human-facing dispatcher for VS2008 and newer. The
-XP-era band uses `scripts/build-legacy.cmd` because PowerShell is not a native
+XP-era band uses `scripts/windows/legacy/build.cmd` because PowerShell is not a native
 VC6-era dependency. Both paths compile the same canonical source files; period
 IDE bands will not introduce source forks.
 

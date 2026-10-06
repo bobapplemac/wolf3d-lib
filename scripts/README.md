@@ -5,8 +5,10 @@ implementation lives in `scripts/windows/build.ps1` and delegates to the
 authoritative CMake presets.
 
 Linux uses the root Makefile as its human-facing dispatcher; run `make help`.
+Linux-hosted helper scripts, including the planned Docker/Open Watcom
+cross-build, live under `scripts/linux/`.
 
-When an empirically tested legacy Visual Studio band cannot use the modern
-dispatcher, its period-appropriate `.cmd` launcher belongs beside that band's
-solution under `ide/visual-studio/<compatibility-band>/`, not in this general
-scripts directory.
+The XP-native VC6--VS2005 dispatcher lives at
+`scripts/windows/legacy/build.cmd`. Visual Studio solutions and projects are
+separately grouped by file-format/toolset compatibility under
+`ide/visual-studio/<compatibility-band>/`.

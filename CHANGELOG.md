@@ -6,6 +6,17 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.33 - 2026-10-06 - Compatibility-banded build layout
+
+- Moved the shared VS2015/VS2019/VS2022 solution and project into an explicit
+  `ide/visual-studio/vs2015-vs2022` compatibility band while retaining the
+  same CMake presets, build trees, and source browsing.
+- Moved the XP-native VC6--VS2005 dispatcher to
+  `scripts/windows/legacy/build.cmd` and established `scripts/linux/` as the
+  home for Linux-hosted helpers such as the planned Open Watcom cross-build.
+- Updated all user and maintainer documentation to identify stable root
+  dispatchers separately from OS-specific scripts and IDE compatibility bands.
+
 ## 1.4.32 - 2026-10-06 - Build and compatibility matrices
 
 - Added one authoritative user-facing matrix covering every supported build
