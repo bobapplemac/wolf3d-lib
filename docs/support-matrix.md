@@ -48,7 +48,7 @@ backend, test-data, and direct-CMake details.
 | Visual Studio 2005 SP1 | MSVC 14.00.50727.762 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
 | Visual Studio .NET 2003 SP1 | MSVC 13.10.6030 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
 | Visual Studio .NET 2002 SP1 | MSVC 13.00.9466 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
-| Visual C++ 6.0 SP6 | MSVC 12.00.8804 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
+| Visual C++ 6.0 SP6 | MSVC 12.00.8804 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86; VC6 DLL exercised by the Win32/GDI game on Windows 11 x64 under WOW64 |
 
 The selected toolset, Windows SDK, CRT mode, and imports jointly determine a
 Windows binary's actual OS floor. Consequently, a successful historical

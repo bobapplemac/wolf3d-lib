@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.35 - 2026-10-06 - VC6 Windows 11 runtime validation
+
+- Recorded a successful manual run of the VC6-built x86 library as part of
+  the Win32/GDI game package on Windows 11 x64 under WOW64, extending the
+  same artifact's runtime evidence beyond its Windows XP SP3 validation.
+
 ## 1.4.34 - 2026-10-06 - Native Visual Studio generation matrix
 
 - Replaced the shared compatibility-band solution with one native, toolset-
