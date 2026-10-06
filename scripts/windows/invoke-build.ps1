@@ -44,6 +44,7 @@ param(
     [int]$Jobs = 0,
     [string]$Msys2Root = 'C:\msys64',
     [switch]$List,
+    [switch]$ListObjects,
     [switch]$DryRun,
     [switch]$NonInteractive
 )
@@ -261,6 +262,10 @@ if ($PSBoundParameters.Count -eq 0 -and -not $NonInteractive -and $canPrompt) {
     if ($confirmation -and $confirmation -notmatch '^[Yy]') { exit 0 }
 }
 
+if ($ListObjects) {
+    $toolchains
+    exit 0
+}
 if ($List) {
     $toolchains | Select-Object Name, Toolset, Available, Installation | Format-Table -AutoSize
     exit 0

@@ -6,6 +6,18 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.37 - 2026-10-06 - Guided cross-platform build configuration
+
+- Split the modern Windows build interface into a dependency-free guided
+  configurator and a stable parameter-driven executor without changing
+  existing root `build.ps1` automation commands.
+- Added guided Bash and Windows XP CMD entry points that detect usable local
+  toolchains, filter incompatible choices, print reproducible backend
+  commands, and request confirmation before building.
+- Kept external toolchain installation out of the configurators while adding
+  verification and opt-in initialization of recorded Git submodules in the
+  companion portable build flow.
+
 ## 1.4.36 - 2026-10-06 - MinGW UCRT64 support
 
 - Added first-class MSYS2 UCRT64/GCC x64 CMake presets and PowerShell

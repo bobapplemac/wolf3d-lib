@@ -1,13 +1,17 @@
 <#
 .SYNOPSIS
-Launch the interactive or parameter-driven Windows library build dispatcher.
+Launch the guided or parameter-driven Windows library build system.
 
 .DESCRIPTION
-This stable root entry point forwards to scripts/windows/build.ps1. Run it
-without arguments for the guided wizard, or pass explicit arguments for
-automation.
+Run without arguments for the dependency-free guided configurator. Explicit
+arguments are forwarded unchanged to the deterministic executor for scripts
+and automation.
 #>
-$driver = Join-Path $PSScriptRoot 'scripts\windows\build.ps1'
+$driver = if ($args.Count -eq 0) {
+    Join-Path $PSScriptRoot 'scripts\windows\configure-build.ps1'
+} else {
+    Join-Path $PSScriptRoot 'scripts\windows\invoke-build.ps1'
+}
 Push-Location -LiteralPath $PSScriptRoot
 try {
     & $driver @args

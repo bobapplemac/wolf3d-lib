@@ -49,7 +49,15 @@ headers are not a host interface.
 
 ## Build
 
-On Linux, GNU Make provides the common paths:
+On Linux, run the dependency-free guided configurator and choose from the
+detected native, portable-glibc, and musl build paths:
+
+```sh
+./build.sh
+```
+
+Explicit arguments bypass the wizard and are forwarded to GNU Make, so the
+established automation interface remains available:
 
 ```sh
 make                    # native shared-library package
@@ -80,7 +88,7 @@ cmake --build --preset windows-dev-x64 --config Release
 ctest --preset windows-dev-x64 -C Release
 ```
 
-The root `build.ps1` provides a guided alternative that detects supported
+The root `build.ps1` is the guided entry point and detects supported
 Visual Studio installations from VS2008/v90 through VS2022/v143 and MSYS2
 UCRT64 MinGW. Run it with no arguments for an interactive wizard:
 
@@ -97,6 +105,7 @@ Windows XP-era x86 builds use an isolated CMake 3.5 definition and native CMD
 dispatcher, preserving compatibility with VC6 SP6 through VS2005 SP1:
 
 ```bat
+build.cmd
 scripts\windows\legacy\build.cmd vc6 Release standard nuked static test
 scripts\windows\legacy\build.cmd vs2002 Release standard nuked static package
 scripts\windows\legacy\build.cmd vs2003

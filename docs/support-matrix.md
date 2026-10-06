@@ -19,18 +19,18 @@ library. MinGW still uses the Windows-provided UCRT dynamically.
 
 | Build host | Recommended entry point | Typical release/package command | Result |
 | --- | --- | --- | --- |
-| Linux | GNU Make | `make` or `make library-release CC=clang` | Native glibc SDK under `dist/` |
-| Linux + Docker | GNU Make | `make portable` | Debian 10 / glibc 2.28 x86-64 SDK |
-| Linux + Docker | GNU Make | `make musl` or `make musl CC=clang` | Alpine/musl x86-64 SDK |
+| Linux | Guided Bash configurator / GNU Make | `./build.sh` or `make library-release CC=clang` | Native glibc SDK under `dist/` |
+| Linux + Docker | Guided Bash configurator / GNU Make | `./build.sh` or `make portable` | Debian 10 / glibc 2.28 x86-64 SDK |
+| Linux + Docker | Guided Bash configurator / GNU Make | `./build.sh` or `make musl CC=clang` | Alpine/musl x86-64 SDK |
 | Linux | CMake presets | `cmake --preset linux-library` then `cmake --build --preset linux-library` | Native library build/package |
 | Windows, VS2008--VS2022 | Guided PowerShell dispatcher | `.\build.ps1` or `.\build.ps1 -Compiler vs2019 -Action package` | Compiler-labelled SDK under `dist/` |
 | Windows, MinGW UCRT64 | Guided PowerShell dispatcher | `.\build.ps1 -Compiler mingw-ucrt64 -Action package` | Native x64 SDK with static GCC support runtime |
 | Windows, VS2002--VS2022 | Visual Studio | Open `ide/visual-studio/vsYYYY/wolf3d-lib.sln` in the matching IDE | Same CMake-backed SDK |
 | Windows, VC6 | Visual C++ 6.0 | Open `ide/visual-studio/vc6/wolf3d-lib.dsw` | Same legacy-CMake SDK |
 | Windows, modern CMake | CMake presets | `cmake --preset windows-vs2022-library-x64` then `cmake --build --preset windows-vs2022-library-x64` | Selected x86/x64 SDK |
-| Windows XP, VC6--VS2005 | Native CMD dispatcher | `scripts\windows\legacy\build.cmd vc6 Release standard nuked static package` | XP-era x86 SDK |
+| Windows XP, VC6--VS2005 | Guided CMD configurator / native dispatcher | `build.cmd` or `scripts\windows\legacy\build.cmd vc6 Release standard nuked static package` | XP-era x86 SDK |
 
-Run `make help`, `.\build.ps1 -List`, or the legacy CMD dispatcher without
+Run `./build.sh`, `make help`, `.\build.ps1`, or `build.cmd` without
 arguments for the complete option list. See [building.md](building.md) for
 backend, test-data, and direct-CMake details.
 

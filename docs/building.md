@@ -21,6 +21,12 @@ are selectable alternatives.
 
 ## Linux with GNU Make
 
+Run `./build.sh` without arguments for a guided scan and build plan. It
+reports GCC, Clang, CMake, Make, Docker, and Git availability, presents only
+usable native/container choices, prints the reproducible command, and asks
+before executing it. It installs nothing. Arguments bypass the wizard and are
+forwarded to Make; the commands below therefore remain the automation API.
+
 ```sh
 make help
 make                         # package with GCC
@@ -114,12 +120,13 @@ dry-run output:
 .\build.ps1 -Action test -Audio silent -Runtime dynamic
 ```
 
-With no arguments it interactively prompts for each relevant choice and asks
-for confirmation. Explicit arguments remain suitable for automation;
-`-NonInteractive` applies documented defaults without prompting. The root
-launcher delegates to `scripts/windows/build.ps1`, which prints every CMake
-command and contains no independent build graph. Run
-`Get-Help .\scripts\windows\build.ps1 -Detailed` for the full interface.
+With no arguments it runs `scripts/windows/configure-build.ps1`, reports every
+recognized toolchain, asks only questions valid for the selected compiler,
+prints a reproducible command, and requests confirmation. Explicit arguments
+are forwarded to `scripts/windows/invoke-build.ps1`, the stable automation
+backend that prints every CMake command and contains no independent build
+graph. Run `Get-Help .\scripts\windows\invoke-build.ps1 -Detailed` for its
+full interface. Neither frontend installs external tools.
 
 The MinGW profile requires MSYS2's UCRT64 GCC toolchain, native CMake, and
 Ninja packages. The default root is `C:\msys64`; pass
@@ -142,14 +149,17 @@ and the XP-native CMD dispatcher; the modern root CMake project and PowerShell
 dispatcher remain unchanged.
 
 ```bat
+build.cmd
 scripts\windows\legacy\build.cmd vc6
 scripts\windows\legacy\build.cmd vs2002 Release standard nuked static test
 scripts\windows\legacy\build.cmd vs2003 Release silent nuked static package
 scripts\windows\legacy\build.cmd vs2005 Release standard dbopl dynamic package
 ```
 
-Arguments are compiler, configuration, audio mode, OPL backend, CRT mode, and
-action. Run the command without arguments for its complete usage summary.
+Run root `build.cmd` without arguments for the XP-compatible guided scanner.
+Arguments passed to it are forwarded to the deterministic legacy executor.
+Those arguments are compiler, configuration, audio mode, OPL backend, CRT
+mode, and action. Run the executor without arguments for its usage summary.
 `build` is the default action, `test` executes a public-header/DLL consumer,
 and `package` stages a clean compiler-labeled SDK under `dist/`.
 
