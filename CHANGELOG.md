@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.43 - 2026-10-07 - MSYS2 bootstrap documentation
+
+- Documented the complete fresh-install MSYS2 UCRT64 update and package setup
+  needed by the MinGW build profile, including its PowerShell detection check.
+- Clarified that the library does not require an MSYS2 SDL3 package.
+
 ## 1.4.42 - 2026-10-07 - Guided Windows build execution
 
 - Corrected the final guided-build handoff to use named PowerShell parameter

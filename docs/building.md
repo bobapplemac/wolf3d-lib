@@ -137,6 +137,28 @@ process, and release binaries statically link GCC support code; the resulting
 SDK imports Windows UCRT API sets but no MSYS, Cygwin, libgcc, libstdc++, or
 winpthread runtime DLLs.
 
+For a fresh MSYS2 installation, open the **MSYS2 UCRT64** terminal and update
+the package database and base installation:
+
+```sh
+pacman -Syu
+```
+
+If MSYS2 asks you to close the terminal, reopen the **MSYS2 UCRT64** terminal
+and run `pacman -Syu` again. Then install the required x64 UCRT toolchain and
+build tools:
+
+```sh
+pacman -S --needed \
+  mingw-w64-ucrt-x86_64-toolchain \
+  mingw-w64-ucrt-x86_64-cmake \
+  mingw-w64-ucrt-x86_64-ninja
+```
+
+Return to ordinary PowerShell and run `.\build.ps1 -List` to verify that
+`mingw-ucrt64` is reported as ready. The project does not require an MSYS2
+SDL3 package.
+
 Visual Studio 2017 bundles a CMake older than the preset format used here;
 Visual Studio 2015 and older do not bundle CMake. The dispatcher uses a CMake
 3.20-or-newer installation from `PATH`, or the CMake bundled with a newer
