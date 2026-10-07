@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.51 - 2026-10-07 - Clean Open Watcom IDE builds
+
+- Excluded `ide2make`, object, diagnostic, response, and library outputs from
+  source control while retaining the generated IDE descriptors themselves.
+- Completed a release-mode `ide2make` and `wmake` validation of both tracked
+  Open Watcom targets with the pinned 2026-10-01 toolchain.
+
 ## 1.4.50 - 2026-10-07 - Reproducible Open Watcom descriptors
 
 - Made generated IDE descriptors byte-identical on Windows and Linux.
