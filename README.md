@@ -137,7 +137,9 @@ legacy-MSVC compatibility header where
 applicable), the compiled audio drivers, licenses, and package notes.
 The Linux-hosted Open Watcom profile instead stages an OMF `WOLF3D.LIB` for
 linking into a 32-bit protected-mode DOS host; it is a cross-build SDK, not
-yet a playable DOS application.
+itself a playable DOS application. A native IDE workspace is also available
+at `ide/open-watcom/wolf3d-lib.wpj`; launch it through the adjacent
+`open-ide.cmd` so the canonical include paths and driver definitions are set.
 See the [build and compatibility matrix](docs/support-matrix.md) for supported
 compilers, build entry points, artifacts, and validated destination operating
 systems. [docs/building.md](docs/building.md) contains the complete command and

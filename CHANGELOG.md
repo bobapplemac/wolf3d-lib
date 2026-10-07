@@ -6,6 +6,15 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.49 - 2026-10-07 - Native Open Watcom IDE workspace
+
+- Added a DOS32 Open Watcom IDE workspace with separate `WOLF3D.LIB` and
+  replaceable `NUKEDOPL.LIB` targets.
+- Added a dependency-free Windows launcher that supplies the canonical include
+  paths, Pentium code generation, and all four OPL driver definitions.
+- Added deterministic descriptor generation from `WGCoreSources.txt`, avoiding
+  manual editing of Open Watcom's opaque project serialization.
+
 ## 1.4.48 - 2026-10-07 - Optional native hardware OPL bridge
 
 - Advanced the public platform API to v4 with optional hardware-OPL lifecycle
