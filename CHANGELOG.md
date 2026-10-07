@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.45 - 2026-10-07 - MSVC 2008 warning-clean compatibility
+
+- Applied `_CRT_SECURE_NO_WARNINGS` to modern-CMake MSVC core targets so the
+  intentional pre-C99 `_vsnprintf` compatibility wrapper remains warning-clean
+  under VS2008 `/W4 /WX`, matching the established XP-era CMake path.
+
 ## 1.4.44 - 2026-10-07 - Windows runtime compatibility validation
 
 - Validated the MinGW UCRT64 package, public API, deterministic tests, and all

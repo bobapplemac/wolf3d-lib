@@ -228,6 +228,7 @@ function(wg_configure_core target)
     endif()
 
     if(MSVC)
+        target_compile_definitions(${target} PRIVATE _CRT_SECURE_NO_WARNINGS)
         target_compile_options(${target} PRIVATE /W4)
         if(MSVC_VERSION LESS 1900)
             target_compile_definitions(${target} PRIVATE inline=__inline)
