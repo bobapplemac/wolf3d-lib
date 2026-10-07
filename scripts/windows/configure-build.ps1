@@ -76,7 +76,7 @@ $availableDefaults = if ($drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } e
 $defaultOpl = Read-Choice 'Default OPL driver' $availableDefaults
 $sampleRate = Read-Choice 'Preferred PCM sample rate' @('48000', '44100')
 
-$arguments = @(
+$commandArguments = @(
     '-Compiler', $compiler.Name,
     '-Architecture', $architecture,
     '-Configuration', $configuration,
@@ -87,7 +87,19 @@ $arguments = @(
     '-Action', $action,
     '-NonInteractive'
 )
-if ($compiler.Name -eq 'mingw-ucrt64') { $arguments += @('-Msys2Root', $Msys2Root) }
+if ($compiler.Name -eq 'mingw-ucrt64') { $commandArguments += @('-Msys2Root', $Msys2Root) }
+$parameters = @{
+    Compiler = $compiler.Name
+    Architecture = $architecture
+    Configuration = $configuration
+    Runtime = $runtime
+    Drivers = $drivers
+    DefaultOpl = $defaultOpl
+    SampleRate = [int]$sampleRate
+    Action = $action
+    NonInteractive = $true
+}
+if ($compiler.Name -eq 'mingw-ucrt64') { $parameters.Msys2Root = $Msys2Root }
 
 Write-Host ''
 Write-Host 'Build plan:'
@@ -99,9 +111,9 @@ Write-Host "  OPL drivers:   $drivers (default: $defaultOpl)"
 Write-Host "  Sample rate:   $sampleRate Hz"
 Write-Host ''
 Write-Host ('Reproducible command:')
-Write-Host ('.\scripts\windows\invoke-build.ps1 ' + ($arguments -join ' '))
+Write-Host ('.\scripts\windows\invoke-build.ps1 ' + ($commandArguments -join ' '))
 Write-Host ''
 if (-not (Confirm-Step 'Run this build now?')) { exit 0 }
 
-& $executor @arguments
+& $executor @parameters
 if (-not $?) { exit 1 }

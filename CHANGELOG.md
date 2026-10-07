@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.42 - 2026-10-07 - Guided Windows build execution
+
+- Corrected the final guided-build handoff to use named PowerShell parameter
+  splatting, so accepting an interactive plan invokes the executor exactly as
+  shown by the reproducible command.
+
 ## 1.4.41 - 2026-10-07 - Visual Studio 2017 and 2026 validation
 
 - Added native Visual Studio 2026/v145 x86 and x64 presets, dispatcher
