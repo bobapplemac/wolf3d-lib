@@ -101,7 +101,7 @@ ctest --preset windows-dev-x64 -C Release
 ```
 
 The root `build.ps1` is the guided entry point and detects supported
-Visual Studio installations from VS2008/v90 through VS2022/v143 and MSYS2
+Visual Studio installations from VS2008/v90 through VS2026/v145 and MSYS2
 UCRT64 MinGW. Run it with no arguments for an interactive wizard:
 
 ```powershell

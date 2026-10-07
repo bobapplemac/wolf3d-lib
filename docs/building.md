@@ -84,7 +84,7 @@ cmake --build --preset linux-library
 ## Windows with Visual Studio or MinGW
 
 Open `ide/visual-studio/vsYYYY/wolf3d-lib.sln` in the matching Visual Studio
-generation. Every IDE from VS2002 through VS2022 has its own native project
+generation. Every IDE from VS2002 through VS2026 has its own native project
 format and compiler-pinned build; VC6 uses
 `ide/visual-studio/vc6/wolf3d-lib.dsw`. Importing an older solution through a
 newer IDE's conversion path is not the supported workflow. VS2008 and newer
@@ -106,6 +106,7 @@ parallelism, and dry-run output:
 ```powershell
 .\build.ps1 -List
 .\build.ps1
+.\build.ps1 -Compiler vs2026 -Architecture x64 -Action test
 .\build.ps1 -Compiler vs2022 -Architecture x86 -Action test
 .\build.ps1 -Compiler vs2019 -Action package -DefaultOpl dbopl
 .\build.ps1 -Compiler vs2017 -Architecture x86 -Action package
@@ -136,6 +137,7 @@ process, and release binaries statically link GCC support code; the resulting
 SDK imports Windows UCRT API sets but no MSYS, Cygwin, libgcc, libstdc++, or
 winpthread runtime DLLs.
 
+Visual Studio 2017 bundles a CMake older than the preset format used here;
 Visual Studio 2015 and older do not bundle CMake. The dispatcher uses a CMake
 3.20-or-newer installation from `PATH`, or the CMake bundled with a newer
 installed Visual Studio, while still generating projects for the selected
@@ -180,8 +182,9 @@ cmake --build --preset windows-library-x64
 ```
 
 The historical `windows-*` preset names explicitly use Visual Studio 2019 and
-v142 and write to `build/windows-vs2019-*`. For Visual Studio 2022 and v143,
-use the parallel names, which write to `build/windows-vs2022-*`:
+v142 and write to `build/windows-vs2019-*`. Visual Studio 2022/v143 and
+Visual Studio 2026/v145 use parallel generation-qualified names and distinct
+build trees:
 
 ```powershell
 cmake --preset windows-vs2022-dev-x64
@@ -190,6 +193,13 @@ ctest --preset windows-vs2022-dev-x64
 
 cmake --preset windows-vs2022-library-x64
 cmake --build --preset windows-vs2022-library-x64
+
+cmake --preset windows-vs2026-dev-x64
+cmake --build --preset windows-vs2026-dev-x64 --config Release
+ctest --preset windows-vs2026-dev-x64
+
+cmake --preset windows-vs2026-library-x64
+cmake --build --preset windows-vs2026-library-x64
 ```
 
 From an MSYS2 UCRT64 shell, the corresponding native-GCC presets are:

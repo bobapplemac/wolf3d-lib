@@ -7,6 +7,7 @@ fork.
 
 | Directory | IDE | Toolset |
 | --- | --- | --- |
+| `vs2026/` | Visual Studio 2026 | v145 |
 | `vs2022/` | Visual Studio 2022 | v143 |
 | `vs2019/` | Visual Studio 2019 | v142 |
 | `vs2017/` | Visual Studio 2017 | v141 |

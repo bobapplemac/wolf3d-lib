@@ -26,7 +26,7 @@ Stages the all-driver SDK with DBOPL as its runtime default.
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('auto', 'mingw-ucrt64', 'vs2022', 'vs2019', 'vs2017',
+    [ValidateSet('auto', 'mingw-ucrt64', 'vs2026', 'vs2022', 'vs2019', 'vs2017',
         'vs2015', 'vs2015-xp', 'vs2013', 'vs2012', 'vs2010', 'vs2008')]
     [string]$Compiler = 'auto',
     [ValidateSet('x64', 'x86')]
@@ -126,6 +126,16 @@ function Find-VisualStudio {
             $ctest = $ctestCandidate
         }
     }
+    if ($cmake) {
+        $versionLine = & $cmake --version 2>$null | Select-Object -First 1
+        $versionText = if ($versionLine -match '([0-9]+\.[0-9]+(?:\.[0-9]+)?)') {
+            $Matches[1]
+        } else { '0.0' }
+        if ([version]$versionText -lt [version]'3.20') {
+            $cmake = $null
+            $ctest = $null
+        }
+    }
     if (-not $cmake -and $CMakeFallbackDirectory) {
         $cmakeCandidate = Join-Path $CMakeFallbackDirectory 'cmake.exe'
         $ctestCandidate = Join-Path $CMakeFallbackDirectory 'ctest.exe'
@@ -168,15 +178,20 @@ if (Test-Path -LiteralPath $vswhere) {
 }
 
 $toolchains = @(
+    Find-VisualStudio -Name 'vs2026' -VersionRange '[18.0,19.0)' `
+        -FallbackPath 'C:\Program Files\Microsoft Visual Studio\18\Enterprise' `
+        -Toolset 'v145' -PresetPrefix 'windows-vs2026'
     Find-VisualStudio -Name 'vs2022' -VersionRange '[17.0,18.0)' `
         -FallbackPath 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise' `
         -Toolset 'v143' -PresetPrefix 'windows-vs2022'
     Find-VisualStudio -Name 'vs2019' -VersionRange '[16.0,17.0)' `
         -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise' `
         -Toolset 'v142' -PresetPrefix 'windows'
-    Find-VisualStudio -Name 'vs2017' -VersionRange '[16.0,17.0)' `
-        -FallbackPath '' -Toolset 'v141' -PresetPrefix 'windows-vs2017' `
-        -RequiredComponent 'Microsoft.VisualStudio.Component.VC.v141.x86.x64'
+    Find-VisualStudio -Name 'vs2017' -VersionRange '[15.0,16.0)' `
+        -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise' `
+        -Toolset 'v141' -PresetPrefix 'windows-vs2017' `
+        -RequiredComponent 'Microsoft.VisualStudio.Component.VC.v141.x86.x64' `
+        -CMakeFallbackDirectory $legacyCMakeDirectory
     Find-VisualStudio -Name 'vs2015' -VersionRange '[14.0,15.0)' `
         -FallbackPath 'C:\Program Files (x86)\Microsoft Visual Studio 14.0' `
         -Toolset 'v140' -PresetPrefix 'windows-vs2015' `

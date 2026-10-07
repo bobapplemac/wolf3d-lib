@@ -6,6 +6,16 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.41 - 2026-10-07 - Visual Studio 2017 and 2026 validation
+
+- Added native Visual Studio 2026/v145 x86 and x64 presets, dispatcher
+  detection, and a generation-specific solution/project pair.
+- Corrected native Visual Studio 2017 discovery and made its command-line and
+  IDE builds use a newer CMake when the IDE's bundled CMake is too old for
+  presets.
+- Validated the library and public API with the exact VS2017, VS2019, VS2022,
+  and VS2026 compiler generations on the dedicated Windows 11 build host.
+
 ## 1.4.40 - 2026-10-06 - Custom audio package auditing
 
 - Matched the GNU Make portable glibc and musl audit paths to the deterministic
