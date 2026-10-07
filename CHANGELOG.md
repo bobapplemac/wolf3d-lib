@@ -6,6 +6,16 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.48 - 2026-10-07 - Optional native hardware OPL bridge
+
+- Advanced the public platform API to v4 with optional hardware-OPL lifecycle
+  and register-write callbacks, leaving raw port I/O entirely to a host.
+- Added an `adlib` driver adapter for Open Watcom builds that advances the
+  existing deterministic 700 Hz/sample clock while routing OPL2 writes to a
+  DOS host and retaining PCM mixing for digitized and PC-speaker effects.
+- Kept the hardware driver opt-in so normal Windows and Linux libraries retain
+  the established Nuked, DBOPL, and silent defaults.
+
 ## 1.4.47 - 2026-10-07 - Clean Open Watcom diagnostics
 
 - Disabled Open Watcom's source-adjacent `.err` report files while retaining

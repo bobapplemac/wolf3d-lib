@@ -44,6 +44,11 @@ builds include Nuked-OPL3, pure-C DBOPL, and timing-preserving silent drivers;
 `--opl nuked|dbopl|silent` selects among the compiled choices at runtime.
 Nuked-OPL3 remains a separate, replaceable LGPL shared library.
 
+The v4 platform table additionally exposes optional native-OPL lifecycle and
+register-write callbacks. They support constrained hardware hosts without
+adding raw I/O to the portable engine; ordinary Windows and Linux builds leave
+them unset and do not compile the `adlib` adapter.
+
 The in-tree `wolf3d::wolf3d` CMake target is the supported target for a
 parent project. The public header is under `include/`; private `src/`
 headers are not a host interface.

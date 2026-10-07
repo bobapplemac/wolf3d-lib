@@ -164,3 +164,25 @@ int WG_PCMSubmit(const int16_t *samples, size_t frame_count)
     return wg_platform.pcm_submit != NULL
                && wg_platform.pcm_submit(samples, frame_count);
 }
+
+int WG_OPLHardwareInit(void)
+{
+    return wg_platform.opl_hardware_init != NULL
+               && wg_platform.opl_hardware_init();
+}
+
+void WG_OPLHardwareShutdown(void)
+{
+    if (wg_platform.opl_hardware_shutdown != NULL)
+    {
+        wg_platform.opl_hardware_shutdown();
+    }
+}
+
+void WG_OPLHardwareWrite(uint16_t register_number, uint8_t value)
+{
+    if (wg_platform.opl_hardware_write != NULL)
+    {
+        wg_platform.opl_hardware_write(register_number, value);
+    }
+}

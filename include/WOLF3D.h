@@ -112,7 +112,7 @@ typedef struct wolf3d_event
     uint32_t buttons;
 } wolf3d_event_t;
 
-#define WOLF3D_PLATFORM_API_VERSION 3U
+#define WOLF3D_PLATFORM_API_VERSION 4U
 
 typedef struct wolf3d_pcm_format
 {
@@ -147,6 +147,9 @@ typedef struct wolf3d_platform_api
     int (*pcm_submit)(const int16_t *samples, size_t frame_count);
     int (*pcm_init_ex)(const wolf3d_pcm_format_t *requested,
                        wolf3d_pcm_format_t *obtained);
+    int (*opl_hardware_init)(void);
+    void (*opl_hardware_shutdown)(void);
+    void (*opl_hardware_write)(uint16_t register_number, uint8_t value);
 } wolf3d_platform_api_t;
 
 WOLF3D_API extern uint8_t *wolf3d_ScreenBuffer;

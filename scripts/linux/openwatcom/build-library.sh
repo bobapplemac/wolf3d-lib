@@ -10,14 +10,13 @@ default_driver=${WG_OPENWATCOM_DEFAULT_OPL:-nuked}
 sample_rate=${WG_OPENWATCOM_SAMPLE_RATE:-44100}
 
 case ",$drivers," in
-    *,nuked,*|*,dbopl,*|*,silent,*) ;;
+    *,nuked,*|*,dbopl,*|*,silent,*|*,adlib,*) ;;
     *) echo "At least one Open Watcom OPL driver must be selected." >&2; exit 2 ;;
 esac
 case ",$drivers," in
     *,$default_driver,*) ;;
     *) echo "Default OPL driver '$default_driver' is not compiled in." >&2; exit 2 ;;
 esac
-
 objects="$build_dir/objects"
 rm -rf "$build_dir" "$dist_dir"
 mkdir -p "$objects" "$dist_dir/include" "$dist_dir/licenses"
@@ -40,6 +39,12 @@ case ",$drivers," in
     *,silent,*)
         defines="$defines -dWG_OPL_ENABLE_SILENT=1"
         opl_sources="$opl_sources $root/src/WG_OPL_SILENT.c"
+        ;;
+esac
+case ",$drivers," in
+    *,adlib,*)
+        defines="$defines -dWG_OPL_ENABLE_ADLIB=1"
+        opl_sources="$opl_sources $root/src/WG_OPL_ADLIB.c"
         ;;
 esac
 

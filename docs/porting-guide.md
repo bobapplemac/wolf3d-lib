@@ -72,6 +72,14 @@ which it accepts application samples, normally the requested rate. A direct
 hardware host may instead report a nearby negotiated rate. The engine's
 rational 700 Hz sample clock remains exact at either rate.
 
+Platform API v4 also has three optional native-OPL callbacks. A constrained
+hardware host may initialize an OPL2-compatible device, accept register/value
+writes, and shut it down without putting port I/O in the generic engine. The
+`adlib` adapter is compiled only by an explicitly configured target. Its
+`generate` step emits a silent FM bed while the normal renderer advances the
+700 Hz IMF clock and mixes digitized/PC-speaker effects into host PCM. Hosts
+that do not provide native OPL should set all three callbacks to `NULL`.
+
 ## Build integration
 
 Add one executable containing the host and an entry point, link it to the

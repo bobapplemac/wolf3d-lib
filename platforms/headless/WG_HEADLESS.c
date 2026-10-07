@@ -123,7 +123,10 @@ int WG_InstallPlatform(void)
         WG_HeadlessPCMShutdown,
         WG_HeadlessPCMWritableFrames,
         WG_HeadlessPCMSubmit,
-        WG_HeadlessPCMInitEx
+        WG_HeadlessPCMInitEx,
+        NULL,
+        NULL,
+        NULL
     };
 
     return wolf3d_SetPlatform(&platform) == WOLF3D_RESULT_OK;

@@ -28,6 +28,9 @@ static const wg_opl_driver_t *WG_OPL_DriverAt(size_t index)
 #if defined(WG_OPL_ENABLE_SILENT)
     if (index-- == 0U) return WG_OPL_SilentDriver();
 #endif
+#if defined(WG_OPL_ENABLE_ADLIB)
+    if (index-- == 0U) return WG_OPL_AdLibDriver();
+#endif
     (void)index;
     return NULL;
 }
@@ -42,6 +45,9 @@ size_t WG_OPL_DriverCount(void)
     ++count;
 #endif
 #if defined(WG_OPL_ENABLE_SILENT)
+    ++count;
+#endif
+#if defined(WG_OPL_ENABLE_ADLIB)
     ++count;
 #endif
     return count;

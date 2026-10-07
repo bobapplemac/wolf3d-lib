@@ -25,5 +25,8 @@ const wg_opl_driver_t *WG_OPL_DBOPLDriver(void);
 #if defined(WG_OPL_ENABLE_SILENT)
 const wg_opl_driver_t *WG_OPL_SilentDriver(void);
 #endif
+#if defined(WG_OPL_ENABLE_ADLIB)
+const wg_opl_driver_t *WG_OPL_AdLibDriver(void);
+#endif
 
 #endif

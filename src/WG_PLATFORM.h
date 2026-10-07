@@ -19,5 +19,8 @@ int WG_PCMInit(uint32_t requested_rate, uint16_t channels,
 void WG_PCMShutdown(void);
 size_t WG_PCMWritableFrames(void);
 int WG_PCMSubmit(const int16_t *samples, size_t frame_count);
+int WG_OPLHardwareInit(void);
+void WG_OPLHardwareShutdown(void);
+void WG_OPLHardwareWrite(uint16_t register_number, uint8_t value);
 
 #endif
