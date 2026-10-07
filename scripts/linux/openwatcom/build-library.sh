@@ -54,7 +54,7 @@ compile_source()
     esac
     echo "Open Watcom C: ${source#$root/}"
     # shellcheck disable=SC2086
-    wcc386 -zq -bt=dos -mf -5r -ox $warning_flags \
+    wcc386 -zq -bt=dos -mf -5r -ox -fr $warning_flags \
         -i="$root/include" -i="$root/src" \
         -i="$root/third_party/DBOPL" -i="$root/third_party/Nuked-OPL3" \
         $defines -fo="$object" "$source"
@@ -77,7 +77,7 @@ link_libraries="$dist_dir/WOLF3D.LIB"
 case ",$drivers," in
     *,nuked,*)
         echo "Open Watcom C: third_party/Nuked-OPL3/opl3.c"
-        wcc386 -zq -bt=dos -mf -5r -ox -w4 \
+        wcc386 -zq -bt=dos -mf -5r -ox -fr -w4 \
             -i="$root/third_party/Nuked-OPL3" \
             -fo="$objects/opl3.obj" "$root/third_party/Nuked-OPL3/opl3.c"
         wlib -q -n "$dist_dir/NUKEDOPL.LIB" +"$objects/opl3.obj"
@@ -86,7 +86,7 @@ case ",$drivers," in
 esac
 
 echo "Open Watcom link check: tests/WOLF3D_CONSUMER.c"
-wcc386 -zq -bt=dos -mf -5r -w4 -we \
+wcc386 -zq -bt=dos -mf -5r -fr -w4 -we \
     -i="$root/include" -dWOLF3D_STATIC \
     -fo="$objects/WGCONSUM.obj" "$root/tests/WOLF3D_CONSUMER.c"
 wlink system dos4g option quiet \

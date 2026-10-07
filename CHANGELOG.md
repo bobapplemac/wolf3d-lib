@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.47 - 2026-10-07 - Clean Open Watcom diagnostics
+
+- Disabled Open Watcom's source-adjacent `.err` report files while retaining
+  all diagnostics on the console, preventing tolerated vendor warnings from
+  dirtying a canonical checkout during Docker builds.
+
 ## 1.4.46 - 2026-10-07 - Open Watcom DOS32 library groundwork
 
 - Added a pinned Docker-hosted Open Watcom 2 toolchain and Linux Make target
