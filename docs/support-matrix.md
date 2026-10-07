@@ -38,13 +38,13 @@ backend, test-data, and direct-CMake details.
 
 | Compiler environment | Toolset | Architecture | CRT modes | Build status | Destination validation |
 | --- | --- | --- | --- | --- | --- |
-| MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Validated | Build, package, API, and deterministic tests on current Windows host; destination runtime pending |
+| MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Validated | Package, API, deterministic tests, and all runtime-selectable OPL drivers validated on Windows 11 x64 |
 | Visual Studio 2026 18.10 | v145 / MSVC 19.51 | x86, x64 | static, dynamic | Validated | Windows 11 compatibility host |
 | Visual Studio 2022 17.14 | v143 / MSVC 19.44 | x86, x64 | static, dynamic | Validated | Current Windows development host |
 | Visual Studio 2019 16.11 | v142 / MSVC 19.29 | x86, x64 | static, dynamic | Validated | Current Windows development host |
 | Visual Studio 2017 15.9 | v141 / MSVC 19.16 | x86, x64 | static, dynamic | Validated | Windows 11 compatibility host; no legacy-OS minimum claimed |
 | Visual Studio 2015 14.0 | v140 / MSVC 19.00.23506 | x86, x64 | static, dynamic | Validated | No legacy-OS minimum claimed |
-| Visual Studio 2015 XP SDK | v140_xp / MSVC 19.00.23506 | x86, x64 | static, dynamic | Validated | Pending on actual XP; PE minimum 5.01 x86 / 5.02 x64 |
+| Visual Studio 2015 XP SDK | v140_xp / MSVC 19.00.24210 | x86, x64 | static, dynamic | Validated | x86 DLL, API consumer, and deterministic tests validated on Windows XP SP3; x64 destination untested; PE minimum 5.01 x86 / 5.02 x64 |
 | Visual Studio 2013 Update 5 | v120 / MSVC 18.00.40629 | x86, x64 | static, dynamic | Validated | No legacy-OS minimum claimed |
 | Visual Studio 2012 Update 5 | v110 / MSVC 17.00.61030 | x86, x64 | static, dynamic | Validated | No legacy-OS minimum claimed |
 | Visual Studio 2010 SP1 | v100 / MSVC 16.00.40219 | x86, x64 | static, dynamic | Validated | No legacy-OS minimum claimed |

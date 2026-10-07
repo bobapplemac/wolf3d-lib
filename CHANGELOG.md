@@ -6,6 +6,16 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.44 - 2026-10-07 - Windows runtime compatibility validation
+
+- Validated the MinGW UCRT64 package, public API, deterministic tests, and all
+  three runtime-selectable OPL drivers on the Windows 11 compatibility host.
+- Validated the v140_xp x86 DLL, public API consumer, and deterministic test
+  suite on Windows XP SP3.
+- Replaced obsolete ajmbuild02 working copies with clean canonical clones after
+  confirming their uncommitted legacy-build drafts were fully superseded by
+  the committed compiler-matrix work.
+
 ## 1.4.43 - 2026-10-07 - MSYS2 bootstrap documentation
 
 - Documented the complete fresh-install MSYS2 UCRT64 update and package setup
