@@ -36,7 +36,7 @@ def write_target(path, output_name, sources):
                       "1", "1", "0"))
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(("\r\n".join(lines) + "\r\n").encode("ascii"))
+    path.write_bytes(("\n".join(lines) + "\n").encode("ascii"))
 
 
 def write_project(path, targets):
@@ -56,7 +56,7 @@ def write_project(path, targets):
         emit_string(lines, component_id + 2, "WFileName", target)
         lines.extend(("0", "-1"))
     lines.append(str(first_component))
-    path.write_bytes(("\r\n".join(lines) + "\r\n").encode("ascii"))
+    path.write_bytes(("\n".join(lines) + "\n").encode("ascii"))
 
 
 def main():
@@ -72,9 +72,9 @@ def main():
                        for source in engine_sources]
     nuked_relative = ["..\\..\\..\\third_party\\Nuked-OPL3\\opl3.c"]
 
-    write_target(IDE / "engine" / "wolf3d-lib.tgt", "WOLF3D.LIB",
+    write_target(IDE / "engine" / "wolf3d-lib.tgt", "WOLF3D.lib",
                  engine_relative)
-    write_target(IDE / "nuked-opl3" / "nuked-opl3.tgt", "NUKEDOPL.LIB",
+    write_target(IDE / "nuked-opl3" / "nuked-opl3.tgt", "NUKEDOPL.lib",
                  nuked_relative)
     write_project(IDE / "wolf3d-lib.wpj",
                   ["engine\\wolf3d-lib.tgt",

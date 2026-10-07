@@ -6,6 +6,14 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.50 - 2026-10-07 - Reproducible Open Watcom descriptors
+
+- Made generated IDE descriptors byte-identical on Windows and Linux.
+- Matched the generated library filename casing to Open Watcom's output so
+  `ide2make` projects also validate on a case-sensitive maintainer host.
+- Documented the native IDE's explicit Pentium/release selection rather than
+  implying environment defaults could override its saved processor switch.
+
 ## 1.4.49 - 2026-10-07 - Native Open Watcom IDE workspace
 
 - Added a DOS32 Open Watcom IDE workspace with separate `WOLF3D.LIB` and
