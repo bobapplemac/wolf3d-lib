@@ -43,6 +43,12 @@ PORTABLE_GLIBC_MAX ?= 2.28
 MUSL_BUILD_DIR ?= build/linux-library-musl-$(COMPILER_NAME)$(BACKEND_SUFFIX)
 MUSL_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-linux-musl-x64$(BACKEND_SUFFIX)$(AUDIO_SUFFIX)
 MUSL_BUILD_IMAGE ?= wolf3d-lib-build-alpine-musl
+OPENWATCOM_BUILD_DIR ?= build/openwatcom-dos32
+OPENWATCOM_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-dos32-openwatcom-x86
+OPENWATCOM_BUILD_IMAGE ?= wolf3d-lib-build-openwatcom-20261001
+OPENWATCOM_OPL_DRIVERS ?= nuked,dbopl,silent
+OPENWATCOM_DEFAULT_OPL ?= nuked
+OPENWATCOM_SAMPLE_RATE ?= 44100
 DOCKER_RUN_ARGS ?=
 
 CMAKE_COMPILER_ARG := -DCMAKE_C_COMPILER="$(CC)"
@@ -60,7 +66,8 @@ PARALLEL_ARG := --parallel $(JOBS)
 	library-release release portable portable-library \
 	portable-library-release portable-image portable-glibc-audit \
 	musl musl-library musl-library-release musl-image musl-audit \
-	print-config clean clean-release clean-portable clean-musl
+	openwatcom openwatcom-library-release openwatcom-image \
+	print-config clean clean-release clean-portable clean-musl clean-openwatcom
 
 all: library-release
 
@@ -73,6 +80,7 @@ help:
 		'  make library-release         Stage dist/wolf3d-<version>-library-linux-<arch>.' \
 		'  make portable-library-release Build and audit the Debian 10/glibc 2.28 package.' \
 		'  make musl-library-release    Build and audit the Alpine/musl package.' \
+		'  make openwatcom              Build the 32-bit DOS Open Watcom library SDK.' \
 		'' \
 		'Short aliases:' \
 		'  make dist | make library | make release  Same as library-release.' \
@@ -93,6 +101,7 @@ help:
 		'  make clean-release           Clean RELEASE_BUILD_DIR.' \
 		'  make clean-portable          Clean the portable tree and builder image.' \
 		'  make clean-musl              Clean the musl tree and builder image.' \
+		'  make clean-openwatcom        Clean the DOS32 tree and builder image.' \
 		'' \
 		'Common variables:' \
 		'  CC=gcc|clang                 C compiler (default: gcc).' \
@@ -104,6 +113,9 @@ help:
 		'  CMAKE_ARGS="..."             Extra CMake -D settings.' \
 		'  TEST_ARGS="..."              Extra arguments passed to CTest.' \
 		'  DOCKER_RUN_ARGS="..."        Extra docker-run options.' \
+		'  OPENWATCOM_OPL_DRIVERS=...   DOS drivers to compile (default: all).' \
+		'  OPENWATCOM_DEFAULT_OPL=...   DOS runtime default (default: nuked).' \
+		'  OPENWATCOM_SAMPLE_RATE=Hz    DOS preferred PCM rate (default: 44100).' \
 		'' \
 		'Examples:' \
 		'  make' \
@@ -111,7 +123,9 @@ help:
 		'  make test OPL_DEFAULT=dbopl' \
 		'  make test OPL_DRIVERS=silent OPL_DEFAULT=silent' \
 		'  make portable JOBS=8' \
-		'  make musl OPL_DEFAULT=dbopl JOBS=8'
+		'  make musl OPL_DEFAULT=dbopl JOBS=8' \
+		'  make openwatcom' \
+		'  make openwatcom OPENWATCOM_OPL_DRIVERS=silent OPENWATCOM_DEFAULT_OPL=silent'
 
 print-config:
 	@printf '%s\n' \
@@ -130,6 +144,9 @@ print-config:
 		'MUSL_BUILD_DIR=$(MUSL_BUILD_DIR)' \
 		'MUSL_DIST_DIR=$(MUSL_DIST_DIR)' \
 		'MUSL_BUILD_IMAGE=$(MUSL_BUILD_IMAGE)' \
+		'OPENWATCOM_BUILD_DIR=$(OPENWATCOM_BUILD_DIR)' \
+		'OPENWATCOM_DIST_DIR=$(OPENWATCOM_DIST_DIR)' \
+		'OPENWATCOM_BUILD_IMAGE=$(OPENWATCOM_BUILD_IMAGE)' \
 		'CMAKE_ARGS=$(CMAKE_ARGS)' \
 		'JOBS=$(JOBS)'
 
@@ -218,11 +235,29 @@ musl-audit: musl-image
 		"$(MUSL_BUILD_IMAGE)" \
 		sh tools/WG_MUSL_AUDIT.sh "$(MUSL_DIST_DIR)"
 
+openwatcom-image:
+	$(DOCKER) build --tag "$(OPENWATCOM_BUILD_IMAGE)" packaging/openwatcom
+
+openwatcom-library-release: openwatcom-image
+	$(DOCKER) run --rm \
+		--user "$$(id -u):$$(id -g)" \
+		--volume "$(CURDIR):/src" \
+		--workdir /src \
+		$(DOCKER_RUN_ARGS) \
+		--env WG_OPENWATCOM_BUILD_DIR="/src/$(OPENWATCOM_BUILD_DIR)" \
+		--env WG_OPENWATCOM_DIST_DIR="/src/$(OPENWATCOM_DIST_DIR)" \
+		--env WG_OPENWATCOM_OPL_DRIVERS="$(OPENWATCOM_OPL_DRIVERS)" \
+		--env WG_OPENWATCOM_DEFAULT_OPL="$(OPENWATCOM_DEFAULT_OPL)" \
+		--env WG_OPENWATCOM_SAMPLE_RATE="$(OPENWATCOM_SAMPLE_RATE)" \
+		"$(OPENWATCOM_BUILD_IMAGE)" \
+		sh scripts/linux/openwatcom/build-library.sh
+
 dist library release: library-release
 portable portable-library: portable-library-release
 musl musl-library: musl-library-release
+openwatcom: openwatcom-library-release
 
-clean: clean-release clean-portable clean-musl
+clean: clean-release clean-portable clean-musl clean-openwatcom
 	@if [ -f "$(BUILD_DIR)/CMakeCache.txt" ]; then \
 		$(CMAKE) --build "$(BUILD_DIR)" --target clean; \
 	fi
@@ -266,4 +301,17 @@ clean-musl:
 	@if command -v "$(firstword $(DOCKER))" >/dev/null 2>&1 && \
 	    $(DOCKER) image inspect "$(MUSL_BUILD_IMAGE)" >/dev/null 2>&1; then \
 		$(DOCKER) image rm "$(MUSL_BUILD_IMAGE)"; \
+	fi
+
+clean-openwatcom:
+	@case "$(OPENWATCOM_BUILD_DIR)" in \
+		build/*) ;; \
+		*) printf '%s\n' \
+			'Refusing to remove an Open Watcom build tree outside build/:' \
+			'  $(OPENWATCOM_BUILD_DIR)'; exit 2 ;; \
+	esac
+	$(CMAKE) -E remove_directory "$(OPENWATCOM_BUILD_DIR)"
+	@if command -v "$(firstword $(DOCKER))" >/dev/null 2>&1 && \
+	    $(DOCKER) image inspect "$(OPENWATCOM_BUILD_IMAGE)" >/dev/null 2>&1; then \
+		$(DOCKER) image rm "$(OPENWATCOM_BUILD_IMAGE)"; \
 	fi

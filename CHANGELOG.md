@@ -6,6 +6,18 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.46 - 2026-10-07 - Open Watcom DOS32 library groundwork
+
+- Added a pinned Docker-hosted Open Watcom 2 toolchain and Linux Make target
+  for producing an OMF `WOLF3D.LIB` SDK for 32-bit protected-mode DOS.
+- Made the core engine source inventory shared by modern CMake, legacy CMake,
+  and the Open Watcom build so compiler bands cannot silently omit a module.
+- Allowed the DOS32 library to compile any combination of Nuked-OPL3, DBOPL,
+  and timing-preserving silent drivers, with all three included by default.
+- Added a public-header consumer link check, guided Linux wizard integration,
+  and an explicit build/runtime support boundary for the forthcoming DOS/32A
+  host.
+
 ## 1.4.45 - 2026-10-07 - MSVC 2008 warning-clean compatibility
 
 - Applied `_CRT_SECURE_NO_WARNINGS` to modern-CMake MSVC core targets so the

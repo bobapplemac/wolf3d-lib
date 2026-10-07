@@ -77,6 +77,7 @@ make test               # library, internal headless oracle, and tests
 make test CC=clang      # same validation with Clang
 make portable JOBS=8    # Debian 10 / glibc 2.28 package in Docker
 make musl JOBS=8        # Alpine/musl package in Docker
+make openwatcom         # 32-bit protected-mode DOS OMF SDK in Docker
 make test OPL_DEFAULT=dbopl
 make test OPL_DRIVERS=silent OPL_DEFAULT=silent
 make help               # complete command and variable reference
@@ -129,6 +130,9 @@ compiler-appropriate import library on Windows, or the versioned
 `libwolf3d.so` SONAME chain on Linux, together with `WOLF3D.h` (and the
 legacy-MSVC compatibility header where
 applicable), the compiled audio drivers, licenses, and package notes.
+The Linux-hosted Open Watcom profile instead stages an OMF `WOLF3D.LIB` for
+linking into a 32-bit protected-mode DOS host; it is a cross-build SDK, not
+yet a playable DOS application.
 See the [build and compatibility matrix](docs/support-matrix.md) for supported
 compilers, build entry points, artifacts, and validated destination operating
 systems. [docs/building.md](docs/building.md) contains the complete command and

@@ -838,7 +838,10 @@ static int WG_FindDOSUnsignedArgument(int argc, char **argv,
             }
             parsed = strtoul(argv[index + 1], &end, 10);
             if (end == argv[index + 1] || *end != '\0'
-                || parsed > UINT_MAX)
+#if ULONG_MAX > UINT_MAX
+                || parsed > UINT_MAX
+#endif
+               )
             {
                 return 0;
             }

@@ -40,8 +40,8 @@ if ready cmake && ready make; then
     labels+=('native library distribution' 'validation tests' 'development build' 'clean local build outputs')
 fi
 if ready docker && ready make; then
-    targets+=(portable-library-release musl-library-release)
-    labels+=('portable glibc 2.28 distribution (Docker)' 'relocatable musl distribution (Docker)')
+    targets+=(portable-library-release musl-library-release openwatcom-library-release)
+    labels+=('portable glibc 2.28 distribution (Docker)' 'relocatable musl distribution (Docker)' 'DOS32 Open Watcom library SDK (Docker)')
 fi
 if [ ${#targets[@]} -eq 0 ]; then
     printf '\nNo usable build path was detected. See docs/building.md for prerequisites.\n' >&2
@@ -55,7 +55,7 @@ for ((i=0; i<${#labels[@]}; ++i)); do
 done
 
 compiler=gcc
-if [[ $target != portable-* && $target != musl-* && $target != clean ]]; then
+if [[ $target != portable-* && $target != musl-* && $target != openwatcom-* && $target != clean ]]; then
     compilers=()
     ready gcc && compilers+=(gcc)
     ready clang && compilers+=(clang)
@@ -74,13 +74,25 @@ if [[ $target != clean ]]; then
         IFS=- read -r -a defaults <<< "$drivers"
         default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
     fi
-    sample_rate=$(choose 'Preferred PCM sample rate' 48000 44100)
+    if [[ $target == openwatcom-* ]]; then
+        sample_rate=$(choose 'Preferred PCM sample rate' 44100 48000)
+    else
+        sample_rate=$(choose 'Preferred PCM sample rate' 48000 44100)
+    fi
 fi
-read -r -p 'Parallel jobs (blank lets the build tool decide): ' jobs
+jobs=''
+if [[ $target != openwatcom-* ]]; then
+    read -r -p 'Parallel jobs (blank lets the build tool decide): ' jobs
+fi
 
 opl_drivers=${drivers//-/,}
 [ "$drivers" = all ] && opl_drivers=nuked,dbopl,silent
-args=("$target" "CC=$compiler" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
+if [[ $target == openwatcom-* ]]; then
+    compiler='Open Watcom 2 (2026-10-01)'
+    args=("$target" "OPENWATCOM_OPL_DRIVERS=$opl_drivers" "OPENWATCOM_DEFAULT_OPL=$default_opl" "OPENWATCOM_SAMPLE_RATE=$sample_rate")
+else
+    args=("$target" "CC=$compiler" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
+fi
 [ -n "$jobs" ] && args+=("JOBS=$jobs")
 printf '\nBuild plan:\n  Target:      %s\n  Compiler:    %s\n  OPL drivers: %s (default: %s)\n  Sample rate: %s Hz\n' "$target" "$compiler" "$opl_drivers" "$default_opl" "$sample_rate"
 printf '\nReproducible command:\n  ./scripts/linux/invoke-build.sh'

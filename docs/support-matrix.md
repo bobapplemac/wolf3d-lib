@@ -10,10 +10,12 @@ This document is the authoritative user-facing matrix for building
 - **Planned** means the combination is part of the roadmap, not current
   support.
 
-The engine is always built as a shared library (`wolf3d.dll` or
-`libwolf3d.so`). On Windows, "static" and "dynamic" describe the compiler
-support runtime linked into that DLL; they do not turn wolf3d into a static
-library. MinGW still uses the Windows-provided UCRT dynamically.
+Normal Windows and Linux profiles build the engine as a shared library
+(`wolf3d.dll` or `libwolf3d.so`). On Windows, "static" and "dynamic" describe
+the compiler support runtime linked into that DLL; they do not turn wolf3d
+into a static library. MinGW still uses the Windows-provided UCRT dynamically.
+The Open Watcom cross-profile is the platform-appropriate exception: it emits
+an OMF `WOLF3D.LIB` to link into a protected-mode DOS host.
 
 ## Build entry points
 
@@ -22,6 +24,7 @@ library. MinGW still uses the Windows-provided UCRT dynamically.
 | Linux | Guided Bash configurator / GNU Make | `./build.sh` or `make library-release CC=clang` | Native glibc SDK under `dist/` |
 | Linux + Docker | Guided Bash configurator / GNU Make | `./build.sh` or `make portable` | Debian 10 / glibc 2.28 x86-64 SDK |
 | Linux + Docker | Guided Bash configurator / GNU Make | `./build.sh` or `make musl CC=clang` | Alpine/musl x86-64 SDK |
+| Linux + Docker | Guided Bash configurator / GNU Make | `./build.sh` or `make openwatcom` | Open Watcom 32-bit DOS OMF SDK |
 | Linux | CMake presets | `cmake --preset linux-library` then `cmake --build --preset linux-library` | Native library build/package |
 | Windows, VS2008--VS2026 | Guided PowerShell dispatcher | `.\build.ps1` or `.\build.ps1 -Compiler vs2019 -Action package` | Compiler-labelled SDK under `dist/` |
 | Windows, MinGW UCRT64 | Guided PowerShell dispatcher | `.\build.ps1 -Compiler mingw-ucrt64 -Action package` | Native x64 SDK with static GCC support runtime |
@@ -72,6 +75,7 @@ MinGW UCRT64; the XP-native CMD dispatcher backs the VC6--VS2005 IDE projects.
 | Native | GCC, Clang | Host (currently x86-64) | Build host glibc | Validated | Same or newer compatible glibc; exact floor is the build host |
 | Portable glibc | GCC | x86-64 | Debian 10, audited maximum `GLIBC_2.28` | Validated | x86-64 Linux with glibc 2.28 or newer |
 | musl | GCC, Clang | x86-64 | Alpine musl | Validated | A musl process with a compatible musl ABI; not loadable into a glibc process |
+| Open Watcom DOS32 | Open Watcom 2 `2026-10-01-Build` | Pentium-class x86 | 32-bit protected-mode DOS OMF | Build and public-consumer link validated in pinned Docker image | Runtime validation awaits the companion DOS/32A host |
 
 glibc is forward-compatible in the direction useful here: an artifact limited
 to glibc 2.28 symbols is intended to run on newer glibc releases. The audit
@@ -98,6 +102,6 @@ corresponding dispatcher/CMake options documented in
 
 | Target | Intended direction | Current status |
 | --- | --- | --- |
-| Open Watcom DOS extender | Linux/Docker cross-build targeting 32-bit DOS with DOS/32A | Planned; no supported build command or runtime claim yet |
+| DOS/32A portable host | VGA, keyboard, PIT, and initially silent audio around the validated Open Watcom library | Planned in `wolf3d-portable`; no playable DOS runtime claim yet |
 | Real AdLib/OPL hardware backend | Replaceable hardware register-output component | Design discussion only |
 

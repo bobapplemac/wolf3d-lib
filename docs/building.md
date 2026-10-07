@@ -13,7 +13,7 @@ operating systems. This document supplies the detailed commands and options.
 - CMake 3.5 for the isolated VC6--VS2005 legacy build definition
 - A C99 compiler
 - GNU Make for the Linux convenience commands
-- Docker only for the optional glibc 2.28 and musl packages
+- Docker only for the optional glibc 2.28, musl, and Open Watcom DOS32 packages
 
 Default builds include all three runtime-selectable drivers: Nuked-OPL3,
 the GPL-compatible PrBoom+ C port of DBOPL, and timing-preserving silence.
@@ -66,6 +66,30 @@ the resulting ELF objects for accidental glibc symbol references. A musl
 shared library must be loaded by a musl process; the companion portable
 repository combines these artifacts with a bundled musl loader to create a
 relocatable application directory.
+
+## 32-bit DOS library with Open Watcom
+
+The DOS library is cross-compiled from Linux through a pinned Docker image;
+no native Open Watcom installation is required or supported by this profile:
+
+```sh
+make openwatcom
+make openwatcom OPENWATCOM_OPL_DRIVERS=silent OPENWATCOM_DEFAULT_OPL=silent
+```
+
+The image uses official Open Watcom 2 release `2026-10-01-Build`, verifies
+the downloaded Linux x64 archive against its checked-in SHA-256, and emits a
+Pentium-targeted OMF SDK at
+`dist/wolf3d-<version>-library-dos32-openwatcom-x86`. The default build
+includes Nuked-OPL3, DBOPL, and timing-preserving silence, selects Nuked by
+default, and requests 44100 Hz PCM. `WOLF3D.LIB` contains the engine and
+adapters; `NUKEDOPL.LIB` remains separate when that driver is selected.
+
+The build also compiles and links the public API consumer into a temporary
+DOS/4G-format executable as an ABI/link check. That validation executable is
+not shipped. The SDK is the completed library checkpoint; the companion
+repository's DOS/32A host, VGA/input/PIT implementation, and runtime testing
+remain separate work.
 
 ## Linux with CMake presets
 
@@ -268,6 +292,10 @@ A staged package contains:
 - the replaceable Nuked-OPL3 shared library when compiled, plus embedded
   DBOPL and silent drivers enabled for that build
 - project and third-party licensing/provenance notes
+
+The Open Watcom package is the deliberate exception to the shared-library
+layout: protected-mode DOS consumes the engine as `WOLF3D.LIB` plus the
+optional replaceable `NUKEDOPL.LIB`.
 
 Production executables and OS-specific dependencies deliberately belong to
 the companion `wolf3d-portable` repository.

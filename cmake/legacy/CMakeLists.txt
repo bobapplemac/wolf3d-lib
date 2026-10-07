@@ -82,41 +82,12 @@ if(NOT DEFINED WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER}
     message(FATAL_ERROR "The default OPL driver must be enabled")
 endif()
 
-set(WG_CORE_SOURCES
-    "${WG_ROOT}/src/WG_ASSETS.c"
-    "${WG_ROOT}/src/WG_AUDIO.c"
-    "${WG_ROOT}/src/WG_CONFIG.c"
-    "${WG_ROOT}/src/ID_CA.c"
-    "${WG_ROOT}/src/ID_IN.c"
-    "${WG_ROOT}/src/WG_DATA.c"
-    "${WG_ROOT}/src/WG_FILE.c"
-    "${WG_ROOT}/src/WG_FIXED.c"
-    "${WG_ROOT}/src/ID_VH.c"
-    "${WG_ROOT}/src/WG_GRAPHICS.c"
-    "${WG_ROOT}/src/WL_GAME.c"
-    "${WG_ROOT}/src/WG_MAPS.c"
-    "${WG_ROOT}/src/ID_PM.c"
-    "${WG_ROOT}/src/ID_SD.c"
-    ${WG_OPL_SOURCE}
-    "${WG_ROOT}/src/WG_PALETTE.c"
-    "${WG_ROOT}/src/WG_PLATFORM.c"
-    "${WG_ROOT}/src/ID_US_1.c"
-    "${WG_ROOT}/src/WL_AGENT.c"
-    "${WG_ROOT}/src/WL_ACT1.c"
-    "${WG_ROOT}/src/WL_ACT2.c"
-    "${WG_ROOT}/src/WL_PLAY.c"
-    "${WG_ROOT}/src/WL_STATE.c"
-    "${WG_ROOT}/src/WL_DRAW.c"
-    "${WG_ROOT}/src/WL_INTER.c"
-    "${WG_ROOT}/src/WL_TEXT.c"
-    "${WG_ROOT}/src/WG_RENDERER.c"
-    "${WG_ROOT}/src/WG_SAVE.c"
-    "${WG_ROOT}/src/WG_SIGNON.c"
-    "${WG_ROOT}/src/WL_SCALE.c"
-    "${WG_ROOT}/src/ID_VL.c"
-    "${WG_ROOT}/src/WL_MAIN.c"
-    "${WG_ROOT}/src/WL_MENU.c"
-    "${WG_ROOT}/src/WOLF3D.c")
+file(STRINGS "${WG_ROOT}/cmake/WGCoreSources.txt" WG_CORE_RELATIVE_SOURCES)
+set(WG_CORE_SOURCES "")
+foreach(WG_SOURCE ${WG_CORE_RELATIVE_SOURCES})
+    list(APPEND WG_CORE_SOURCES "${WG_ROOT}/${WG_SOURCE}")
+endforeach()
+list(APPEND WG_CORE_SOURCES ${WG_OPL_SOURCE})
 
 add_library(wolf3d SHARED ${WG_CORE_SOURCES})
 set_target_properties(wolf3d PROPERTIES OUTPUT_NAME "wolf3d")

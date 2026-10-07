@@ -133,42 +133,9 @@ endif()
 configure_file(packaging/LIBRARY-README.txt.in
                ${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt @ONLY)
 
-set(WG_CORE_SOURCES
-    src/WG_ASSETS.c
-    src/WG_AUDIO.c
-    src/WG_CONFIG.c
-    src/ID_CA.c
-    src/ID_IN.c
-    src/WG_DATA.c
-    src/WG_FILE.c
-    src/WG_FIXED.c
-    src/ID_VH.c
-    src/WG_GRAPHICS.c
-    src/WL_GAME.c
-    src/WG_MAPS.c
-    src/ID_PM.c
-    src/ID_SD.c
-    ${WG_OPL_SOURCES}
-    src/WG_PALETTE.c
-    src/WG_PLATFORM.c
-    src/ID_US_1.c
-    src/WL_AGENT.c
-    src/WL_ACT1.c
-    src/WL_ACT2.c
-    src/WL_PLAY.c
-    src/WL_STATE.c
-    src/WL_DRAW.c
-    src/WL_INTER.c
-    src/WL_TEXT.c
-    src/WG_RENDERER.c
-    src/WG_SAVE.c
-    src/WG_SIGNON.c
-    src/WL_SCALE.c
-    src/ID_VL.c
-    src/WL_MAIN.c
-    src/WL_MENU.c
-    src/WOLF3D.c
-)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/WGCoreSources.txt"
+     WG_CORE_BASE_SOURCES)
+set(WG_CORE_SOURCES ${WG_CORE_BASE_SOURCES} ${WG_OPL_SOURCES})
 
 add_library(wolf3d SHARED ${WG_CORE_SOURCES})
 add_library(wolf3d::wolf3d ALIAS wolf3d)
