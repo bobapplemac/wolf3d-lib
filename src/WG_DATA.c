@@ -491,6 +491,8 @@ wg_game_family_t WG_DataExecutableFamily(const char *path)
 {
     const char *base;
     const char *cursor;
+    const char *extension;
+    size_t name_length;
 
     if (path == NULL)
     {
@@ -508,8 +510,11 @@ wg_game_family_t WG_DataExecutableFamily(const char *path)
     {
         return WG_GAME_FAMILY_WOLF3D;
     }
-    if (WG_DataASCIIPrefix(base, "spear")
-        || WG_DataASCIIPrefix(base, "sod"))
+    extension = strrchr(base, '.');
+    name_length = extension != NULL ? (size_t)(extension - base)
+                                    : strlen(base);
+    if (name_length == 5U
+        && WG_DataASCIIPrefix(base, "spear"))
     {
         return WG_GAME_FAMILY_SPEAR;
     }

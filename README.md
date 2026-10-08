@@ -19,6 +19,13 @@ licensing evidence behind this modernization are documented in
 Original Wolfenstein 3D or Spear of Destiny game data is required and is not
 distributed here.
 
+`--game EXT` selects an exact data extension; short aliases `-WL1`, `-WL6`,
+`-SDM`, `-SOD`, `-SD1`, `-SD2`, and `-SD3` are equivalent. Executable names
+beginning with `wolf` prefer the Wolf3D family, while the exact basename
+`spear` prefers Spear. Recursive directory discovery belongs to the companion
+`wolf3d-portable` launchers; `--data PATH` remains an exact library-directory
+contract.
+
 ## Shareware data
 
 The freely distributed shareware/demo data sets are a convenient way to try a

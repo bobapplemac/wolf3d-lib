@@ -5349,8 +5349,10 @@ static void TestGameSelection(void)
     CHECK(WG_DataExecutableFamily("C:\\games\\WOLFPORT.EXE")
           == WG_GAME_FAMILY_WOLF3D);
     CHECK(WG_DataExecutableFamily("/games/spear-port")
-          == WG_GAME_FAMILY_SPEAR);
+          == WG_GAME_FAMILY_UNKNOWN);
     CHECK(WG_DataExecutableFamily("SODGENERIC.EXE")
+          == WG_GAME_FAMILY_UNKNOWN);
+    CHECK(WG_DataExecutableFamily("/games/SPEAR.EXE")
           == WG_GAME_FAMILY_SPEAR);
     CHECK(WG_DataExecutableFamily("game") == WG_GAME_FAMILY_UNKNOWN);
 
@@ -5390,10 +5392,23 @@ static void TestPlatformAPI(void)
     CHECK(wolf3d_SetPlatform(NULL) == WOLF3D_RESULT_INVALID_ARGUMENT);
     CHECK(wolf3d_GetCommandLineHelp() != NULL);
     CHECK(strstr(wolf3d_GetCommandLineHelp(), "--data PATH") != NULL);
+    CHECK(strstr(wolf3d_GetCommandLineHelp(), "-EXT") != NULL);
     CHECK(strstr(wolf3d_GetCommandLineHelp(), "--no-sound") != NULL);
     CHECK(strstr(wolf3d_GetCommandLineHelp(), "-noal") != NULL);
     CHECK(strstr(wolf3d_GetCommandLineHelp(), "-nosb") != NULL);
     CHECK(strstr(wolf3d_GetCommandLineHelp(), "-goobers") != NULL);
+    CHECK(WG_DataExecutableFamily("WOLF.EXE")
+          == WG_GAME_FAMILY_WOLF3D);
+    CHECK(WG_DataExecutableFamily("wolf3d-sdl3")
+          == WG_GAME_FAMILY_WOLF3D);
+    CHECK(WG_DataExecutableFamily("SPEAR.EXE")
+          == WG_GAME_FAMILY_SPEAR);
+    CHECK(WG_DataExecutableFamily("spear")
+          == WG_GAME_FAMILY_SPEAR);
+    CHECK(WG_DataExecutableFamily("spear-test.exe")
+          == WG_GAME_FAMILY_UNKNOWN);
+    CHECK(WG_DataExecutableFamily("SOD.EXE")
+          == WG_GAME_FAMILY_UNKNOWN);
 
     platform.api_version = WOLF3D_PLATFORM_API_VERSION;
     platform.struct_size = sizeof(platform);

@@ -24,8 +24,8 @@
 - [x] The generic engine builds as a shared library with a ten-symbol public
   ABI, a versioned host callback table, and its own clean release target.
 - [x] The Win32 executable imports the engine DLL instead of embedding it.
-- [x] Staged executables use the adjacent folder for game data by default and
-  require no non-system Visual C++ runtime DLL.
+- [x] Staged executables recursively search their installation folder for
+  game data and require no non-system Visual C++ runtime DLL.
 - [x] SDL3 GUI release staging produces x86/x64 Windows folders and a Linux
   folder with the engine, replaceable Nuked-OPL3, and SDL shared libraries.
 - [x] Linux direct-console staging provides DRM/KMS video, evdev input, and

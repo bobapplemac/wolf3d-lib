@@ -6,6 +6,14 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.59 - 2026-10-08 - Historical game-selection aliases
+
+- Added case-insensitive `-WL1`, `-WL6`, `-SDM`, `-SOD`, `-SD1`, `-SD2`, and
+  `-SD3` aliases for the corresponding `--game EXT` selection.
+- Matched the original executable lineage when inferring a family: names
+  beginning with `wolf` prefer Wolfenstein 3D, while only the exact `spear`
+  basename prefers Spear of Destiny; `sod*` is no longer a filename hint.
+
 ## 1.4.58 - 2026-10-08 - Sound hardware profiles
 
 - Separated emulated sound-hardware detection from the selected OPL renderer

@@ -758,6 +758,12 @@ static int WG_FindGameSelection(int argc, char **argv,
             }
             return 1;
         }
+        if (argv[index][0] == '-' && argv[index][1] != '-'
+            && WG_DataParseGame(argv[index] + 1, requested_variant))
+        {
+            *preferred_family = WG_DataVariantFamily(*requested_variant);
+            return 1;
+        }
     }
     return 1;
 }
@@ -4715,6 +4721,7 @@ const char *wolf3d_GetCommandLineHelp(void)
         "Game selection:\n"
         "  --data PATH          Directory containing original game data\n"
         "  --game EXT           Data extension: WL1, WL6, SDM, SOD, SD1, SD2, or SD3\n"
+        "  -EXT                 Short form: -WL1, -WL6, -SDM, -SOD, -SD1, -SD2, or -SD3\n"
         "  --signon NAME        SIGNON: auto, apogee, gt, id, activision, or spear\n"
         "  --signon-palette SET SIGNON palette: auto, wolf, or spear\n"
         "\n"
