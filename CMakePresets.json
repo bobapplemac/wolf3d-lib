@@ -1,0 +1,883 @@
+{
+  "version": 2,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-vs2008-base",
+      "hidden": true,
+      "generator": "Visual Studio 9 2008",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v90"
+      }
+    },
+    {
+      "name": "windows-vs2010-base",
+      "hidden": true,
+      "generator": "Visual Studio 10 2010",
+      "toolset": "v100",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v100"
+      }
+    },
+    {
+      "name": "windows-vs2012-base",
+      "hidden": true,
+      "generator": "Visual Studio 11 2012",
+      "toolset": "v110",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v110"
+      }
+    },
+    {
+      "name": "windows-vs2013-base",
+      "hidden": true,
+      "generator": "Visual Studio 12 2013",
+      "toolset": "v120",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v120"
+      }
+    },
+    {
+      "name": "windows-vs2015-xp-base",
+      "hidden": true,
+      "generator": "Visual Studio 14 2015",
+      "toolset": "v140_xp",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v140-xp"
+      }
+    },
+    {
+      "name": "windows-vs2015-base",
+      "hidden": true,
+      "generator": "Visual Studio 14 2015",
+      "toolset": "v140",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v140"
+      }
+    },
+    {
+      "name": "windows-vs2017-base",
+      "hidden": true,
+      "generator": "Visual Studio 15 2017",
+      "toolset": "v141",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v141"
+      }
+    },
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "generator": "Visual Studio 16 2019",
+      "toolset": "v142",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v142"
+      }
+    },
+    {
+      "name": "windows-vs2022-base",
+      "hidden": true,
+      "generator": "Visual Studio 17 2022",
+      "toolset": "v143",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v143"
+      }
+    },
+    {
+      "name": "windows-vs2026-base",
+      "hidden": true,
+      "generator": "Visual Studio 18 2026",
+      "toolset": "v145",
+      "cacheVariables": {
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_MSVC_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "msvc-v145"
+      }
+    },
+    {
+      "name": "windows-vs2008-dev-x64",
+      "displayName": "Visual Studio 2008 library development (x64)",
+      "inherits": "windows-vs2008-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2008-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2008-dev-x86",
+      "displayName": "Visual Studio 2008 library development (x86)",
+      "inherits": "windows-vs2008-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2008-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2008-library-x64",
+      "displayName": "Visual Studio 2008 library release (x64)",
+      "inherits": "windows-vs2008-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2008-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2008-library-x86",
+      "displayName": "Visual Studio 2008 library release (x86)",
+      "inherits": "windows-vs2008-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2008-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2010-dev-x64",
+      "displayName": "Visual Studio 2010 library development (x64)",
+      "inherits": "windows-vs2010-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2010-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2010-dev-x86",
+      "displayName": "Visual Studio 2010 library development (x86)",
+      "inherits": "windows-vs2010-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2010-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2010-library-x64",
+      "displayName": "Visual Studio 2010 library release (x64)",
+      "inherits": "windows-vs2010-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2010-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2010-library-x86",
+      "displayName": "Visual Studio 2010 library release (x86)",
+      "inherits": "windows-vs2010-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2010-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2015-xp-dev-x64",
+      "displayName": "Visual Studio 2015 XP-targeting library development (x64)",
+      "inherits": "windows-vs2015-xp-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-xp-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2015-xp-dev-x86",
+      "displayName": "Visual Studio 2015 XP-targeting library development (x86)",
+      "inherits": "windows-vs2015-xp-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-xp-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2015-xp-library-x64",
+      "displayName": "Visual Studio 2015 XP-targeting library release (x64)",
+      "inherits": "windows-vs2015-xp-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-xp-library-x64",
+      "cacheVariables": { "BUILD_TESTING": "OFF", "WG_BUILD_HEADLESS": "OFF" }
+    },
+    {
+      "name": "windows-vs2015-xp-library-x86",
+      "displayName": "Visual Studio 2015 XP-targeting library release (x86)",
+      "inherits": "windows-vs2015-xp-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-xp-library-x86",
+      "cacheVariables": { "BUILD_TESTING": "OFF", "WG_BUILD_HEADLESS": "OFF" }
+    },
+    {
+      "name": "windows-vs2015-dev-x64",
+      "displayName": "Visual Studio 2015 library development (x64)",
+      "inherits": "windows-vs2015-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2013-dev-x64",
+      "displayName": "Visual Studio 2013 library development (x64)",
+      "inherits": "windows-vs2013-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2013-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2012-dev-x64",
+      "displayName": "Visual Studio 2012 library development (x64)",
+      "inherits": "windows-vs2012-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2012-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2012-dev-x86",
+      "displayName": "Visual Studio 2012 library development (x86)",
+      "inherits": "windows-vs2012-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2012-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2012-library-x64",
+      "displayName": "Visual Studio 2012 library release (x64)",
+      "inherits": "windows-vs2012-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2012-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2012-library-x86",
+      "displayName": "Visual Studio 2012 library release (x86)",
+      "inherits": "windows-vs2012-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2012-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2013-dev-x86",
+      "displayName": "Visual Studio 2013 library development (x86)",
+      "inherits": "windows-vs2013-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2013-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2013-library-x64",
+      "displayName": "Visual Studio 2013 library release (x64)",
+      "inherits": "windows-vs2013-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2013-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2013-library-x86",
+      "displayName": "Visual Studio 2013 library release (x86)",
+      "inherits": "windows-vs2013-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2013-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2015-dev-x86",
+      "displayName": "Visual Studio 2015 library development (x86)",
+      "inherits": "windows-vs2015-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2015-library-x64",
+      "displayName": "Visual Studio 2015 library release (x64)",
+      "inherits": "windows-vs2015-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2015-library-x86",
+      "displayName": "Visual Studio 2015 library release (x86)",
+      "inherits": "windows-vs2015-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2015-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2017-dev-x64",
+      "displayName": "Visual Studio 2017 toolset library development (x64)",
+      "inherits": "windows-vs2017-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2017-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2017-dev-x86",
+      "displayName": "Visual Studio 2017 toolset library development (x86)",
+      "inherits": "windows-vs2017-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2017-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2017-library-x64",
+      "displayName": "Visual Studio 2017 toolset library release (x64)",
+      "inherits": "windows-vs2017-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2017-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2017-library-x86",
+      "displayName": "Visual Studio 2017 toolset library release (x86)",
+      "inherits": "windows-vs2017-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2017-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-dev-x64",
+      "displayName": "Windows library development (x64)",
+      "inherits": "windows-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2019-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-dev-x86",
+      "displayName": "Windows library development (x86)",
+      "inherits": "windows-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2019-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-library-x64",
+      "displayName": "Windows library release (x64)",
+      "inherits": "windows-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2019-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-library-x86",
+      "displayName": "Windows library release (x86)",
+      "inherits": "windows-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2019-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2022-dev-x64",
+      "displayName": "Visual Studio 2022 library development (x64)",
+      "inherits": "windows-vs2022-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2022-dev-x86",
+      "displayName": "Visual Studio 2022 library development (x86)",
+      "inherits": "windows-vs2022-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2022-library-x64",
+      "displayName": "Visual Studio 2022 library release (x64)",
+      "inherits": "windows-vs2022-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2022-library-x86",
+      "displayName": "Visual Studio 2022 library release (x86)",
+      "inherits": "windows-vs2022-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2026-dev-x64",
+      "displayName": "Visual Studio 2026 library development (x64)",
+      "inherits": "windows-vs2026-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2026-dev-x64",
+      "architecture": "x64"
+    },
+    {
+      "name": "windows-vs2026-dev-x86",
+      "displayName": "Visual Studio 2026 library development (x86)",
+      "inherits": "windows-vs2026-base",
+      "binaryDir": "${sourceDir}/build/windows-vs2026-dev-x86",
+      "architecture": "Win32"
+    },
+    {
+      "name": "windows-vs2026-library-x64",
+      "displayName": "Visual Studio 2026 library release (x64)",
+      "inherits": "windows-vs2026-dev-x64",
+      "binaryDir": "${sourceDir}/build/windows-vs2026-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-vs2026-library-x86",
+      "displayName": "Visual Studio 2026 library release (x86)",
+      "inherits": "windows-vs2026-dev-x86",
+      "binaryDir": "${sourceDir}/build/windows-vs2026-library-x86",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "windows-mingw-ucrt64-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "WG_WARNINGS_AS_ERRORS": "ON",
+        "WG_STATIC_GNU_RUNTIME": "ON",
+        "WG_COMPILER_LABEL": "mingw-ucrt-gcc"
+      }
+    },
+    {
+      "name": "windows-mingw-ucrt64-dev-x64",
+      "displayName": "MinGW UCRT64 library development (x64)",
+      "inherits": "windows-mingw-ucrt64-base",
+      "binaryDir": "${sourceDir}/build/windows-mingw-ucrt64-dev-x64"
+    },
+    {
+      "name": "windows-mingw-ucrt64-library-x64",
+      "displayName": "MinGW UCRT64 library release (x64)",
+      "inherits": "windows-mingw-ucrt64-base",
+      "binaryDir": "${sourceDir}/build/windows-mingw-ucrt64-library-x64",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "WG_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "linux-dev",
+      "displayName": "Linux library development",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-dev"
+    },
+    {
+      "name": "linux-library",
+      "displayName": "Linux library release",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-library",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "WG_BUILD_HEADLESS": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-vs2008-dev-x64",
+      "configurePreset": "windows-vs2008-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2008-dev-x86",
+      "configurePreset": "windows-vs2008-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2008-library-x64",
+      "configurePreset": "windows-vs2008-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2008-library-x86",
+      "configurePreset": "windows-vs2008-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2010-dev-x64",
+      "configurePreset": "windows-vs2010-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2010-dev-x86",
+      "configurePreset": "windows-vs2010-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2010-library-x64",
+      "configurePreset": "windows-vs2010-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2010-library-x86",
+      "configurePreset": "windows-vs2010-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2012-dev-x64",
+      "configurePreset": "windows-vs2012-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2012-dev-x86",
+      "configurePreset": "windows-vs2012-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2012-library-x64",
+      "configurePreset": "windows-vs2012-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2012-library-x86",
+      "configurePreset": "windows-vs2012-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2013-dev-x64",
+      "configurePreset": "windows-vs2013-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2013-dev-x86",
+      "configurePreset": "windows-vs2013-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2013-library-x64",
+      "configurePreset": "windows-vs2013-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2013-library-x86",
+      "configurePreset": "windows-vs2013-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    { "name": "windows-vs2015-xp-dev-x64", "configurePreset": "windows-vs2015-xp-dev-x64", "configuration": "Release" },
+    { "name": "windows-vs2015-xp-dev-x86", "configurePreset": "windows-vs2015-xp-dev-x86", "configuration": "Release" },
+    { "name": "windows-vs2015-xp-library-x64", "configurePreset": "windows-vs2015-xp-library-x64", "configuration": "Release", "targets": ["library-release"] },
+    { "name": "windows-vs2015-xp-library-x86", "configurePreset": "windows-vs2015-xp-library-x86", "configuration": "Release", "targets": ["library-release"] },
+    {
+      "name": "windows-vs2015-dev-x64",
+      "configurePreset": "windows-vs2015-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2015-dev-x86",
+      "configurePreset": "windows-vs2015-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2015-library-x64",
+      "configurePreset": "windows-vs2015-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2015-library-x86",
+      "configurePreset": "windows-vs2015-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2017-dev-x64",
+      "configurePreset": "windows-vs2017-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2017-dev-x86",
+      "configurePreset": "windows-vs2017-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2017-library-x64",
+      "configurePreset": "windows-vs2017-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2017-library-x86",
+      "configurePreset": "windows-vs2017-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-dev-x64",
+      "configurePreset": "windows-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-dev-x86",
+      "configurePreset": "windows-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-library-x64",
+      "configurePreset": "windows-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-library-x86",
+      "configurePreset": "windows-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2022-dev-x64",
+      "configurePreset": "windows-vs2022-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2022-dev-x86",
+      "configurePreset": "windows-vs2022-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2022-library-x64",
+      "configurePreset": "windows-vs2022-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2022-library-x86",
+      "configurePreset": "windows-vs2022-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2026-dev-x64",
+      "configurePreset": "windows-vs2026-dev-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2026-dev-x86",
+      "configurePreset": "windows-vs2026-dev-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-vs2026-library-x64",
+      "configurePreset": "windows-vs2026-library-x64",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-vs2026-library-x86",
+      "configurePreset": "windows-vs2026-library-x86",
+      "configuration": "Release",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "windows-mingw-ucrt64-dev-x64",
+      "configurePreset": "windows-mingw-ucrt64-dev-x64"
+    },
+    {
+      "name": "windows-mingw-ucrt64-library-x64",
+      "configurePreset": "windows-mingw-ucrt64-library-x64",
+      "targets": ["library-release"]
+    },
+    {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev"
+    },
+    {
+      "name": "linux-library",
+      "configurePreset": "linux-library",
+      "targets": ["library-release"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-vs2008-dev-x64",
+      "configurePreset": "windows-vs2008-dev-x64",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2008-dev-x86",
+      "configurePreset": "windows-vs2008-dev-x86",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2010-dev-x64",
+      "configurePreset": "windows-vs2010-dev-x64",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2010-dev-x86",
+      "configurePreset": "windows-vs2010-dev-x86",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2012-dev-x64",
+      "configurePreset": "windows-vs2012-dev-x64",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2012-dev-x86",
+      "configurePreset": "windows-vs2012-dev-x86",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2013-dev-x64",
+      "configurePreset": "windows-vs2013-dev-x64",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2013-dev-x86",
+      "configurePreset": "windows-vs2013-dev-x86",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2015-xp-dev-x64",
+      "configurePreset": "windows-vs2015-xp-dev-x64",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2015-xp-dev-x86",
+      "configurePreset": "windows-vs2015-xp-dev-x86",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-vs2015-dev-x64",
+      "configurePreset": "windows-vs2015-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2015-dev-x86",
+      "configurePreset": "windows-vs2015-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2017-dev-x64",
+      "configurePreset": "windows-vs2017-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2017-dev-x86",
+      "configurePreset": "windows-vs2017-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-dev-x64",
+      "configurePreset": "windows-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-dev-x86",
+      "configurePreset": "windows-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2022-dev-x64",
+      "configurePreset": "windows-vs2022-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2022-dev-x86",
+      "configurePreset": "windows-vs2022-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2026-dev-x64",
+      "configurePreset": "windows-vs2026-dev-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2026-dev-x86",
+      "configurePreset": "windows-vs2026-dev-x86",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-mingw-ucrt64-dev-x64",
+      "configurePreset": "windows-mingw-ucrt64-dev-x64",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

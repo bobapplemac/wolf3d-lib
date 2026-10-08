@@ -1,0 +1,25 @@
+/build/
+/dist/
+/CMakeUserPresets.json
+/.vs/
+/CMakeSettings.json
+*.user
+*.suo
+*.VC.db
+*.VC.VC.opendb
+
+# Open Watcom IDE/ide2make output (the descriptors themselves are tracked).
+/ide/open-watcom/*.mk
+/ide/open-watcom/**/*.mk1
+/ide/open-watcom/**/*.obj
+/ide/open-watcom/**/*.err
+/ide/open-watcom/**/*.lb1
+/ide/open-watcom/**/*.lib
+
+# Runtime files belong to the user and must never be committed.
+*.WL1
+*.WL6
+*.SOD
+*.SDM
+CONFIG.*
+SAVEGAM?.*

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="wolf3d-lib"
+	Keyword="MakeFileProj">
+	<Platforms><Platform Name="Win32" /></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" OutputDirectory="$(ProjectDir)obj\Debug" IntermediateDirectory="$(ProjectDir)obj\Debug" ConfigurationType="0" CharacterSet="2">
+			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug build" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2003-standard-nuked-static\Debug\wolf3d.dll" />
+		</Configuration>		<Configuration Name="Release|Win32" OutputDirectory="$(ProjectDir)obj\Release" IntermediateDirectory="$(ProjectDir)obj\Release" ConfigurationType="0" CharacterSet="2">
+			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release build" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2003-standard-nuked-static\Release\wolf3d.dll" />
+		</Configuration>		<Configuration Name="Publish|Win32" OutputDirectory="$(ProjectDir)obj\Publish" IntermediateDirectory="$(ProjectDir)obj\Publish" ConfigurationType="0" CharacterSet="2">
+			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release publish" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2003-standard-nuked-static\Release\wolf3d.dll" />
+		</Configuration>	</Configurations>
+	<References />
+	<Files>
+		<File RelativePath=".\build.cmd" />
+		<File RelativePath="..\..\..\CMakeLists.txt" />
+		<File RelativePath="..\..\..\README.md" />
+		<Filter Name="Canonical source" Filter="c;h">
+			<File RelativePath="..\..\..\src\ID_CA.c" />
+			<File RelativePath="..\..\..\src\ID_CA.h" />
+			<File RelativePath="..\..\..\src\ID_IN.c" />
+			<File RelativePath="..\..\..\src\ID_IN.h" />
+			<File RelativePath="..\..\..\src\ID_PM.c" />
+			<File RelativePath="..\..\..\src\ID_PM.h" />
+			<File RelativePath="..\..\..\src\ID_SD.c" />
+			<File RelativePath="..\..\..\src\ID_SD.h" />
+			<File RelativePath="..\..\..\src\ID_US_1.c" />
+			<File RelativePath="..\..\..\src\ID_US_1.h" />
+			<File RelativePath="..\..\..\src\ID_VH.c" />
+			<File RelativePath="..\..\..\src\ID_VH.h" />
+			<File RelativePath="..\..\..\src\ID_VL.c" />
+			<File RelativePath="..\..\..\src\ID_VL.h" />
+			<File RelativePath="..\..\..\src\WG_ASSETS.c" />
+			<File RelativePath="..\..\..\src\WG_ASSETS.h" />
+			<File RelativePath="..\..\..\src\WG_AUDIO.c" />
+			<File RelativePath="..\..\..\src\WG_AUDIO.h" />
+			<File RelativePath="..\..\..\src\WG_COMPAT.h" />
+			<File RelativePath="..\..\..\src\WG_CONFIG.c" />
+			<File RelativePath="..\..\..\src\WG_CONFIG.h" />
+			<File RelativePath="..\..\..\src\WG_DATA.c" />
+			<File RelativePath="..\..\..\src\WG_DATA.h" />
+			<File RelativePath="..\..\..\src\WG_ENDIAN.h" />
+			<File RelativePath="..\..\..\src\WG_FILE.c" />
+			<File RelativePath="..\..\..\src\WG_FILE.h" />
+			<File RelativePath="..\..\..\src\WG_FIXED.c" />
+			<File RelativePath="..\..\..\src\WG_FIXED.h" />
+			<File RelativePath="..\..\..\src\WG_GRAPHICS.c" />
+			<File RelativePath="..\..\..\src\WG_GRAPHICS.h" />
+			<File RelativePath="..\..\..\src\WG_MAPS.c" />
+			<File RelativePath="..\..\..\src\WG_MAPS.h" />
+			<File RelativePath="..\..\..\src\WG_OPL_DBOPL.c" />
+			<File RelativePath="..\..\..\src\WG_OPL_NUKED.c" />
+			<File RelativePath="..\..\..\src\WG_OPL_SILENT.c" />
+			<File RelativePath="..\..\..\src\WG_OPL.h" />
+			<File RelativePath="..\..\..\src\WG_PALETTE.c" />
+			<File RelativePath="..\..\..\src\WG_PALETTE.h" />
+			<File RelativePath="..\..\..\src\WG_PLATFORM.c" />
+			<File RelativePath="..\..\..\src\WG_PLATFORM.h" />
+			<File RelativePath="..\..\..\src\WG_RENDERER.c" />
+			<File RelativePath="..\..\..\src\WG_RENDERER.h" />
+			<File RelativePath="..\..\..\src\WG_SAVE.c" />
+			<File RelativePath="..\..\..\src\WG_SAVE.h" />
+			<File RelativePath="..\..\..\src\WG_SIGNON.c" />
+			<File RelativePath="..\..\..\src\WG_SIGNON.h" />
+			<File RelativePath="..\..\..\src\WL_ACT1.c" />
+			<File RelativePath="..\..\..\src\WL_ACT1.h" />
+			<File RelativePath="..\..\..\src\WL_ACT2.c" />
+			<File RelativePath="..\..\..\src\WL_ACT2.h" />
+			<File RelativePath="..\..\..\src\WL_AGENT.c" />
+			<File RelativePath="..\..\..\src\WL_AGENT.h" />
+			<File RelativePath="..\..\..\src\WL_DRAW.c" />
+			<File RelativePath="..\..\..\src\WL_DRAW.h" />
+			<File RelativePath="..\..\..\src\WL_GAME.c" />
+			<File RelativePath="..\..\..\src\WL_GAME.h" />
+			<File RelativePath="..\..\..\src\WL_INTER.c" />
+			<File RelativePath="..\..\..\src\WL_INTER.h" />
+			<File RelativePath="..\..\..\src\WL_MAIN.c" />
+			<File RelativePath="..\..\..\src\WL_MAIN.h" />
+			<File RelativePath="..\..\..\src\WL_MENU.c" />
+			<File RelativePath="..\..\..\src\WL_MENU.h" />
+			<File RelativePath="..\..\..\src\WL_PLAY.c" />
+			<File RelativePath="..\..\..\src\WL_PLAY.h" />
+			<File RelativePath="..\..\..\src\WL_SCALE.c" />
+			<File RelativePath="..\..\..\src\WL_SCALE.h" />
+			<File RelativePath="..\..\..\src\WL_STATE.c" />
+			<File RelativePath="..\..\..\src\WL_STATE.h" />
+			<File RelativePath="..\..\..\src\WL_TEXT.c" />
+			<File RelativePath="..\..\..\src\WL_TEXT.h" />
+			<File RelativePath="..\..\..\src\WOLF3D.c" />
+			<File RelativePath="..\..\..\include\WOLF3D_STDINT.h" />
+			<File RelativePath="..\..\..\include\WOLF3D.h" />
+			<File RelativePath="..\..\..\third_party\Nuked-OPL3\opl3.c" />
+			<File RelativePath="..\..\..\third_party\Nuked-OPL3\opl3.h" />
+		</Filter>
+	</Files>
+	<Globals />
+</VisualStudioProject>

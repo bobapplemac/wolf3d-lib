@@ -1,0 +1,37 @@
+set(WG_VERSION_FILE "${CMAKE_CURRENT_LIST_DIR}/../VERSION")
+
+if(NOT EXISTS "${WG_VERSION_FILE}")
+    message(FATAL_ERROR "Missing authoritative version file: ${WG_VERSION_FILE}")
+endif()
+
+file(STRINGS "${WG_VERSION_FILE}" WG_VERSION_LINES)
+list(LENGTH WG_VERSION_LINES WG_VERSION_LINE_COUNT)
+if(NOT WG_VERSION_LINE_COUNT EQUAL 1)
+    message(FATAL_ERROR "VERSION must contain exactly one non-empty line")
+endif()
+
+list(GET WG_VERSION_LINES 0 WG_PROJECT_VERSION)
+string(STRIP "${WG_PROJECT_VERSION}" WG_PROJECT_VERSION)
+if(NOT WG_PROJECT_VERSION MATCHES "^1\\.4\\.[0-9]+$")
+    message(FATAL_ERROR
+        "VERSION must use the preservation revision form 1.4.REVISION; got '${WG_PROJECT_VERSION}'")
+endif()
+
+if(DEFINED WG_EXPECTED_VERSION
+   AND NOT WG_EXPECTED_VERSION STREQUAL WG_PROJECT_VERSION)
+    message(FATAL_ERROR
+        "Build version '${WG_EXPECTED_VERSION}' does not match VERSION '${WG_PROJECT_VERSION}'")
+endif()
+
+set(WG_CHANGELOG_FILE "${CMAKE_CURRENT_LIST_DIR}/../CHANGELOG.md")
+if(NOT EXISTS "${WG_CHANGELOG_FILE}")
+    message(FATAL_ERROR "Missing changelog: ${WG_CHANGELOG_FILE}")
+endif()
+
+file(READ "${WG_CHANGELOG_FILE}" WG_CHANGELOG_CONTENTS)
+string(FIND "${WG_CHANGELOG_CONTENTS}"
+    "## ${WG_PROJECT_VERSION} - " WG_CHANGELOG_VERSION_OFFSET)
+if(WG_CHANGELOG_VERSION_OFFSET EQUAL -1)
+    message(FATAL_ERROR
+        "CHANGELOG.md has no release heading for ${WG_PROJECT_VERSION}")
+endif()

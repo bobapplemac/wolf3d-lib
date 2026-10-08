@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug Dynamic CRT|Win32">
+      <Configuration>Debug Dynamic CRT</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug Dynamic CRT|x64">
+      <Configuration>Debug Dynamic CRT</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release Dynamic CRT|Win32">
+      <Configuration>Release Dynamic CRT</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release Dynamic CRT|x64">
+      <Configuration>Release Dynamic CRT</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{F6F21D5A-C02A-4A69-9F21-0198E475D9A4}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+    <RootNamespace>wolf3d_lib</RootNamespace>
+    <ProjectName>wolf3d-lib</ProjectName>
+    <WGVisualStudioGeneration>2017</WGVisualStudioGeneration>
+    <WGPlatformToolset>v141</WGPlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>$(WGPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>$(WGPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Dynamic CRT|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>$(WGPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Dynamic CRT|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>$(WGPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>$(WGPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>$(WGPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Dynamic CRT|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>$(WGPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Dynamic CRT|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>$(WGPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <WGRoot>$(MSBuildThisFileDirectory)..\..\..\</WGRoot>
+    <WGCMake>$(WGRoot)scripts\windows\cmake-driver.cmd</WGCMake>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)'=='Win32'">
+    <WGPreset>windows-vs2017-dev-x86</WGPreset>
+    <WGBuildDir>$(WGRoot)build\windows-vs2017-dev-x86</WGBuildDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)'=='x64'">
+    <WGPreset>windows-vs2017-dev-x64</WGPreset>
+    <WGBuildDir>$(WGRoot)build\windows-vs2017-dev-x64</WGBuildDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <WGStaticMsvcRuntime>ON</WGStaticMsvcRuntime>
+    <WGCMakeConfig>$(Configuration)</WGCMakeConfig>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug Dynamic CRT'">
+    <WGStaticMsvcRuntime>OFF</WGStaticMsvcRuntime>
+    <WGCMakeConfig>Debug</WGCMakeConfig>
+    <WGBuildDir>$(WGBuildDir)-dynamic-crt</WGBuildDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release Dynamic CRT'">
+    <WGStaticMsvcRuntime>OFF</WGStaticMsvcRuntime>
+    <WGCMakeConfig>Release</WGCMakeConfig>
+    <WGBuildDir>$(WGBuildDir)-dynamic-crt</WGBuildDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IntDir>$(WGBuildDir)\msbuild\$(WGCMakeConfig)\</IntDir>
+    <OutDir>$(WGBuildDir)\msbuild\$(WGCMakeConfig)\</OutDir>
+    <NMakeBuildCommandLine>cd /d "$(WGRoot)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)"</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>cd /d "$(WGRoot)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)" --clean-first</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cd /d "$(WGRoot)" &amp;&amp; "$(WGCMake)" --preset $(WGPreset) -B "$(WGBuildDir)" -DWG_STATIC_MSVC_RUNTIME=$(WGStaticMsvcRuntime) &amp;&amp; "$(WGCMake)" --build "$(WGBuildDir)" --config "$(WGCMakeConfig)" --target clean</NMakeCleanCommandLine>
+    <NMakeOutput>$(WGBuildDir)\$(WGCMakeConfig)\wolf3d.dll</NMakeOutput>
+    <NMakeIncludeSearchPath>$(WGRoot)include;$(WGRoot)src;$(WGRoot)third_party\Nuked-OPL3</NMakeIncludeSearchPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="$(WGRoot)src\*.c" />
+    <ClCompile Include="$(WGRoot)platforms\*.c" />
+    <ClCompile Include="$(WGRoot)platforms\headless\*.c" />
+    <ClCompile Include="$(WGRoot)tests\*.c" />
+    <ClCompile Include="$(WGRoot)third_party\Nuked-OPL3\*.c" />
+    <ClInclude Include="$(WGRoot)include\*.h" />
+    <ClInclude Include="$(WGRoot)src\*.h" />
+    <ClInclude Include="$(WGRoot)platforms\*.h" />
+    <ClInclude Include="$(WGRoot)third_party\Nuked-OPL3\*.h" />
+    <None Include="$(WGRoot)CMakeLists.txt" />
+    <None Include="$(WGRoot)CMakePresets.json" />
+    <None Include="$(WGRoot)README.md" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>
