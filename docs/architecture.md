@@ -1,0 +1,504 @@
+# Architecture
+
+The original-source parity audit is documented in
+[`tools/CALLGRAPH_AUDIT.md`](../tools/CALLGRAPH_AUDIT.md). It extracts separate
+WL1, WL6, SDM, and SOD call/state graphs from the DOS source, uses Chocolate
+Wolfenstein as corroborating evidence, and compares both with the production
+reachability graph of the generic library. Reviewed renames and structural
+substitutions live in `tools/callgraph-overrides.json`.
+
+wolf3d-lib keeps the original game's indexed 320x200 presentation and game
+rules while replacing assumptions that only hold in 16-bit DOS. The portable
+core is C99 and communicates with a host through the deliberately small
+public `WOLF3D.h` contract.
+
+Translated files retain their original uppercase `ID_*` and `WL_*` basenames
+when they have a clear historical owner. New generic boundaries use uppercase
+`WG_*`; extensions remain lowercase for modern toolchain portability.
+The complete mapping and naming policy is recorded in
+[`source-layout.md`](source-layout.md).
+
+## Resource boundary
+
+The resource modules parse the original, unmodified data files into explicitly
+sized host-memory objects:
+
+- `wg_graphics`: VGAHEAD/VGADICT/VGAGRAPH Huffman chunks, picture dimensions,
+  and planar-to-chunky picture conversion.
+- `wg_maps`: MAPHEAD/GAMEMAPS headers and Carmack plus RLEW map-plane decoding.
+- `wg_pages`: bounds-checked VSWAP wall, sprite, and digitized-sound pages.
+- `wg_assets`: 64x64 wall textures and validated compiled-sprite post streams,
+  including the original signed pixel-pool offsets.
+- `wg_audio`: AUDIOHED/AUDIOT chunk lookup for PC speaker, AdLib, digitized
+  sound metadata, and IMF music.
+
+The file formats are read byte-by-byte with little-endian helpers. No compiler
+packing, native pointer width, or unaligned host access is part of the format
+contract. Malformed offsets and compressed streams fail at the resource
+boundary instead of propagating unchecked pointers into game code.
+
+The generated headers assign an implicit 4,608-byte expanded size to the TILE8
+chunk. The supplied v1.4 streams do not produce that many bytes before their
+record boundary under the otherwise verified Huffman tree. The original cache
+routine has no input bound and can read into its scratch buffer. wolf3d-lib
+does not reproduce that unsafe over-read: TILE8 remains isolated pending a
+reference-behavior capture. All explicit-size graphics chunks used by the title,
+menus, status bar, and game flow are decoded and corpus-tested.
+
+## Presentation boundary
+
+The core owns one 320x200 byte-per-pixel framebuffer and a 256-entry RGB
+palette. A host presents that pair, reports input events, supplies monotonic
+time and sleeping, and reports fatal errors. The internal headless oracle
+supplies deterministic virtual time for tests; production hosts are maintained
+in the companion `wolf3d-portable` repository.
+
+Production hosts treat the framebuffer as original VGA output rather than as
+square pixels. They scale the complete 320x200 image into a centered 4:3
+viewport and own any letterboxing required by the client area. The library
+performs no aspect correction.
+
+The portable video layer implements clipped plots, bars, picture blits,
+proportional bitmap fonts, VGA-precision palette interpolation, and the
+original 17-bit fizzle LFSR. The logical operations are tested without a host;
+the headless host can also export any presented indexed frame as a PPM image.
+Keyboard events use the original IBM PC set-1 scan-code values so gameplay and
+menu code do not depend on a platform's virtual-key numbering.
+
+The first control-panel slice restores `WL_MENU.c` ownership for the main menu.
+Its `Read This!` action uses `WL_TEXT.c` to decode and navigate the original
+embedded `T_HELPART` rather than carrying a rewritten help document.
+It draws the original dark-red field, stripes, `C_OPTIONSPIC`, menu window,
+font-1 labels, disabled Save Game row, special Read This color, mouse legend,
+and gun cursor. Navigation wraps and skips disabled entries as `HandleMenu`
+did. Title input and completed high-score entry now return to this front-end
+state, while View Scores reuses the restored score table. New Game follows the
+original two-stage flow: six two-line episode rows with authored pictures,
+then four difficulty rows with selection-specific BJ portraits. Apogee
+shareware exposes the unavailable episodes in their locked color but only
+accepts Episode 1. The selected episode becomes its first map and the selected
+difficulty is passed into level construction, enemy filtering, hit points, and
+baby-mode damage. Escape during ordinary play now enters this same control
+panel with `Save Game` enabled and `Back to Game` selected; simulation tics and
+the IMF sequencer pause without destroying the owned map session.
+
+The Load/Save slice retains `WL_MENU.C`'s ten outlined slots, font-0 names,
+authored title plaques, wrapping cursor, and profile-specific
+`SAVEGAM?.WL1`/`.WL6`/`.SOD`/`.SDM`/`.SD1`/`.SD2`/`.SD3` naming. The
+original `SaveTheGame` wrote compiler-layout structures and reconstructed
+16-bit near pointers while loading. `WG_SAVE.c` is the narrow modernization
+boundary: every integer and enum is encoded explicitly little-endian, array
+counts are bounded, transient sound events are discarded, and a version,
+edition tag, and checksum reject incompatible or damaged data. The complete
+runtime level, campaign score/lives/weapons, doors, statics, actors, pushwall,
+random-table position, and eight floor ratios round-trip without depending on
+host pointer size or structure padding.
+
+The Sound slice preserves `SndMenu`'s twelve-row layout and three device
+groups. It exposes PC-speaker and Nuked-OPL3 effects, Sound Blaster digitized
+samples, and Nuked-OPL3 music alongside each original `None` choice. Only the
+unimplemented Disney Sound Source is rendered in the original disabled color.
+The selected modes gate live playback; music-off retains a silent front-end
+mixer so the original pistol preview can still be heard.
+
+The first Control slice restores the original device list and sensitivity
+dialog. The portable event boundary already provides relative mouse motion and
+three buttons, so Mouse Enabled gates both paths and the selected 0–9 value is
+carried in `wl_input_t` to the original `10/(13-adjustment)` and
+`20/(13-adjustment)` movement calculations. The joystick rows use a normalized
+two-device host event and `ID_IN.c` applies the original calibrated outer-third
+dead zone and signed `-127..127` delta scaling.
+
+The `--mouse` switch supplies the original input manager's hardware-presence
+result. Without it, SIGNON leaves the Mouse indicator blank, mouse events are
+discarded, and mouse-specific Controls and Customize Controls entries are
+inactive. With it, mouse hardware is present and control starts enabled; the
+Controls menu may then disable or re-enable it for the running session.
+
+Customize Controls retains the original four presentation columns—Run, Open,
+Fire, and Strafe—and the Left, Right, Forward, and Back movement row. Bindings
+remain IBM set-1 scan codes, so no platform key namespace enters engine code.
+The live input adapter resolves the selected keyboard and mouse bindings into
+`wl_input_t`; mouse-button reassignment preserves the original one-action-per-
+button rule. Joystick bindings preserve the same one-action-per-button rule,
+with the original attack/strafe/use/run defaults and two-button versus Gravis
+four-button gating.
+
+Change View retains the original size-4-through-19 selection boundary and
+size-15 default. `WL_GAME.c` owns the authored gray surround and asymmetric
+black/gray bevel; the portable wall, sprite, weapon, and targeting paths derive
+their centered viewport from the same width. The full-width size-20 path is
+also retained for deterministic historical renderer fixtures and explicit
+headless captures.
+
+`WL_PLAY.c` also owns the original demo stream boundary. The four-byte header
+retains its map byte, 16-bit total length, and skipped fourth byte; every
+following record is the original button bitmap plus signed X/Y controls. Demo
+records advance as one four-tic frame. Ordinary live play converts monotonic
+host time to the original 70 Hz logical clock and calls the player, doors,
+pushwalls, and actors once with the elapsed `tics` value before rendering once.
+The elapsed value is clamped to the original `MAXTICS` of 10, and excess time
+is discarded exactly as `CalcTics` backed it out of `TimeCount`. Presentation
+states that were explicit one-tic service loops remain one-tic updates. This
+distinction preserves both authored demo rounding and the original live
+frame-batching semantics without emulating PIT interrupt phase or CPU cycles.
+
+The runtime attract state follows `DemoLoop`'s original ordering and durations:
+15-second title, 10-second credits, 10-second high scores, then one rotating
+embedded demo. It returns completed or interrupted demos through the same owned
+session cleanup used by normal games; input during any attract phase opens the
+control panel rather than leaking into player controls.
+Front-end music has separate lifetime ownership from a map session. The title,
+credits, and attract scores keep one continuous `NAZI_NOR_MUS` sequence;
+entering the control panel selects `WONDERIN_MUS`, Read This selects
+`CORNER_MUS`, and View Scores selects `ROSTER_MUS`. Starting a game or demo
+closes that owner before the map session opens the same generic PCM sink.
+
+## Gameplay state boundary
+
+Map planes are converted into an explicitly sized 64x64 runtime level. Plane 0
+values below the original `AREATILE` value become collision tiles; area numbers
+remain zero in that byte map. Plane 1 is retained verbatim for actor and object
+spawning. The initial player position and direction use the original tile codes
+19 through 22 and 16.16 tile-center coordinates.
+
+Static-object codes 23 through 71 are scanned in original map order into the
+original 400-object capacity. Their shape numbers preserve the `SPR_DEMO`,
+`SPR_DEATHCAM`, `SPR_STAT_0` enumeration relationship rather than using a new
+asset-name table. Code 71 retains the original final `SPR_STAT_26` duplicate
+ammo-clip entry from `statinfo`.
+
+The active-object setup recognizes standing and patrolling guards, officers,
+SS, dogs, and mutants at the original easy, medium, and hard map-code
+thresholds, plus inert dead guards. The seven original bosses and four ghost
+states use their fixed initial shapes and original north, south, or east
+directions. Actors retain their tile-center 16.16 position, eight-way direction,
+initial state shape, the original 150-object capacity, and `SpawnPatrol`'s
+one-tile destination advance. The original map format reserves standing-dog
+codes although the DOS `SpawnStand` switch omits the dog case; the portable
+setup gives those entries the dog's path pose without advancing it, avoiding the
+original undefined stale-object behavior. The legacy `WG_LevelBuild` entry
+point selects medium difficulty; an explicit difficulty entry point supports
+deterministic setup testing. Corpus validation checks that every actor spawned
+by all 10 WL1 and 60 WL6 maps names a sprite page present in that edition.
+
+The first dynamic actor slice ports the original path-state timing and
+`T_Path`/`SelectPathDir` movement into `WL_STATE.c`. Patrol actors retain the
+randomized initial tic phase, six-state `20/5/15/20/5/15` animation cycle,
+class-specific speed, destination-tile reservation, tile-center snapping, and
+direction arrows stored in map plane 1. Cardinal and diagonal wall/actor checks
+preserve the distinction between ordinary actors and dogs, and actors stop at
+closed doors until the door reaches its fully open position. Special-boss
+movement, projectile contact, and player/actor separation use the same
+fixed-point movement foundation. As in
+`DoActor`, only path states with a `T_Path` thinker move; the short `path1s` and
+`path3s` states update animation time without movement.
+
+The awareness slice retains all 37 original area numbers separately from the
+collision byte map. An ambush marker (plane-0 tile 106) is cleared and assigned
+the neighboring area using `SpawnStand`'s original right/up/down/left overwrite
+order. A bounded traversal of the original door-to-area graph derives the areas
+connected to the player. `CheckLine` retains the original 1/256-tile two-axis
+trace and door-position test, while `CheckSight`, `SightPlayer`, and
+`FirstSighting` retain close-range detection, cardinal facing checks, ambush and
+noise rules, class-specific randomized reaction delays, chase speeds, and the
+first chase frame.
+
+As in the original `PlayLoop`, `madenoise` is cleared once before player and
+actor thinking. A gunshot, or a knife strike that actually damages an actor,
+sets it for the remainder of that frame. This is not a distance calculation:
+every non-ambush actor in an area connected to the player through opening or
+open doors may react. Door operation itself does not set `madenoise`; the first
+`MoveDoors` opening step connects the adjacent areas. Standing actors call
+`SightPlayer` every tic, while patrol actors call it only from the four
+`T_Path` states and not from the two short pause states.
+
+The original `objtype.active` scheduling bit is represented by
+`WG_ACTOR_FLAG_ACTIVE`. Patrols and transient actors begin active; otherwise an
+actor is frozen while its area is disconnected until rendering it makes the
+activation permanent. This preserves `DoActor` behavior without exposing DOS
+object-layout details in the portable structure.
+
+The first chase slice adds the original six-state `10/3/8/10/3/8` animation,
+`SelectChaseDir`, `SelectDodgeDir`, `TryWalk` destination reservation, and the
+movement portion of `T_Chase` for guards, officers, mutants, SS, Hans, Gretel,
+Mecha Hitler, and Hitler. It retains first-attack turnaround permission, random
+dodge ordering, cardinal/diagonal collision rules, closed-door waiting,
+tile-center correction, and `MINACTORDIST` player separation. The ranged-attack
+probability consumes the original random value; class-specific thinkers replace
+the earlier explicit pending states.
+
+Ordinary ranged combat retains the guard, officer, mutant, and SS attack state
+tables from `WL_ACT2.C`, including their distinct durations, sprite sequences,
+and one, two, or four `T_Shoot` actions. The shot calculation preserves area and
+line checks, SS distance advantage, visible/running accuracy branches, original
+random consumption, and distance-scaled damage. `TakeDamage` owns player health,
+baby-mode quarter damage, death state, and accumulated red-flash damage in
+`WL_AGENT.c`. Actor flag values now exactly match the original bit layout, and
+the renderer maintains `FL_VISABLE` as the DOS `DrawScaleds` pass did.
+
+Dog combat follows its separate original branch: `T_DogChase` always uses
+`SelectDodgeDir`, cannot cross doors, and begins the five-state jump when the
+next movement step reaches `MINACTORDIST` on both axes. The `10/10/10/10/10`
+jump sequence invokes `T_Bite` from its second state, retaining the two-tile
+axis bounds, `180/256` hit roll, and `US_RndT() >> 4` damage. Sound dispatch
+follows the original priority rules, while fatal damage enters the completed
+turn, fizzle, life-accounting, and floor-restart flow.
+
+Player combat in `WL_AGENT.c` retains the four original `attackinfo` tables and
+their six-tic frame cadence. `DrawScaleds` stores the projected `viewx` and
+`transx` values used by `KnifeAttack` and `GunAttack`; targeting keeps the
+original center-screen window, nearest-target choice, wall trace, knife range,
+tile-distance hit roll, and random damage divisors. Machine-gun and chaingun
+hold behavior loops the same attack-table entries, and empty guns fall back to
+the knife. Runtime weapon, ammo, health, and score now feed both the first-person
+sprite and status bar. `--player-fire-view` captures the pistol recoil frame
+after a deterministic E1M1 shot.
+
+The four hitscan bosses reuse `T_Shoot` with their original state tables. Hans
+and Gretel use eight firing states with six shot actions; Mecha-Hitler and
+Hitler use six states with five actions. All retain the `30`-tic windup,
+alternating second/third firing sprites, `10`-tic burst cadence, and class
+return to the first chase state. Hans alone retains the original boss accuracy
+and damage-distance advantage.
+
+Schabbs uses his separate `T_Schabb` attack probability and two-state throw
+sequence. `T_SchabbThrow` quantizes the player bearing to the original 360-angle
+domain and creates a reusable non-blocking syringe actor. Its four six-tic
+`SPR_HYPO` frames run `T_Projectile` at speed `0x2000`, using the original
+`PROJSIZE` wall box and `PROJECTILESIZE` player box. A player hit deals
+`(US_RndT() >> 3) + 20` damage; wall and player impacts remove the projectile.
+Removed slots are reused so repeated throws remain bounded by the original
+150-actor capacity.
+
+Giftmacher and Fatface share the original `T_GiftThrow` rocket construction and
+their close-range `SelectRunDir` retreat behavior. Giftmacher uses a two-state
+throw; Fatface follows the throw with four hitscan `T_Shoot` actions. Rockets
+use the original eight directional `SPR_ROCKET` views, three-tic smoke action,
+`0x2000` speed, and `(US_RndT() >> 3) + 30` player damage. Wall impacts enter
+the three six-tic `SPR_BOOM` states, while player impacts remove the rocket.
+Four smoke states age independently and reuse the same bounded transient slots.
+
+Fake Hitler keeps his separate `T_Fake` thinker: a clear line consumes the
+original `US_RndT() < (tics << 1)` attack roll, while movement always uses
+`SelectDodgeDir` and refuses doors. His nine eight-tic firing states invoke
+`T_FakeFire` from the first eight states. Each non-rotating two-frame flame is
+aimed in the original 360-angle domain, moves at `0x1200`, disappears on a wall
+or player impact, and deals the original `US_RndT() >> 3` damage.
+
+Door codes 90 through 101 are converted in the original scan order into at most
+64 runtime door records. Doors begin fully closed, retain orientation and lock
+type, occupy the original `0x80 | index` tile value, and mark the adjacent wall
+tiles with bit 0x40 for door-jamb texture selection. Every map in both supplied
+editions is exercised through this conversion.
+
+The gameplay random generator is the original 256-byte lookup table and byte
+index progression rather than a host C library generator. Its state is held in
+an engine-owned object so tests and demo playback can reset it exactly. As in
+`SetupGameLevel`, the index is selected before actors are scanned from the map:
+embedded demos start at zero, while ordinary games use the host monotonic
+clock's hundredths phase (0--99), corresponding to DOS `US_InitRndT(true)`.
+
+## Renderer math
+
+The view layer retains the original 16.16 coordinate unit, 3,600 fine-angle
+tangent table, overlapping 360-degree sine/cosine table, focal length, minimum
+distance, and per-column ray-angle calculation. The verified results of the
+original single-precision `BuildTables` and `CalcProjection` calculations are
+frozen in `WG_VIEW_TABLES.inc` for every legal view width. Runtime rendering
+therefore has no dependency on a host math library, and the complete table
+hashes are checked identically by the x86 and x64 test builds. Negative
+trigonometric values use portable two's-complement integers; the DOS source's
+sign-magnitude encoding existed solely for its assembly `FixedByFrac` routine.
+
+Projectile aiming and death-camera rotation replace the source's runtime
+`atan2` calls with a deterministic integer degree quantizer. Frozen Q32
+unit-circle boundaries reproduce the source's assignment to single-precision
+`float`, including its truncation at negative exact diagonals. A dense
+maintainer audit over more than one million coordinate pairs found no mismatch
+against the original expression; the shipped suite retains compact cardinal,
+diagonal, near-axis, and near-boundary cases.
+
+Wall columns are scaled by ordinary bounded C into the indexed framebuffer. The
+source sampling order and the original three-bit fractional wall-height unit are
+retained from `ScalePost`; a single call may reproduce the original adjacent-post
+coalescing optimization without VGA plane masks or generated machine code.
+
+The ray-traversal layer is a direct, fixed-point translation of original
+`AsmRefresh`, including its quadrant-specific tangent steps, vertical/horizontal
+entry switching, focal-point offset, texture mirroring, and perpendicular height
+calculation. Closed and opening doors use their original half-tile planes,
+position tests, lock/elevator faces, and adjacent jamb textures. `PushWall` and
+`MovePWalls` retain the original `1/128/256` state thresholds, destination
+reservation, obstruction checks, secret accounting, vacated-tile area handoff,
+and `pwallpos = (pwallstate / 2) & 63` offset. The vertical and horizontal
+pushwall hit paths move the sampled wall plane by that offset before performing
+the same texture mirroring and perpendicular-height calculation.
+
+An owned wall cache decodes every present pre-sprite VSWAP page once into conventional
+row-major 64x64 pixels. The initial renderer composes the static traversal and
+wall scaler into the original 320x160 play view, using the per-level VGA ceiling
+colors and color 0x19 floor from `VGAClearScreen`. A headless `--play-view`
+capture makes the real E1M1 result directly inspectable. The static HUD is
+composed from the original status-bar, digit, face, key, and weapon pictures by
+the translated `WL_AGENT.c` routines. The ready pistol uses a bounded translation
+of `SimpleScaleShape` over the original compiled sprite format. Static scenery
+uses the original `TransformTile` projection, 50-entry visible-object limit,
+ray-traversal `spotvis` admission, far-to-near `DrawScaleds` ordering, and
+wall-height tests for per-column occlusion. The headless `--open-doors`
+diagnostic exposes the scenery beyond E1M1's initially closed door without
+changing normal level state. Ordinary enemies and dead guards share the same
+visible-object list; live actors use the original larger `ACTORSIZE` projection
+adjustment and select one of eight rotations with `CalcRotate`. Patrol state
+updates feed this same rendering path. The isolated
+`--alert-view` diagnostic advances the selected guard through awareness and its
+reaction delay. `--chase-view` then advances the original chase animation and
+movement. `--fire-view` selects the original guard shot action and renders its
+resulting attack sprite and health change. `--bite-view` does the same for an
+original E1M1 dog's leap and bite. `--boss-fire-view` renders Hans's seeded
+hitscan attack on E1M9. `--needle-view` renders Schabbs's syringe in flight on
+E2M9, and `--rocket-view` renders Giftmacher's rotating rocket and smoke trail
+on E4M9. `--pushwall-view` activates the first E1M1 secret and renders it at a
+half-tile offset without altering normal captures. Ordinary guards, officers,
+mutants, SS, and dogs now carry the original difficulty-indexed hit points and
+run through their pain, death, scoring, and item-drop paths. `--death-view`
+captures an E1M1 guard in the third collapse frame with his dropped clip. All
+Wolf3D bosses use their original score, item-drop, and death sequences. The
+long terminal sequences set victory and level-complete state on successive
+death-camera actions; Mecha Hitler instead leaves a corpse and spawns the
+independently damageable second phase. `--boss-death-view` captures Hans in the
+third collapse frame on E1M9.
+Map-authored and enemy-dropped bonuses share a single item type and the
+original `GetBonus` inventory rules. Consumed objects remain in the fixed
+static array with a removal flag, mirroring the original negative-shape marker
+without requiring a signed sprite index. `WL_CollectPlayerTileBonuses` is the
+movement-facing collection boundary; the `--pickup-view` checkpoint exercises
+it and renders the resulting live score, lives, keys, ammo, and weapon state.
+The same player layer now owns original-scale turning and thrust, fixed-radius
+collision against walls, closed doors, blocking statics, and live actors, plus
+axis-by-axis wall sliding. Cardinal use dispatches to pushwalls, elevators, or
+the door state machine. Doors connect areas as soon as opening begins, admit
+movement only when fully open, wait 300 tics before closing, and reverse when
+the player or an actor obstructs the moving plane. `--door-use-view` renders a
+real E1M1 door halfway through its use-triggered opening cycle.
+
+The interactive session now owns the campaign state that the original
+`GameLoop` kept outside `SetupGameLevel`. Completing a floor rebuilds the next
+map while carrying health, ammo, weapons, lives, score, and the next-extra-life
+threshold, then clears keys. Secret exits select floor 10 and the original
+`ElevatorBackTo` table returns each episode to its authored destination.
+`WL_INTER.c` owns the corresponding original boundary: map construction counts
+difficulty-filtered kills, authored treasure and pushwall secrets; `WL_PLAY.c`
+advances floor `TimeCount`; and the completed-floor state calculates the
+original par/perfect bonuses, renders the original big-glyph screen, plays
+`ENDLEVEL_MUS`, and waits for input before rebuilding the destination map. A
+fatal hit retains its attacker's world position. The death state removes the
+weapon, turns toward that position along the shortest arc at the original two
+degrees per 70 Hz tic, clears palette shifts, and advances the original LFSR
+fizzle toward VGA color 4 in 70 frame-sized batches. After input timeout and
+the death sound both finish, it discards score earned on that floor, decrements
+a life, and restarts with pistol, eight rounds, and full health.
+
+Each completed ordinary floor also persists its time and three ratios across
+map rebuilds. A terminal boss victory averages the first eight floor records,
+caps total time at 99:00, derives the original medium-or-harder verification
+code, draws `Victory()`'s `YOU WIN!` screen and BJ portrait, and switches to
+`URAHERO_MUS`. Acknowledgement then decodes the episode's `T_ENDART` chunk and
+hands it to the portable `WL_TEXT.c` translation. That renderer retains the
+original 320x200 window pieces, proportional word wrapping, per-row margins,
+page counter, and recognizes `^B`, `^;`, `^P`, `^E`, `^C`, `^>`, `^L`, `^T`,
+and `^G` commands. Arrow/Enter navigation matches `ShowArticle`; Escape
+continues into the high-score table and then returns through the completed
+control-panel flow.
+
+The original seven-entry high-score defaults and `CheckHighScore` ordering
+rule—score first, completed floor as the tie-break—also live in `WL_INTER.c`.
+`DrawHighScores` retains the dark-red menu field, stripe, picture headings,
+proportional names, and font characters 129-138 used for fixed-width numbers.
+Exhausting the last life inserts the score, switches to `ROSTER_MUS`, and shows
+that table. A qualifying entry uses the original `ID_IN.C` shifted/unshifted
+scan-code tables and `US_LineInput` editing rules: Caps Lock, cursor movement,
+Home/End, Backspace/Delete, insertion, Enter/Escape, 57 characters, and the
+100-pixel font-width limit. `WG_CONFIG.c` replaces the compiler-layout-dependent
+DOS configuration dump with an explicitly sized, little-endian format carrying
+the same high scores, sound choices, mouse and joystick settings, bindings, and
+view size. Edition tagging, bounds checks, and a checksum reject incompatible
+or damaged files; version-2 files gain the original joystick defaults when read.
+
+Hosts supply relative mouse packets through the generic event contract rather
+than exposing window coordinates to the engine. `WL_PLAY.c` applies the original
+default `PollMouseMove` scale (`x * 10 / 8`, `y * 20 / 8`) before the same
+per-tic ±100 control clamp used by keyboard/demo input. The original default
+button mapping is retained: left attacks, right strafes, and middle uses.
+The same contract carries two normalized joystick slots. `ID_IN.c` owns the
+original calibration curve, port selection, and four-button state; wrappers
+map native controller APIs without making them dependencies of the engine.
+
+The DOS Pause interrupt remains a distinct generic key rather than masquerading
+as an ordinary scan code. While paused, the host continues pumping PCM so sound
+effects and device transport remain live, but gameplay tics and IMF sequence
+time stop. `ID_SD_MusicSetPaused` applies the original `SD_MusicOff` channel
+key-offs without discarding the sequencer position; the next key or mouse-button
+press restores play and redraws the unobscured game frame.
+
+Player feedback retains the VGA palette mechanism rather than tinting rendered
+pixels. `WL_PLAY.c` generates the original six red damage tables and three
+yellow-white bonus tables from the 6-bit base palette, gives damage precedence,
+and decays both counters at the 70 Hz game rate. Only the host-facing 8-bit RGB
+palette changes; the indexed framebuffer therefore remains untouched. The
+headless host exposes a separate palette hash for this distinction.
+
+Audio follows the same model: the core produces PCM through the host contract.
+An internal registry makes the faithful upstream Nuked OPL3 implementation,
+the lower-resource pure-C DBOPL implementation, and timing-preserving silence
+runtime-selectable when compiled. Nuked remains the default, with its LGPL
+terms and shared-library separation preserved.
+
+The first music slice now follows that design. `ID_SD.c` parses the original
+length-prefixed IMF event stream, preserves same-tic zero-delay register
+batches and end-of-sequence looping, and services it at 700 Hz. A rational
+sample accumulator splits OPL generation at exact event boundaries; it
+therefore produces exactly 700 services per second at any negotiated PCM rate
+without making the 70 Hz gameplay loop run ten times faster. The generic layer
+submits signed stereo PCM at a preferred 48 kHz (or a runtime override), while
+production hosts transport or resample it through native audio APIs.
+AdLib effects share Nuked's channel 0 with the music chip, retain original
+priority replacement and instrument programming, and consume one pitch byte at
+140 Hz (every fifth IMF service), just as the fast DOS timer ISR did.
+
+The FM bus receives a fixed 4x gain after Nuked-OPL3 synthesis and before the
+digitized and PC-speaker buses are added. This is the software counterpart of
+the original `SDL_StartSB` policy, which raised the Sound Blaster Pro FM mixer
+to maximum specifically to make FM output comparable with digitized output.
+The gain lives at the board/mixer boundary rather than in the unmodified OPL
+emulator, and therefore applies equally to music and channel-0 AdLib effects.
+The final bus additions remain signed 16-bit saturating mixes.
+
+PC-speaker effects use the parallel six-byte `PCSound` format and that same
+140 Hz service cadence. Each nonzero pitch byte selects the original
+`sample * 60` divisor for the 1,193,182 Hz PIT channel-2 square wave; zero is
+silence. The continuously phase-accumulated square wave is mixed into the host
+PCM stream without coupling its timing to presentation or game tics.
+
+Digitized effects retain the original VSWAP layout and `wolfdigimap` selection.
+`ID_SD.c` reads the terminal `(start page, byte length)` table, joins each
+page-spanning unsigned 8-bit sample, applies the original priority rules and
+Sound Blaster Pro 0-15 stereo attenuation, and mixes it into the same signed
+PCM stream. The zero-order hold advances at 7,042 Hz, matching the effective
+rate produced by the original integer DSP time constant for its nominal 7 kHz
+configuration. Missing sample pages in the shareware archive fall back to the
+corresponding AdLib effect at runtime.
+
+The default hardware profile exposes both Sound Blaster digitized playback and
+its AdLib-compatible OPL synthesis. `--adlib` models an AdLib-only machine by
+disabling the digitized path while retaining music and synthesized effects.
+This also follows original `IntroScreen`: `SoundBlasterPresent` selects only
+the Sound Blaster indicator, whereas AdLib is marked only when no Sound Blaster
+is present.
+
+World sounds retain the original `WL_GAME.C` spatial transform and its exact
+15-by-30 left-ear attenuation table (the right ear is its mirrored axis).
+Events distinguish centered player/interface sounds from positioned actors and
+doors. While the selected digitized sound remains active, its world coordinate
+is transformed again each game tic so turning or walking changes the stereo
+image as it did through `UpdateSoundLoc` on Sound Blaster Pro hardware.

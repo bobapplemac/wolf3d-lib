@@ -1,0 +1,195 @@
+{
+  "mappings": {
+    "BJ_Breathe": "WG_GameSessionAdvanceIntermission",
+    "VictoryTile": "WL_Thrust",
+    "VictorySpin": "WL_VictorySpin",
+    "SpawnBJVictory": "WL_SpawnBJVictory",
+    "T_BJRun": "WL_T_BJRun",
+    "T_BJJump": "WL_TickBJVictory",
+    "T_BJYell": "WL_TickBJVictory",
+    "T_BJDone": "WL_TickBJVictory",
+    "A_DeathScream": "WL_QueueDeathSound",
+    "A_HitlerMorph": "WL_SpawnRealHitler",
+    "A_MechaSound": "WL_ChaseStateAction",
+    "A_Slurpie": "WL_TickPainOrDeath",
+    "A_StartDeathCam": "WG_GameSessionTick",
+    "A_Breathing": "WL_TickActors",
+    "A_Dormant": "WL_TickActors",
+    "A_Relaunch": "WL_TickActors",
+    "A_StartAttack": "WL_BeginAttack",
+    "A_Victory": "WL_TickActors",
+    "T_Attack": "WL_TickPlayerAttack",
+    "T_Player": "WL_PlayFrame",
+    "CheckWeaponChange": "WL_SelectWeapon",
+    "Cmd_Fire": "WL_StartAttack",
+    "Cmd_Use": "WL_CmdUseHeld",
+    "ControlMovement": "WL_ControlMovement",
+    "Thrust": "WL_Thrust",
+    "ClipMove": "WL_ClipMove",
+    "TryMove": "WL_TryMove",
+    "PollControls": "WL_PlayFrame",
+    "GetBonus": "WL_GetBonus",
+    "GiveAmmo": "WL_GiveAmmo",
+    "GiveWeapon": "WL_GiveWeapon",
+    "HealSelf": "WL_HealSelf",
+    "DrawScaleds": "WL_DrawScaleds",
+    "TransformTile": "WG_TransformTile",
+    "UpdateFace": "WG_GameSessionUpdateFace",
+    "FizzleFade": "WG_FizzleStepRegion",
+    "Died": "WG_GameSessionTick",
+    "GameLoop": "WG_GameSessionTick",
+    "DoActor": "WL_TickActors",
+    "PreloadGraphics": "WG_GameSessionBeginPreload",
+    "PreloadUpdate": "WL_DrawGetPsyched",
+    "ConnectAreas": "WL_UpdateAreaConnectivity",
+    "RecursiveConnect": "WL_UpdateAreaConnectivity",
+    "InitAreas": "WG_LevelBuildForVariant",
+    "DoorOpen": "WL_MoveDoors",
+    "DoorOpening": "WL_MoveDoors",
+    "DoorClosing": "WL_MoveDoors",
+    "MoveDoors": "WL_MoveDoors",
+    "MovePWalls": "WL_MovePushWalls",
+    "GiveKey": "WL_GetBonus",
+    "GiveExtraMan": "WL_GiveExtraMan",
+    "GivePoints": "WL_GivePoints",
+    "SpawnDoor": "WG_LevelBuildForVariant",
+    "SpawnPlayer": "WG_LevelBuildForVariant",
+    "SpawnStatic": "WG_LevelBuildForVariant",
+    "InitDoorList": "WG_LevelBuildForVariant",
+    "InitStaticList": "WG_LevelBuildForVariant",
+    "ScanInfoPlane": "WG_LevelBuildForVariant",
+    "SetupGameLevel": "WG_GameSessionOpen",
+    "T_Launch": "WL_T_SpearLaunch",
+    "T_UShoot": "WL_T_Shoot",
+    "T_Will": "WL_T_SpecialBoss",
+    "T_Fat": "WL_T_SpecialBoss",
+    "T_Gift": "WL_T_SpecialBoss",
+    "T_Schabb": "WL_T_SpecialBoss",
+    "SightPlayer": "WL_SightPlayer",
+    "T_Stand": "WL_TickAwareness",
+    "PlayLoop": "WG_GameSessionTick",
+    "LevelCompleted": "WG_GameSessionBeginIntermission",
+    "CheckHighScore": "WG_GameSessionBeginHighScores",
+    "ThreeDRefresh": "WG_GameSessionRender",
+    "TakeDamage": "WL_TakeDamageFrom"
+  },
+  "edge_exceptions": [
+    {
+      "caller": "MoveObj",
+      "callee": "TakeDamage",
+      "reason": "The portable translation splits coordinate movement into WL_MoveObj and the original player-collision/contact-damage semantics into WL_MoveChase."
+    },
+    {
+      "caller": "T_Path",
+      "callee": "SightPlayer",
+      "reason": "The portable actor dispatcher calls WL_SightPlayer immediately before WL_T_Path for path think states."
+    },
+    {
+      "caller": "T_Attack",
+      "callee": "ControlMovement",
+      "reason": "WL_PlayFrame calls WL_ControlMovement and WL_TickPlayerAttack as sibling services for the same player tick."
+    },
+    {
+      "caller": "LevelCompleted",
+      "callee": "BJ_Breathe",
+      "reason": "The non-blocking session scheduler advances the intermission animation after BeginIntermission returns."
+    },
+    {
+      "caller": "LevelCompleted",
+      "callee": "DrawPlayBorder",
+      "reason": "The session state transition redraws the play border when the next gameplay view is entered."
+    },
+    {
+      "caller": "LevelCompleted",
+      "callee": "GivePoints",
+      "reason": "The non-blocking intermission state machine awards the completed ratio bonus when counting finishes or the player skips it."
+    },
+    {
+      "caller": "PlayLoop",
+      "callee": "UpdatePaletteShifts",
+      "reason": "Palette-shift timing is advanced by the generic host/session frame service rather than a blocking PlayLoop call."
+    },
+    {
+      "caller": "SpawnBJVictory",
+      "callee": "T_BJRun",
+      "reason": "The portable actor dispatcher invokes WL_T_BJRun for the BJ state instead of storing a function pointer in the state table."
+    },
+    {
+      "caller": "T_BJRun",
+      "callee": "T_BJJump",
+      "reason": "Run-to-jump state dispatch is folded into WL_TickBJVictory."
+    },
+    {
+      "caller": "T_BJJump",
+      "callee": "T_BJYell",
+      "reason": "The jump action callback is folded into WL_TickBJVictory."
+    },
+    {
+      "caller": "T_BJYell",
+      "callee": "T_BJDone",
+      "reason": "The terminal jump callback is folded into WL_TickBJVictory."
+    },
+    {
+      "caller": "SpawnPlayer",
+      "callee": "Thrust",
+      "reason": "WG_LevelBuildForVariant directly initializes the tile coordinates and starting-area state that the original established through Thrust(0, 0)."
+    },
+    {
+      "caller": "T_Attack",
+      "callee": "VictorySpin",
+      "reason": "WL_PlayFrame invokes WL_VictorySpin before its translated attack/player branches when victory is active."
+    },
+    {
+      "caller": "T_Attack",
+      "callee": "UpdateFace",
+      "reason": "The session scheduler invokes WG_GameSessionUpdateFace immediately before WL_PlayFrame dispatches the translated attacking-player branch."
+    },
+    {
+      "caller": "T_Player",
+      "callee": "UpdateFace",
+      "reason": "The session scheduler invokes WG_GameSessionUpdateFace immediately before WL_PlayFrame dispatches the translated normal-player branch."
+    },
+    {
+      "caller": "ThreeDRefresh",
+      "callee": "FizzleFade",
+      "reason": "The non-blocking session scheduler runs WG_FizzleStepRegion after WG_GameSessionRender has prepared the source view, rather than blocking inside the renderer."
+    },
+    {
+      "caller": "PreloadGraphics",
+      "callee": "DrawPlayBorder",
+      "reason": "When the preload timer expires, the session renders the first view and WG_GameSessionBeginEntryFizzle calls WL_DrawPlayBorder before revealing it."
+    }
+  ],
+  "classifications": [
+    {
+      "source": "ID_MM.C",
+      "function": "*",
+      "status": "intentional-platform-replacement",
+      "reason": "Segmented DOS memory management is replaced by bounded native allocation."
+    },
+    {
+      "source": "ID_VL.C",
+      "function": "*",
+      "status": "intentional-platform-replacement",
+      "reason": "VGA register and planar framebuffer operations are replaced by the generic indexed framebuffer."
+    },
+    {
+      "source": "ID_IN.C",
+      "function": "INL_*",
+      "status": "intentional-platform-replacement",
+      "reason": "Interrupt and BIOS input backends are host callbacks."
+    },
+    {
+      "source": "ID_SD.C",
+      "function": "SDL_*",
+      "status": "intentional-platform-replacement",
+      "reason": "ISA/PIT/DMA hardware setup is replaced by the generic audio stream."
+    },
+    {
+      "source": "WL_DEBUG.C",
+      "function": "*",
+      "status": "out-of-scope-debug-tool",
+      "reason": "Original development cheats and profiling tools are not production game behavior."
+    }
+  ]
+}
