@@ -87,9 +87,10 @@ adapters; `NUKEDOPL.LIB` remains separate when that driver is selected.
 
 The build also compiles and links the public API consumer into a temporary
 DOS/4G-format executable as an ABI/link check. That validation executable is
-not shipped. The SDK is the completed library checkpoint; the companion
-repository's DOS/32A host, VGA/input/PIT implementation, and runtime testing
-remain separate work.
+not shipped. The companion `wolf3d-portable` repository consumes the SDK in
+its completed DOS/32A host with direct VGA, IRQ 1 keyboard, 700 Hz PIT timing,
+SB16 PCM, and native AdLib output. That integration is interactively validated
+under DOSBox; physical DOS hardware remains untested.
 
 ## Linux with CMake presets
 

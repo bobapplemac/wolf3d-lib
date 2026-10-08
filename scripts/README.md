@@ -7,8 +7,8 @@ Both ultimately delegate to the authoritative CMake presets.
 
 The root `build.sh` follows the same convention on Linux. Its configurator and
 thin Make executor live under `scripts/linux/`; direct `make` remains fully
-supported. Linux-hosted helpers, including the planned Docker/Open Watcom
-cross-build, also belong there.
+supported. Linux-hosted Docker helpers for portable glibc, musl, and the
+pinned Open Watcom DOS32 cross-build also belong there.
 
 Root `build.cmd` provides the XP-native guided scanner. Its VC6--VS2005
 executor lives at `scripts/windows/legacy/build.cmd`. Visual Studio solutions and projects are

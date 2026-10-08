@@ -6,6 +6,16 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.52 - 2026-10-07 - DOS integration closure
+
+- Reconciled the library documentation with the completed companion
+  `wolf3d-portable` DOS/32A host rather than continuing to describe it as
+  planned work.
+- Recorded integrated DOSBox runtime validation of the Open Watcom engine with
+  native AdLib, DBOPL, silent audio, SB16 PCM, VGA, keyboard, and PIT timing.
+- Kept physical DOS hardware explicitly unclaimed until that optional testing
+  is performed.
+
 ## 1.4.51 - 2026-10-07 - Clean Open Watcom IDE builds
 
 - Excluded `ide2make`, object, diagnostic, response, and library outputs from

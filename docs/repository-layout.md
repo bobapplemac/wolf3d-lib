@@ -20,7 +20,7 @@ tests, and library packaging. Production host wrappers live in the companion
 | `ide/visual-studio/vsYYYY/` | One native, toolset-pinned solution/project pair per supported Visual Studio IDE generation. |
 | `build.ps1` | Modern Windows toolchain detector and human-facing build dispatcher. |
 | `scripts/windows/` | Modern Visual Studio/MinGW PowerShell implementation and XP-native legacy CMD dispatcher. |
-| `scripts/linux/` | Linux-hosted helpers, including future Docker cross-build scripts. |
+| `scripts/linux/` | Linux build dispatchers plus Docker helpers for portable glibc, musl, and Open Watcom DOS32 cross-builds. |
 | `build/` | Ignored compiler output and local diagnostics. |
 | `dist/` | Ignored clean library SDK packages. |
 

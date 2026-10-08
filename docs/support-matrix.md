@@ -75,7 +75,7 @@ MinGW UCRT64; the XP-native CMD dispatcher backs the VC6--VS2005 IDE projects.
 | Native | GCC, Clang | Host (currently x86-64) | Build host glibc | Validated | Same or newer compatible glibc; exact floor is the build host |
 | Portable glibc | GCC | x86-64 | Debian 10, audited maximum `GLIBC_2.28` | Validated | x86-64 Linux with glibc 2.28 or newer |
 | musl | GCC, Clang | x86-64 | Alpine musl | Validated | A musl process with a compatible musl ABI; not loadable into a glibc process |
-| Open Watcom DOS32 | Open Watcom 2 `2026-10-01-Build` | Pentium-class x86 | 32-bit protected-mode DOS OMF | Build and public-consumer link validated in pinned Docker image | Runtime validation awaits the companion DOS/32A host |
+| Open Watcom DOS32 | Open Watcom 2 `2026-10-01-Build` | Pentium-class x86 | 32-bit protected-mode DOS OMF | Build and public-consumer link validated in pinned Docker image | Integrated runtime validated by the companion DOS/32A host under DOSBox 0.74; physical DOS hardware remains untested |
 
 glibc is forward-compatible in the direction useful here: an artifact limited
 to glibc 2.28 symbols is intended to run on newer glibc releases. The audit
@@ -98,10 +98,10 @@ Use `OPL_DRIVERS`, `OPL_DEFAULT`, and `SAMPLE_RATE` with Make, or the
 corresponding dispatcher/CMake options documented in
 [building.md](building.md).
 
-## Planned, not currently supported
+## Companion DOS integration
 
-| Target | Intended direction | Current status |
+| Target | Integration | Validation |
 | --- | --- | --- |
-| DOS/32A portable host | VGA, keyboard, PIT, and initially silent audio around the validated Open Watcom library | Planned in `wolf3d-portable`; no playable DOS runtime claim yet |
-| Real AdLib/OPL hardware backend | Replaceable hardware register-output component | Design discussion only |
+| DOS/32A portable host | `wolf3d-portable` links this OMF library with direct VGA, IRQ 1 keyboard, 700 Hz PIT, SB16 PCM, and DOS/32A | Interactive DOSBox gameplay confirmed; physical DOS hardware remains untested |
+| Native AdLib/OPL backend | The v4 platform callbacks keep port I/O in the host while the library's `adlib` adapter preserves the 700 Hz engine clock | Native port-388h operation confirmed under DOSBox; DBOPL and silent fallbacks also confirmed |
 
