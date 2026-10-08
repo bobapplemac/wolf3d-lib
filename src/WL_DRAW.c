@@ -1,1403 +1,936 @@
-// WL_DRAW.C
+/* Portable AsmRefresh and wall/door hit paths from WL_DR_A.ASM/WL_DRAW.C. */
+#include "WL_DRAW.h"
 
-#include "WL_DEF.H"
-#include <DOS.H>
-#pragma hdrstop
+#include <stddef.h>
+#include <string.h>
 
-//#define DEBUGWALLS
-//#define DEBUGTICS
+#include "WG_FIXED.h"
+#include "WG_ASSETS.h"
+#include "WL_AGENT.h"
+#include "WL_SCALE.h"
 
-/*
-=============================================================================
-
-						 LOCAL CONSTANTS
-
-=============================================================================
-*/
-
-// the door is the last picture before the sprites
-#define DOORWALL	(PMSpriteStart-8)
-
-#define ACTORSIZE	0x4000
-
-/*
-=============================================================================
-
-						 GLOBAL VARIABLES
-
-=============================================================================
-*/
-
-
-#ifdef DEBUGWALLS
-unsigned screenloc[3]= {0,0,0};
-#else
-unsigned screenloc[3]= {PAGE1START,PAGE2START,PAGE3START};
-#endif
-unsigned freelatch = FREESTART;
-
-long 	lasttimecount;
-long 	frameon;
-
-unsigned	wallheight[MAXVIEWWIDTH];
-
-fixed	tileglobal	= TILEGLOBAL;
-fixed	mindist		= MINDIST;
-
-
-//
-// math tables
-//
-int			pixelangle[MAXVIEWWIDTH];
-long		far finetangent[FINEANGLES/4];
-fixed 		far sintable[ANGLES+ANGLES/4],far *costable = sintable+(ANGLES/4);
-
-//
-// refresh variables
-//
-fixed	viewx,viewy;			// the focal point
-int		viewangle;
-fixed	viewsin,viewcos;
-
-
-
-fixed	FixedByFrac (fixed a, fixed b);
-void	TransformActor (objtype *ob);
-void	BuildTables (void);
-void	ClearScreen (void);
-int		CalcRotate (objtype *ob);
-void	DrawScaleds (void);
-void	CalcTics (void);
-void	FixOfs (void);
-void	ThreeDRefresh (void);
-
-
-
-//
-// wall optimization variables
-//
-int		lastside;		// true for vertical
-long	lastintercept;
-int		lasttilehit;
-
-
-//
-// ray tracing variables
-//
-int			focaltx,focalty,viewtx,viewty;
-
-int			midangle,angle;
-unsigned	xpartial,ypartial;
-unsigned	xpartialup,xpartialdown,ypartialup,ypartialdown;
-unsigned	xinttile,yinttile;
-
-unsigned	tilehit;
-unsigned	pixx;
-
-int		xtile,ytile;
-int		xtilestep,ytilestep;
-long	xintercept,yintercept;
-long	xstep,ystep;
-
-int		horizwall[MAXWALLTILES],vertwall[MAXWALLTILES];
-
-
-/*
-=============================================================================
-
-						 LOCAL VARIABLES
-
-=============================================================================
-*/
-
-
-void AsmRefresh (void);			// in WL_DR_A.ASM
-
-/*
-============================================================================
-
-			   3 - D  DEFINITIONS
-
-============================================================================
-*/
-
-
-//==========================================================================
-
-
-/*
-========================
-=
-= FixedByFrac
-=
-= multiply a 16/16 bit, 2's complement fixed point number by a 16 bit
-= fraction, passed as a signed magnitude 32 bit number
-=
-========================
-*/
-
-#pragma warn -rvl			// I stick the return value in with ASMs
-
-fixed FixedByFrac (fixed a, fixed b)
+static int WG_FixedTile(int32_t value)
 {
-//
-// setup
-//
-asm	mov	si,[WORD PTR b+2]	// sign of result = sign of fraction
-
-asm	mov	ax,[WORD PTR a]
-asm	mov	cx,[WORD PTR a+2]
-
-asm	or	cx,cx
-asm	jns	aok:				// negative?
-asm	neg	cx
-asm	neg	ax
-asm	sbb	cx,0
-asm	xor	si,0x8000			// toggle sign of result
-aok:
-
-//
-// multiply  cx:ax by bx
-//
-asm	mov	bx,[WORD PTR b]
-asm	mul	bx					// fraction*fraction
-asm	mov	di,dx				// di is low word of result
-asm	mov	ax,cx				//
-asm	mul	bx					// units*fraction
-asm add	ax,di
-asm	adc	dx,0
-
-//
-// put result dx:ax in 2's complement
-//
-asm	test	si,0x8000		// is the result negative?
-asm	jz	ansok:
-asm	neg	dx
-asm	neg	ax
-asm	sbb	dx,0
-
-ansok:;
-
+    if (value >= 0)
+    {
+        return value / WG_FIXED_ONE;
+    }
+    return -(int)((-(int64_t)value + WG_FIXED_ONE - 1) / WG_FIXED_ONE);
 }
 
-#pragma warn +rvl
-
-//==========================================================================
-
-/*
-========================
-=
-= TransformActor
-=
-= Takes paramaters:
-=   gx,gy		: globalx/globaly of point
-=
-= globals:
-=   viewx,viewy		: point of view
-=   viewcos,viewsin	: sin/cos of viewangle
-=   scale		: conversion from global value to screen value
-=
-= sets:
-=   screenx,transx,transy,screenheight: projected edge location and size
-=
-========================
-*/
-
-
-//
-// transform actor
-//
-void TransformActor (objtype *ob)
+static uint8_t WG_LevelTile(const wg_level_t *level, int x, int y)
 {
-	int ratio;
-	fixed gx,gy,gxt,gyt,nx,ny;
-	long	temp;
-
-//
-// translate point to view centered coordinates
-//
-	gx = ob->x-viewx;
-	gy = ob->y-viewy;
-
-//
-// calculate newx
-//
-	gxt = FixedByFrac(gx,viewcos);
-	gyt = FixedByFrac(gy,viewsin);
-	nx = gxt-gyt-ACTORSIZE;		// fudge the shape forward a bit, because
-								// the midpoint could put parts of the shape
-								// into an adjacent wall
-
-//
-// calculate newy
-//
-	gxt = FixedByFrac(gx,viewsin);
-	gyt = FixedByFrac(gy,viewcos);
-	ny = gyt+gxt;
-
-//
-// calculate perspective ratio
-//
-	ob->transx = nx;
-	ob->transy = ny;
-
-	if (nx<mindist)			// too close, don't overflow the divide
-	{
-	  ob->viewheight = 0;
-	  return;
-	}
-
-	ob->viewx = centerx + ny*scale/nx;	// DEBUG: use assembly divide
-
-//
-// calculate height (heightnumerator/(nx>>8))
-//
-	asm	mov	ax,[WORD PTR heightnumerator]
-	asm	mov	dx,[WORD PTR heightnumerator+2]
-	asm	idiv	[WORD PTR nx+1]			// nx>>8
-	asm	mov	[WORD PTR temp],ax
-	asm	mov	[WORD PTR temp+2],dx
-
-	ob->viewheight = temp;
+    return level->tiles[(size_t)y * WG_LEVEL_SIZE + (size_t)x];
 }
 
-//==========================================================================
-
-/*
-========================
-=
-= TransformTile
-=
-= Takes paramaters:
-=   tx,ty		: tile the object is centered in
-=
-= globals:
-=   viewx,viewy		: point of view
-=   viewcos,viewsin	: sin/cos of viewangle
-=   scale		: conversion from global value to screen value
-=
-= sets:
-=   screenx,transx,transy,screenheight: projected edge location and size
-=
-= Returns true if the tile is withing getting distance
-=
-========================
-*/
-
-boolean TransformTile (int tx, int ty, int *dispx, int *dispheight)
+static int32_t WG_HalfFloor(int32_t value)
 {
-	int ratio;
-	fixed gx,gy,gxt,gyt,nx,ny;
-	long	temp;
-
-//
-// translate point to view centered coordinates
-//
-	gx = ((long)tx<<TILESHIFT)+0x8000-viewx;
-	gy = ((long)ty<<TILESHIFT)+0x8000-viewy;
-
-//
-// calculate newx
-//
-	gxt = FixedByFrac(gx,viewcos);
-	gyt = FixedByFrac(gy,viewsin);
-	nx = gxt-gyt-0x2000;		// 0x2000 is size of object
-
-//
-// calculate newy
-//
-	gxt = FixedByFrac(gx,viewsin);
-	gyt = FixedByFrac(gy,viewcos);
-	ny = gyt+gxt;
-
-
-//
-// calculate perspective ratio
-//
-	if (nx<mindist)			// too close, don't overflow the divide
-	{
-		*dispheight = 0;
-		return false;
-	}
-
-	*dispx = centerx + ny*scale/nx;	// DEBUG: use assembly divide
-
-//
-// calculate height (heightnumerator/(nx>>8))
-//
-	asm	mov	ax,[WORD PTR heightnumerator]
-	asm	mov	dx,[WORD PTR heightnumerator+2]
-	asm	idiv	[WORD PTR nx+1]			// nx>>8
-	asm	mov	[WORD PTR temp],ax
-	asm	mov	[WORD PTR temp+2],dx
-
-	*dispheight = temp;
-
-//
-// see if it should be grabbed
-//
-	if (nx<TILEGLOBAL && ny>-TILEGLOBAL/2 && ny<TILEGLOBAL/2)
-		return true;
-	else
-		return false;
+    if (value >= 0)
+    {
+        return value / 2;
+    }
+    return (value - 1) / 2;
 }
 
-//==========================================================================
-
-/*
-====================
-=
-= CalcHeight
-=
-= Calculates the height of xintercept,yintercept from viewx,viewy
-=
-====================
-*/
-
-#pragma warn -rvl			// I stick the return value in with ASMs
-
-int	CalcHeight (void)
+static int32_t WG_PushWallStepOffset(int32_t step, uint8_t position)
 {
-	int	transheight;
-	int ratio;
-	fixed gxt,gyt,nx,ny;
-	long	gx,gy;
+    int64_t product = (int64_t)step * position;
 
-	gx = xintercept-viewx;
-	gxt = FixedByFrac(gx,viewcos);
-
-	gy = yintercept-viewy;
-	gyt = FixedByFrac(gy,viewsin);
-
-	nx = gxt-gyt;
-
-  //
-  // calculate perspective ratio (heightnumerator/(nx>>8))
-  //
-	if (nx<mindist)
-		nx=mindist;			// don't let divide overflow
-
-	asm	mov	ax,[WORD PTR heightnumerator]
-	asm	mov	dx,[WORD PTR heightnumerator+2]
-	asm	idiv	[WORD PTR nx+1]			// nx>>8
+    if (product >= 0)
+    {
+        return (int32_t)(product / 64);
+    }
+    return -(int32_t)((-product + 63) / 64);
 }
 
-
-//==========================================================================
-
-/*
-===================
-=
-= ScalePost
-=
-===================
-*/
-
-long		postsource;
-unsigned	postx;
-unsigned	postwidth;
-
-void	near ScalePost (void)		// VGA version
+static uint16_t WG_DoorPage(uint16_t base, wg_door_lock_t lock,
+                            int vertical_hit)
 {
-	asm	mov	ax,SCREENSEG
-	asm	mov	es,ax
+    unsigned offset;
 
-	asm	mov	bx,[postx]
-	asm	shl	bx,1
-	asm	mov	bp,WORD PTR [wallheight+bx]		// fractional height (low 3 bits frac)
-	asm	and	bp,0xfff8				// bp = heightscaler*4
-	asm	shr	bp,1
-	asm	cmp	bp,[maxscaleshl2]
-	asm	jle	heightok
-	asm	mov	bp,[maxscaleshl2]
-heightok:
-	asm	add	bp,OFFSET fullscalefarcall
-	//
-	// scale a byte wide strip of wall
-	//
-	asm	mov	bx,[postx]
-	asm	mov	di,bx
-	asm	shr	di,2						// X in bytes
-	asm	add	di,[bufferofs]
-
-	asm	and	bx,3
-	asm	shl	bx,3						// bx = pixel*8+pixwidth
-	asm	add	bx,[postwidth]
-
-	asm	mov	al,BYTE PTR [mapmasks1-1+bx]	// -1 because no widths of 0
-	asm	mov	dx,SC_INDEX+1
-	asm	out	dx,al						// set bit mask register
-	asm	lds	si,DWORD PTR [postsource]
-	asm	call DWORD PTR [bp]				// scale the line of pixels
-
-	asm	mov	al,BYTE PTR [ss:mapmasks2-1+bx]   // -1 because no widths of 0
-	asm	or	al,al
-	asm	jz	nomore
-
-	//
-	// draw a second byte for vertical strips that cross two bytes
-	//
-	asm	inc	di
-	asm	out	dx,al						// set bit mask register
-	asm	call DWORD PTR [bp]				// scale the line of pixels
-
-	asm	mov	al,BYTE PTR [ss:mapmasks3-1+bx]	// -1 because no widths of 0
-	asm	or	al,al
-	asm	jz	nomore
-	//
-	// draw a third byte for vertical strips that cross three bytes
-	//
-	asm	inc	di
-	asm	out	dx,al						// set bit mask register
-	asm	call DWORD PTR [bp]				// scale the line of pixels
-
-
-nomore:
-	asm	mov	ax,ss
-	asm	mov	ds,ax
+    if (lock == WG_DOOR_ELEVATOR)
+    {
+        offset = 4U;
+    }
+    else if (lock != WG_DOOR_NORMAL)
+    {
+        offset = 6U;
+    }
+    else
+    {
+        offset = 0U;
+    }
+    return (uint16_t)(base + offset + (vertical_hit ? 1U : 0U));
 }
 
-void  FarScalePost (void)				// just so other files can call
+static void WG_RecordDoorHit(const wg_view_tables_t *tables,
+                             wg_wall_hit_t *hit, uint8_t tile,
+                             int map_x, int map_y, uint16_t wall_page,
+                             unsigned texture, int32_t x_intercept,
+                             int32_t y_intercept, int32_t view_x,
+                             int32_t view_y, int32_t view_cosine,
+                             int32_t view_sine)
 {
-	ScalePost ();
+    int32_t distance = WG_FixedByFrac(x_intercept - view_x, view_cosine)
+                       - WG_FixedByFrac(y_intercept - view_y, view_sine);
+
+    if (distance < WG_MIN_DISTANCE)
+    {
+        distance = WG_MIN_DISTANCE;
+    }
+    hit->x = x_intercept;
+    hit->y = y_intercept;
+    hit->height = tables->height_numerator / (distance / 256);
+    hit->wall_page = wall_page;
+    hit->texture_column = (uint8_t)texture;
+    hit->tile = tile;
+    hit->map_x = (uint8_t)map_x;
+    hit->map_y = (uint8_t)map_y;
+    hit->side = WG_WALL_DOOR;
 }
 
-
-/*
-====================
-=
-= HitVertWall
-=
-= tilehit bit 7 is 0, because it's not a door tile
-= if bit 6 is 1 and the adjacent tile is a door tile, use door side pic
-=
-====================
-*/
-
-void HitVertWall (void)
+static void WG_RecordHit(const wg_view_tables_t *tables,
+                         wg_wall_hit_t *hit, uint8_t tile,
+                         wg_wall_side_t side, int map_x, int map_y,
+                         int x_tile_step, int y_tile_step,
+                         int32_t x_intercept, int32_t y_intercept,
+                         int32_t view_x, int32_t view_y,
+                         int32_t view_cosine, int32_t view_sine)
 {
-	int			wallpic;
-	unsigned	texture;
+    unsigned texture;
+    int32_t distance;
 
-	texture = (yintercept>>4)&0xfc0;
-	if (xtilestep == -1)
-	{
-		texture = 0xfc0-texture;
-		xintercept += TILEGLOBAL;
-	}
-	wallheight[pixx] = CalcHeight();
+    if (side == WG_WALL_VERTICAL)
+    {
+        texture = ((uint32_t)y_intercept >> 10) & 63U;
+        if (x_tile_step == -1)
+        {
+            texture = 63U - texture;
+            x_intercept += WG_FIXED_ONE;
+        }
+        hit->wall_page = (uint16_t)((tile - 1U) * 2U + 1U);
+    }
+    else
+    {
+        texture = ((uint32_t)x_intercept >> 10) & 63U;
+        if (y_tile_step == -1)
+        {
+            y_intercept += WG_FIXED_ONE;
+        }
+        else
+        {
+            texture = 63U - texture;
+        }
+        hit->wall_page = (uint16_t)((tile - 1U) * 2U);
+    }
 
-	if (lastside==1 && lastintercept == xtile && lasttilehit == tilehit)
-	{
-		// in the same wall type as last time, so check for optimized draw
-		if (texture == (unsigned)postsource)
-		{
-		// wide scale
-			postwidth++;
-			wallheight[pixx] = wallheight[pixx-1];
-			return;
-		}
-		else
-		{
-			ScalePost ();
-			(unsigned)postsource = texture;
-			postwidth = 1;
-			postx = pixx;
-		}
-	}
-	else
-	{
-	// new wall
-		if (lastside != -1)				// if not the first scaled post
-			ScalePost ();
-
-		lastside = true;
-		lastintercept = xtile;
-
-		lasttilehit = tilehit;
-		postx = pixx;
-		postwidth = 1;
-
-		if (tilehit & 0x40)
-		{								// check for adjacent doors
-			ytile = yintercept>>TILESHIFT;
-			if ( tilemap[xtile-xtilestep][ytile]&0x80 )
-				wallpic = DOORWALL+3;
-			else
-				wallpic = vertwall[tilehit & ~0x40];
-		}
-		else
-			wallpic = vertwall[tilehit];
-
-		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
-		(unsigned)postsource = texture;
-
-	}
+    distance = WG_FixedByFrac(x_intercept - view_x, view_cosine)
+               - WG_FixedByFrac(y_intercept - view_y, view_sine);
+    if (distance < WG_MIN_DISTANCE)
+    {
+        distance = WG_MIN_DISTANCE;
+    }
+    hit->x = x_intercept;
+    hit->y = y_intercept;
+    hit->height = tables->height_numerator / (distance / 256);
+    hit->texture_column = (uint8_t)texture;
+    hit->tile = tile;
+    hit->map_x = (uint8_t)map_x;
+    hit->map_y = (uint8_t)map_y;
+    hit->side = side;
 }
 
-
-/*
-====================
-=
-= HitHorizWall
-=
-= tilehit bit 7 is 0, because it's not a door tile
-= if bit 6 is 1 and the adjacent tile is a door tile, use door side pic
-=
-====================
-*/
-
-void HitHorizWall (void)
+static void WG_RecordPushWallHit(const wg_level_t *level,
+                                 const wg_view_tables_t *tables,
+                                 wg_wall_hit_t *hit, uint8_t tile,
+                                 wg_wall_side_t side, int map_x, int map_y,
+                                 int x_tile_step, int y_tile_step,
+                                 int32_t x_intercept, int32_t y_intercept,
+                                 int32_t view_x, int32_t view_y,
+                                 int32_t view_cosine, int32_t view_sine)
 {
-	int			wallpic;
-	unsigned	texture;
+    unsigned texture;
+    int32_t offset = (int32_t)level->pushwall_position * 1024;
+    int32_t distance;
 
-	texture = (xintercept>>4)&0xfc0;
-	if (ytilestep == -1)
-		yintercept += TILEGLOBAL;
-	else
-		texture = 0xfc0-texture;
-	wallheight[pixx] = CalcHeight();
-
-	if (lastside==0 && lastintercept == ytile && lasttilehit == tilehit)
-	{
-		// in the same wall type as last time, so check for optimized draw
-		if (texture == (unsigned)postsource)
-		{
-		// wide scale
-			postwidth++;
-			wallheight[pixx] = wallheight[pixx-1];
-			return;
-		}
-		else
-		{
-			ScalePost ();
-			(unsigned)postsource = texture;
-			postwidth = 1;
-			postx = pixx;
-		}
-	}
-	else
-	{
-	// new wall
-		if (lastside != -1)				// if not the first scaled post
-			ScalePost ();
-
-		lastside = 0;
-		lastintercept = ytile;
-
-		lasttilehit = tilehit;
-		postx = pixx;
-		postwidth = 1;
-
-		if (tilehit & 0x40)
-		{								// check for adjacent doors
-			xtile = xintercept>>TILESHIFT;
-			if ( tilemap[xtile][ytile-ytilestep]&0x80 )
-				wallpic = DOORWALL+2;
-			else
-				wallpic = horizwall[tilehit & ~0x40];
-		}
-		else
-			wallpic = horizwall[tilehit];
-
-		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
-		(unsigned)postsource = texture;
-	}
-
+    if (side == WG_WALL_VERTICAL)
+    {
+        texture = ((uint32_t)y_intercept >> 10) & 63U;
+        if (x_tile_step == -1)
+        {
+            x_intercept += WG_FIXED_ONE - offset;
+            texture = 63U - texture;
+        }
+        else
+        {
+            x_intercept += offset;
+        }
+        hit->wall_page = (uint16_t)(((tile & 63U) - 1U) * 2U + 1U);
+    }
+    else
+    {
+        texture = ((uint32_t)x_intercept >> 10) & 63U;
+        if (y_tile_step == -1)
+        {
+            y_intercept += WG_FIXED_ONE - offset;
+        }
+        else
+        {
+            y_intercept += offset;
+            texture = 63U - texture;
+        }
+        hit->wall_page = (uint16_t)(((tile & 63U) - 1U) * 2U);
+    }
+    distance = WG_FixedByFrac(x_intercept - view_x, view_cosine)
+               - WG_FixedByFrac(y_intercept - view_y, view_sine);
+    if (distance < WG_MIN_DISTANCE)
+    {
+        distance = WG_MIN_DISTANCE;
+    }
+    hit->x = x_intercept;
+    hit->y = y_intercept;
+    hit->height = tables->height_numerator / (distance / 256);
+    hit->texture_column = (uint8_t)texture;
+    hit->tile = tile;
+    hit->map_x = (uint8_t)map_x;
+    hit->map_y = (uint8_t)map_y;
+    hit->side = side;
 }
 
-//==========================================================================
-
-/*
-====================
-=
-= HitHorizDoor
-=
-====================
-*/
-
-void HitHorizDoor (void)
+static int WG_RaycastWallsInternal(
+    const wg_level_t *level, const wg_view_tables_t *tables,
+    int32_t player_x, int32_t player_y, uint16_t player_angle,
+    uint16_t door_wall_base, wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE])
 {
-	unsigned	texture,doorpage,doornum;
+    const int32_t *cosine;
+    int32_t view_sine;
+    int32_t view_cosine;
+    int32_t view_x;
+    int32_t view_y;
+    int32_t x_partial_down;
+    int32_t x_partial_up;
+    int32_t y_partial_down;
+    int32_t y_partial_up;
+    int focal_x;
+    int focal_y;
+    int pixel;
 
-	doornum = tilehit&0x7f;
-	texture = ( (xintercept-doorposition[doornum]) >> 4) &0xfc0;
+    if (level == NULL || tables == NULL || hits == NULL
+        || tables->view_width < 2U
+        || tables->view_width > WG_MAX_VIEW_WIDTH
+        || player_angle >= WG_ANGLES)
+    {
+        return 0;
+    }
+    if (visible_tiles != NULL)
+    {
+        int player_tile_x = WG_FixedTile(player_x);
+        int player_tile_y = WG_FixedTile(player_y);
 
-	wallheight[pixx] = CalcHeight();
+        memset(visible_tiles, 0, WG_LEVEL_SIZE * WG_LEVEL_SIZE);
+        if (player_tile_x >= 0 && player_tile_x < WG_LEVEL_SIZE
+            && player_tile_y >= 0 && player_tile_y < WG_LEVEL_SIZE)
+        {
+            visible_tiles[(size_t)player_tile_y * WG_LEVEL_SIZE
+                          + (size_t)player_tile_x] = 1U;
+        }
+    }
+    cosine = WG_ViewCosineTable(tables);
+    view_sine = tables->sine[player_angle];
+    view_cosine = cosine[player_angle];
+    view_x = player_x - WG_FixedByFrac(tables->focal_length, view_cosine);
+    view_y = player_y + WG_FixedByFrac(tables->focal_length, view_sine);
+    focal_x = WG_FixedTile(view_x);
+    focal_y = WG_FixedTile(view_y);
+    if (focal_x < 0 || focal_x >= WG_LEVEL_SIZE
+        || focal_y < 0 || focal_y >= WG_LEVEL_SIZE)
+    {
+        return 0;
+    }
+    x_partial_down = (int32_t)((uint32_t)view_x & 0xffffU);
+    x_partial_up = WG_FIXED_ONE - x_partial_down;
+    y_partial_down = (int32_t)((uint32_t)view_y & 0xffffU);
+    y_partial_up = WG_FIXED_ONE - y_partial_down;
 
-	if (lasttilehit == tilehit)
-	{
-	// in the same door as last time, so check for optimized draw
-		if (texture == (unsigned)postsource)
-		{
-		// wide scale
-			postwidth++;
-			wallheight[pixx] = wallheight[pixx-1];
-			return;
-		}
-		else
-		{
-			ScalePost ();
-			(unsigned)postsource = texture;
-			postwidth = 1;
-			postx = pixx;
-		}
-	}
-	else
-	{
-		if (lastside != -1)				// if not the first scaled post
-			ScalePost ();			// draw last post
-	// first pixel in this door
-		lastside = 2;
-		lasttilehit = tilehit;
-		postx = pixx;
-		postwidth = 1;
+    for (pixel = 0; pixel < tables->view_width; ++pixel)
+    {
+        int angle = (int)player_angle * (WG_FINE_ANGLES / WG_ANGLES)
+                    + tables->pixel_angle[pixel];
+        int x_tile_step;
+        int y_tile_step;
+        int32_t x_step;
+        int32_t y_step;
+        int32_t x_partial;
+        int32_t y_partial;
+        int32_t x_intercept;
+        int32_t y_intercept;
+        int x_tile;
+        int y_tile;
+        int vertical_entry = 1;
+        int iterations;
 
-		switch (doorobjlist[doornum].lock)
-		{
-		case dr_normal:
-			doorpage = DOORWALL;
-			break;
-		case dr_lock1:
-		case dr_lock2:
-		case dr_lock3:
-		case dr_lock4:
-			doorpage = DOORWALL+6;
-			break;
-		case dr_elevator:
-			doorpage = DOORWALL+4;
-			break;
-		}
+        if (angle < 0)
+        {
+            angle += WG_FINE_ANGLES;
+        }
+        if (angle >= WG_FINE_ANGLES)
+        {
+            angle -= WG_FINE_ANGLES;
+        }
+        if (angle < 900)
+        {
+            x_tile_step = 1;
+            y_tile_step = -1;
+            x_step = tables->fine_tangent[899 - angle];
+            y_step = -tables->fine_tangent[angle];
+            x_partial = x_partial_up;
+            y_partial = y_partial_down;
+        }
+        else if (angle < 1800)
+        {
+            x_tile_step = -1;
+            y_tile_step = -1;
+            x_step = -tables->fine_tangent[angle - 900];
+            y_step = -tables->fine_tangent[1799 - angle];
+            x_partial = x_partial_down;
+            y_partial = y_partial_down;
+        }
+        else if (angle < 2700)
+        {
+            x_tile_step = -1;
+            y_tile_step = 1;
+            x_step = -tables->fine_tangent[2699 - angle];
+            y_step = tables->fine_tangent[angle - 1800];
+            x_partial = x_partial_down;
+            y_partial = y_partial_up;
+        }
+        else
+        {
+            x_tile_step = 1;
+            y_tile_step = 1;
+            x_step = tables->fine_tangent[angle - 2700];
+            y_step = tables->fine_tangent[3599 - angle];
+            x_partial = x_partial_up;
+            y_partial = y_partial_up;
+        }
 
-		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(doorpage);
-		(unsigned)postsource = texture;
-	}
+        y_intercept = WG_FixedByFrac(y_step, x_partial) + view_y;
+        x_tile = focal_x + x_tile_step;
+        x_intercept = WG_FixedByFrac(x_step, y_partial) + view_x;
+        y_tile = focal_y + y_tile_step;
+
+        for (iterations = 0; iterations < WG_LEVEL_SIZE * 2; ++iterations)
+        {
+            int map_x;
+            int map_y;
+            uint8_t tile;
+
+            if (vertical_entry)
+            {
+                if ((y_tile_step == -1 && WG_FixedTile(y_intercept) <= y_tile)
+                    || (y_tile_step == 1
+                        && WG_FixedTile(y_intercept) >= y_tile))
+                {
+                    vertical_entry = 0;
+                    --iterations;
+                    continue;
+                }
+                map_x = x_tile;
+                map_y = WG_FixedTile(y_intercept);
+                if (map_x < 0 || map_x >= WG_LEVEL_SIZE
+                    || map_y < 0 || map_y >= WG_LEVEL_SIZE)
+                {
+                    return 0;
+                }
+                tile = WG_LevelTile(level, map_x, map_y);
+                if (tile != 0U)
+                {
+                    if ((tile & 0xc0U) == 0xc0U)
+                    {
+                        int32_t adjusted = y_intercept
+                            + WG_PushWallStepOffset(
+                                y_step, level->pushwall_position);
+
+                        /* WL_DR_A.ASM advances the ray intersection by the
+                           same fraction that the pushwall has moved. If that
+                           leaves this map tile, the ray struck the stationary
+                           tile edge before reaching the translated wall and
+                           must continue tracing. */
+                        if (WG_FixedTile(adjusted) != map_y)
+                        {
+                            if (visible_tiles != NULL)
+                            {
+                                visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                              + (size_t)map_x] = 1U;
+                            }
+                            x_tile += x_tile_step;
+                            y_intercept += y_step;
+                            continue;
+                        }
+                        y_intercept = adjusted;
+                        x_intercept = x_tile * WG_FIXED_ONE;
+                        WG_RecordPushWallHit(
+                            level, tables, &hits[pixel], tile,
+                            WG_WALL_VERTICAL, map_x, map_y,
+                            x_tile_step, y_tile_step,
+                            x_intercept, y_intercept,
+                            view_x, view_y, view_cosine, view_sine);
+                        break;
+                    }
+                    if ((tile & 0x80U) != 0U)
+                    {
+                        unsigned door_index = tile & 0x7fU;
+                        const wg_door_t *door;
+                        int32_t adjusted;
+
+                        if (door_index >= level->door_count)
+                        {
+                            return 0;
+                        }
+                        door = &level->doors[door_index];
+                        adjusted = y_intercept + WG_HalfFloor(y_step);
+                        if (WG_FixedTile(adjusted)
+                            != WG_FixedTile(y_intercept)
+                            || (uint16_t)adjusted < door->position)
+                        {
+                            if (visible_tiles != NULL)
+                            {
+                                visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                              + (size_t)map_x] = 1U;
+                            }
+                            x_tile += x_tile_step;
+                            y_intercept += y_step;
+                            continue;
+                        }
+                        y_intercept = adjusted;
+                        x_intercept = x_tile * WG_FIXED_ONE
+                                      + WG_FIXED_ONE / 2;
+                        WG_RecordDoorHit(
+                            tables, &hits[pixel], tile, map_x, map_y,
+                            WG_DoorPage(door_wall_base, door->lock, 1),
+                            ((uint32_t)(y_intercept - door->position) >> 10)
+                            & 63U,
+                            x_intercept, y_intercept, view_x, view_y,
+                            view_cosine, view_sine);
+                        break;
+                    }
+                    if (tile == 64U)
+                    {
+                        return 0;
+                    }
+                    x_intercept = x_tile * WG_FIXED_ONE;
+                    WG_RecordHit(tables, &hits[pixel], tile & 0x3fU,
+                                 WG_WALL_VERTICAL, map_x, map_y,
+                                 x_tile_step, y_tile_step,
+                                 x_intercept, y_intercept,
+                                 view_x, view_y, view_cosine, view_sine);
+                    hits[pixel].tile = tile;
+                    if ((tile & 0x40U) != 0U
+                        && (WG_LevelTile(level, map_x - x_tile_step, map_y)
+                            & 0x80U) != 0U)
+                    {
+                        hits[pixel].wall_page = (uint16_t)(door_wall_base + 3U);
+                    }
+                    break;
+                }
+                if (visible_tiles != NULL)
+                {
+                    visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                  + (size_t)map_x] = 1U;
+                }
+                x_tile += x_tile_step;
+                y_intercept += y_step;
+            }
+            else
+            {
+                if ((x_tile_step == -1 && WG_FixedTile(x_intercept) <= x_tile)
+                    || (x_tile_step == 1
+                        && WG_FixedTile(x_intercept) >= x_tile))
+                {
+                    vertical_entry = 1;
+                    --iterations;
+                    continue;
+                }
+                map_x = WG_FixedTile(x_intercept);
+                map_y = y_tile;
+                if (map_x < 0 || map_x >= WG_LEVEL_SIZE
+                    || map_y < 0 || map_y >= WG_LEVEL_SIZE)
+                {
+                    return 0;
+                }
+                tile = WG_LevelTile(level, map_x, map_y);
+                if (tile != 0U)
+                {
+                    if ((tile & 0xc0U) == 0xc0U)
+                    {
+                        int32_t adjusted = x_intercept
+                            + WG_PushWallStepOffset(
+                                x_step, level->pushwall_position);
+
+                        if (WG_FixedTile(adjusted) != map_x)
+                        {
+                            if (visible_tiles != NULL)
+                            {
+                                visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                              + (size_t)map_x] = 1U;
+                            }
+                            y_tile += y_tile_step;
+                            x_intercept += x_step;
+                            continue;
+                        }
+                        x_intercept = adjusted;
+                        y_intercept = y_tile * WG_FIXED_ONE;
+                        WG_RecordPushWallHit(
+                            level, tables, &hits[pixel], tile,
+                            WG_WALL_HORIZONTAL, map_x, map_y,
+                            x_tile_step, y_tile_step,
+                            x_intercept, y_intercept,
+                            view_x, view_y, view_cosine, view_sine);
+                        break;
+                    }
+                    if ((tile & 0x80U) != 0U)
+                    {
+                        unsigned door_index = tile & 0x7fU;
+                        const wg_door_t *door;
+                        int32_t adjusted;
+
+                        if (door_index >= level->door_count)
+                        {
+                            return 0;
+                        }
+                        door = &level->doors[door_index];
+                        adjusted = x_intercept + WG_HalfFloor(x_step);
+                        if (WG_FixedTile(adjusted)
+                            != WG_FixedTile(x_intercept)
+                            || (uint16_t)adjusted < door->position)
+                        {
+                            if (visible_tiles != NULL)
+                            {
+                                visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                              + (size_t)map_x] = 1U;
+                            }
+                            y_tile += y_tile_step;
+                            x_intercept += x_step;
+                            continue;
+                        }
+                        x_intercept = adjusted;
+                        y_intercept = y_tile * WG_FIXED_ONE
+                                      + WG_FIXED_ONE / 2;
+                        WG_RecordDoorHit(
+                            tables, &hits[pixel], tile, map_x, map_y,
+                            WG_DoorPage(door_wall_base, door->lock, 0),
+                            ((uint32_t)(x_intercept - door->position) >> 10)
+                            & 63U,
+                            x_intercept, y_intercept, view_x, view_y,
+                            view_cosine, view_sine);
+                        break;
+                    }
+                    if (tile == 64U)
+                    {
+                        return 0;
+                    }
+                    y_intercept = y_tile * WG_FIXED_ONE;
+                    WG_RecordHit(tables, &hits[pixel], tile & 0x3fU,
+                                 WG_WALL_HORIZONTAL, map_x, map_y,
+                                 x_tile_step, y_tile_step,
+                                 x_intercept, y_intercept,
+                                 view_x, view_y, view_cosine, view_sine);
+                    hits[pixel].tile = tile;
+                    if ((tile & 0x40U) != 0U
+                        && (WG_LevelTile(level, map_x, map_y - y_tile_step)
+                            & 0x80U) != 0U)
+                    {
+                        hits[pixel].wall_page = (uint16_t)(door_wall_base + 2U);
+                    }
+                    break;
+                }
+                if (visible_tiles != NULL)
+                {
+                    visible_tiles[(size_t)map_y * WG_LEVEL_SIZE
+                                  + (size_t)map_x] = 1U;
+                }
+                y_tile += y_tile_step;
+                x_intercept += x_step;
+            }
+        }
+        if (iterations == WG_LEVEL_SIZE * 2)
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
 
-//==========================================================================
-
-/*
-====================
-=
-= HitVertDoor
-=
-====================
-*/
-
-void HitVertDoor (void)
+int WG_RaycastWalls(const wg_level_t *level,
+                    const wg_view_tables_t *tables,
+                    int32_t player_x, int32_t player_y,
+                    uint16_t player_angle, uint16_t door_wall_base,
+                    wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH])
 {
-	unsigned	texture,doorpage,doornum;
-
-	doornum = tilehit&0x7f;
-	texture = ( (yintercept-doorposition[doornum]) >> 4) &0xfc0;
-
-	wallheight[pixx] = CalcHeight();
-
-	if (lasttilehit == tilehit)
-	{
-	// in the same door as last time, so check for optimized draw
-		if (texture == (unsigned)postsource)
-		{
-		// wide scale
-			postwidth++;
-			wallheight[pixx] = wallheight[pixx-1];
-			return;
-		}
-		else
-		{
-			ScalePost ();
-			(unsigned)postsource = texture;
-			postwidth = 1;
-			postx = pixx;
-		}
-	}
-	else
-	{
-		if (lastside != -1)				// if not the first scaled post
-			ScalePost ();			// draw last post
-	// first pixel in this door
-		lastside = 2;
-		lasttilehit = tilehit;
-		postx = pixx;
-		postwidth = 1;
-
-		switch (doorobjlist[doornum].lock)
-		{
-		case dr_normal:
-			doorpage = DOORWALL;
-			break;
-		case dr_lock1:
-		case dr_lock2:
-		case dr_lock3:
-		case dr_lock4:
-			doorpage = DOORWALL+6;
-			break;
-		case dr_elevator:
-			doorpage = DOORWALL+4;
-			break;
-		}
-
-		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(doorpage+1);
-		(unsigned)postsource = texture;
-	}
+    return WG_RaycastWallsInternal(level, tables, player_x, player_y,
+                                   player_angle, door_wall_base, hits, NULL);
 }
 
-//==========================================================================
-
-
-/*
-====================
-=
-= HitHorizPWall
-=
-= A pushable wall in action has been hit
-=
-====================
-*/
-
-void HitHorizPWall (void)
+int WG_RaycastWallsVisible(
+    const wg_level_t *level, const wg_view_tables_t *tables,
+    int32_t player_x, int32_t player_y, uint16_t player_angle,
+    uint16_t door_wall_base, wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
+    uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE])
 {
-	int			wallpic;
-	unsigned	texture,offset;
-
-	texture = (xintercept>>4)&0xfc0;
-	offset = pwallpos<<10;
-	if (ytilestep == -1)
-		yintercept += TILEGLOBAL-offset;
-	else
-	{
-		texture = 0xfc0-texture;
-		yintercept += offset;
-	}
-
-	wallheight[pixx] = CalcHeight();
-
-	if (lasttilehit == tilehit)
-	{
-		// in the same wall type as last time, so check for optimized draw
-		if (texture == (unsigned)postsource)
-		{
-		// wide scale
-			postwidth++;
-			wallheight[pixx] = wallheight[pixx-1];
-			return;
-		}
-		else
-		{
-			ScalePost ();
-			(unsigned)postsource = texture;
-			postwidth = 1;
-			postx = pixx;
-		}
-	}
-	else
-	{
-	// new wall
-		if (lastside != -1)				// if not the first scaled post
-			ScalePost ();
-
-		lasttilehit = tilehit;
-		postx = pixx;
-		postwidth = 1;
-
-		wallpic = horizwall[tilehit&63];
-
-		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
-		(unsigned)postsource = texture;
-	}
-
+    if (visible_tiles == NULL)
+    {
+        return 0;
+    }
+    return WG_RaycastWallsInternal(level, tables, player_x, player_y,
+                                   player_angle, door_wall_base, hits,
+                                   visible_tiles);
 }
 
-
-/*
-====================
-=
-= HitVertPWall
-=
-= A pushable wall in action has been hit
-=
-====================
-*/
-
-void HitVertPWall (void)
+int WG_RaycastStaticWalls(const wg_level_t *level,
+                          const wg_view_tables_t *tables,
+                          int32_t player_x, int32_t player_y,
+                          uint16_t player_angle,
+                          wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH])
 {
-	int			wallpic;
-	unsigned	texture,offset;
-
-	texture = (yintercept>>4)&0xfc0;
-	offset = pwallpos<<10;
-	if (xtilestep == -1)
-	{
-		xintercept += TILEGLOBAL-offset;
-		texture = 0xfc0-texture;
-	}
-	else
-		xintercept += offset;
-
-	wallheight[pixx] = CalcHeight();
-
-	if (lasttilehit == tilehit)
-	{
-		// in the same wall type as last time, so check for optimized draw
-		if (texture == (unsigned)postsource)
-		{
-		// wide scale
-			postwidth++;
-			wallheight[pixx] = wallheight[pixx-1];
-			return;
-		}
-		else
-		{
-			ScalePost ();
-			(unsigned)postsource = texture;
-			postwidth = 1;
-			postx = pixx;
-		}
-	}
-	else
-	{
-	// new wall
-		if (lastside != -1)				// if not the first scaled post
-			ScalePost ();
-
-		lasttilehit = tilehit;
-		postx = pixx;
-		postwidth = 1;
-
-		wallpic = vertwall[tilehit&63];
-
-		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
-		(unsigned)postsource = texture;
-	}
-
+    return WG_RaycastWalls(level, tables, player_x, player_y, player_angle,
+                           0, hits);
 }
 
-//==========================================================================
-
-//==========================================================================
-
-#if 0
-/*
-=====================
-=
-= ClearScreen
-=
-=====================
-*/
-
-void ClearScreen (void)
+typedef struct wg_visible_object
 {
- unsigned floor=egaFloor[gamestate.episode*10+mapon],
-	  ceiling=egaCeiling[gamestate.episode*10+mapon];
+    int view_x;
+    int32_t view_height;
+    int32_t trans_x;
+    uint16_t shape;
+} wg_visible_object_t;
 
-  //
-  // clear the screen
-  //
-asm	mov	dx,GC_INDEX
-asm	mov	ax,GC_MODE + 256*2		// read mode 0, write mode 2
-asm	out	dx,ax
-asm	mov	ax,GC_BITMASK + 255*256
-asm	out	dx,ax
-
-asm	mov	dx,40
-asm	mov	ax,[viewwidth]
-asm	shr	ax,3
-asm	sub	dx,ax					// dx = 40-viewwidth/8
-
-asm	mov	bx,[viewwidth]
-asm	shr	bx,4					// bl = viewwidth/16
-asm	mov	bh,BYTE PTR [viewheight]
-asm	shr	bh,1					// half height
-
-asm	mov	ax,[ceiling]
-asm	mov	es,[screenseg]
-asm	mov	di,[bufferofs]
-
-toploop:
-asm	mov	cl,bl
-asm	rep	stosw
-asm	add	di,dx
-asm	dec	bh
-asm	jnz	toploop
-
-asm	mov	bh,BYTE PTR [viewheight]
-asm	shr	bh,1					// half height
-asm	mov	ax,[floor]
-
-bottomloop:
-asm	mov	cl,bl
-asm	rep	stosw
-asm	add	di,dx
-asm	dec	bh
-asm	jnz	bottomloop
-
-
-asm	mov	dx,GC_INDEX
-asm	mov	ax,GC_MODE + 256*10		// read mode 1, write mode 2
-asm	out	dx,ax
-asm	mov	al,GC_BITMASK
-asm	out	dx,al
-
-}
-#endif
-//==========================================================================
-
-unsigned vgaCeiling[]=
+static int32_t WG_MultiplyWrap32(int32_t left, int32_t right)
 {
-#ifndef SPEAR
- 0x1d1d,0x1d1d,0x1d1d,0x1d1d,0x1d1d,0x1d1d,0x1d1d,0x1d1d,0x1d1d,0xbfbf,
- 0x4e4e,0x4e4e,0x4e4e,0x1d1d,0x8d8d,0x4e4e,0x1d1d,0x2d2d,0x1d1d,0x8d8d,
- 0x1d1d,0x1d1d,0x1d1d,0x1d1d,0x1d1d,0x2d2d,0xdddd,0x1d1d,0x1d1d,0x9898,
+    uint32_t bits = (uint32_t)left * (uint32_t)right;
 
- 0x1d1d,0x9d9d,0x2d2d,0xdddd,0xdddd,0x9d9d,0x2d2d,0x4d4d,0x1d1d,0xdddd,
- 0x7d7d,0x1d1d,0x2d2d,0x2d2d,0xdddd,0xd7d7,0x1d1d,0x1d1d,0x1d1d,0x2d2d,
- 0x1d1d,0x1d1d,0x1d1d,0x1d1d,0xdddd,0xdddd,0x7d7d,0xdddd,0xdddd,0xdddd
-#else
- 0x6f6f,0x4f4f,0x1d1d,0xdede,0xdfdf,0x2e2e,0x7f7f,0x9e9e,0xaeae,0x7f7f,
- 0x1d1d,0xdede,0xdfdf,0xdede,0xdfdf,0xdede,0xe1e1,0xdcdc,0x2e2e,0x1d1d,0xdcdc
-#endif
-};
-
-/*
-=====================
-=
-= VGAClearScreen
-=
-=====================
-*/
-
-void VGAClearScreen (void)
-{
- unsigned ceiling=vgaCeiling[gamestate.episode*10+mapon];
-
-  //
-  // clear the screen
-  //
-asm	mov	dx,SC_INDEX
-asm	mov	ax,SC_MAPMASK+15*256	// write through all planes
-asm	out	dx,ax
-
-asm	mov	dx,80
-asm	mov	ax,[viewwidth]
-asm	shr	ax,2
-asm	sub	dx,ax					// dx = 40-viewwidth/2
-
-asm	mov	bx,[viewwidth]
-asm	shr	bx,3					// bl = viewwidth/8
-asm	mov	bh,BYTE PTR [viewheight]
-asm	shr	bh,1					// half height
-
-asm	mov	es,[screenseg]
-asm	mov	di,[bufferofs]
-asm	mov	ax,[ceiling]
-
-toploop:
-asm	mov	cl,bl
-asm	rep	stosw
-asm	add	di,dx
-asm	dec	bh
-asm	jnz	toploop
-
-asm	mov	bh,BYTE PTR [viewheight]
-asm	shr	bh,1					// half height
-asm	mov	ax,0x1919
-
-bottomloop:
-asm	mov	cl,bl
-asm	rep	stosw
-asm	add	di,dx
-asm	dec	bh
-asm	jnz	bottomloop
+    /* Borland's long multiplication wrapped to 32 bits before the following
+       perspective divide.  Spell out two's-complement interpretation without
+       relying on signed-overflow behavior in the host compiler. */
+    return bits <= INT32_MAX
+               ? (int32_t)bits
+               : (int32_t)((int64_t)bits - INT64_C(0x100000000));
 }
 
-//==========================================================================
-
-/*
-=====================
-=
-= CalcRotate
-=
-=====================
-*/
-
-int	CalcRotate (objtype *ob)
+static int WG_TransformTile(const wg_view_tables_t *tables,
+                            uint8_t tile_x, uint8_t tile_y,
+                            int32_t view_x, int32_t view_y,
+                            int32_t view_cosine, int32_t view_sine,
+                            wg_visible_object_t *visible,
+                            int *within_grab_distance)
 {
-	int	angle,viewangle;
+    int32_t gx = (int32_t)tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_x;
+    int32_t gy = (int32_t)tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2 - view_y;
+    int32_t gxt = WG_FixedByFrac(gx, view_cosine);
+    int32_t gyt = WG_FixedByFrac(gy, view_sine);
+    int32_t nx = gxt - gyt - 0x2000;
+    int32_t ny;
 
-	// this isn't exactly correct, as it should vary by a trig value,
-	// but it is close enough with only eight rotations
-
-	viewangle = player->angle + (centerx - ob->viewx)/8;
-
-	if (ob->obclass == rocketobj || ob->obclass == hrocketobj)
-		angle =  (viewangle-180)- ob->angle;
-	else
-		angle =  (viewangle-180)- dirangle[ob->dir];
-
-	angle+=ANGLES/16;
-	while (angle>=ANGLES)
-		angle-=ANGLES;
-	while (angle<0)
-		angle+=ANGLES;
-
-	if (ob->state->rotate == 2)             // 2 rotation pain frame
-		return 4*(angle/(ANGLES/2));        // seperated by 3 (art layout...)
-
-	return angle/(ANGLES/8);
+    if (nx < WG_MIN_DISTANCE)
+    {
+        *within_grab_distance = 0;
+        return 0;
+    }
+    gxt = WG_FixedByFrac(gx, view_sine);
+    gyt = WG_FixedByFrac(gy, view_cosine);
+    ny = gyt + gxt;
+    visible->view_x = tables->view_width / 2 - 1
+                      + WG_MultiplyWrap32(ny, tables->scale) / nx;
+    visible->view_height = tables->height_numerator / (nx / 256);
+    visible->trans_x = nx;
+    *within_grab_distance = nx < WG_FIXED_ONE
+        && ny > -WG_FIXED_ONE / 2 && ny < WG_FIXED_ONE / 2;
+    return visible->view_height > 0;
 }
 
-
-/*
-=====================
-=
-= DrawScaleds
-=
-= Draws all objects that are visable
-=
-=====================
-*/
-
-#define MAXVISABLE	50
-
-typedef struct
+static int WG_TransformActor(const wg_view_tables_t *tables,
+                             const wg_actor_t *actor,
+                             int32_t view_x, int32_t view_y,
+                             int32_t view_cosine, int32_t view_sine,
+                             wg_visible_object_t *visible)
 {
-	int	viewx,
-		viewheight,
-		shapenum;
-} visobj_t;
+    int32_t gx = actor->x - view_x;
+    int32_t gy = actor->y - view_y;
+    int32_t gxt = WG_FixedByFrac(gx, view_cosine);
+    int32_t gyt = WG_FixedByFrac(gy, view_sine);
+    int32_t nx = gxt - gyt - 0x4000;
+    int32_t ny;
 
-visobj_t	vislist[MAXVISABLE],*visptr,*visstep,*farthest;
-
-void DrawScaleds (void)
-{
-	int 		i,j,least,numvisable,height;
-	memptr		shape;
-	byte		*tilespot,*visspot;
-	int			shapenum;
-	unsigned	spotloc;
-
-	statobj_t	*statptr;
-	objtype		*obj;
-
-	visptr = &vislist[0];
-
-//
-// place static objects
-//
-	for (statptr = &statobjlist[0] ; statptr !=laststatobj ; statptr++)
-	{
-		if ((visptr->shapenum = statptr->shapenum) == -1)
-			continue;						// object has been deleted
-
-		if (!*statptr->visspot)
-			continue;						// not visable
-
-		if (TransformTile (statptr->tilex,statptr->tiley
-			,&visptr->viewx,&visptr->viewheight) && statptr->flags & FL_BONUS)
-		{
-			GetBonus (statptr);
-			continue;
-		}
-
-		if (!visptr->viewheight)
-			continue;						// to close to the object
-
-		if (visptr < &vislist[MAXVISABLE-1])	// don't let it overflow
-			visptr++;
-	}
-
-//
-// place active objects
-//
-	for (obj = player->next;obj;obj=obj->next)
-	{
-		if (!(visptr->shapenum = obj->state->shapenum))
-			continue;						// no shape
-
-		spotloc = (obj->tilex<<6)+obj->tiley;	// optimize: keep in struct?
-		visspot = &spotvis[0][0]+spotloc;
-		tilespot = &tilemap[0][0]+spotloc;
-
-		//
-		// could be in any of the nine surrounding tiles
-		//
-		if (*visspot
-		|| ( *(visspot-1) && !*(tilespot-1) )
-		|| ( *(visspot+1) && !*(tilespot+1) )
-		|| ( *(visspot-65) && !*(tilespot-65) )
-		|| ( *(visspot-64) && !*(tilespot-64) )
-		|| ( *(visspot-63) && !*(tilespot-63) )
-		|| ( *(visspot+65) && !*(tilespot+65) )
-		|| ( *(visspot+64) && !*(tilespot+64) )
-		|| ( *(visspot+63) && !*(tilespot+63) ) )
-		{
-			obj->active = true;
-			TransformActor (obj);
-			if (!obj->viewheight)
-				continue;						// too close or far away
-
-			visptr->viewx = obj->viewx;
-			visptr->viewheight = obj->viewheight;
-			if (visptr->shapenum == -1)
-				visptr->shapenum = obj->temp1;	// special shape
-
-			if (obj->state->rotate)
-				visptr->shapenum += CalcRotate (obj);
-
-			if (visptr < &vislist[MAXVISABLE-1])	// don't let it overflow
-				visptr++;
-			obj->flags |= FL_VISABLE;
-		}
-		else
-			obj->flags &= ~FL_VISABLE;
-	}
-
-//
-// draw from back to front
-//
-	numvisable = visptr-&vislist[0];
-
-	if (!numvisable)
-		return;									// no visable objects
-
-	for (i = 0; i<numvisable; i++)
-	{
-		least = 32000;
-		for (visstep=&vislist[0] ; visstep<visptr ; visstep++)
-		{
-			height = visstep->viewheight;
-			if (height < least)
-			{
-				least = height;
-				farthest = visstep;
-			}
-		}
-		//
-		// draw farthest
-		//
-		ScaleShape(farthest->viewx,farthest->shapenum,farthest->viewheight);
-
-		farthest->viewheight = 32000;
-	}
-
+    if (nx < WG_MIN_DISTANCE)
+    {
+        return 0;
+    }
+    gxt = WG_FixedByFrac(gx, view_sine);
+    gyt = WG_FixedByFrac(gy, view_cosine);
+    ny = gyt + gxt;
+    visible->view_x = tables->view_width / 2 - 1
+                      + WG_MultiplyWrap32(ny, tables->scale) / nx;
+    visible->view_height = tables->height_numerator / (nx / 256);
+    visible->trans_x = nx;
+    return visible->view_height > 0;
 }
 
-//==========================================================================
-
-/*
-==============
-=
-= DrawPlayerWeapon
-=
-= Draw the player's hands
-=
-==============
-*/
-
-int	weaponscale[NUMWEAPONS] = {SPR_KNIFEREADY,SPR_PISTOLREADY
-	,SPR_MACHINEGUNREADY,SPR_CHAINREADY};
-
-void DrawPlayerWeapon (void)
+static int WG_ActorTileIsVisible(
+    const wg_level_t *level,
+    const uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE],
+    int tile_x, int tile_y)
 {
-	int	shapenum;
+    int offset_x;
+    int offset_y;
 
-#ifndef SPEAR
-	if (gamestate.victoryflag)
-	{
-		if (player->state == &s_deathcam && (TimeCount&32) )
-			SimpleScaleShape(viewwidth/2,SPR_DEATHCAM,viewheight+1);
-		return;
-	}
-#endif
+    if (visible_tiles[(size_t)tile_y * WG_LEVEL_SIZE + (size_t)tile_x] != 0U)
+    {
+        return 1;
+    }
+    for (offset_y = -1; offset_y <= 1; ++offset_y)
+    {
+        for (offset_x = -1; offset_x <= 1; ++offset_x)
+        {
+            int x = tile_x + offset_x;
+            int y = tile_y + offset_y;
+            size_t tile_index;
 
-	if (gamestate.weapon != -1)
-	{
-		shapenum = weaponscale[gamestate.weapon]+gamestate.weaponframe;
-		SimpleScaleShape(viewwidth/2,shapenum,viewheight+1);
-	}
-
-	if (demorecord || demoplayback)
-		SimpleScaleShape(viewwidth/2,SPR_DEMO,viewheight+1);
+            if ((offset_x == 0 && offset_y == 0)
+                || x < 0 || x >= WG_LEVEL_SIZE
+                || y < 0 || y >= WG_LEVEL_SIZE)
+            {
+                continue;
+            }
+            tile_index = (size_t)y * WG_LEVEL_SIZE + (size_t)x;
+            if (visible_tiles[tile_index] != 0U
+                && level->tiles[tile_index] == 0U)
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
-
-//==========================================================================
-
-
-/*
-=====================
-=
-= CalcTics
-=
-=====================
-*/
-
-void CalcTics (void)
+static uint16_t WG_ActorShape(const wg_actor_t *actor, int projected_x,
+                              uint16_t player_angle, int center_x)
 {
-	long	newtime,oldtimecount;
+    int view_angle = (int)player_angle + (center_x - projected_x) / 8;
+    int actor_angle = actor->actor_class == WG_ACTOR_ROCKET
+                          ? actor->angle
+                          : actor->direction * (WG_ANGLES / 8);
+    int angle = (view_angle - 180) - actor_angle;
 
-//
-// calculate tics since last refresh for adaptive timing
-//
-	if (lasttimecount > TimeCount)
-		TimeCount = lasttimecount;		// if the game was paused a LONG time
-
-	do
-	{
-		newtime = TimeCount;
-		tics = newtime-lasttimecount;
-	} while (!tics);			// make sure at least one tic passes
-
-	lasttimecount = newtime;
-
-#ifdef FILEPROFILE
-		strcpy (scratch,"\tTics:");
-		itoa (tics,str,10);
-		strcat (scratch,str);
-		strcat (scratch,"\n");
-		write (profilehandle,scratch,strlen(scratch));
-#endif
-
-	if (tics>MAXTICS)
-	{
-		TimeCount -= (tics-MAXTICS);
-		tics = MAXTICS;
-	}
+    /* Original death states never rotate.  Keep that property tied to the
+       state as well as the cached rotate field so a stale field (for example
+       from a save made during a transition) cannot index into the following
+       actor's sprite range. */
+    if (actor->rotate == 0U
+        || (actor->state >= WG_STATE_SHOOT1
+            && actor->state <= WG_STATE_SHOOT9)
+        || (actor->state >= WG_STATE_DOG_JUMP1
+            && actor->state <= WG_STATE_DOG_JUMP5)
+        || (actor->state >= WG_STATE_DIE1
+            && actor->state <= WG_STATE_DEAD))
+    {
+        return actor->shape;
+    }
+    angle += WG_ANGLES / 16;
+    while (angle >= WG_ANGLES)
+    {
+        angle -= WG_ANGLES;
+    }
+    while (angle < 0)
+    {
+        angle += WG_ANGLES;
+    }
+    if (actor->rotate == 2U)
+    {
+        return (uint16_t)(actor->shape
+                          + 4 * (angle / (WG_ANGLES / 2)));
+    }
+    return (uint16_t)(actor->shape + angle / (WG_ANGLES / 8));
 }
 
-
-//==========================================================================
-
-
-/*
-========================
-=
-= FixOfs
-=
-========================
-*/
-
-void	FixOfs (void)
+int WL_DrawScaleds(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_pages_t *pages, wg_level_t *level,
+    const wg_view_tables_t *tables,
+    const wg_wall_hit_t hits[WG_MAX_VIEW_WIDTH],
+    const uint8_t visible_tiles[WG_LEVEL_SIZE * WG_LEVEL_SIZE],
+    int32_t player_x, int32_t player_y, uint16_t player_angle)
 {
-	VW_ScreenToScreen (displayofs,bufferofs,viewwidth/8,viewheight);
+    wg_visible_object_t visible[50];
+    int32_t wall_height[WG_MAX_VIEW_WIDTH];
+    const int32_t *cosine;
+    int32_t view_cosine;
+    int32_t view_sine;
+    int32_t view_x;
+    int32_t view_y;
+    int screen_x;
+    int screen_y;
+    int view_height;
+    size_t visible_count = 0;
+    size_t index;
+
+    if (framebuffer == NULL || pages == NULL || level == NULL
+        || tables == NULL || hits == NULL || visible_tiles == NULL
+        || tables->view_width < 64U
+        || tables->view_width > WG_VIDEO_WIDTH
+        || (tables->view_width & 15U) != 0U
+        || player_angle >= WG_ANGLES)
+    {
+        return 0;
+    }
+    cosine = WG_ViewCosineTable(tables);
+    view_cosine = cosine[player_angle];
+    view_sine = tables->sine[player_angle];
+    view_x = player_x - WG_FixedByFrac(tables->focal_length, view_cosine);
+    view_y = player_y + WG_FixedByFrac(tables->focal_length, view_sine);
+    view_height = tables->view_width / 2;
+    screen_x = (WG_VIDEO_WIDTH - tables->view_width) / 2;
+    screen_y = (160 - view_height) / 2;
+    level->view_width = tables->view_width;
+    for (index = 0; index < tables->view_width; ++index)
+    {
+        wall_height[index] = hits[index].height;
+    }
+    for (index = 0; index < level->static_count; ++index)
+    {
+        wg_visible_object_t candidate;
+        size_t tile_index;
+        int within_grab_distance = 0;
+
+        if (level->statics[index].removed != 0U)
+        {
+            continue;
+        }
+        tile_index = (size_t)level->statics[index].tile_y * WG_LEVEL_SIZE
+                     + level->statics[index].tile_x;
+
+        if (visible_tiles[tile_index] != 0U
+            && WG_TransformTile(tables, level->statics[index].tile_x,
+                                level->statics[index].tile_y, view_x, view_y,
+                                view_cosine, view_sine, &candidate,
+                                &within_grab_distance))
+        {
+            if (within_grab_distance
+                && level->statics[index].item != WG_ITEM_NONE)
+            {
+                (void)WL_GetBonus(level, index);
+                continue;
+            }
+            candidate.shape = level->statics[index].shape;
+            if (visible_count < sizeof(visible) / sizeof(visible[0]))
+            {
+                visible[visible_count++] = candidate;
+            }
+        }
+    }
+    for (index = 0; index < level->actor_count; ++index)
+    {
+        wg_actor_t *actor = &level->actors[index];
+        wg_visible_object_t candidate;
+
+        if ((actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            continue;
+        }
+        if (WG_ActorTileIsVisible(level, visible_tiles,
+                                  actor->tile_x, actor->tile_y))
+        {
+            /* DOS ThreeDRefresh permanently activates an actor the first
+               time its tile (or a clear neighbor) enters spotvis. */
+            actor->flags |= WG_ACTOR_FLAG_ACTIVE;
+            if (!WG_TransformActor(tables, actor, view_x, view_y,
+                                   view_cosine, view_sine, &candidate))
+            {
+                continue;
+            }
+            actor->flags |= WG_ACTOR_FLAG_VISIBLE;
+            actor->view_x = candidate.view_x;
+            actor->trans_x = candidate.trans_x;
+            candidate.shape = WG_ActorShape(
+                actor, candidate.view_x, player_angle,
+                tables->view_width / 2);
+            if (visible_count < sizeof(visible) / sizeof(visible[0]))
+            {
+                visible[visible_count++] = candidate;
+            }
+        }
+        else
+        {
+            /* Original DrawScaleds clears FL_VISABLE only in this branch.
+               If a visible-tile actor is rejected by TransformActor, its
+               prior visibility flag remains stale and still affects the
+               enemy shooting calculation on the following tic. */
+            actor->flags = (uint16_t)(actor->flags
+                                      & ~WG_ACTOR_FLAG_VISIBLE);
+        }
+    }
+
+    for (index = 0; index < visible_count; ++index)
+    {
+        size_t search;
+        size_t farthest = index;
+        wg_sprite_image_t sprite;
+
+        for (search = index + 1; search < visible_count; ++search)
+        {
+            if (visible[search].view_height
+                < visible[farthest].view_height)
+            {
+                farthest = search;
+            }
+        }
+        if (farthest != index)
+        {
+            wg_visible_object_t temporary = visible[index];
+
+            visible[index] = visible[farthest];
+            visible[farthest] = temporary;
+        }
+        if (!WG_DecodeSprite(pages, visible[index].shape, &sprite)
+            || !WG_ScaleSpriteClipped(
+                framebuffer, screen_x, screen_y, tables->view_width,
+                view_height,
+                visible[index].view_x, &sprite,
+                (unsigned)visible[index].view_height, wall_height))
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
 
-
-//==========================================================================
-
-
-/*
-====================
-=
-= WallRefresh
-=
-====================
-*/
-
-void WallRefresh (void)
+int WL_DrawPlayerWeapon(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_pages_t *pages, unsigned weapon, unsigned weapon_frame,
+    unsigned view_width)
 {
-//
-// set up variables for this view
-//
-	viewangle = player->angle;
-	midangle = viewangle*(FINEANGLES/ANGLES);
-	viewsin = sintable[viewangle];
-	viewcos = costable[viewangle];
-	viewx = player->x - FixedByFrac(focallength,viewcos);
-	viewy = player->y + FixedByFrac(focallength,viewsin);
+    wg_sprite_image_t sprite;
+    size_t sprite_count;
+    size_t shape;
 
-	focaltx = viewx>>TILESHIFT;
-	focalty = viewy>>TILESHIFT;
-
-	viewtx = player->x >> TILESHIFT;
-	viewty = player->y >> TILESHIFT;
-
-	xpartialdown = viewx&(TILEGLOBAL-1);
-	xpartialup = TILEGLOBAL-xpartialdown;
-	ypartialdown = viewy&(TILEGLOBAL-1);
-	ypartialup = TILEGLOBAL-ypartialdown;
-
-	lastside = -1;			// the first pixel is on a new wall
-	AsmRefresh ();
-	ScalePost ();			// no more optimization on last post
+    if (framebuffer == NULL || pages == NULL || pages->data_set == NULL
+        || weapon > 3U || weapon_frame > 4U
+        || view_width < 64U || view_width > WG_VIDEO_WIDTH
+        || (view_width & 15U) != 0U)
+    {
+        return 0;
+    }
+    sprite_count = (size_t)(pages->data_set->sound_start
+                            - pages->data_set->sprite_start);
+    if (sprite_count < 20U)
+    {
+        return 0;
+    }
+    shape = sprite_count - 20U + weapon * 5U + weapon_frame;
+    return WG_DecodeSprite(pages, shape, &sprite)
+           && WG_ScaleSprite(framebuffer,
+                             (WG_VIDEO_WIDTH - (int)view_width) / 2,
+                             (160 - (int)view_width / 2) / 2,
+                             (int)view_width, (int)view_width / 2,
+                             (int)view_width / 2, &sprite,
+                             view_width / 2U + 1U);
 }
-
-//==========================================================================
-
-/*
-========================
-=
-= ThreeDRefresh
-=
-========================
-*/
-
-void	ThreeDRefresh (void)
-{
-	int tracedir;
-
-// this wouldn't need to be done except for my debugger/video wierdness
-	outportb (SC_INDEX,SC_MAPMASK);
-
-//
-// clear out the traced array
-//
-asm	mov	ax,ds
-asm	mov	es,ax
-asm	mov	di,OFFSET spotvis
-asm	xor	ax,ax
-asm	mov	cx,2048							// 64*64 / 2
-asm	rep stosw
-
-	bufferofs += screenofs;
-
-//
-// follow the walls from there to the right, drawwing as we go
-//
-	VGAClearScreen ();
-
-	WallRefresh ();
-
-//
-// draw all the scaled images
-//
-	DrawScaleds();			// draw scaled stuff
-	DrawPlayerWeapon ();	// draw player's hands
-
-//
-// show screen and time last cycle
-//
-	if (fizzlein)
-	{
-		FizzleFade(bufferofs,displayofs+screenofs,viewwidth,viewheight,20,false);
-		fizzlein = false;
-
-		lasttimecount = TimeCount = 0;		// don't make a big tic count
-
-	}
-
-	bufferofs -= screenofs;
-	displayofs = bufferofs;
-
-	asm	cli
-	asm	mov	cx,[displayofs]
-	asm	mov	dx,3d4h		// CRTC address register
-	asm	mov	al,0ch		// start address high register
-	asm	out	dx,al
-	asm	inc	dx
-	asm	mov	al,ch
-	asm	out	dx,al   	// set the high byte
-	asm	sti
-
-	bufferofs += SCREENSIZE;
-	if (bufferofs > PAGE3START)
-		bufferofs = PAGE1START;
-
-	frameon++;
-	PM_NextFrame();
-}
-
-
-//===========================================================================
-
