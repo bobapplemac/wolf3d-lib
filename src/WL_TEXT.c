@@ -1,859 +1,493 @@
-// WL_TEXT.C
+/* Portable article layout derived from the original WL_TEXT.C. */
+#include "WL_TEXT.h"
 
-#include "WL_DEF.H"
-#pragma	hdrstop
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-/*
-=============================================================================
+#include "WG_COMPAT.h"
 
-TEXT FORMATTING COMMANDS
-------------------------
-^C<hex digit>  			Change text color
-^E[enter]				End of layout (all pages)
-^G<y>,<x>,<pic>[enter]	Draw a graphic and push margins
-^P[enter]				start new page, must be the first chars in a layout
-^L<x>,<y>[ENTER]		Locate to a specific spot, x in pixels, y in lines
+#include "ID_VH.h"
+#include "ID_VL.h"
 
-=============================================================================
-*/
+#define WL_TEXT_BACK_COLOR 0x11U
+#define WL_TEXT_FONT_HEIGHT 10
+#define WL_TEXT_TOP_MARGIN 16
+#define WL_TEXT_BOTTOM_MARGIN 32
+#define WL_TEXT_LEFT_MARGIN 16
+#define WL_TEXT_RIGHT_MARGIN 16
+#define WL_TEXT_PICTURE_MARGIN 8
+#define WL_TEXT_ROWS ((200 - WL_TEXT_TOP_MARGIN - WL_TEXT_BOTTOM_MARGIN) \
+                      / WL_TEXT_FONT_HEIGHT)
+#define WL_TEXT_SPACE_WIDTH 7
+#define WL_TEXT_WORD_LIMIT 80
 
-/*
-=============================================================================
-
-						 LOCAL CONSTANTS
-
-=============================================================================
-*/
-
-#define BACKCOLOR		0x11
-
-
-#define WORDLIMIT		80
-#define FONTHEIGHT		10
-#define	TOPMARGIN		16
-#define BOTTOMMARGIN	32
-#define LEFTMARGIN		16
-#define RIGHTMARGIN		16
-#define PICMARGIN		8
-#define TEXTROWS		((200-TOPMARGIN-BOTTOMMARGIN)/FONTHEIGHT)
-#define	SPACEWIDTH		7
-#define SCREENPIXWIDTH	320
-#define SCREENMID		(SCREENPIXWIDTH/2)
-
-/*
-=============================================================================
-
-						 LOCAL VARIABLES
-
-=============================================================================
-*/
-
-int			pagenum,numpages;
-
-unsigned	leftmargin[TEXTROWS],rightmargin[TEXTROWS];
-char		far *text;
-unsigned	rowon;
-
-int			picx,picy,picnum,picdelay;
-boolean		layoutdone;
-
-//===========================================================================
-
-#ifndef JAPAN
-/*
-=====================
-=
-= RipToEOL
-=
-=====================
-*/
-
-void RipToEOL (void)
+typedef struct wl_article_layout
 {
-	while (*text++ != '\n')		// scan to end of line
-	;
+    const uint8_t *text;
+    const uint8_t *end;
+    unsigned left[WL_TEXT_ROWS];
+    unsigned right[WL_TEXT_ROWS];
+    unsigned row;
+    int x;
+    int y;
+    uint8_t color;
+    int done;
+} wl_article_layout_t;
+
+static int WL_ArticleChunks(wg_game_variant_t variant, size_t *top,
+                            size_t *help_text, size_t *end_text)
+{
+    if (top == NULL || help_text == NULL || end_text == NULL)
+    {
+        return 0;
+    }
+    if (WG_DataUsesApogeeWolfGraphics(variant))
+    {
+        *top = 17U;
+        *help_text = 150U;
+        *end_text = 155U;
+        return 1;
+    }
+    if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        *top = 6U;
+        *help_text = 138U;
+        *end_text = 143U;
+        return 1;
+    }
+    return 0;
 }
 
-
-/*
-=====================
-=
-= ParseNumber
-=
-=====================
-*/
-
-int	ParseNumber (void)
+static int WL_ArticleHex(uint8_t character)
 {
-	char	ch;
-	char	num[80],*numptr;
-
-//
-// scan until a number is found
-//
-	ch = *text;
-	while (ch < '0' || ch >'9')
-		ch = *++text;
-
-//
-// copy the number out
-//
-	numptr = num;
-	do
-	{
-		*numptr++ = ch;
-		ch = *++text;
-	} while (ch >= '0' && ch <= '9');
-	*numptr = 0;
-
-	return atoi (num);
+    character = (uint8_t)toupper((int)character);
+    if (character >= '0' && character <= '9')
+    {
+        return character - '0';
+    }
+    if (character >= 'A' && character <= 'F')
+    {
+        return character - 'A' + 10;
+    }
+    return -1;
 }
 
-
-
-/*
-=====================
-=
-= ParsePicCommand
-=
-= Call with text pointing just after a ^P
-= Upon exit text points to the start of next line
-=
-=====================
-*/
-
-void	ParsePicCommand (void)
+static int WL_ArticleNumber(wl_article_layout_t *layout, unsigned *number)
 {
-	picy=ParseNumber();
-	picx=ParseNumber();
-	picnum=ParseNumber();
-	RipToEOL ();
+    unsigned value = 0U;
+
+    while (layout->text < layout->end
+           && (*layout->text < '0' || *layout->text > '9'))
+    {
+        ++layout->text;
+    }
+    if (layout->text == layout->end)
+    {
+        return 0;
+    }
+    do
+    {
+        value = value * 10U + (unsigned)(*layout->text - '0');
+        ++layout->text;
+    } while (layout->text < layout->end
+             && *layout->text >= '0' && *layout->text <= '9');
+    *number = value;
+    return 1;
 }
 
-
-void	ParseTimedCommand (void)
+static int WL_ArticleEndOfLine(wl_article_layout_t *layout)
 {
-	picy=ParseNumber();
-	picx=ParseNumber();
-	picnum=ParseNumber();
-	picdelay=ParseNumber();
-	RipToEOL ();
+    while (layout->text < layout->end && *layout->text != '\n')
+    {
+        ++layout->text;
+    }
+    if (layout->text == layout->end)
+    {
+        return 0;
+    }
+    ++layout->text;
+    return 1;
 }
 
-
-/*
-=====================
-=
-= TimedPicCommand
-=
-= Call with text pointing just after a ^P
-= Upon exit text points to the start of next line
-=
-=====================
-*/
-
-void	TimedPicCommand (void)
+static void WL_ArticleNewLine(wl_article_layout_t *layout)
 {
-	ParseTimedCommand ();
-
-//
-// update the screen, and wait for time delay
-//
-	VW_UpdateScreen ();
-
-//
-// wait for time
-//
-	TimeCount = 0;
-	while (TimeCount < picdelay)
-	;
-
-//
-// draw pic
-//
-	VWB_DrawPic (picx&~7,picy,picnum);
+    ++layout->row;
+    if (layout->row >= WL_TEXT_ROWS)
+    {
+        layout->done = 1;
+        return;
+    }
+    layout->x = (int)layout->left[layout->row];
+    layout->y += WL_TEXT_FONT_HEIGHT;
 }
 
-
-/*
-=====================
-=
-= HandleCommand
-=
-=====================
-*/
-
-void HandleCommand (void)
+static int WL_ArticlePicture(wl_article_layout_t *layout,
+                             const wg_graphics_t *graphics,
+                             uint8_t *framebuffer, int margins)
 {
-	int	i,margin,top,bottom;
-	int	picwidth,picheight,picmid;
+    unsigned picture_y;
+    unsigned picture_x;
+    unsigned picture_chunk;
+    size_t picture;
 
-	switch (toupper(*++text))
-	{
-	case 'B':
-		picy=ParseNumber();
-		picx=ParseNumber();
-		picwidth=ParseNumber();
-		picheight=ParseNumber();
-		VWB_Bar(picx,picy,picwidth,picheight,BACKCOLOR);
-		RipToEOL();
-		break;
-	case ';':		// comment
-		RipToEOL();
-		break;
-	case 'P':		// ^P is start of next page, ^E is end of file
-	case 'E':
-		layoutdone = true;
-		text--;    	// back up to the '^'
-		break;
+    if (!WL_ArticleNumber(layout, &picture_y)
+        || !WL_ArticleNumber(layout, &picture_x)
+        || !WL_ArticleNumber(layout, &picture_chunk)
+        || !WL_ArticleEndOfLine(layout)
+        || !WG_VideoDrawPicture(framebuffer, graphics, picture_chunk,
+                                (int)(picture_x & ~7U), (int)picture_y))
+    {
+        return 0;
+    }
+    picture = picture_chunk - 3U;
+    if (margins && picture_chunk >= 3U && picture < graphics->picture_count)
+    {
+        int width = graphics->pictures[picture].width;
+        int height = graphics->pictures[picture].height;
+        int middle = (int)picture_x + width / 2;
+        int top = ((int)picture_y - WL_TEXT_TOP_MARGIN)
+                  / WL_TEXT_FONT_HEIGHT;
+        int bottom = ((int)picture_y + height - WL_TEXT_TOP_MARGIN)
+                     / WL_TEXT_FONT_HEIGHT;
+        int row;
 
-	case 'C':		// ^c<hex digit> changes text color
-		i = toupper(*++text);
-		if (i>='0' && i<='9')
-			fontcolor = i-'0';
-		else if (i>='A' && i<='F')
-			fontcolor = i-'A'+10;
-
-		fontcolor *= 16;
-		i = toupper(*++text);
-		if (i>='0' && i<='9')
-			fontcolor += i-'0';
-		else if (i>='A' && i<='F')
-			fontcolor += i-'A'+10;
-		text++;
-		break;
-
-	case '>':
-		px = 160;
-		text++;
-		break;
-
-	case 'L':
-		py=ParseNumber();
-		rowon = (py-TOPMARGIN)/FONTHEIGHT;
-		py = TOPMARGIN+rowon*FONTHEIGHT;
-		px=ParseNumber();
-		while (*text++ != '\n')		// scan to end of line
-		;
-		break;
-
-	case 'T':		// ^Tyyy,xxx,ppp,ttt waits ttt tics, then draws pic
-		TimedPicCommand ();
-		break;
-
-	case 'G':		// ^Gyyy,xxx,ppp draws graphic
-		ParsePicCommand ();
-		VWB_DrawPic (picx&~7,picy,picnum);
-		picwidth = pictable[picnum-STARTPICS].width;
-		picheight = pictable[picnum-STARTPICS].height;
-		//
-		// adjust margins
-		//
-		picmid = picx + picwidth/2;
-		if (picmid > SCREENMID)
-			margin = picx-PICMARGIN;			// new right margin
-		else
-			margin = picx+picwidth+PICMARGIN;	// new left margin
-
-		top = (picy-TOPMARGIN)/FONTHEIGHT;
-		if (top<0)
-			top = 0;
-		bottom = (picy+picheight-TOPMARGIN)/FONTHEIGHT;
-		if (bottom>=TEXTROWS)
-			bottom = TEXTROWS-1;
-
-		for (i=top;i<=bottom;i++)
-			if (picmid > SCREENMID)
-				rightmargin[i] = margin;
-			else
-				leftmargin[i] = margin;
-
-		//
-		// adjust this line if needed
-		//
-		if (px < leftmargin[rowon])
-			px = leftmargin[rowon];
-		break;
-	}
+        if (top < 0)
+        {
+            top = 0;
+        }
+        if (bottom >= WL_TEXT_ROWS)
+        {
+            bottom = WL_TEXT_ROWS - 1;
+        }
+        for (row = top; row <= bottom; ++row)
+        {
+            if (middle > 160)
+            {
+                layout->right[row] = picture_x - WL_TEXT_PICTURE_MARGIN;
+            }
+            else
+            {
+                layout->left[row] = picture_x + (unsigned)width
+                                  + WL_TEXT_PICTURE_MARGIN;
+            }
+        }
+        if (layout->x < (int)layout->left[layout->row])
+        {
+            layout->x = (int)layout->left[layout->row];
+        }
+    }
+    return 1;
 }
 
-
-/*
-=====================
-=
-= NewLine
-=
-=====================
-*/
-
-void NewLine (void)
+static int WL_ArticleCommand(wl_article_layout_t *layout,
+                             const wg_graphics_t *graphics,
+                             uint8_t *framebuffer)
 {
-	char	ch;
+    int command;
 
-	if (++rowon == TEXTROWS)
-	{
-	//
-	// overflowed the page, so skip until next page break
-	//
-		layoutdone = true;
-		do
-		{
-			if (*text == '^')
-			{
-				ch = toupper(*(text+1));
-				if (ch == 'E' || ch == 'P')
-				{
-					layoutdone = true;
-					return;
-				}
-			}
-			text++;
+    ++layout->text;
+    if (layout->text == layout->end)
+    {
+        return 0;
+    }
+    command = toupper((int)*layout->text++);
+    if (command == 'P' || command == 'E')
+    {
+        layout->done = 1;
+        layout->text -= 2;
+        return 1;
+    }
+    if (command == ';')
+    {
+        return WL_ArticleEndOfLine(layout);
+    }
+    if (command == 'C')
+    {
+        int high;
+        int low;
 
-		} while (1);
+        if ((size_t)(layout->end - layout->text) < 2U)
+        {
+            return 0;
+        }
+        high = WL_ArticleHex(*layout->text++);
+        low = WL_ArticleHex(*layout->text++);
+        if (high < 0 || low < 0)
+        {
+            return 0;
+        }
+        layout->color = (uint8_t)(high * 16 + low);
+        return 1;
+    }
+    if (command == '>')
+    {
+        layout->x = 160;
+        return 1;
+    }
+    if (command == 'G')
+    {
+        return WL_ArticlePicture(layout, graphics, framebuffer, 1);
+    }
+    if (command == 'T')
+    {
+        if (!WL_ArticlePicture(layout, graphics, framebuffer, 0))
+        {
+            return 0;
+        }
+        /* The portable renderer presents complete frames; the original delay
+           preceded this picture and does not occur in the shipped EndText. */
+        return 1;
+    }
+    if (command == 'L')
+    {
+        unsigned y;
+        unsigned x;
 
-	}
-	px = leftmargin[rowon];
-	py+= FONTHEIGHT;
+        if (!WL_ArticleNumber(layout, &y)
+            || !WL_ArticleNumber(layout, &x)
+            || !WL_ArticleEndOfLine(layout))
+        {
+            return 0;
+        }
+        layout->row = y <= WL_TEXT_TOP_MARGIN ? 0U
+                    : (y - WL_TEXT_TOP_MARGIN) / WL_TEXT_FONT_HEIGHT;
+        if (layout->row >= WL_TEXT_ROWS)
+        {
+            layout->row = WL_TEXT_ROWS - 1U;
+        }
+        layout->y = WL_TEXT_TOP_MARGIN
+                  + (int)layout->row * WL_TEXT_FONT_HEIGHT;
+        layout->x = (int)x;
+        return 1;
+    }
+    if (command == 'B')
+    {
+        unsigned y;
+        unsigned x;
+        unsigned width;
+        unsigned height;
+
+        if (!WL_ArticleNumber(layout, &y)
+            || !WL_ArticleNumber(layout, &x)
+            || !WL_ArticleNumber(layout, &width)
+            || !WL_ArticleNumber(layout, &height)
+            || !WL_ArticleEndOfLine(layout))
+        {
+            return 0;
+        }
+        WG_VideoBar(framebuffer, (int)x, (int)y, (int)width, (int)height,
+                    WL_TEXT_BACK_COLOR);
+        return 1;
+    }
+    return 0;
 }
 
-
-
-/*
-=====================
-=
-= HandleCtrls
-=
-=====================
-*/
-
-void HandleCtrls (void)
+static int WL_ArticleOpenChunk(wl_article_t *article,
+                               const wg_graphics_t *graphics, size_t chunk)
 {
-	char	ch;
+    size_t index;
 
-	ch = *text++;			// get the character and advance
-
-	if (ch == '\n')
-	{
-		NewLine ();
-		return;
-	}
-
+    if (article == NULL || graphics == NULL)
+    {
+        return 0;
+    }
+    memset(article, 0, sizeof(*article));
+    if (!WG_GraphicsDecodeChunk(graphics, chunk,
+                                &article->text, &article->text_size))
+    {
+        return 0;
+    }
+    for (index = 0U; index + 1U < article->text_size; ++index)
+    {
+        if (article->text[index] == '^'
+            && toupper((int)article->text[index + 1U]) == 'P')
+        {
+            if (article->page_count == WL_ARTICLE_MAX_PAGES)
+            {
+                WL_ArticleClose(article);
+                return 0;
+            }
+            article->page_offsets[article->page_count++] = index;
+        }
+        else if (article->text[index] == '^'
+                 && toupper((int)article->text[index + 1U]) == 'E')
+        {
+            break;
+        }
+    }
+    if (article->page_count == 0U)
+    {
+        WL_ArticleClose(article);
+        return 0;
+    }
+    return 1;
 }
 
-
-/*
-=====================
-=
-= HandleWord
-=
-=====================
-*/
-
-void HandleWord (void)
+int WL_ArticleOpen(wl_article_t *article, const wg_graphics_t *graphics,
+                   unsigned episode)
 {
-	char		word[WORDLIMIT];
-	int			i,wordindex;
-	unsigned	wwidth,wheight,newpos;
+    size_t unused_top;
+    size_t unused_help_text;
+    size_t end_text;
 
-
-	//
-	// copy the next word into [word]
-	//
-	word[0] = *text++;
-	wordindex = 1;
-	while (*text>32)
-	{
-		word[wordindex] = *text++;
-		if (++wordindex == WORDLIMIT)
-			Quit ("PageLayout: Word limit exceeded");
-	}
-	word[wordindex] = 0;		// stick a null at end for C
-
-	//
-	// see if it fits on this line
-	//
-	VW_MeasurePropString (word,&wwidth,&wheight);
-
-	while (px+wwidth > rightmargin[rowon])
-	{
-		NewLine ();
-		if (layoutdone)
-			return;		// overflowed page
-	}
-
-	//
-	// print it
-	//
-	newpos = px+wwidth;
-	VWB_DrawPropString (word);
-	px = newpos;
-
-	//
-	// suck up any extra spaces
-	//
-	while (*text == ' ')
-	{
-		px += SPACEWIDTH;
-		text++;
-	}
+    if (graphics == NULL
+        || !WL_ArticleChunks(graphics->variant, &unused_top,
+                             &unused_help_text, &end_text)
+        || episode >= (graphics->variant == WG_GAME_WOLF3D_SHAREWARE_14
+                       ? 1U : 6U))
+    {
+        return 0;
+    }
+    return WL_ArticleOpenChunk(article, graphics, end_text + episode);
 }
 
-/*
-=====================
-=
-= PageLayout
-=
-= Clears the screen, draws the pics on the page, and word wraps the text.
-= Returns a pointer to the terminating command
-=
-=====================
-*/
-
-void PageLayout (boolean shownumber)
+int WL_ArticleOpenHelp(wl_article_t *article,
+                       const wg_graphics_t *graphics)
 {
-	int		i,oldfontcolor;
-	char	ch;
+    size_t unused_top;
+    size_t help_text;
+    size_t unused_end_text;
 
-	oldfontcolor = fontcolor;
-
-	fontcolor = 0;
-
-//
-// clear the screen
-//
-	VWB_Bar (0,0,320,200,BACKCOLOR);
-	VWB_DrawPic (0,0,H_TOPWINDOWPIC);
-	VWB_DrawPic (0,8,H_LEFTWINDOWPIC);
-	VWB_DrawPic (312,8,H_RIGHTWINDOWPIC);
-	VWB_DrawPic (8,176,H_BOTTOMINFOPIC);
-
-
-	for (i=0;i<TEXTROWS;i++)
-	{
-		leftmargin[i] = LEFTMARGIN;
-		rightmargin[i] = SCREENPIXWIDTH-RIGHTMARGIN;
-	}
-
-	px = LEFTMARGIN;
-	py = TOPMARGIN;
-	rowon = 0;
-	layoutdone = false;
-
-//
-// make sure we are starting layout text (^P first command)
-//
-	while (*text <= 32)
-		text++;
-
-	if (*text != '^' || toupper(*++text) != 'P')
-		Quit ("PageLayout: Text not headed with ^P");
-
-	while (*text++ != '\n')
-	;
-
-
-//
-// process text stream
-//
-	do
-	{
-		ch = *text;
-
-		if (ch == '^')
-			HandleCommand ();
-		else
-		if (ch == 9)
-		{
-		 px = (px+8)&0xf8;
-		 text++;
-		}
-		else if (ch <= 32)
-			HandleCtrls ();
-		else
-			HandleWord ();
-
-	} while (!layoutdone);
-
-	pagenum++;
-
-	if (shownumber)
-	{
-		#ifdef SPANISH
-		strcpy (str,"Hoja ");
-		itoa (pagenum,str2,10);
-		strcat (str,str2);
-		strcat (str," de ");
-		py = 183;
-		px = 208;
-		#else
-		strcpy (str,"pg ");
-		itoa (pagenum,str2,10);
-		strcat (str,str2);
-		strcat (str," of ");
-		py = 183;
-		px = 213;
-		#endif
-		itoa (numpages,str2,10);
-		strcat (str,str2);
-		fontcolor = 0x4f; 			   //12^BACKCOLOR;
-
-		VWB_DrawPropString (str);
-	}
-
-	fontcolor = oldfontcolor;
+    if (graphics == NULL
+        || !WL_ArticleChunks(graphics->variant, &unused_top, &help_text,
+                             &unused_end_text))
+    {
+        return 0;
+    }
+    return WL_ArticleOpenChunk(article, graphics, help_text);
 }
 
-//===========================================================================
-
-/*
-=====================
-=
-= BackPage
-=
-= Scans for a previous ^P
-=
-=====================
-*/
-
-void BackPage (void)
+void WL_ArticleClose(wl_article_t *article)
 {
-	pagenum--;
-	do
-	{
-		text--;
-		if (*text == '^' && toupper(*(text+1)) == 'P')
-			return;
-	} while (1);
+    if (article != NULL)
+    {
+        free(article->text);
+        memset(article, 0, sizeof(*article));
+    }
 }
 
-
-//===========================================================================
-
-
-/*
-=====================
-=
-= CacheLayoutGraphics
-=
-= Scans an entire layout file (until a ^E) marking all graphics used, and
-= counting pages, then caches the graphics in
-=
-=====================
-*/
-void CacheLayoutGraphics (void)
+int WL_ArticleRender(const wl_article_t *article,
+                     const wg_graphics_t *graphics, size_t page,
+                     uint8_t framebuffer[320 * 200])
 {
-	char	far *bombpoint, far *textstart;
-	char	ch;
+    wl_article_layout_t layout;
+    wg_font_t font;
+    size_t top;
+    size_t unused_help_text;
+    size_t unused_end_text;
+    unsigned row;
+    char page_number[32];
 
-	textstart = text;
-	bombpoint = text+30000;
-	numpages = pagenum = 0;
+    if (article == NULL || graphics == NULL || framebuffer == NULL
+        || article->text == NULL || page >= article->page_count
+        || !WL_ArticleChunks(graphics->variant, &top, &unused_help_text,
+                             &unused_end_text)
+        || !WG_FontOpen(&font, graphics, 0U))
+    {
+        return 0;
+    }
+    memset(&layout, 0, sizeof(layout));
+    layout.text = article->text + article->page_offsets[page];
+    layout.end = article->text + article->text_size;
+    layout.x = WL_TEXT_LEFT_MARGIN;
+    layout.y = WL_TEXT_TOP_MARGIN;
+    for (row = 0U; row < WL_TEXT_ROWS; ++row)
+    {
+        layout.left[row] = WL_TEXT_LEFT_MARGIN;
+        layout.right[row] = 320U - WL_TEXT_RIGHT_MARGIN;
+    }
+    WG_VideoClear(framebuffer, WL_TEXT_BACK_COLOR);
+    if (!WG_VideoDrawPicture(framebuffer, graphics, top, 0, 0)
+        || !WG_VideoDrawPicture(framebuffer, graphics, top + 1U, 0, 8)
+        || !WG_VideoDrawPicture(framebuffer, graphics, top + 2U, 312, 8)
+        || !WG_VideoDrawPicture(framebuffer, graphics, top + 3U, 8, 176))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    while (layout.text < layout.end && *layout.text <= 32U)
+    {
+        ++layout.text;
+    }
+    if ((size_t)(layout.end - layout.text) < 2U
+        || *layout.text != '^'
+        || toupper((int)layout.text[1]) != 'P')
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    layout.text += 2;
+    if (!WL_ArticleEndOfLine(&layout))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
+    while (!layout.done && layout.text < layout.end)
+    {
+        uint8_t character = *layout.text;
 
-	do
-	{
-		if (*text == '^')
-		{
-			ch = toupper(*++text);
-			if (ch == 'P')		// start of a page
-				numpages++;
-			if (ch == 'E')		// end of file, so load graphics and return
-			{
-				CA_MarkGrChunk(H_TOPWINDOWPIC);
-				CA_MarkGrChunk(H_LEFTWINDOWPIC);
-				CA_MarkGrChunk(H_RIGHTWINDOWPIC);
-				CA_MarkGrChunk(H_BOTTOMINFOPIC);
-				CA_CacheMarks ();
-				text = textstart;
-				return;
-			}
-			if (ch == 'G')		// draw graphic command, so mark graphics
-			{
-				ParsePicCommand ();
-				CA_MarkGrChunk (picnum);
-			}
-			if (ch == 'T')		// timed draw graphic command, so mark graphics
-			{
-				ParseTimedCommand ();
-				CA_MarkGrChunk (picnum);
-			}
-		}
-		else
-			text++;
+        if (character == '^')
+        {
+            if (!WL_ArticleCommand(&layout, graphics, framebuffer))
+            {
+                WG_FontClose(&font);
+                return 0;
+            }
+        }
+        else if (character == '\t')
+        {
+            layout.x = (layout.x + 8) & ~7;
+            ++layout.text;
+        }
+        else if (character <= 32U)
+        {
+            ++layout.text;
+            if (character == '\n')
+            {
+                WL_ArticleNewLine(&layout);
+            }
+        }
+        else
+        {
+            char word[WL_TEXT_WORD_LIMIT];
+            size_t length = 0U;
+            size_t width;
 
-	} while (text<bombpoint);
-
-	Quit ("CacheLayoutGraphics: No ^E to terminate file!");
-}
-#endif
-
-
-/*
-=====================
-=
-= ShowArticle
-=
-=====================
-*/
-
-#ifdef JAPAN
-void ShowArticle (int which)
-#else
-void ShowArticle (char far *article)
-#endif
-{
-	#ifdef JAPAN
-	int		snames[10] = {	H_HELP1PIC,
-							H_HELP2PIC,
-							H_HELP3PIC,
-							H_HELP4PIC,
-							H_HELP5PIC,
-							H_HELP6PIC,
-							H_HELP7PIC,
-							H_HELP8PIC,
-							H_HELP9PIC,
-							H_HELP10PIC};
-	int		enames[14] = {
-							0,0,
-							#ifndef JAPDEMO
-							C_ENDGAME1APIC,
-							C_ENDGAME1BPIC,
-							C_ENDGAME2APIC,
-							C_ENDGAME2BPIC,
-							C_ENDGAME3APIC,
-							C_ENDGAME3BPIC,
-							C_ENDGAME4APIC,
-							C_ENDGAME4BPIC,
-							C_ENDGAME5APIC,
-							C_ENDGAME5BPIC,
-							C_ENDGAME6APIC,
-							C_ENDGAME6BPIC
-							#endif
-							};
-	#endif
-	unsigned	oldfontnumber;
-	unsigned	temp;
-	boolean 	newpage,firstpage;
-
-	#ifdef JAPAN
-	pagenum = 1;
-	if (!which)
-		numpages = 10;
-	else
-		numpages = 2;
-
-	#else
-
-	text = article;
-	oldfontnumber = fontnumber;
-	fontnumber = 0;
-	CA_MarkGrChunk(STARTFONT);
-	VWB_Bar (0,0,320,200,BACKCOLOR);
-	CacheLayoutGraphics ();
-	#endif
-
-	newpage = true;
-	firstpage = true;
-
-	do
-	{
-		if (newpage)
-		{
-			newpage = false;
-			#ifdef JAPAN
-			if (!which)
-				CA_CacheScreen(snames[pagenum - 1]);
-			else
-				CA_CacheScreen(enames[which*2 + pagenum - 1]);
-			#else
-			PageLayout (true);
-			#endif
-			VW_UpdateScreen ();
-			if (firstpage)
-			{
-				VL_FadeIn(0,255,&gamepal,10);
-				// VW_FadeIn ()
-				firstpage = false;
-			}
-		}
-
-		LastScan = 0;
-		while (!LastScan)
-		;
-
-		switch (LastScan)
-		{
-		case sc_UpArrow:
-		case sc_PgUp:
-		case sc_LeftArrow:
-			if (pagenum>1)
-			{
-				#ifndef JAPAN
-				BackPage ();
-				BackPage ();
-				#else
-				pagenum--;
-				#endif
-				newpage = true;
-			}
-			break;
-
-		case sc_Enter:
-		case sc_DownArrow:
-		case sc_PgDn:
-		case sc_RightArrow:		// the text allready points at next page
-			if (pagenum<numpages)
-			{
-				newpage = true;
-				#ifdef JAPAN
-				pagenum++;
-				#endif
-			}
-			break;
-		}
-
-		#ifndef SPEAR
-		if (Keyboard[sc_Tab] && Keyboard[sc_P] && MS_CheckParm("goobers"))
-			PicturePause();
-		#endif
-
-	} while (LastScan != sc_Escape);
-
-	IN_ClearKeysDown ();
-	fontnumber = oldfontnumber;
-}
-
-
-//===========================================================================
-
-#ifndef JAPAN
-#ifdef ARTSEXTERN
-int 	endextern = T_ENDART1;
-#ifndef SPEAR
-int		helpextern = T_HELPART;
-#endif
-#endif
-char helpfilename[13] = "HELPART.",
-	 endfilename[13] = "ENDART1.";
-#endif
-
-/*
-=================
-=
-= HelpScreens
-=
-=================
-*/
-#ifndef SPEAR
-void HelpScreens (void)
-{
-	int			artnum;
-	char far 	*text;
-	memptr		layout;
-
-
-	CA_UpLevel ();
-	MM_SortMem ();
-#ifdef JAPAN
-	ShowArticle (0);
-	VW_FadeOut();
-	FreeMusic ();
-	CA_DownLevel ();
-	MM_SortMem ();
-#else
-
-
-
-
-#ifdef ARTSEXTERN
-	artnum = helpextern;
-	CA_CacheGrChunk (artnum);
-	text = (char _seg *)grsegs[artnum];
-	MM_SetLock (&grsegs[artnum], true);
-#else
-	CA_LoadFile (helpfilename,&layout);
-	text = (char _seg *)layout;
-	MM_SetLock (&layout, true);
-#endif
-
-	ShowArticle (text);
-
-#ifdef ARTSEXTERN
-	MM_FreePtr (&grsegs[artnum]);
-#else
-	MM_FreePtr (&layout);
-#endif
-
-
-
-	VW_FadeOut();
-
-	FreeMusic ();
-	CA_DownLevel ();
-	MM_SortMem ();
-#endif
-}
-#endif
-
-//
-// END ARTICLES
-//
-void EndText (void)
-{
-	int			artnum;
-	char far 	*text;
-	memptr		layout;
-
-
-	ClearMemory ();
-
-	CA_UpLevel ();
-	MM_SortMem ();
-#ifdef JAPAN
-	ShowArticle(gamestate.episode + 1);
-
-	VW_FadeOut();
-
-	SETFONTCOLOR(0,15);
-	IN_ClearKeysDown();
-	if (MousePresent)
-		Mouse(MDelta);	// Clear accumulated mouse movement
-
-	FreeMusic ();
-	CA_DownLevel ();
-	MM_SortMem ();
-#else
-
-
-
-#ifdef ARTSEXTERN
-	artnum = endextern+gamestate.episode;
-	CA_CacheGrChunk (artnum);
-	text = (char _seg *)grsegs[artnum];
-	MM_SetLock (&grsegs[artnum], true);
-#else
-	endfilename[6] = '1'+gamestate.episode;
-	CA_LoadFile (endfilename,&layout);
-	text = (char _seg *)layout;
-	MM_SetLock (&layout, true);
-#endif
-
-	ShowArticle (text);
-
-#ifdef ARTSEXTERN
-	MM_FreePtr (&grsegs[artnum]);
-#else
-	MM_FreePtr (&layout);
-#endif
-
-
-	VW_FadeOut();
-	SETFONTCOLOR(0,15);
-	IN_ClearKeysDown();
-	if (MousePresent)
-		Mouse(MDelta);	// Clear accumulated mouse movement
-
-	FreeMusic ();
-	CA_DownLevel ();
-	MM_SortMem ();
-#endif
+            while (layout.text < layout.end && *layout.text > 32U)
+            {
+                if (length + 1U >= sizeof(word))
+                {
+                    WG_FontClose(&font);
+                    return 0;
+                }
+                word[length++] = (char)*layout.text++;
+            }
+            word[length] = '\0';
+            width = WG_FontMeasure(&font, word);
+            while (!layout.done
+                   && layout.x + (int)width
+                      > (int)layout.right[layout.row])
+            {
+                WL_ArticleNewLine(&layout);
+            }
+            if (!layout.done)
+            {
+                WG_FontDraw(&font, framebuffer, layout.x, layout.y,
+                            word, layout.color);
+                layout.x += (int)width;
+                while (layout.text < layout.end && *layout.text == ' ')
+                {
+                    layout.x += WL_TEXT_SPACE_WIDTH;
+                    ++layout.text;
+                }
+            }
+        }
+    }
+    (void)snprintf(page_number, sizeof(page_number), "pg %u of %u",
+                   (unsigned)(page + 1U), (unsigned)article->page_count);
+    WG_FontDraw(&font, framebuffer, 213, 183, page_number, 0x4fU);
+    WG_FontClose(&font);
+    return 1;
 }
