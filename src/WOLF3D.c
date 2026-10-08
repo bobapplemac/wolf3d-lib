@@ -80,6 +80,7 @@ static uint8_t wg_joystick_bindings[WL_CUSTOM_BINDINGS] =
 static uint8_t wg_joystick_enabled;
 static uint8_t wg_joystick_port;
 static uint8_t wg_gamepad_enabled;
+static uint8_t wg_joystick_input_allowed = 1U;
 static uint16_t wg_action_keys[WL_CUSTOM_BINDINGS] =
     { WOLF3D_KEY_RIGHT_SHIFT, WOLF3D_KEY_SPACE, WOLF3D_KEY_CONTROL, WOLF3D_KEY_ALT };
 static uint16_t wg_movement_keys[WL_CUSTOM_BINDINGS] =
@@ -4684,6 +4685,11 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     const char *signon_palette;
     const char *opl_driver;
     unsigned sample_rate;
+    uint32_t input_devices;
+    int force_mouse;
+    int suppress_mouse;
+    int force_joystick;
+    int suppress_joystick;
     int argument_index;
 
     if (wg_initialized || argc < 0 || (argc > 0 && argv == NULL))
@@ -4729,7 +4735,11 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
                                     3U, &collapse_frame)
         || view_size < WL_VIEW_SIZE_MIN
         || (WG_HasArgument(argc, argv, "--adlib")
-            && WG_HasArgument(argc, argv, "--pc-speaker")))
+            && WG_HasArgument(argc, argv, "--pc-speaker"))
+        || (WG_HasArgument(argc, argv, "--mouse")
+            && WG_HasArgument(argc, argv, "--nomouse"))
+        || (WG_HasArgument(argc, argv, "--joy")
+            && WG_HasArgument(argc, argv, "--nojoy")))
     {
         return WOLF3D_RESULT_INVALID_ARGUMENT;
     }
@@ -4760,7 +4770,21 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     WG_SetWindowTitle("wolf3d");
     wg_initialized = 1;
     wg_next_demo = 0U;
-    wg_mouse_present = (uint8_t)WG_HasArgument(argc, argv, "--mouse");
+    force_mouse = WG_HasArgument(argc, argv, "--mouse");
+    suppress_mouse = WG_HasArgument(argc, argv, "--nomouse");
+    force_joystick = WG_HasArgument(argc, argv, "--joy");
+    suppress_joystick = WG_HasArgument(argc, argv, "--nojoy");
+    input_devices = WG_InputDevices();
+    wg_mouse_present = (uint8_t)(!suppress_mouse
+        && (force_mouse
+            || (input_devices & WOLF3D_INPUT_DEVICE_MOUSE) != 0U));
+    wg_joystick_input_allowed = (uint8_t)!suppress_joystick;
+    if (!suppress_joystick
+        && (force_joystick
+            || (input_devices & WOLF3D_INPUT_DEVICE_JOYSTICK) != 0U))
+    {
+        (void)ID_IN_SetJoystick(0U, 1, 0, 0, 0U);
+    }
     data_path = WG_FindDataPath(argc, argv);
     if (data_path == NULL && WG_IsInteractive() && argc > 0
         && WG_FindExecutableDirectory(argv[0], default_data_path,
@@ -4807,6 +4831,10 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     /* Retain the serialized field for format compatibility and in-session
        menu changes, but make mouse control opt-in at each startup. */
     wg_mouse_enabled = wg_mouse_present;
+    if (force_joystick)
+    {
+        wg_joystick_enabled = 1U;
+    }
     if (WG_HasArgument(argc, argv, "--pc-speaker"))
     {
         wg_sound_mode = 1U;
@@ -5444,7 +5472,8 @@ wolf3d_result_t wolf3d_Run(void)
                 uint8_t pressed_buttons;
                 int ui_input;
 
-                if (event.joystick >= ID_IN_MAX_JOYSTICKS)
+                if (!wg_joystick_input_allowed
+                    || event.joystick >= ID_IN_MAX_JOYSTICKS)
                 {
                     continue;
                 }
@@ -7139,6 +7168,7 @@ void wolf3d_Shutdown(void)
     wg_config_ready = 0U;
     wg_mouse_present = 0U;
     wg_mouse_enabled = 0U;
+    wg_joystick_input_allowed = 1U;
     wg_debug_parameter = 0U;
     wg_debug_keys_enabled = 0U;
     wg_confirm_action = WG_CONFIRM_NONE;

@@ -126,6 +126,7 @@ int WG_InstallPlatform(void)
         WG_HeadlessPCMInitEx,
         NULL,
         NULL,
+        NULL,
         NULL
     };
 

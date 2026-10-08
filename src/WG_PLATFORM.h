@@ -10,6 +10,7 @@ uint32_t WG_GetTicksMs(void);
 void WG_SleepMs(uint32_t milliseconds);
 int WG_PollEvent(wolf3d_event_t *event);
 int WG_IsInteractive(void);
+uint32_t WG_InputDevices(void);
 void WG_SetWindowTitle(const char *title);
 void WG_PrintMessage(const char *message);
 void WG_ReportError(const char *message);

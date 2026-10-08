@@ -109,11 +109,13 @@ carried in `wl_input_t` to the original `10/(13-adjustment)` and
 two-device host event and `ID_IN.c` applies the original calibrated outer-third
 dead zone and signed `-127..127` delta scaling.
 
-The `--mouse` switch supplies the original input manager's hardware-presence
-result. Without it, SIGNON leaves the Mouse indicator blank, mouse events are
-discarded, and mouse-specific Controls and Customize Controls entries are
-inactive. With it, mouse hardware is present and control starts enabled; the
-Controls menu may then disable or re-enable it for the running session.
+Platform API v5 reports the host's initially detected mouse and joystick
+devices. The engine uses those results for the original input manager's
+hardware-presence state and SIGNON indicators. `--mouse` and `--joy` force a
+device present, while `--nomouse` and `--nojoy` force it absent; contradictory
+pairs are invalid. When a mouse is present, mouse control starts enabled and
+the Controls menu may then disable or re-enable it for the running session.
+Joystick hot-plug state continues to arrive through ordinary input events.
 
 Customize Controls retains the original four presentation columns—Run, Open,
 Fire, and Strafe—and the Left, Right, Forward, and Back movement row. Bindings

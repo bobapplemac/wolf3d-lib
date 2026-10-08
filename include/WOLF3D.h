@@ -112,7 +112,10 @@ typedef struct wolf3d_event
     uint32_t buttons;
 } wolf3d_event_t;
 
-#define WOLF3D_PLATFORM_API_VERSION 4U
+#define WOLF3D_PLATFORM_API_VERSION 5U
+
+#define WOLF3D_INPUT_DEVICE_MOUSE    0x01U
+#define WOLF3D_INPUT_DEVICE_JOYSTICK 0x02U
 
 typedef struct wolf3d_pcm_format
 {
@@ -150,6 +153,7 @@ typedef struct wolf3d_platform_api
     int (*opl_hardware_init)(void);
     void (*opl_hardware_shutdown)(void);
     void (*opl_hardware_write)(uint16_t register_number, uint8_t value);
+    uint32_t (*input_devices)(void);
 } wolf3d_platform_api_t;
 
 WOLF3D_API extern uint8_t *wolf3d_ScreenBuffer;

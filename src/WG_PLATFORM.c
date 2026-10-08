@@ -78,6 +78,12 @@ int WG_IsInteractive(void)
                && wg_platform.is_interactive();
 }
 
+uint32_t WG_InputDevices(void)
+{
+    return wg_platform.input_devices != NULL
+               ? wg_platform.input_devices() : 0U;
+}
+
 void WG_SetWindowTitle(const char *title)
 {
     if (wg_platform.set_window_title != NULL)

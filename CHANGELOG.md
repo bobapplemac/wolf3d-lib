@@ -6,6 +6,15 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.55 - 2026-10-08 - Host input-device discovery
+
+- Added a platform capability callback for automatic mouse and joystick
+  discovery while retaining deterministic command-line overrides.
+- Changed `--mouse` and `--joy` to force hardware presence, and added
+  `--nomouse` and `--nojoy` to force hardware absence.
+- Reject contradictory force-on and force-off options instead of depending on
+  argument order.
+
 ## 1.4.54 - 2026-10-07 - Public project maintenance
 
 - Added structured issue forms for engine/fidelity defects and compiler or
