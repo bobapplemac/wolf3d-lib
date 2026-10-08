@@ -84,6 +84,14 @@ uint32_t WG_InputDevices(void)
                ? wg_platform.input_devices() : 0U;
 }
 
+void WG_SetMouseCapture(int captured)
+{
+    if (wg_platform.set_mouse_capture != NULL)
+    {
+        wg_platform.set_mouse_capture(captured != 0);
+    }
+}
+
 void WG_SetWindowTitle(const char *title)
 {
     if (wg_platform.set_window_title != NULL)

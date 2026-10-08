@@ -72,7 +72,7 @@ which it accepts application samples, normally the requested rate. A direct
 hardware host may instead report a nearby negotiated rate. The engine's
 rational 700 Hz sample clock remains exact at either rate.
 
-Platform API v5 also has three optional native-OPL callbacks. A constrained
+Platform API v6 also has three optional native-OPL callbacks. A constrained
 hardware host may initialize an OPL2-compatible device, accept register/value
 writes, and shut it down without putting port I/O in the generic engine. The
 `adlib` adapter is compiled only by an explicitly configured target. Its
@@ -85,6 +85,10 @@ The optional `input_devices` callback returns the bitwise combination of
 host initialization. Return zero (or use `NULL`) when discovery is unavailable.
 Command-line force-on and force-off options take precedence over this initial
 snapshot; later joystick connection changes use `WOLF3D_EVENT_JOYSTICK`.
+The optional `set_mouse_capture` callback confines and hides the native cursor
+when its argument is nonzero, and releases and shows it otherwise. The engine
+calls it after startup configuration, whenever Mouse Enabled changes, and
+before platform shutdown.
 
 ## Build integration
 

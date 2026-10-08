@@ -4831,6 +4831,7 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     /* Retain the serialized field for format compatibility and in-session
        menu changes, but make mouse control opt-in at each startup. */
     wg_mouse_enabled = wg_mouse_present;
+    WG_SetMouseCapture(wg_mouse_enabled);
     if (force_joystick)
     {
         wg_joystick_enabled = 1U;
@@ -5199,6 +5200,7 @@ static int WG_ControlMenuActivate(void)
                 return 1;
             }
             wg_mouse_enabled = (uint8_t)!wg_mouse_enabled;
+            WG_SetMouseCapture(wg_mouse_enabled);
             if (!WG_DrawControlMenuScreen())
             {
                 return 0;
@@ -7141,6 +7143,7 @@ void wolf3d_Shutdown(void)
     WG_WriteConfig();
     WG_GameSessionClose();
     WG_FrontMusicClose();
+    WG_SetMouseCapture(0);
     WG_PresentDOSExitScreen();
     WG_Shutdown();
     WG_DataClose(&wg_data_set);

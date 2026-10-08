@@ -109,13 +109,16 @@ carried in `wl_input_t` to the original `10/(13-adjustment)` and
 two-device host event and `ID_IN.c` applies the original calibrated outer-third
 dead zone and signed `-127..127` delta scaling.
 
-Platform API v5 reports the host's initially detected mouse and joystick
+Platform API v6 reports the host's initially detected mouse and joystick
 devices. The engine uses those results for the original input manager's
 hardware-presence state and SIGNON indicators. `--mouse` and `--joy` force a
 device present, while `--nomouse` and `--nojoy` force it absent; contradictory
 pairs are invalid. When a mouse is present, mouse control starts enabled and
 the Controls menu may then disable or re-enable it for the running session.
 Joystick hot-plug state continues to arrive through ordinary input events.
+An optional engine-to-host callback synchronizes native cursor capture with
+the live Mouse Enabled setting rather than requiring a host to infer menu
+configuration from input traffic.
 
 Customize Controls retains the original four presentation columns—Run, Open,
 Fire, and Strafe—and the Left, Right, Forward, and Back movement row. Bindings

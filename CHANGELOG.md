@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.56 - 2026-10-08 - Engine-directed mouse capture
+
+- Added an optional platform callback that synchronizes OS mouse capture with
+  the engine's live Mouse Enabled configuration.
+- Release capture during clean shutdown and immediately when mouse control is
+  disabled from the Controls menu; restore it when control is re-enabled.
+
 ## 1.4.55 - 2026-10-08 - Host input-device discovery
 
 - Added a platform capability callback for automatic mouse and joystick
