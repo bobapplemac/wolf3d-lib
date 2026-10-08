@@ -1,0 +1,48 @@
+name: Engine or fidelity bug
+description: Report a gameplay, rendering, data, timing, persistence, or audio difference.
+title: "[Engine] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping preserve Wolfenstein 3D accurately. Do not attach copyrighted game-data files.
+  - type: input
+    id: version
+    attributes:
+      label: wolf3d-lib version or commit
+      placeholder: 1.4.54 or a full commit SHA
+    validations:
+      required: true
+  - type: input
+    id: data
+    attributes:
+      label: Game-data edition
+      description: Identify the extension and release, such as WL1 Apogee, WL6 GT, SDM, or SOD.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed and expected behavior
+      description: Explain what happened and how the original DOS release behaves instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: Include map, relevant settings, inputs, and whether a demo or save is involved.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Host and build details
+      description: Include OS, architecture, compiler, OPL driver, sample rate, and consuming host.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Additional evidence
+      description: Add logs, screenshots, hashes, or links that do not redistribute commercial game data.
