@@ -63,11 +63,16 @@ Runtime audio selection is intentionally host-independent:
 ```text
 --opl nuked|dbopl|silent  Select an implementation compiled into the library
 --sample-rate HZ          Request 8000--192000 Hz PCM (default: 48000)
+--adlib / -nosb           Emulate an AdLib-only machine
+--pc-speaker / -noal      Emulate no sound card and use PC-speaker effects
+--no-sound                Emulate no sound card and select no audio
 ```
 
 The host may negotiate another application-facing PCM rate. The library then
 constructs the selected emulator at that obtained rate while preserving the
 exact rational 700 Hz IMF clock and 140 Hz effect clock.
+Hardware profiles are independent of the selected OPL implementation and of
+whether the host opens a physical audio device.
 
 ## Build
 

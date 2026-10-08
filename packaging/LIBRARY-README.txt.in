@@ -27,3 +27,7 @@ timing-preserving silent driver are built into wolf3d when enabled. Select an
 included driver at runtime with --opl nuked, --opl dbopl, or --opl silent;
 use --sample-rate HZ to change the preferred host PCM rate. See
 THIRD_PARTY_NOTICES.txt for provenance.
+
+Emulated hardware is selected separately: --adlib/-nosb for AdLib-only,
+--pc-speaker/-noal for no sound card with PC-speaker effects, or --no-sound
+for no sound card with all in-game sound initially off.

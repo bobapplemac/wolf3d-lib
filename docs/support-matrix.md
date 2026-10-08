@@ -94,6 +94,12 @@ omit unneeded implementations at compile time:
 | `--opl dbopl` | DBOPL | Embedded pure-C implementation |
 | `--opl silent` | Silent timing driver | Timing and register activity retained; all PCM is silent |
 
+Emulated hardware is selected separately: the default exposes Sound Blaster
+and AdLib-compatible hardware, `--adlib`/`-nosb` exposes AdLib only,
+`--pc-speaker`/`-noal` exposes neither card and selects PC-speaker effects, and
+`--no-sound` exposes neither card with all in-game sound initially off. Every
+profile preserves the internal audio clock.
+
 Use `OPL_DRIVERS`, `OPL_DEFAULT`, and `SAMPLE_RATE` with Make, or the
 corresponding dispatcher/CMake options documented in
 [building.md](building.md).

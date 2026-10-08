@@ -99,6 +99,8 @@ static char wg_save_original_name[WL_SAVE_NAME_LENGTH + 1U];
 static uint8_t wg_sound_mode = 2U;
 static uint8_t wg_digitized_effects = 1U;
 static uint8_t wg_music_enabled = 1U;
+static uint8_t wg_adlib_present = 1U;
+static uint8_t wg_sound_blaster_present = 1U;
 static uint8_t wg_debug_parameter;
 static uint8_t wg_debug_keys_enabled;
 
@@ -227,6 +229,14 @@ typedef enum wg_attract_phase
     WG_ATTRACT_SCORES
 } wg_attract_phase_t;
 
+typedef enum wg_sound_profile
+{
+    WG_SOUND_PROFILE_SOUND_BLASTER,
+    WG_SOUND_PROFILE_ADLIB,
+    WG_SOUND_PROFILE_PC_SPEAKER,
+    WG_SOUND_PROFILE_NONE
+} wg_sound_profile_t;
+
 static wg_attract_phase_t wg_attract_phase;
 static uint32_t wg_attract_deadline;
 #define WG_SIGNON_WORK_MIN_MS 750U
@@ -235,7 +245,7 @@ static uint32_t wg_attract_deadline;
 #define WG_MENU_CURSOR_FLASH_MS 129U
 #define WG_MENU_CURSOR_HOLD_MS 1015U
 static wg_game_family_t wg_signon_family;
-static uint8_t wg_signon_sound_blaster;
+static wg_sound_hardware_t wg_signon_sound_hardware;
 static wg_audio_t wg_front_audio;
 static id_sd_music_t *wg_front_music;
 static uint8_t wg_front_audio_active;
@@ -880,6 +890,40 @@ static wg_difficulty_t WG_DOSDifficulty(int argc, char **argv)
     return WG_DIFFICULTY_EASY;
 }
 
+static int WG_FindSoundProfile(int argc, char **argv,
+                               wg_sound_profile_t *profile)
+{
+    int no_adlib;
+    int no_sound_blaster;
+    int request_adlib;
+    int request_pc_speaker;
+    int request_no_sound;
+
+    if (profile == NULL)
+    {
+        return 0;
+    }
+    no_adlib = WG_HasDOSArgument(argc, argv, "noal");
+    no_sound_blaster = WG_HasDOSArgument(argc, argv, "nosb");
+    request_adlib = WG_HasArgument(argc, argv, "--adlib")
+        || (no_sound_blaster && !no_adlib);
+    request_pc_speaker = WG_HasArgument(argc, argv, "--pc-speaker")
+        || no_adlib;
+    request_no_sound = WG_HasArgument(argc, argv, "--no-sound");
+
+    if ((request_adlib && request_pc_speaker)
+        || (request_adlib && request_no_sound)
+        || (request_pc_speaker && request_no_sound))
+    {
+        return 0;
+    }
+    *profile = request_no_sound ? WG_SOUND_PROFILE_NONE
+        : request_pc_speaker ? WG_SOUND_PROFILE_PC_SPEAKER
+        : request_adlib ? WG_SOUND_PROFILE_ADLIB
+        : WG_SOUND_PROFILE_SOUND_BLASTER;
+    return 1;
+}
+
 static int WG_FindUnsignedArgument(int argc, char **argv,
                                    const char *argument,
                                    unsigned default_value,
@@ -1431,7 +1475,7 @@ static int WG_DrawSignonPrompt(const char *text, uint8_t color)
 
 static int WG_LoadSignonScreen(const char *path,
                                wg_game_family_t palette_family,
-                               int sound_blaster_present)
+                               wg_sound_hardware_t sound_hardware)
 {
     wg_file_buffer_t file;
 
@@ -1455,9 +1499,9 @@ static int WG_LoadSignonScreen(const char *path,
                             wg_mouse_present,
                             ID_IN_JoystickPresent(0U)
                                 || ID_IN_JoystickPresent(1U),
-                            sound_blaster_present);
+                            sound_hardware);
     wg_signon_family = palette_family;
-    wg_signon_sound_blaster = (uint8_t)sound_blaster_present;
+    wg_signon_sound_hardware = sound_hardware;
     WG_GamePalette(palette_family == WG_GAME_FAMILY_SPEAR
                        ? WG_GAME_SPEAR_FULL_SOD
                        : WG_GAME_WOLF3D_FULL_GT_14,
@@ -1491,7 +1535,7 @@ static int WG_LoadSignonScreen(const char *path,
 
 static int WG_DrawEmbeddedSignon(const char *name,
                                  wg_game_family_t palette_override,
-                                 int sound_blaster_present)
+                                 wg_sound_hardware_t sound_hardware)
 {
     wg_game_family_t asset_family;
     wg_game_family_t palette_family;
@@ -1501,7 +1545,7 @@ static int WG_DrawEmbeddedSignon(const char *name,
                        wg_mouse_present,
                        ID_IN_JoystickPresent(0U)
                            || ID_IN_JoystickPresent(1U),
-                       sound_blaster_present,
+                       sound_hardware,
                        &asset_family))
     {
         return 0;
@@ -1509,7 +1553,7 @@ static int WG_DrawEmbeddedSignon(const char *name,
     palette_family = palette_override == WG_GAME_FAMILY_UNKNOWN
                          ? asset_family : palette_override;
     wg_signon_family = asset_family;
-    wg_signon_sound_blaster = (uint8_t)sound_blaster_present;
+    wg_signon_sound_hardware = sound_hardware;
     WG_GamePalette(palette_family == WG_GAME_FAMILY_SPEAR
                        ? WG_GAME_SPEAR_FULL_SOD
                        : WG_GAME_WOLF3D_FULL_GT_14,
@@ -1968,7 +2012,9 @@ static int WG_DrawSoundMenuScreen(void)
     }
     result = WL_DrawSoundMenu(wolf3d_ScreenBuffer, &graphics,
                               wg_sound_selection, wg_sound_mode,
-                              wg_digitized_effects, wg_music_enabled);
+                              wg_digitized_effects, wg_music_enabled,
+                              wg_adlib_present,
+                              wg_sound_blaster_present);
     WG_GraphicsClose(&graphics);
     if (result)
     {
@@ -4495,7 +4541,8 @@ static int WG_LoadInitialPlayView(unsigned map_number, int open_doors,
         }
     }
     if (sound_menu_view
-        && !WL_DrawSoundMenu(wolf3d_ScreenBuffer, &graphics, 0U, 2U, 1, 1))
+        && !WL_DrawSoundMenu(wolf3d_ScreenBuffer, &graphics, 0U, 2U, 1, 1,
+                             1, 1))
     {
         goto cleanup;
     }
@@ -4678,14 +4725,17 @@ const char *wolf3d_GetCommandLineHelp(void)
         "Audio:\n"
         "  --opl NAME           Select a compiled OPL driver\n"
         "  --sample-rate HZ     Preferred PCM rate from 8000 through 192000 Hz\n"
-        "  --adlib              Use AdLib music/effects without digitized sound\n"
-        "  --pc-speaker         Use PC-speaker sound effects\n"
+        "  --adlib              Emulate an AdLib-only machine\n"
+        "  --pc-speaker         Emulate no sound card; use PC-speaker effects\n"
+        "  --no-sound           Emulate no sound card; select no audio\n"
         "\n"
         "Original command-line options:\n"
         "  -goobers             Enable Wolf3D debug keys\n"
         "  -debugmode           Enable Spear debug keys\n"
         "  -tedlevel N          Start map N directly (0-59 Wolf3D, 0-20 Spear)\n"
         "  -baby|-easy|-normal|-hard  Difficulty used with -tedlevel\n"
+        "  -noal                Skip AdLib and Sound Blaster detection\n"
+        "  -nosb                Skip Sound Blaster detection\n"
         "  -nowait              Skip the title screen\n";
 }
 
@@ -4708,6 +4758,8 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     wg_game_variant_t requested_variant;
     wg_game_family_t preferred_family;
     wg_game_family_t signon_palette_family;
+    wg_sound_profile_t sound_profile;
+    wg_sound_hardware_t sound_hardware;
     const char *signon_path;
     const char *signon_palette;
     const char *opl_driver;
@@ -4738,6 +4790,7 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
         || !WG_FindStringArgument(argc, argv, "--signon-palette",
                                   &signon_palette)
         || !WG_FindStringArgument(argc, argv, "--opl", &opl_driver)
+        || !WG_FindSoundProfile(argc, argv, &sound_profile)
         || !WG_FindUnsignedArgument(argc, argv, "--sample-rate",
                                     WG_DEFAULT_SAMPLE_RATE, 192000U,
                                     &sample_rate)
@@ -4761,8 +4814,6 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
         || !WG_FindUnsignedArgument(argc, argv, "--collapse-frame", 0U,
                                     3U, &collapse_frame)
         || view_size < WL_VIEW_SIZE_MIN
-        || (WG_HasArgument(argc, argv, "--adlib")
-            && WG_HasArgument(argc, argv, "--pc-speaker"))
         || (WG_HasArgument(argc, argv, "--mouse")
             && WG_HasArgument(argc, argv, "--nomouse"))
         || (WG_HasArgument(argc, argv, "--joy")
@@ -4776,6 +4827,15 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
         return WOLF3D_RESULT_INVALID_ARGUMENT;
     }
     wg_preferred_sample_rate = (uint32_t)sample_rate;
+    wg_adlib_present = (uint8_t)(
+        sound_profile == WG_SOUND_PROFILE_SOUND_BLASTER
+        || sound_profile == WG_SOUND_PROFILE_ADLIB);
+    wg_sound_blaster_present = (uint8_t)(
+        sound_profile == WG_SOUND_PROFILE_SOUND_BLASTER);
+    sound_hardware = wg_sound_blaster_present
+        ? WG_SOUND_HARDWARE_SOUND_BLASTER
+        : wg_adlib_present ? WG_SOUND_HARDWARE_ADLIB
+                           : WG_SOUND_HARDWARE_NONE;
 
     framebuffer_size = (size_t)WOLF3D_SCREEN_WIDTH * (size_t)WOLF3D_SCREEN_HEIGHT;
     wolf3d_ScreenBuffer = (uint8_t *)calloc(framebuffer_size, sizeof(*wolf3d_ScreenBuffer));
@@ -4830,10 +4890,10 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
         && !(WG_SignonIsEmbeddedName(signon_path)
                  ? WG_DrawEmbeddedSignon(
                        signon_path, signon_palette_family,
-                       !WG_HasArgument(argc, argv, "--adlib"))
+                       sound_hardware)
                  : WG_LoadSignonScreen(
                        signon_path, signon_palette_family,
-                       !WG_HasArgument(argc, argv, "--adlib"))))
+                       sound_hardware)))
     {
         wolf3d_Shutdown();
         return WOLF3D_RESULT_PLATFORM_ERROR;
@@ -4841,7 +4901,7 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     if (data_path != NULL && signon_path == NULL && WG_IsInteractive()
         && !WG_DrawEmbeddedSignon(
             NULL, signon_palette_family,
-            !WG_HasArgument(argc, argv, "--adlib")))
+            sound_hardware))
     {
         wolf3d_Shutdown();
         return WOLF3D_RESULT_PLATFORM_ERROR;
@@ -4863,15 +4923,23 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     {
         wg_joystick_enabled = 1U;
     }
-    if (WG_HasArgument(argc, argv, "--pc-speaker"))
+    if (sound_profile == WG_SOUND_PROFILE_PC_SPEAKER)
     {
         wg_sound_mode = 1U;
+        wg_digitized_effects = 0U;
+        wg_music_enabled = 0U;
     }
-    else if (WG_HasArgument(argc, argv, "--adlib"))
+    else if (sound_profile == WG_SOUND_PROFILE_ADLIB)
     {
         wg_sound_mode = 2U;
         wg_digitized_effects = 0U;
         wg_music_enabled = 1U;
+    }
+    else if (sound_profile == WG_SOUND_PROFILE_NONE)
+    {
+        wg_sound_mode = 0U;
+        wg_digitized_effects = 0U;
+        wg_music_enabled = 0U;
     }
     if (WG_HasArgument(argc, argv, "--view-size"))
     {
@@ -5164,6 +5232,12 @@ static wolf3d_result_t WG_GameQuickKey(uint16_t key)
 static int WG_SoundMenuActivate(void)
 {
     int preview = 0;
+
+    if (!WL_SoundMenuActive(wg_sound_selection, wg_adlib_present,
+                            wg_sound_blaster_present))
+    {
+        return 1;
+    }
 
     switch (wg_sound_selection)
     {
@@ -5522,7 +5596,7 @@ wolf3d_result_t wolf3d_Run(void)
                     WG_SignonDrawIndicators(wolf3d_ScreenBuffer,
                                             wg_signon_family,
                                             wg_mouse_present, 1,
-                                            wg_signon_sound_blaster);
+                                            wg_signon_sound_hardware);
                 }
                 ID_IN_GetJoyDelta(event.joystick, &new_x, &new_y);
                 pressed_buttons = (uint8_t)(ID_IN_JoyButtons(event.joystick)
@@ -6330,7 +6404,9 @@ wolf3d_result_t wolf3d_Run(void)
                         if (event.key == WOLF3D_KEY_UP)
                         {
                             wg_sound_selection = WL_SoundMenuMove(
-                                wg_sound_selection, -1);
+                                wg_sound_selection, -1,
+                                wg_adlib_present,
+                                wg_sound_blaster_present);
                             if (!WG_DrawSoundMenuScreen())
                             {
                                 return WOLF3D_RESULT_PLATFORM_ERROR;
@@ -6340,7 +6416,9 @@ wolf3d_result_t wolf3d_Run(void)
                         else if (event.key == WOLF3D_KEY_DOWN)
                         {
                             wg_sound_selection = WL_SoundMenuMove(
-                                wg_sound_selection, 1);
+                                wg_sound_selection, 1,
+                                wg_adlib_present,
+                                wg_sound_blaster_present);
                             if (!WG_DrawSoundMenuScreen())
                             {
                                 return WOLF3D_RESULT_PLATFORM_ERROR;

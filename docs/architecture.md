@@ -495,11 +495,14 @@ configuration. Missing sample pages in the shareware archive fall back to the
 corresponding AdLib effect at runtime.
 
 The default hardware profile exposes both Sound Blaster digitized playback and
-its AdLib-compatible OPL synthesis. `--adlib` models an AdLib-only machine by
-disabling the digitized path while retaining music and synthesized effects.
-This also follows original `IntroScreen`: `SoundBlasterPresent` selects only
-the Sound Blaster indicator, whereas AdLib is marked only when no Sound Blaster
-is present.
+its AdLib-compatible OPL synthesis. `--adlib` and original `-nosb` model an
+AdLib-only machine. `--pc-speaker` and original `-noal` model a machine with no
+AdLib or Sound Blaster and initially select PC-speaker effects; `--no-sound`
+uses that same detected hardware with all in-game sound initially off. These
+profiles control SIGNON markers and Sound-menu availability independently of
+the OPL driver and host output device. This follows original `IntroScreen`:
+`SoundBlasterPresent` selects only the Sound Blaster indicator, AdLib is marked
+only without Sound Blaster, and neither is marked for PC-speaker-only hardware.
 
 World sounds retain the original `WL_GAME.C` spatial transform and its exact
 15-by-30 left-ear attenuation table (the right ear is its mirrored axis).

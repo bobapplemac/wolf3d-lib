@@ -6,6 +6,18 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.58 - 2026-10-08 - Sound hardware profiles
+
+- Separated emulated sound-hardware detection from the selected OPL renderer
+  and host audio output, preserving the internal audio clock in every mode.
+- Added explicit Sound Blaster, AdLib-only, PC-speaker, and no-sound profiles;
+  `--pc-speaker` and original `-noal` intentionally select the same effective
+  no-sound-card/PC-speaker profile, while `-nosb` selects AdLib-only hardware.
+- Made the SIGNON hardware markers and Sound menu availability match the
+  emulated hardware, including the historically assumed PC speaker.
+- Added `--no-sound` for no detected sound card with all in-game sound choices
+  initially disabled.
+
 ## 1.4.57 - 2026-10-08 - Public command-line help
 
 - Added `wolf3d_GetCommandLineHelp()` as the authoritative user-facing list

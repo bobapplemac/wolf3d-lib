@@ -71,7 +71,7 @@ typedef struct wl_menu_item
     uint8_t active;
 } wl_menu_item_t;
 
-static int WL_SoundMenuActive(unsigned item);
+static int WL_SoundMenuItem(unsigned item);
 
 static int WL_MainMenuOmitsReadThis(wg_game_variant_t variant)
 {
@@ -194,7 +194,7 @@ int WL_DrawMenuCursor(uint8_t framebuffer[320 * 200],
         y = WL_LOAD_SAVE_Y - 2 + (int)selected * 13;
         break;
     case WL_MENU_CURSOR_SOUND:
-        if (selected >= WL_SOUND_MENU_ITEMS || !WL_SoundMenuActive(selected))
+        if (selected >= WL_SOUND_MENU_ITEMS || !WL_SoundMenuItem(selected))
         {
             return 0;
         }
@@ -626,13 +626,22 @@ unsigned WL_LoadSaveMenuMove(unsigned selected, int direction)
     return selected + 1U == WL_SAVE_SLOTS ? 0U : selected + 1U;
 }
 
-static int WL_SoundMenuActive(unsigned item)
+static int WL_SoundMenuItem(unsigned item)
 {
     return item == 0U || item == 1U || item == 2U || item == 5U || item == 7U
         || item == 10U || item == 11U;
 }
 
-unsigned WL_SoundMenuMove(unsigned selected, int direction)
+int WL_SoundMenuActive(unsigned item, int adlib_present,
+                       int sound_blaster_present)
+{
+    return item == 0U || item == 1U || item == 5U || item == 10U
+        || ((item == 2U || item == 11U) && adlib_present)
+        || (item == 7U && sound_blaster_present);
+}
+
+unsigned WL_SoundMenuMove(unsigned selected, int direction,
+                          int adlib_present, int sound_blaster_present)
 {
     unsigned candidate;
 
@@ -653,13 +662,15 @@ unsigned WL_SoundMenuMove(unsigned selected, int direction)
             candidate = candidate + 1U == WL_SOUND_MENU_ITEMS
                             ? 0U : candidate + 1U;
         }
-    } while (!WL_SoundMenuActive(candidate));
+    } while (!WL_SoundMenuActive(candidate, adlib_present,
+                                  sound_blaster_present));
     return candidate;
 }
 
 int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                      const wg_graphics_t *graphics, unsigned selected,
-                     unsigned sound_mode, int digitized, int music)
+                     unsigned sound_mode, int digitized, int music,
+                     int adlib_present, int sound_blaster_present)
 {
     static const char *const labels[WL_SOUND_MENU_ITEMS] =
     {
@@ -673,7 +684,8 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
 
     if (framebuffer == NULL || graphics == NULL
         || selected >= WL_SOUND_MENU_ITEMS
-        || !WL_SoundMenuActive(selected)
+        || !WL_SoundMenuActive(selected, adlib_present,
+                               sound_blaster_present)
         || !WL_MenuChunks(graphics->variant, &chunks)
         || !WG_FontOpen(&font, graphics, 1U))
     {
@@ -718,7 +730,8 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
         {
             continue;
         }
-        color = WL_SoundMenuActive(index)
+        color = WL_SoundMenuActive(index, adlib_present,
+                                   sound_blaster_present)
                     ? (index == selected ? WL_MENU_HIGHLIGHT_COLOR
                                          : WL_MENU_TEXT_COLOR)
                     : WL_MENU_DEACTIVE_COLOR;

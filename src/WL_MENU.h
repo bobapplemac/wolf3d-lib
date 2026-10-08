@@ -52,8 +52,12 @@ int WL_DrawLoadSaveMenu(
 unsigned WL_LoadSaveMenuMove(unsigned selected, int direction);
 int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                      const wg_graphics_t *graphics, unsigned selected,
-                     unsigned sound_mode, int digitized, int music);
-unsigned WL_SoundMenuMove(unsigned selected, int direction);
+                     unsigned sound_mode, int digitized, int music,
+                     int adlib_present, int sound_blaster_present);
+int WL_SoundMenuActive(unsigned item, int adlib_present,
+                       int sound_blaster_present);
+unsigned WL_SoundMenuMove(unsigned selected, int direction,
+                          int adlib_present, int sound_blaster_present);
 int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                        const wg_graphics_t *graphics, unsigned selected,
                        int mouse_present, int mouse_enabled,

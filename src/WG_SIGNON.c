@@ -122,7 +122,7 @@ static void WG_SignonBar(uint8_t *framebuffer, unsigned x, unsigned y,
 void WG_SignonDrawIndicators(uint8_t framebuffer[WG_SIGNON_SIZE],
                              wg_game_family_t family,
                              int mouse_present, int joystick_present,
-                             int sound_blaster_present)
+                             wg_sound_hardware_t sound_hardware)
 {
     uint8_t memory_color;
     unsigned index;
@@ -141,8 +141,8 @@ void WG_SignonDrawIndicators(uint8_t framebuffer[WG_SIGNON_SIZE],
     }
 
     /* As in the original IntroScreen, these markers report hardware that the
-       input/audio startup accepted. Sound Blaster takes precedence over its
-       AdLib-compatible OPL hardware. Disney Sound Source is absent. */
+       input/audio startup accepted. A PC speaker was assumed and has no
+       marker. Disney Sound Source is absent. */
     if (mouse_present)
     {
         WG_SignonBar(framebuffer, 164U, 82U, 12U, 2U, 14U);
@@ -151,8 +151,14 @@ void WG_SignonDrawIndicators(uint8_t framebuffer[WG_SIGNON_SIZE],
     {
         WG_SignonBar(framebuffer, 164U, 105U, 12U, 2U, 14U);
     }
-    WG_SignonBar(framebuffer, 164U,
-                 sound_blaster_present ? 151U : 128U, 12U, 2U, 14U);
+    if (sound_hardware == WG_SOUND_HARDWARE_ADLIB)
+    {
+        WG_SignonBar(framebuffer, 164U, 128U, 12U, 2U, 14U);
+    }
+    else if (sound_hardware == WG_SOUND_HARDWARE_SOUND_BLASTER)
+    {
+        WG_SignonBar(framebuffer, 164U, 151U, 12U, 2U, 14U);
+    }
 }
 
 int WG_SignonIsEmbeddedName(const char *name)
@@ -165,7 +171,7 @@ int WG_SignonDraw(uint8_t framebuffer[WG_SIGNON_SIZE],
                   wg_game_variant_t game_variant,
                   wg_data_edition_t data_edition, const char *name,
                   int mouse_present, int joystick_present,
-                  int sound_blaster_present,
+                  wg_sound_hardware_t sound_hardware,
                   wg_game_family_t *palette_family)
 {
     const wg_signon_asset_t *asset;
@@ -183,7 +189,7 @@ int WG_SignonDraw(uint8_t framebuffer[WG_SIGNON_SIZE],
     }
     memcpy(framebuffer, asset->pixels, WG_SIGNON_SIZE);
     WG_SignonDrawIndicators(framebuffer, asset->family, mouse_present,
-                            joystick_present, sound_blaster_present);
+                            joystick_present, sound_hardware);
     *palette_family = asset->family;
     return 1;
 }

@@ -4016,7 +4016,8 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                                    ? 0x025ab818aa8840a9ULL
                                    : 0x0b2a93f76bdc8ce8ULL));
         memset(framebuffer, 0, sizeof(framebuffer));
-        CHECK(WL_DrawSoundMenu(framebuffer, &graphics, 0U, 2U, 1, 1));
+        CHECK(WL_DrawSoundMenu(framebuffer, &graphics, 0U, 2U, 1, 1,
+                               1, 1));
         for (index = 0U; index < sizeof(framebuffer); ++index)
         {
             sound_menu_hash ^= framebuffer[index];
@@ -4026,14 +4027,21 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
                WG_DataVariantName(data_set.variant),
                (unsigned long long)sound_menu_hash);
         CHECK(sound_menu_hash == 0xbd51c51cceb48736ULL);
-        CHECK(WL_SoundMenuMove(0U, -1) == 11U);
-        CHECK(WL_SoundMenuMove(0U, 1) == 1U);
-        CHECK(WL_SoundMenuMove(1U, 1) == 2U);
-        CHECK(WL_SoundMenuMove(2U, 1) == 5U);
-        CHECK(WL_SoundMenuMove(5U, 1) == 7U);
-        CHECK(WL_SoundMenuMove(7U, 1) == 10U);
-        CHECK(WL_SoundMenuMove(10U, 1) == 11U);
-        CHECK(WL_SoundMenuMove(11U, 1) == 0U);
+        CHECK(WL_SoundMenuMove(0U, -1, 1, 1) == 11U);
+        CHECK(WL_SoundMenuMove(0U, 1, 1, 1) == 1U);
+        CHECK(WL_SoundMenuMove(1U, 1, 1, 1) == 2U);
+        CHECK(WL_SoundMenuMove(2U, 1, 1, 1) == 5U);
+        CHECK(WL_SoundMenuMove(5U, 1, 1, 1) == 7U);
+        CHECK(WL_SoundMenuMove(7U, 1, 1, 1) == 10U);
+        CHECK(WL_SoundMenuMove(10U, 1, 1, 1) == 11U);
+        CHECK(WL_SoundMenuMove(11U, 1, 1, 1) == 0U);
+        CHECK(WL_SoundMenuMove(1U, 1, 0, 0) == 5U);
+        CHECK(WL_SoundMenuMove(5U, 1, 0, 0) == 10U);
+        CHECK(WL_SoundMenuMove(10U, 1, 0, 0) == 0U);
+        CHECK(WL_SoundMenuMove(1U, 1, 1, 0) == 2U);
+        CHECK(WL_SoundMenuMove(5U, 1, 1, 0) == 10U);
+        CHECK(!WL_SoundMenuActive(2U, 0, 0));
+        CHECK(!WL_SoundMenuActive(7U, 1, 0));
         memset(framebuffer, 0, sizeof(framebuffer));
         CHECK(WL_DrawControlMenu(framebuffer, &graphics, 0U, 1, 1,
                                  0, 0, 0U, 0));
@@ -5382,6 +5390,9 @@ static void TestPlatformAPI(void)
     CHECK(wolf3d_SetPlatform(NULL) == WOLF3D_RESULT_INVALID_ARGUMENT);
     CHECK(wolf3d_GetCommandLineHelp() != NULL);
     CHECK(strstr(wolf3d_GetCommandLineHelp(), "--data PATH") != NULL);
+    CHECK(strstr(wolf3d_GetCommandLineHelp(), "--no-sound") != NULL);
+    CHECK(strstr(wolf3d_GetCommandLineHelp(), "-noal") != NULL);
+    CHECK(strstr(wolf3d_GetCommandLineHelp(), "-nosb") != NULL);
     CHECK(strstr(wolf3d_GetCommandLineHelp(), "-goobers") != NULL);
 
     platform.api_version = WOLF3D_PLATFORM_API_VERSION;
@@ -5414,7 +5425,8 @@ static void TestSignonAssets(void)
     CHECK(!WG_SignonIsEmbeddedName("SIGNON.BIN"));
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_SHAREWARE_14,
-                        WG_DATA_EDITION_APOGEE, "auto", 1, 0, 1,
+                        WG_DATA_EDITION_APOGEE, "auto", 1, 0,
+                        WG_SOUND_HARDWARE_SOUND_BLASTER,
                         &family));
     CHECK(family == WG_GAME_FAMILY_WOLF3D);
     for (index = 0U; index < 10U; ++index)
@@ -5433,18 +5445,27 @@ static void TestSignonAssets(void)
     CHECK(framebuffer[174U * 320U + 164U] != 14U);
 
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
-                        WG_DATA_EDITION_GT, "gt", 0, 0, 0, &family));
+                        WG_DATA_EDITION_GT, "gt", 0, 0,
+                        WG_SOUND_HARDWARE_ADLIB, &family));
     CHECK(framebuffer[82U * 320U + 164U] != 14U);
     CHECK(framebuffer[128U * 320U + 164U] == 14U);
     CHECK(framebuffer[151U * 320U + 164U] != 14U);
 
+    CHECK(WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
+                        WG_DATA_EDITION_GT, "gt", 0, 0,
+                        WG_SOUND_HARDWARE_NONE, &family));
+    CHECK(framebuffer[128U * 320U + 164U] != 14U);
+    CHECK(framebuffer[151U * 320U + 164U] != 14U);
+
     CHECK(WG_SignonDraw(framebuffer, WG_GAME_SPEAR_FULL_SOD,
-                        WG_DATA_EDITION_SPEAR, NULL, 1, 1, 1, &family));
+                        WG_DATA_EDITION_SPEAR, NULL, 1, 1,
+                        WG_SOUND_HARDWARE_SOUND_BLASTER, &family));
     CHECK(family == WG_GAME_FAMILY_SPEAR);
     CHECK(framebuffer[163U * 320U + 49U] == 0x4fU);
     CHECK(framebuffer[105U * 320U + 164U] == 14U);
     CHECK(!WG_SignonDraw(framebuffer, WG_GAME_WOLF3D_FULL_GT_14,
-                         WG_DATA_EDITION_GT, "unknown", 0, 0, 1,
+                         WG_DATA_EDITION_GT, "unknown", 0, 0,
+                         WG_SOUND_HARDWARE_SOUND_BLASTER,
                          &family));
     free(framebuffer);
 }
