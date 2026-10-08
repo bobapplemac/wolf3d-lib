@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.53 - 2026-10-07 - Nuked-OPL3 provenance naming
+
+- Renamed the vendored Nuked-OPL3 provenance note to use the public
+  `wolf3d-lib` repository identity.
+- Corrected its remaining reference to the former `wolf3dgeneric` project
+  name without changing the upstream library or its LGPL terms.
+
 ## 1.4.52 - 2026-10-07 - DOS integration closure
 
 - Reconciled the library documentation with the completed companion

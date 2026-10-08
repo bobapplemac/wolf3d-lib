@@ -9,4 +9,4 @@ repository line-ending normalization. They are built as the separate
 remain independently reviewable.
 
 Nuked-OPL3 is licensed under LGPL-2.1-or-later. See `LICENSE` in this directory.
-wolf3dgeneric's own license does not replace or narrow those terms.
+wolf3d-lib's own license does not replace or narrow those terms.
