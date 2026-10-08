@@ -7,9 +7,14 @@ placing operating-system services behind a compact C99 callback API.
 
 This repository owns the engine only. Ready-to-run Win32, SDL3, and Linux
 direct-console applications live in the companion
-[`wolf3d-portable`](https://gitlab.moorenet.xyz/personal/wolf3d-portable)
+[`wolf3d-portable`](https://github.com/bobapplemac/wolf3d-portable)
 repository. Every portable-host build compiles the exact pinned revision of
 this library.
+
+The project's relationship to id Software's original repository and the
+licensing evidence behind this modernization are documented in
+[`docs/history.md`](docs/history.md) and
+[`docs/licensing-history.md`](docs/licensing-history.md).
 
 Original Wolfenstein 3D or Spear of Destiny game data is required and is not
 distributed here.

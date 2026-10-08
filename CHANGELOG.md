@@ -80,9 +80,9 @@ post-promotion milestones below without rewriting Git history.
   three runtime-selectable OPL drivers on the Windows 11 compatibility host.
 - Validated the v140_xp x86 DLL, public API consumer, and deterministic test
   suite on Windows XP SP3.
-- Replaced obsolete ajmbuild02 working copies with clean canonical clones after
-  confirming their uncommitted legacy-build drafts were fully superseded by
-  the committed compiler-matrix work.
+- Replaced obsolete Windows 7 validation-host working copies with clean
+  canonical clones after confirming their uncommitted legacy-build drafts were
+  fully superseded by the committed compiler-matrix work.
 
 ## 1.4.43 - 2026-10-07 - MSYS2 bootstrap documentation
 

@@ -27,3 +27,8 @@ backfill does not rewrite existing Git history.
 The product revision is independent of shared-library ABI compatibility. A
 future Linux SONAME changes only for an incompatible public ABI change, not
 for each product revision.
+
+The curated public reconstruction from the original id Software ancestor is a
+history presentation of the already released 1.4.52 checkpoint, not a series
+of new post-1.4.52 library revisions. The per-commit increment rule applies to
+new development after that reconstruction checkpoint.

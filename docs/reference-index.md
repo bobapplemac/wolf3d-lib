@@ -1,8 +1,8 @@
 # Reference corpus index
 
-This index describes the trusted reference tree at
-`C:\Users\Andrew\codex\wolf3dgeneric_context`. It is an aid for development;
-reference projects are not vendored into `wolf3dgeneric`.
+This index describes the external reference corpus used during development.
+It is an aid for documenting provenance and research coverage; the corpus and
+its reference projects are not vendored into `wolf3d-lib`.
 
 ## Inventory and review status
 
