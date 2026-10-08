@@ -1,1480 +1,3582 @@
-// WL_STATE.C
+/* Portable actor state and tile movement from the original WL_STATE.C. */
+#include "WL_STATE.h"
 
-#include "WL_DEF.H"
-#pragma hdrstop
+#include <limits.h>
+#include <string.h>
 
-/*
-=============================================================================
+#include "WG_FIXED.h"
+#include "WL_ACT1.h"
+#include "WL_AGENT.h"
+#include "WL_MAIN.h"
 
-						 LOCAL CONSTANTS
+#define WG_NO_DIRECTION 8U
+#define WG_PROJECTILE_SIZE INT32_C(0xc000)
+#define WG_PROJECTILE_COLLISION_SIZE INT32_C(0x2000)
+#define WG_SPR_HYPO1 317U
+#define WG_SPR_FIRE1 326U
+#define WG_SPR_ROCKET1 370U
+#define WG_SPR_SMOKE1 378U
+#define WG_SPR_BOOM1 382U
+#define WG_SPR_SPEAR_ROCKET1 292U
+#define WG_SPR_SPEAR_SMOKE1 300U
+#define WG_SPR_SPEAR_BOOM1 304U
+#define WG_SPR_SPEAR_HROCKET1 307U
+#define WG_SPR_SPEAR_HSMOKE1 315U
+#define WG_SPR_SPEAR_HBOOM1 319U
+#define WG_SPR_SPEAR_SPARK1 322U
+#define WG_SPR_STAT_KEY1 22U
+#define WG_SPR_STAT_CLIP2 28U
+#define WG_SPR_STAT_MACHINEGUN 29U
 
-=============================================================================
-*/
+static int WL_BeginAttack(wg_actor_t *actor);
+static void WL_FirstSighting(wg_level_t *level, wg_actor_t *actor);
+static int WL_SightPlayer(wg_level_t *level, wg_actor_t *actor,
+                          unsigned tics, int made_noise);
+static int32_t WL_ChaseStateDuration(const wg_actor_t *actor,
+                                     wg_actor_state_t state);
+static wg_actor_state_t WL_NextChaseState(wg_actor_state_t state);
+static void WL_SetChaseShape(wg_actor_t *actor);
+static wg_actor_t *WL_AllocateTransientActor(wg_level_t *level);
+static void WL_T_Shoot(wg_level_t *level, wg_actor_t *actor);
 
-
-/*
-=============================================================================
-
-						 GLOBAL VARIABLES
-
-=============================================================================
-*/
-
-
-dirtype opposite[9] =
-	{west,southwest,south,southeast,east,northeast,north,northwest,nodir};
-
-dirtype diagonal[9][9] =
+static int WL_IsPathState(wg_actor_state_t state)
 {
-/* east */	{nodir,nodir,northeast,nodir,nodir,nodir,southeast,nodir,nodir},
-			{nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir},
-/* north */ {northeast,nodir,nodir,nodir,northwest,nodir,nodir,nodir,nodir},
-			{nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir},
-/* west */  {nodir,nodir,northwest,nodir,nodir,nodir,southwest,nodir,nodir},
-			{nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir},
-/* south */ {southeast,nodir,nodir,nodir,southwest,nodir,nodir,nodir,nodir},
-			{nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir},
-			{nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir,nodir}
-};
+    return state >= WG_STATE_PATH1 && state <= WG_STATE_PATH4;
+}
 
-
-
-void	SpawnNewObj (unsigned tilex, unsigned tiley, statetype *state);
-void	NewState (objtype *ob, statetype *state);
-
-boolean TryWalk (objtype *ob);
-void	MoveObj (objtype *ob, long move);
-
-void	KillActor (objtype *ob);
-void	DamageActor (objtype *ob, unsigned damage);
-
-boolean CheckLine (objtype *ob);
-void FirstSighting (objtype *ob);
-boolean	CheckSight (objtype *ob);
-
-/*
-=============================================================================
-
-						 LOCAL VARIABLES
-
-=============================================================================
-*/
-
-
-
-//===========================================================================
-
-
-/*
-===================
-=
-= SpawnNewObj
-=
-= Spaws a new actor at the given TILE coordinates, with the given state, and
-= the given size in GLOBAL units.
-=
-= new			= a pointer to an initialized new actor
-=
-===================
-*/
-
-void SpawnNewObj (unsigned tilex, unsigned tiley, statetype *state)
+static int WL_PathHasThink(wg_actor_state_t state)
 {
-	GetNewActor ();
-	new->state = state;
-	if (state->tictime)
-		new->ticcount = US_RndT () % state->tictime;
-	else
-		new->ticcount = 0;
-
-	new->tilex = tilex;
-	new->tiley = tiley;
-	new->x = ((long)tilex<<TILESHIFT)+TILEGLOBAL/2;
-	new->y = ((long)tiley<<TILESHIFT)+TILEGLOBAL/2;
-	new->dir = nodir;
-
-	actorat[tilex][tiley] = new;
-	new->areanumber =
-		*(mapsegs[0] + farmapylookup[new->tiley]+new->tilex) - AREATILE;
+    return state == WG_STATE_PATH1 || state == WG_STATE_PATH2
+           || state == WG_STATE_PATH3 || state == WG_STATE_PATH4;
 }
 
-
-
-/*
-===================
-=
-= NewState
-=
-= Changes ob to a new state, setting ticcount to the max for that state
-=
-===================
-*/
-
-void NewState (objtype *ob, statetype *state)
+static int WL_IsChaseState(wg_actor_state_t state)
 {
-	ob->state = state;
-	ob->ticcount = state->tictime;
+    return state >= WG_STATE_CHASE1 && state <= WG_STATE_CHASE4;
 }
 
-
-
-/*
-=============================================================================
-
-				ENEMY TILE WORLD MOVEMENT CODE
-
-=============================================================================
-*/
-
-
-/*
-==================================
-=
-= TryWalk
-=
-= Attempts to move ob in its current (ob->dir) direction.
-=
-= If blocked by either a wall or an actor returns FALSE
-=
-= If move is either clear or blocked only by a door, returns TRUE and sets
-=
-= ob->tilex			= new destination
-= ob->tiley
-= ob->areanumber    = the floor tile number (0-(NUMAREAS-1)) of destination
-= ob->distance  	= TILEGLOBAl, or -doornumber if a door is blocking the way
-=
-= If a door is in the way, an OpenDoor call is made to start it opening.
-= The actor code should wait until
-= 	doorobjlist[-ob->distance].action = dr_open, meaning the door has been
-=	fully opened
-=
-==================================
-*/
-
-#define CHECKDIAG(x,y)								\
-{                                                   \
-	temp=(unsigned)actorat[x][y];                   \
-	if (temp)                                       \
-	{                                               \
-		if (temp<256)                               \
-			return false;                           \
-		if (((objtype *)temp)->flags&FL_SHOOTABLE)  \
-			return false;                           \
-	}                                               \
-}
-
-#define CHECKSIDE(x,y)								\
-{                                                   \
-	temp=(unsigned)actorat[x][y];                   \
-	if (temp)                                       \
-	{                                               \
-		if (temp<128)                               \
-			return false;                           \
-		if (temp<256)                               \
-			doornum = temp&63;                      \
-		else if (((objtype *)temp)->flags&FL_SHOOTABLE)\
-			return false;                           \
-	}                                               \
-}
-
-
-boolean TryWalk (objtype *ob)
+static int WL_ChaseHasThink(wg_actor_state_t state)
 {
-	int			doornum;
-	unsigned	temp;
-
-	doornum = -1;
-
-	if (ob->obclass == inertobj)
-	{
-		switch (ob->dir)
-		{
-		case north:
-			ob->tiley--;
-			break;
-
-		case northeast:
-			ob->tilex++;
-			ob->tiley--;
-			break;
-
-		case east:
-			ob->tilex++;
-			break;
-
-		case southeast:
-			ob->tilex++;
-			ob->tiley++;
-			break;
-
-		case south:
-			ob->tiley++;
-			break;
-
-		case southwest:
-			ob->tilex--;
-			ob->tiley++;
-			break;
-
-		case west:
-			ob->tilex--;
-			break;
-
-		case northwest:
-			ob->tilex--;
-			ob->tiley--;
-			break;
-		}
-	}
-	else
-		switch (ob->dir)
-		{
-		case north:
-			if (ob->obclass == dogobj || ob->obclass == fakeobj)
-			{
-				CHECKDIAG(ob->tilex,ob->tiley-1);
-			}
-			else
-			{
-				CHECKSIDE(ob->tilex,ob->tiley-1);
-			}
-			ob->tiley--;
-			break;
-
-		case northeast:
-			CHECKDIAG(ob->tilex+1,ob->tiley-1);
-			CHECKDIAG(ob->tilex+1,ob->tiley);
-			CHECKDIAG(ob->tilex,ob->tiley-1);
-			ob->tilex++;
-			ob->tiley--;
-			break;
-
-		case east:
-			if (ob->obclass == dogobj || ob->obclass == fakeobj)
-			{
-				CHECKDIAG(ob->tilex+1,ob->tiley);
-			}
-			else
-			{
-				CHECKSIDE(ob->tilex+1,ob->tiley);
-			}
-			ob->tilex++;
-			break;
-
-		case southeast:
-			CHECKDIAG(ob->tilex+1,ob->tiley+1);
-			CHECKDIAG(ob->tilex+1,ob->tiley);
-			CHECKDIAG(ob->tilex,ob->tiley+1);
-			ob->tilex++;
-			ob->tiley++;
-			break;
-
-		case south:
-			if (ob->obclass == dogobj || ob->obclass == fakeobj)
-			{
-				CHECKDIAG(ob->tilex,ob->tiley+1);
-			}
-			else
-			{
-				CHECKSIDE(ob->tilex,ob->tiley+1);
-			}
-			ob->tiley++;
-			break;
-
-		case southwest:
-			CHECKDIAG(ob->tilex-1,ob->tiley+1);
-			CHECKDIAG(ob->tilex-1,ob->tiley);
-			CHECKDIAG(ob->tilex,ob->tiley+1);
-			ob->tilex--;
-			ob->tiley++;
-			break;
-
-		case west:
-			if (ob->obclass == dogobj || ob->obclass == fakeobj)
-			{
-				CHECKDIAG(ob->tilex-1,ob->tiley);
-			}
-			else
-			{
-				CHECKSIDE(ob->tilex-1,ob->tiley);
-			}
-			ob->tilex--;
-			break;
-
-		case northwest:
-			CHECKDIAG(ob->tilex-1,ob->tiley-1);
-			CHECKDIAG(ob->tilex-1,ob->tiley);
-			CHECKDIAG(ob->tilex,ob->tiley-1);
-			ob->tilex--;
-			ob->tiley--;
-			break;
-
-		case nodir:
-			return false;
-
-		default:
-			Quit ("Walk: Bad dir");
-		}
-
-	if (doornum != -1)
-	{
-		OpenDoor (doornum);
-		ob->distance = -doornum-1;
-		return true;
-	}
-
-
-	ob->areanumber =
-		*(mapsegs[0] + farmapylookup[ob->tiley]+ob->tilex) - AREATILE;
-
-	ob->distance = TILEGLOBAL;
-	return true;
+    return state == WG_STATE_CHASE1 || state == WG_STATE_CHASE2
+           || state == WG_STATE_CHASE3 || state == WG_STATE_CHASE4;
 }
 
-
-
-/*
-==================================
-=
-= SelectDodgeDir
-=
-= Attempts to choose and initiate a movement for ob that sends it towards
-= the player while dodging
-=
-= If there is no possible move (ob is totally surrounded)
-=
-= ob->dir			=	nodir
-=
-= Otherwise
-=
-= ob->dir			= new direction to follow
-= ob->distance		= TILEGLOBAL or -doornumber
-= ob->tilex			= new destination
-= ob->tiley
-= ob->areanumber    = the floor tile number (0-(NUMAREAS-1)) of destination
-=
-==================================
-*/
-
-void SelectDodgeDir (objtype *ob)
+static int WL_IsShootState(wg_actor_state_t state)
 {
-	int 		deltax,deltay,i;
-	unsigned	absdx,absdy;
-	dirtype 	dirtry[5];
-	dirtype 	turnaround,tdir;
-
-	if (ob->flags & FL_FIRSTATTACK)
-	{
-	//
-	// turning around is only ok the very first time after noticing the
-	// player
-	//
-		turnaround = nodir;
-		ob->flags &= ~FL_FIRSTATTACK;
-	}
-	else
-		turnaround=opposite[ob->dir];
-
-	deltax = player->tilex - ob->tilex;
-	deltay = player->tiley - ob->tiley;
-
-//
-// arange 5 direction choices in order of preference
-// the four cardinal directions plus the diagonal straight towards
-// the player
-//
-
-	if (deltax>0)
-	{
-		dirtry[1]= east;
-		dirtry[3]= west;
-	}
-	else
-	{
-		dirtry[1]= west;
-		dirtry[3]= east;
-	}
-
-	if (deltay>0)
-	{
-		dirtry[2]= south;
-		dirtry[4]= north;
-	}
-	else
-	{
-		dirtry[2]= north;
-		dirtry[4]= south;
-	}
-
-//
-// randomize a bit for dodging
-//
-	absdx = abs(deltax);
-	absdy = abs(deltay);
-
-	if (absdx > absdy)
-	{
-		tdir = dirtry[1];
-		dirtry[1] = dirtry[2];
-		dirtry[2] = tdir;
-		tdir = dirtry[3];
-		dirtry[3] = dirtry[4];
-		dirtry[4] = tdir;
-	}
-
-	if (US_RndT() < 128)
-	{
-		tdir = dirtry[1];
-		dirtry[1] = dirtry[2];
-		dirtry[2] = tdir;
-		tdir = dirtry[3];
-		dirtry[3] = dirtry[4];
-		dirtry[4] = tdir;
-	}
-
-	dirtry[0] = diagonal [ dirtry[1] ] [ dirtry[2] ];
-
-//
-// try the directions util one works
-//
-	for (i=0;i<5;i++)
-	{
-		if ( dirtry[i] == nodir || dirtry[i] == turnaround)
-			continue;
-
-		ob->dir = dirtry[i];
-		if (TryWalk(ob))
-			return;
-	}
-
-//
-// turn around only as a last resort
-//
-	if (turnaround != nodir)
-	{
-		ob->dir = turnaround;
-
-		if (TryWalk(ob))
-			return;
-	}
-
-	ob->dir = nodir;
+    return state >= WG_STATE_SHOOT1 && state <= WG_STATE_SHOOT9;
 }
 
-
-/*
-============================
-=
-= SelectChaseDir
-=
-= As SelectDodgeDir, but doesn't try to dodge
-=
-============================
-*/
-
-void SelectChaseDir (objtype *ob)
+static int WL_IsDogJumpState(wg_actor_state_t state)
 {
-	int deltax,deltay,i;
-	dirtype d[3];
-	dirtype tdir, olddir, turnaround;
-
-
-	olddir=ob->dir;
-	turnaround=opposite[olddir];
-
-	deltax=player->tilex - ob->tilex;
-	deltay=player->tiley - ob->tiley;
-
-	d[1]=nodir;
-	d[2]=nodir;
-
-	if (deltax>0)
-		d[1]= east;
-	else if (deltax<0)
-		d[1]= west;
-	if (deltay>0)
-		d[2]=south;
-	else if (deltay<0)
-		d[2]=north;
-
-	if (abs(deltay)>abs(deltax))
-	{
-		tdir=d[1];
-		d[1]=d[2];
-		d[2]=tdir;
-	}
-
-	if (d[1]==turnaround)
-		d[1]=nodir;
-	if (d[2]==turnaround)
-		d[2]=nodir;
-
-
-	if (d[1]!=nodir)
-	{
-		ob->dir=d[1];
-		if (TryWalk(ob))
-			return;     /*either moved forward or attacked*/
-	}
-
-	if (d[2]!=nodir)
-	{
-		ob->dir=d[2];
-		if (TryWalk(ob))
-			return;
-	}
-
-/* there is no direct path to the player, so pick another direction */
-
-	if (olddir!=nodir)
-	{
-		ob->dir=olddir;
-		if (TryWalk(ob))
-			return;
-	}
-
-	if (US_RndT()>128) 	/*randomly determine direction of search*/
-	{
-		for (tdir=north;tdir<=west;tdir++)
-		{
-			if (tdir!=turnaround)
-			{
-				ob->dir=tdir;
-				if ( TryWalk(ob) )
-					return;
-			}
-		}
-	}
-	else
-	{
-		for (tdir=west;tdir>=north;tdir--)
-		{
-			if (tdir!=turnaround)
-			{
-			  ob->dir=tdir;
-			  if ( TryWalk(ob) )
-				return;
-			}
-		}
-	}
-
-	if (turnaround !=  nodir)
-	{
-		ob->dir=turnaround;
-		if (ob->dir != nodir)
-		{
-			if ( TryWalk(ob) )
-				return;
-		}
-	}
-
-	ob->dir = nodir;		// can't move
+    return state >= WG_STATE_DOG_JUMP1 && state <= WG_STATE_DOG_JUMP5;
 }
 
-
-/*
-============================
-=
-= SelectRunDir
-=
-= Run Away from player
-=
-============================
-*/
-
-void SelectRunDir (objtype *ob)
+static int WL_IsPainState(wg_actor_state_t state)
 {
-	int deltax,deltay,i;
-	dirtype d[3];
-	dirtype tdir, olddir, turnaround;
-
-
-	deltax=player->tilex - ob->tilex;
-	deltay=player->tiley - ob->tiley;
-
-	if (deltax<0)
-		d[1]= east;
-	else
-		d[1]= west;
-	if (deltay<0)
-		d[2]=south;
-	else
-		d[2]=north;
-
-	if (abs(deltay)>abs(deltax))
-	{
-		tdir=d[1];
-		d[1]=d[2];
-		d[2]=tdir;
-	}
-
-	ob->dir=d[1];
-	if (TryWalk(ob))
-		return;     /*either moved forward or attacked*/
-
-	ob->dir=d[2];
-	if (TryWalk(ob))
-		return;
-
-/* there is no direct path to the player, so pick another direction */
-
-	if (US_RndT()>128) 	/*randomly determine direction of search*/
-	{
-		for (tdir=north;tdir<=west;tdir++)
-		{
-			ob->dir=tdir;
-			if ( TryWalk(ob) )
-				return;
-		}
-	}
-	else
-	{
-		for (tdir=west;tdir>=north;tdir--)
-		{
-			ob->dir=tdir;
-			if ( TryWalk(ob) )
-			  return;
-		}
-	}
-
-	ob->dir = nodir;		// can't move
+    return state == WG_STATE_PAIN1 || state == WG_STATE_PAIN2;
 }
 
-
-/*
-=================
-=
-= MoveObj
-=
-= Moves ob be move global units in ob->dir direction
-= Actors are not allowed to move inside the player
-= Does NOT check to see if the move is tile map valid
-=
-= ob->x			= adjusted for new position
-= ob->y
-=
-=================
-*/
-
-void MoveObj (objtype *ob, long move)
+static int WL_IsDeathState(wg_actor_state_t state)
 {
-	long	deltax,deltay;
-
-	switch (ob->dir)
-	{
-	case north:
-		ob->y -= move;
-		break;
-	case northeast:
-		ob->x += move;
-		ob->y -= move;
-		break;
-	case east:
-		ob->x += move;
-		break;
-	case southeast:
-		ob->x += move;
-		ob->y += move;
-		break;
-	case south:
-		ob->y += move;
-		break;
-	case southwest:
-		ob->x -= move;
-		ob->y += move;
-		break;
-	case west:
-		ob->x -= move;
-		break;
-	case northwest:
-		ob->x -= move;
-		ob->y -= move;
-		break;
-
-	case nodir:
-		return;
-
-	default:
-		Quit ("MoveObj: bad dir!");
-	}
-
-//
-// check to make sure it's not on top of player
-//
-	if (areabyplayer[ob->areanumber])
-	{
-		deltax = ob->x - player->x;
-		if (deltax < -MINACTORDIST || deltax > MINACTORDIST)
-			goto moveok;
-		deltay = ob->y - player->y;
-		if (deltay < -MINACTORDIST || deltay > MINACTORDIST)
-			goto moveok;
-
-		if (ob->obclass == ghostobj || ob->obclass == spectreobj)
-			TakeDamage (tics*2,ob);
-
-	//
-	// back up
-	//
-		switch (ob->dir)
-		{
-		case north:
-			ob->y += move;
-			break;
-		case northeast:
-			ob->x -= move;
-			ob->y += move;
-			break;
-		case east:
-			ob->x -= move;
-			break;
-		case southeast:
-			ob->x -= move;
-			ob->y -= move;
-			break;
-		case south:
-			ob->y -= move;
-			break;
-		case southwest:
-			ob->x += move;
-			ob->y -= move;
-			break;
-		case west:
-			ob->x += move;
-			break;
-		case northwest:
-			ob->x += move;
-			ob->y += move;
-			break;
-
-		case nodir:
-			return;
-		}
-		return;
-	}
-moveok:
-	ob->distance -=move;
+    return state >= WG_STATE_DIE1 && state <= WG_STATE_DIE9;
 }
 
-/*
-=============================================================================
-
-							STUFF
-
-=============================================================================
-*/
-
-/*
-===============
-=
-= DropItem
-=
-= Tries to drop a bonus item somewhere in the tiles surrounding the
-= given tilex/tiley
-=
-===============
-*/
-
-void DropItem (stat_t itemtype, int tilex, int tiley)
+static int WL_UsesSpearOrdinaryShapes(wg_game_variant_t variant,
+                                      wg_actor_class_t actor_class)
 {
-	int	x,y,xl,xh,yl,yh;
-
-//
-// find a free spot to put it in
-//
-	if (!actorat[tilex][tiley])
-	{
-		PlaceItemType (itemtype, tilex,tiley);
-		return;
-	}
-
-	xl = tilex-1;
-	xh = tilex+1;
-	yl = tiley-1;
-	yh = tiley+1;
-
-	for (x=xl ; x<= xh ; x++)
-		for (y=yl ; y<= yh ; y++)
-			if (!actorat[x][y])
-			{
-				PlaceItemType (itemtype, x,y);
-				return;
-			}
+    if (WG_DataVariantFamily(variant) != WG_GAME_FAMILY_SPEAR)
+    {
+        return 0;
+    }
+    return actor_class == WG_ACTOR_GUARD
+           || actor_class == WG_ACTOR_OFFICER
+           || actor_class == WG_ACTOR_MUTANT
+           || actor_class == WG_ACTOR_SS
+           || actor_class == WG_ACTOR_DOG;
 }
 
-
-
-/*
-===============
-=
-= KillActor
-=
-===============
-*/
-
-void KillActor (objtype *ob)
+static uint16_t WL_PainShape(wg_game_variant_t variant,
+                             wg_actor_class_t actor_class, int second)
 {
-	int	tilex,tiley;
+    uint16_t shape;
 
-	tilex = ob->tilex = ob->x >> TILESHIFT;		// drop item on center
-	tiley = ob->tiley = ob->y >> TILESHIFT;
-
-	switch (ob->obclass)
-	{
-	case guardobj:
-		GivePoints (100);
-		NewState (ob,&s_grddie1);
-		PlaceItemType (bo_clip2,tilex,tiley);
-		break;
-
-	case officerobj:
-		GivePoints (400);
-		NewState (ob,&s_ofcdie1);
-		PlaceItemType (bo_clip2,tilex,tiley);
-		break;
-
-	case mutantobj:
-		GivePoints (700);
-		NewState (ob,&s_mutdie1);
-		PlaceItemType (bo_clip2,tilex,tiley);
-		break;
-
-	case ssobj:
-		GivePoints (500);
-		NewState (ob,&s_ssdie1);
-		if (gamestate.bestweapon < wp_machinegun)
-			PlaceItemType (bo_machinegun,tilex,tiley);
-		else
-			PlaceItemType (bo_clip2,tilex,tiley);
-		break;
-
-	case dogobj:
-		GivePoints (200);
-		NewState (ob,&s_dogdie1);
-		break;
-
-#ifndef SPEAR
-	case bossobj:
-		GivePoints (5000);
-		NewState (ob,&s_bossdie1);
-		PlaceItemType (bo_key1,tilex,tiley);
-		break;
-
-	case gretelobj:
-		GivePoints (5000);
-		NewState (ob,&s_greteldie1);
-		PlaceItemType (bo_key1,tilex,tiley);
-		break;
-
-	case giftobj:
-		GivePoints (5000);
-		gamestate.killx = player->x;
-		gamestate.killy = player->y;
-		NewState (ob,&s_giftdie1);
-		break;
-
-	case fatobj:
-		GivePoints (5000);
-		gamestate.killx = player->x;
-		gamestate.killy = player->y;
-		NewState (ob,&s_fatdie1);
-		break;
-
-	case schabbobj:
-		GivePoints (5000);
-		gamestate.killx = player->x;
-		gamestate.killy = player->y;
-		NewState (ob,&s_schabbdie1);
-		A_DeathScream(ob);
-		break;
-	case fakeobj:
-		GivePoints (2000);
-		NewState (ob,&s_fakedie1);
-		break;
-
-	case mechahitlerobj:
-		GivePoints (5000);
-		NewState (ob,&s_mechadie1);
-		break;
-	case realhitlerobj:
-		GivePoints (5000);
-		gamestate.killx = player->x;
-		gamestate.killy = player->y;
-		NewState (ob,&s_hitlerdie1);
-		A_DeathScream(ob);
-		break;
-#else
-	case spectreobj:
-		GivePoints (200);
-		NewState (ob,&s_spectredie1);
-		break;
-
-	case angelobj:
-		GivePoints (5000);
-		NewState (ob,&s_angeldie1);
-		break;
-
-	case transobj:
-		GivePoints (5000);
-		NewState (ob,&s_transdie0);
-		PlaceItemType (bo_key1,tilex,tiley);
-		break;
-
-	case uberobj:
-		GivePoints (5000);
-		NewState (ob,&s_uberdie0);
-		PlaceItemType (bo_key1,tilex,tiley);
-		break;
-
-	case willobj:
-		GivePoints (5000);
-		NewState (ob,&s_willdie1);
-		PlaceItemType (bo_key1,tilex,tiley);
-		break;
-
-	case deathobj:
-		GivePoints (5000);
-		NewState (ob,&s_deathdie1);
-		PlaceItemType (bo_key1,tilex,tiley);
-		break;
-#endif
-	}
-
-	gamestate.killcount++;
-	ob->flags &= ~FL_SHOOTABLE;
-	actorat[ob->tilex][ob->tiley] = NULL;
-	ob->flags |= FL_NONMARK;
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        shape = (uint16_t)(second ? 94U : 90U);
+        break;
+    case WG_ACTOR_OFFICER:
+        shape = (uint16_t)(second ? 282U : 278U);
+        break;
+    case WG_ACTOR_MUTANT:
+        shape = (uint16_t)(second ? 231U : 227U);
+        break;
+    case WG_ACTOR_SS:
+        shape = (uint16_t)(second ? 182U : 178U);
+        break;
+    default:
+        return 0U;
+    }
+    return (uint16_t)(shape
+        + (WL_UsesSpearOrdinaryShapes(variant, actor_class) ? 4U : 0U));
 }
 
-
-
-/*
-===================
-=
-= DamageActor
-=
-= Called when the player succesfully hits an enemy.
-=
-= Does damage points to enemy ob, either putting it into a stun frame or
-= killing it.
-=
-===================
-*/
-
-void DamageActor (objtype *ob, unsigned damage)
+static unsigned WL_DeathTimedFrames(wg_actor_class_t actor_class)
 {
-	madenoise = true;
-
-//
-// do double damage if shooting a non attack mode actor
-//
-	if ( !(ob->flags & FL_ATTACKMODE) )
-		damage <<= 1;
-
-	ob->hitpoints -= damage;
-
-	if (ob->hitpoints<=0)
-		KillActor (ob);
-	else
-	{
-		if (! (ob->flags & FL_ATTACKMODE) )
-			FirstSighting (ob);		// put into combat mode
-
-		switch (ob->obclass)		// dogs only have one hit point
-		{
-		case guardobj:
-			if (ob->hitpoints&1)
-				NewState (ob,&s_grdpain);
-			else
-				NewState (ob,&s_grdpain1);
-			break;
-
-		case officerobj:
-			if (ob->hitpoints&1)
-				NewState (ob,&s_ofcpain);
-			else
-				NewState (ob,&s_ofcpain1);
-			break;
-
-		case mutantobj:
-			if (ob->hitpoints&1)
-				NewState (ob,&s_mutpain);
-			else
-				NewState (ob,&s_mutpain1);
-			break;
-
-		case ssobj:
-			if (ob->hitpoints&1)
-				NewState (ob,&s_sspain);
-			else
-				NewState (ob,&s_sspain1);
-
-			break;
-
-		}
-	}
+    switch (actor_class)
+    {
+    case WG_ACTOR_OFFICER:
+    case WG_ACTOR_MUTANT:
+        return 4U;
+    case WG_ACTOR_GUARD:
+    case WG_ACTOR_SS:
+    case WG_ACTOR_DOG:
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+    case WG_ACTOR_MECHA_HITLER:
+        return 3U;
+    case WG_ACTOR_SCHABBS:
+    case WG_ACTOR_FAKE:
+    case WG_ACTOR_GIFT:
+    case WG_ACTOR_FAT:
+        return 5U;
+    case WG_ACTOR_REAL_HITLER:
+        return 9U;
+    case WG_ACTOR_SPECTRE:
+        return 3U;
+    case WG_ACTOR_TRANS:
+    case WG_ACTOR_WILL:
+        return 5U;
+    case WG_ACTOR_UBER:
+        return 6U;
+    case WG_ACTOR_ANGEL:
+        return 9U;
+    case WG_ACTOR_DEATH:
+        return 8U;
+    default:
+        return 0U;
+    }
 }
 
-/*
-=============================================================================
-
-							CHECKSIGHT
-
-=============================================================================
-*/
-
-
-/*
-=====================
-=
-= CheckLine
-=
-= Returns true if a straight line between the player and ob is unobstructed
-=
-=====================
-*/
-
-boolean CheckLine (objtype *ob)
+static int32_t WL_DeathFrameDuration(wg_actor_class_t actor_class,
+                                     unsigned frame)
 {
-	int	x1,y1,xt1,yt1,x2,y2,xt2,yt2;
-	int	x,y;
-	int	xdist,ydist,xstep,ystep;
-	int	temp;
-	int	partial,delta;
-	long	ltemp;
-	int	xfrac,yfrac,deltafrac;
-	unsigned	value,intercept;
-
-	x1 = ob->x >> UNSIGNEDSHIFT;		// 1/256 tile precision
-	y1 = ob->y >> UNSIGNEDSHIFT;
-	xt1 = x1 >> 8;
-	yt1 = y1 >> 8;
-
-	x2 = plux;
-	y2 = pluy;
-	xt2 = player->tilex;
-	yt2 = player->tiley;
-
-
-	xdist = abs(xt2-xt1);
-
-	if (xdist > 0)
-	{
-		if (xt2 > xt1)
-		{
-			partial = 256-(x1&0xff);
-			xstep = 1;
-		}
-		else
-		{
-			partial = x1&0xff;
-			xstep = -1;
-		}
-
-		deltafrac = abs(x2-x1);
-		delta = y2-y1;
-		ltemp = ((long)delta<<8)/deltafrac;
-		if (ltemp > 0x7fffl)
-			ystep = 0x7fff;
-		else if (ltemp < -0x7fffl)
-			ystep = -0x7fff;
-		else
-			ystep = ltemp;
-		yfrac = y1 + (((long)ystep*partial) >>8);
-
-		x = xt1+xstep;
-		xt2 += xstep;
-		do
-		{
-			y = yfrac>>8;
-			yfrac += ystep;
-
-			value = (unsigned)tilemap[x][y];
-			x += xstep;
-
-			if (!value)
-				continue;
-
-			if (value<128 || value>256)
-				return false;
-
-			//
-			// see if the door is open enough
-			//
-			value &= ~0x80;
-			intercept = yfrac-ystep/2;
-
-			if (intercept>doorposition[value])
-				return false;
-
-		} while (x != xt2);
-	}
-
-	ydist = abs(yt2-yt1);
-
-	if (ydist > 0)
-	{
-		if (yt2 > yt1)
-		{
-			partial = 256-(y1&0xff);
-			ystep = 1;
-		}
-		else
-		{
-			partial = y1&0xff;
-			ystep = -1;
-		}
-
-		deltafrac = abs(y2-y1);
-		delta = x2-x1;
-		ltemp = ((long)delta<<8)/deltafrac;
-		if (ltemp > 0x7fffl)
-			xstep = 0x7fff;
-		else if (ltemp < -0x7fffl)
-			xstep = -0x7fff;
-		else
-			xstep = ltemp;
-		xfrac = x1 + (((long)xstep*partial) >>8);
-
-		y = yt1 + ystep;
-		yt2 += ystep;
-		do
-		{
-			x = xfrac>>8;
-			xfrac += xstep;
-
-			value = (unsigned)tilemap[x][y];
-			y += ystep;
-
-			if (!value)
-				continue;
-
-			if (value<128 || value>256)
-				return false;
-
-			//
-			// see if the door is open enough
-			//
-			value &= ~0x80;
-			intercept = xfrac-xstep/2;
-
-			if (intercept>doorposition[value])
-				return false;
-		} while (y != yt2);
-	}
-
-	return true;
+    switch (actor_class)
+    {
+    case WG_ACTOR_OFFICER:
+        return 11;
+    case WG_ACTOR_MUTANT:
+        return 7;
+    case WG_ACTOR_FAKE:
+    case WG_ACTOR_MECHA_HITLER:
+        return 10;
+    case WG_ACTOR_SCHABBS:
+        return frame == 1U ? 5 : 10;
+    case WG_ACTOR_GIFT:
+    case WG_ACTOR_FAT:
+    case WG_ACTOR_REAL_HITLER:
+        return frame == 0U ? 1 : frame == 1U ? 5 : 10;
+    case WG_ACTOR_TRANS:
+    case WG_ACTOR_UBER:
+        return frame < 2U ? 1 : 15;
+    case WG_ACTOR_WILL:
+    case WG_ACTOR_DEATH:
+        return frame == 0U ? 1 : 10;
+    case WG_ACTOR_ANGEL:
+        return frame < 2U ? 1 : 10;
+    case WG_ACTOR_SPECTRE:
+        return 10;
+    default:
+        return 15;
+    }
 }
 
-
-
-/*
-================
-=
-= CheckSight
-=
-= Checks a straight line between player and current object
-=
-= If the sight is ok, check alertness and angle to see if they notice
-=
-= returns true if the player has been spoted
-=
-================
-*/
-
-#define MINSIGHT	0x18000l
-
-boolean CheckSight (objtype *ob)
+static uint16_t WL_DeathShape(wg_game_variant_t variant,
+                              wg_actor_class_t actor_class, unsigned frame)
 {
-	long		deltax,deltay;
+    static const uint16_t guard[] = {91U, 92U, 93U, 95U};
+    static const uint16_t officer[] = {279U, 280U, 281U, 283U, 284U};
+    static const uint16_t mutant[] = {228U, 229U, 230U, 232U, 233U};
+    static const uint16_t ss[] = {179U, 180U, 181U, 183U};
+    static const uint16_t dog[] = {131U, 132U, 133U, 134U};
+    static const uint16_t boss[] = {304U, 305U, 306U, 303U};
+    static const uint16_t schabbs[] = {307U, 307U, 313U, 314U, 315U, 316U};
+    static const uint16_t fake[] = {328U, 329U, 330U, 331U, 332U, 333U};
+    static const uint16_t mecha[] = {342U, 343U, 344U, 341U};
+    static const uint16_t hitler[] =
+        {345U, 345U, 353U, 354U, 355U, 356U, 357U, 358U, 359U, 352U};
+    static const uint16_t gift[] = {360U, 360U, 366U, 367U, 368U, 369U};
+    static const uint16_t gretel[] = {393U, 394U, 395U, 392U};
+    static const uint16_t fat[] = {396U, 396U, 404U, 405U, 406U, 407U};
+    static const uint16_t spectre[] = {381U, 382U, 383U, 384U};
+    static const uint16_t angel[] =
+        {385U, 385U, 393U, 394U, 395U, 396U, 397U, 398U, 399U, 400U};
+    static const uint16_t trans[] = {326U, 326U, 334U, 335U, 336U, 333U};
+    static const uint16_t uber[] =
+        {349U, 349U, 357U, 358U, 359U, 360U, 361U};
+    static const uint16_t will[] = {337U, 337U, 345U, 346U, 347U, 348U};
+    static const uint16_t death[] =
+        {362U, 362U, 370U, 371U, 372U, 373U, 374U, 375U, 376U};
 
-//
-// don't bother tracing a line if the area isn't connected to the player's
-//
-	if (!areabyplayer[ob->areanumber])
-		return false;
+    const uint16_t *shapes;
 
-//
-// if the player is real close, sight is automatic
-//
-	deltax = player->x - ob->x;
-	deltay = player->y - ob->y;
-
-	if (deltax > -MINSIGHT && deltax < MINSIGHT
-	&& deltay > -MINSIGHT && deltay < MINSIGHT)
-		return true;
-
-//
-// see if they are looking in the right direction
-//
-	switch (ob->dir)
-	{
-	case north:
-		if (deltay > 0)
-			return false;
-		break;
-
-	case east:
-		if (deltax < 0)
-			return false;
-		break;
-
-	case south:
-		if (deltay < 0)
-			return false;
-		break;
-
-	case west:
-		if (deltax > 0)
-			return false;
-		break;
-	}
-
-//
-// trace a line to check for blocking tiles (corners)
-//
-	return CheckLine (ob);
-
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        shapes = guard;
+        break;
+    case WG_ACTOR_OFFICER:
+        shapes = officer;
+        break;
+    case WG_ACTOR_MUTANT:
+        shapes = mutant;
+        break;
+    case WG_ACTOR_SS:
+        shapes = ss;
+        break;
+    case WG_ACTOR_DOG:
+        shapes = dog;
+        break;
+    case WG_ACTOR_BOSS:
+        shapes = boss;
+        break;
+    case WG_ACTOR_SCHABBS:
+        shapes = schabbs;
+        break;
+    case WG_ACTOR_FAKE:
+        shapes = fake;
+        break;
+    case WG_ACTOR_MECHA_HITLER:
+        shapes = mecha;
+        break;
+    case WG_ACTOR_REAL_HITLER:
+        shapes = hitler;
+        break;
+    case WG_ACTOR_GIFT:
+        shapes = gift;
+        break;
+    case WG_ACTOR_GRETEL:
+        shapes = gretel;
+        break;
+    case WG_ACTOR_FAT:
+        shapes = fat;
+        break;
+    case WG_ACTOR_SPECTRE:
+        shapes = spectre;
+        break;
+    case WG_ACTOR_ANGEL:
+        shapes = angel;
+        break;
+    case WG_ACTOR_TRANS:
+        shapes = trans;
+        break;
+    case WG_ACTOR_UBER:
+        shapes = uber;
+        break;
+    case WG_ACTOR_WILL:
+        shapes = will;
+        break;
+    case WG_ACTOR_DEATH:
+        shapes = death;
+        break;
+    default:
+        return 0U;
+    }
+    return (uint16_t)(shapes[frame]
+        + (WL_UsesSpearOrdinaryShapes(variant, actor_class) ? 4U : 0U));
 }
 
-
-
-/*
-===============
-=
-= FirstSighting
-=
-= Puts an actor into attack mode and possibly reverses the direction
-= if the player is behind it
-=
-===============
-*/
-
-void FirstSighting (objtype *ob)
+static int32_t WL_DeathTerminalDuration(wg_actor_class_t actor_class)
 {
-//
-// react to the player
-//
-	switch (ob->obclass)
-	{
-	case guardobj:
-		PlaySoundLocActor(HALTSND,ob);
-		NewState (ob,&s_grdchase1);
-		ob->speed *= 3;			// go faster when chasing player
-		break;
-
-	case officerobj:
-		PlaySoundLocActor(SPIONSND,ob);
-		NewState (ob,&s_ofcchase1);
-		ob->speed *= 5;			// go faster when chasing player
-		break;
-
-	case mutantobj:
-		NewState (ob,&s_mutchase1);
-		ob->speed *= 3;			// go faster when chasing player
-		break;
-
-	case ssobj:
-		PlaySoundLocActor(SCHUTZADSND,ob);
-		NewState (ob,&s_sschase1);
-		ob->speed *= 4;			// go faster when chasing player
-		break;
-
-	case dogobj:
-		PlaySoundLocActor(DOGBARKSND,ob);
-		NewState (ob,&s_dogchase1);
-		ob->speed *= 2;			// go faster when chasing player
-		break;
-
-#ifndef SPEAR
-	case bossobj:
-		SD_PlaySound(GUTENTAGSND);
-		NewState (ob,&s_bosschase1);
-		ob->speed = SPDPATROL*3;	// go faster when chasing player
-		break;
-
-	case gretelobj:
-		SD_PlaySound(KEINSND);
-		NewState (ob,&s_gretelchase1);
-		ob->speed *= 3;			// go faster when chasing player
-		break;
-
-	case giftobj:
-		SD_PlaySound(EINESND);
-		NewState (ob,&s_giftchase1);
-		ob->speed *= 3;			// go faster when chasing player
-		break;
-
-	case fatobj:
-		SD_PlaySound(ERLAUBENSND);
-		NewState (ob,&s_fatchase1);
-		ob->speed *= 3;			// go faster when chasing player
-		break;
-
-	case schabbobj:
-		SD_PlaySound(SCHABBSHASND);
-		NewState (ob,&s_schabbchase1);
-		ob->speed *= 3;			// go faster when chasing player
-		break;
-
-	case fakeobj:
-		SD_PlaySound(TOT_HUNDSND);
-		NewState (ob,&s_fakechase1);
-		ob->speed *= 3;			// go faster when chasing player
-		break;
-
-	case mechahitlerobj:
-		SD_PlaySound(DIESND);
-		NewState (ob,&s_mechachase1);
-		ob->speed *= 3;			// go faster when chasing player
-		break;
-
-	case realhitlerobj:
-		SD_PlaySound(DIESND);
-		NewState (ob,&s_hitlerchase1);
-		ob->speed *= 5;			// go faster when chasing player
-		break;
-
-	case ghostobj:
-		NewState (ob,&s_blinkychase1);
-		ob->speed *= 2;			// go faster when chasing player
-		break;
-#else
-
-	case spectreobj:
-		SD_PlaySound(GHOSTSIGHTSND);
-		NewState (ob,&s_spectrechase1);
-		ob->speed = 800;			// go faster when chasing player
-		break;
-
-	case angelobj:
-		SD_PlaySound(ANGELSIGHTSND);
-		NewState (ob,&s_angelchase1);
-		ob->speed = 1536;			// go faster when chasing player
-		break;
-
-	case transobj:
-		SD_PlaySound(TRANSSIGHTSND);
-		NewState (ob,&s_transchase1);
-		ob->speed = 1536;			// go faster when chasing player
-		break;
-
-	case uberobj:
-		NewState (ob,&s_uberchase1);
-		ob->speed = 3000;			// go faster when chasing player
-		break;
-
-	case willobj:
-		SD_PlaySound(WILHELMSIGHTSND);
-		NewState (ob,&s_willchase1);
-		ob->speed = 2048;			// go faster when chasing player
-		break;
-
-	case deathobj:
-		SD_PlaySound(KNIGHTSIGHTSND);
-		NewState (ob,&s_deathchase1);
-		ob->speed = 2048;			// go faster when chasing player
-		break;
-
-#endif
-	}
-
-	if (ob->distance < 0)
-		ob->distance = 0;	// ignore the door opening command
-
-	ob->flags |= FL_ATTACKMODE|FL_FIRSTATTACK;
+    switch (actor_class)
+    {
+    case WG_ACTOR_DOG:
+        return 15;
+    case WG_ACTOR_SCHABBS:
+    case WG_ACTOR_GIFT:
+    case WG_ACTOR_FAT:
+    case WG_ACTOR_REAL_HITLER:
+        return 20;
+    case WG_ACTOR_WILL:
+        return 20;
+    case WG_ACTOR_ANGEL:
+        return 130;
+    case WG_ACTOR_SPECTRE:
+        return 300;
+    default:
+        return 0;
+    }
 }
 
-
-
-/*
-===============
-=
-= SightPlayer
-=
-= Called by actors that ARE NOT chasing the player.  If the player
-= is detected (by sight, noise, or proximity), the actor is put into
-= it's combat frame and true is returned.
-=
-= Incorporates a random reaction delay
-=
-===============
-*/
-
-boolean SightPlayer (objtype *ob)
+static int WL_UsesDeathCam(wg_actor_class_t actor_class)
 {
-	if (ob->flags & FL_ATTACKMODE)
-		Quit ("An actor in ATTACKMODE called SightPlayer!");
-
-	if (ob->temp2)
-	{
-	//
-	// count down reaction time
-	//
-		ob->temp2 -= tics;
-		if (ob->temp2 > 0)
-			return false;
-		ob->temp2 = 0;					// time to react
-	}
-	else
-	{
-		if (!areabyplayer[ob->areanumber])
-			return false;
-
-		if (ob->flags & FL_AMBUSH)
-		{
-			if (!CheckSight (ob))
-				return false;
-			ob->flags &= ~FL_AMBUSH;
-		}
-		else
-		{
-			if (!madenoise && !CheckSight (ob))
-				return false;
-		}
-
-
-		switch (ob->obclass)
-		{
-		case guardobj:
-			ob->temp2 = 1+US_RndT()/4;
-			break;
-		case officerobj:
-			ob->temp2 = 2;
-			break;
-		case mutantobj:
-			ob->temp2 = 1+US_RndT()/6;
-			break;
-		case ssobj:
-			ob->temp2 = 1+US_RndT()/6;
-			break;
-		case dogobj:
-			ob->temp2 = 1+US_RndT()/8;
-			break;
-
-		case bossobj:
-		case schabbobj:
-		case fakeobj:
-		case mechahitlerobj:
-		case realhitlerobj:
-		case gretelobj:
-		case giftobj:
-		case fatobj:
-		case spectreobj:
-		case angelobj:
-		case transobj:
-		case uberobj:
-		case willobj:
-		case deathobj:
-			ob->temp2 = 1;
-			break;
-		}
-		return false;
-	}
-
-	FirstSighting (ob);
-
-	return true;
+    return actor_class == WG_ACTOR_SCHABBS
+           || actor_class == WG_ACTOR_GIFT
+           || actor_class == WG_ACTOR_FAT
+           || actor_class == WG_ACTOR_REAL_HITLER;
 }
 
+static int WL_SpectreMayWake(const wg_level_t *level,
+                             const wg_actor_t *actor)
+{
+    int32_t dx = actor->x - level->player_x;
+    int32_t dy = actor->y - level->player_y;
+    int x0;
+    int x1;
+    int y0;
+    int y1;
+    int x;
+    int y;
+    size_t index;
 
+    if (dx >= -WG_FIXED_ONE && dx <= WG_FIXED_ONE
+        && dy >= -WG_FIXED_ONE && dy <= WG_FIXED_ONE)
+    {
+        return 0;
+    }
+    x0 = (actor->x - 0x5800) / WG_FIXED_ONE;
+    x1 = (actor->x + 0x5800) / WG_FIXED_ONE;
+    y0 = (actor->y - 0x5800) / WG_FIXED_ONE;
+    y1 = (actor->y + 0x5800) / WG_FIXED_ONE;
+    if (x0 < 0 || y0 < 0 || x1 >= WG_LEVEL_SIZE || y1 >= WG_LEVEL_SIZE)
+    {
+        return 0;
+    }
+    for (y = y0; y <= y1; ++y)
+    {
+        for (x = x0; x <= x1; ++x)
+        {
+            if (level->tiles[(size_t)y * WG_LEVEL_SIZE + x] != 0U)
+            {
+                return 0;
+            }
+        }
+    }
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        const wg_actor_t *other = &level->actors[index];
+
+        if (other != actor && other->tile_x >= x0 && other->tile_x <= x1
+            && other->tile_y >= y0 && other->tile_y <= y1
+            && (other->flags & WG_ACTOR_FLAG_SHOOTABLE) != 0U)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int WL_DropItem(wg_level_t *level, uint8_t tile_x, uint8_t tile_y,
+                       uint16_t shape, wg_item_type_t item)
+{
+    wg_static_object_t *object;
+
+    if (level->static_count >= WG_MAX_STATICS)
+    {
+        return 0;
+    }
+    object = &level->statics[level->static_count++];
+    object->tile_x = tile_x;
+    object->tile_y = tile_y;
+    object->blocking = 0U;
+    object->removed = 0U;
+    object->shape = shape;
+    object->item = item;
+    return 1;
+}
+
+static int WL_SpawnRealHitler(wg_level_t *level, const wg_actor_t *mecha)
+{
+    static const int32_t hit_points[] = {500, 700, 800, 900};
+    wg_actor_t *actor = WL_AllocateTransientActor(level);
+
+    if (actor == NULL)
+    {
+        return 0;
+    }
+    actor->x = mecha->x;
+    actor->y = mecha->y;
+    actor->tile_x = mecha->tile_x;
+    actor->tile_y = mecha->tile_y;
+    actor->direction = mecha->direction;
+    actor->shape = 345U;
+    actor->base_shape = 345U;
+    actor->attack_shape = 349U;
+    actor->rotate = 0U;
+    actor->area_number = mecha->area_number;
+    actor->flags = mecha->flags | WG_ACTOR_FLAG_SHOOTABLE;
+    actor->tic_count = WG_RandomNext(&level->random) % 6U;
+    actor->speed = 512 * 5;
+    actor->distance = mecha->distance;
+    actor->hit_points = hit_points[level->difficulty];
+    actor->state = WG_STATE_CHASE1;
+    actor->actor_class = WG_ACTOR_REAL_HITLER;
+    return 1;
+}
+
+static void WL_ChaseStateAction(wg_level_t *level, const wg_actor_t *actor)
+{
+    if (actor->actor_class == WG_ACTOR_MECHA_HITLER
+        && (actor->state == WG_STATE_CHASE1
+            || actor->state == WG_STATE_CHASE3)
+        && actor->area_number < WG_NUM_AREAS
+        && level->area_by_player[actor->area_number])
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_MECHA_STEP,
+                              actor->x, actor->y);
+    }
+}
+
+static void WL_QueueDeathSound(wg_level_t *level, const wg_actor_t *actor)
+{
+    static const wg_sound_t guard_sounds[] =
+    {
+        WG_SOUND_DEATH_SCREAM_1, WG_SOUND_DEATH_SCREAM_2,
+        WG_SOUND_DEATH_SCREAM_3, WG_SOUND_DEATH_SCREAM_4,
+        WG_SOUND_DEATH_SCREAM_5, WG_SOUND_DEATH_SCREAM_7,
+        WG_SOUND_DEATH_SCREAM_8, WG_SOUND_DEATH_SCREAM_9
+    };
+    wg_sound_t sound;
+    int positioned = 1;
+
+    if (level->variant != WG_GAME_WOLF3D_SHAREWARE_14
+        && (WG_DataVariantFamily(level->variant) == WG_GAME_FAMILY_SPEAR
+             ? (level->map_number == 18U || level->map_number == 19U)
+             : level->map_number % 10U == 9U)
+        && WG_RandomNext(&level->random) == 0U
+        && (actor->actor_class == WG_ACTOR_MUTANT
+            || actor->actor_class == WG_ACTOR_GUARD
+            || actor->actor_class == WG_ACTOR_OFFICER
+            || actor->actor_class == WG_ACTOR_SS
+            || actor->actor_class == WG_ACTOR_DOG))
+    {
+        sound = WG_SOUND_DEATH_SCREAM_6;
+    }
+    else
+    {
+        switch (actor->actor_class)
+        {
+        case WG_ACTOR_MUTANT:
+            sound = WG_SOUND_AHHHG;
+            break;
+        case WG_ACTOR_GUARD:
+            sound = guard_sounds[WG_RandomNext(&level->random)
+                                 % (level->variant
+                                        == WG_GAME_WOLF3D_SHAREWARE_14
+                                    ? 2U : 8U)];
+            break;
+        case WG_ACTOR_OFFICER:
+            sound = WG_SOUND_NEIN_SOWAS;
+            break;
+        case WG_ACTOR_SS:
+            sound = WG_SOUND_LEBEN;
+            break;
+        case WG_ACTOR_DOG:
+            sound = WG_SOUND_DOG_DEATH;
+            break;
+        case WG_ACTOR_BOSS:
+            sound = WG_SOUND_MUTTI;
+            positioned = 0;
+            break;
+        case WG_ACTOR_SCHABBS:
+            sound = WG_SOUND_MEIN_GOTT;
+            positioned = 0;
+            break;
+        case WG_ACTOR_FAKE:
+            sound = WG_SOUND_HITLER_HA;
+            positioned = 0;
+            break;
+        case WG_ACTOR_MECHA_HITLER:
+            sound = WG_SOUND_SCHEIST;
+            positioned = 0;
+            break;
+        case WG_ACTOR_REAL_HITLER:
+            sound = WG_SOUND_EVA;
+            positioned = 0;
+            break;
+        case WG_ACTOR_GRETEL:
+            sound = WG_SOUND_MEIN;
+            positioned = 0;
+            break;
+        case WG_ACTOR_GIFT:
+            sound = WG_SOUND_DONNER;
+            positioned = 0;
+            break;
+        case WG_ACTOR_FAT:
+            sound = WG_SOUND_ROSE;
+            positioned = 0;
+            break;
+        case WG_ACTOR_SPECTRE:
+            sound = WG_SOUND_GHOST_FADE;
+            positioned = 0;
+            break;
+        case WG_ACTOR_ANGEL:
+            sound = WG_SOUND_ANGEL_DEATH;
+            positioned = 0;
+            break;
+        case WG_ACTOR_TRANS:
+            sound = WG_SOUND_TRANS_DEATH;
+            positioned = 0;
+            break;
+        case WG_ACTOR_UBER:
+            sound = WG_SOUND_UBER_DEATH;
+            positioned = 0;
+            break;
+        case WG_ACTOR_WILL:
+            sound = WG_SOUND_WILHELM_DEATH;
+            positioned = 0;
+            break;
+        case WG_ACTOR_DEATH:
+            sound = WG_SOUND_KNIGHT_DEATH;
+            positioned = 0;
+            break;
+        default:
+            return;
+        }
+    }
+    if (positioned)
+    {
+        (void)WG_QueueSoundAt(level, sound, actor->x, actor->y);
+    }
+    else
+    {
+        (void)WG_QueueSound(level, sound);
+    }
+}
+
+int WL_KillActor(wg_level_t *level, size_t actor_index)
+{
+    wg_actor_t *actor;
+    uint32_t points;
+    int drop = 0;
+    wg_item_type_t drop_item = WG_ITEM_NONE;
+
+    if (level == NULL || actor_index >= level->actor_count)
+    {
+        return 0;
+    }
+    actor = &level->actors[actor_index];
+    if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U
+        || WL_DeathTimedFrames(actor->actor_class) == 0U)
+    {
+        return 0;
+    }
+    switch (actor->actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        points = 100U;
+        drop = WG_SPR_STAT_CLIP2;
+        drop_item = WG_ITEM_CLIP2;
+        break;
+    case WG_ACTOR_OFFICER:
+        points = 400U;
+        drop = WG_SPR_STAT_CLIP2;
+        drop_item = WG_ITEM_CLIP2;
+        break;
+    case WG_ACTOR_MUTANT:
+        points = 700U;
+        drop = WG_SPR_STAT_CLIP2;
+        drop_item = WG_ITEM_CLIP2;
+        break;
+    case WG_ACTOR_SS:
+        points = 500U;
+        drop = level->player_best_weapon < 2U
+                   ? WG_SPR_STAT_MACHINEGUN : WG_SPR_STAT_CLIP2;
+        drop_item = level->player_best_weapon < 2U
+                        ? WG_ITEM_MACHINEGUN : WG_ITEM_CLIP2;
+        break;
+    case WG_ACTOR_DOG:
+        points = 200U;
+        break;
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+        points = 5000U;
+        drop = WG_SPR_STAT_KEY1;
+        drop_item = WG_ITEM_KEY1;
+        break;
+    case WG_ACTOR_FAKE:
+        points = 2000U;
+        break;
+    case WG_ACTOR_SCHABBS:
+    case WG_ACTOR_MECHA_HITLER:
+    case WG_ACTOR_REAL_HITLER:
+    case WG_ACTOR_GIFT:
+    case WG_ACTOR_FAT:
+        points = 5000U;
+        break;
+    case WG_ACTOR_SPECTRE:
+        points = 200U;
+        break;
+    case WG_ACTOR_ANGEL:
+        points = 5000U;
+        break;
+    case WG_ACTOR_TRANS:
+    case WG_ACTOR_UBER:
+    case WG_ACTOR_WILL:
+    case WG_ACTOR_DEATH:
+        points = 5000U;
+        drop = WG_SPR_STAT_KEY1;
+        drop_item = WG_ITEM_KEY1;
+        break;
+    default:
+        return 0;
+    }
+    actor->tile_x = (uint8_t)(actor->x / WG_FIXED_ONE);
+    actor->tile_y = (uint8_t)(actor->y / WG_FIXED_ONE);
+    /* KillActor clears the actor's physical tile after replacing tilex/tiley.
+       If it was still marked at an old destination, that stale actorat entry
+       intentionally survives just as it did in the DOS engine. */
+    level->actor_at[(size_t)actor->tile_y * WG_LEVEL_SIZE + actor->tile_x]
+        = 0U;
+    if (WL_UsesDeathCam(actor->actor_class))
+    {
+        level->kill_x = level->player_x;
+        level->kill_y = level->player_y;
+    }
+    if (drop != 0)
+    {
+        (void)WL_DropItem(level, actor->tile_x, actor->tile_y,
+                          (uint16_t)drop, drop_item);
+    }
+    actor->hit_points = 0;
+    actor->state = WG_STATE_DIE1;
+    actor->tic_count = WL_DeathFrameDuration(actor->actor_class, 0U);
+    actor->shape = WL_DeathShape(level->variant, actor->actor_class, 0U);
+    actor->rotate = 0U;
+    actor->flags = (uint16_t)(actor->flags & ~WG_ACTOR_FLAG_SHOOTABLE);
+    actor->flags |= WG_ACTOR_FLAG_NONMARK;
+    /* A_DeathScream is the action attached to the first death state in the
+       original state table.  DoActor invokes it when that state expires,
+       not when KillActor enters it.  Schabbs is the one deliberate exception:
+       KillActor also calls A_DeathScream immediately for him. */
+    if (actor->actor_class == WG_ACTOR_SCHABBS)
+    {
+        WL_QueueDeathSound(level, actor);
+    }
+    WL_GivePoints(level, points);
+    ++level->kill_count;
+    return 1;
+}
+
+static int WL_TickPainOrDeath(wg_level_t *level, wg_actor_t *actor,
+                              unsigned tics)
+{
+    actor->tic_count -= (int32_t)tics;
+    if (WL_IsPainState(actor->state))
+    {
+        if (actor->tic_count <= 0)
+        {
+            actor->state = WG_STATE_CHASE1;
+            actor->tic_count += WL_ChaseStateDuration(actor,
+                                                       actor->state);
+            while (actor->tic_count <= 0)
+            {
+                WL_ChaseStateAction(level, actor);
+                actor->state = WL_NextChaseState(actor->state);
+                actor->tic_count += WL_ChaseStateDuration(actor,
+                                                           actor->state);
+            }
+            WL_SetChaseShape(actor);
+            actor->rotate = 1U;
+            /* DoActor immediately executes the think callback of the state
+               reached by a timed transition.  Tell the caller that pain
+               ended in chase1 so it can run T_Chase in this same frame. */
+            return 2;
+        }
+        return 1;
+    }
+    while (actor->tic_count <= 0 && WL_IsDeathState(actor->state))
+    {
+        unsigned frame = (unsigned)(actor->state - WG_STATE_DIE1) + 1U;
+
+        if (actor->state == WG_STATE_DIE1)
+        {
+            WL_QueueDeathSound(level, actor);
+        }
+
+        if (frame >= WL_DeathTimedFrames(actor->actor_class))
+        {
+            if (actor->actor_class == WG_ACTOR_MECHA_HITLER
+                && !WL_SpawnRealHitler(level, actor))
+            {
+                return 0;
+            }
+            actor->state = WG_STATE_DEAD;
+            actor->shape = WL_DeathShape(level->variant,
+                                         actor->actor_class, frame);
+            actor->tic_count = WL_DeathTerminalDuration(actor->actor_class);
+            return 1;
+        }
+        actor->state = (wg_actor_state_t)(actor->state + 1);
+        actor->shape = WL_DeathShape(level->variant,
+                                     actor->actor_class, frame);
+        actor->tic_count += WL_DeathFrameDuration(actor->actor_class, frame);
+        if ((actor->actor_class == WG_ACTOR_ANGEL && frame == 1U)
+            || (actor->actor_class == WG_ACTOR_REAL_HITLER && frame == 3U))
+        {
+            (void)WG_QueueSound(level, WG_SOUND_SLURPIE);
+        }
+    }
+    return 1;
+}
+
+static int WL_IsNeedleState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_NEEDLE1 && state <= WG_STATE_NEEDLE4;
+}
+
+static int WL_IsSmokeState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_SMOKE1 && state <= WG_STATE_SMOKE4;
+}
+
+static int WL_IsBoomState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_BOOM1 && state <= WG_STATE_BOOM3;
+}
+
+static int WL_IsFireState(wg_actor_state_t state)
+{
+    return state == WG_STATE_FIRE1 || state == WG_STATE_FIRE2;
+}
+
+static int32_t WL_StateDuration(wg_actor_state_t state)
+{
+    switch (state)
+    {
+    case WG_STATE_PATH1:
+    case WG_STATE_PATH3:
+        return 20;
+    case WG_STATE_PATH1S:
+    case WG_STATE_PATH3S:
+        return 5;
+    case WG_STATE_PATH2:
+    case WG_STATE_PATH4:
+        return 15;
+    default:
+        return 0;
+    }
+}
+
+static wg_actor_state_t WL_NextPathState(wg_actor_state_t state)
+{
+    switch (state)
+    {
+    case WG_STATE_PATH1:
+        return WG_STATE_PATH1S;
+    case WG_STATE_PATH1S:
+        return WG_STATE_PATH2;
+    case WG_STATE_PATH2:
+        return WG_STATE_PATH3;
+    case WG_STATE_PATH3:
+        return WG_STATE_PATH3S;
+    case WG_STATE_PATH3S:
+        return WG_STATE_PATH4;
+    default:
+        return WG_STATE_PATH1;
+    }
+}
+
+static int32_t WL_ChaseStateDuration(const wg_actor_t *actor,
+                                     wg_actor_state_t state)
+{
+    if (actor->actor_class == WG_ACTOR_REAL_HITLER)
+    {
+        switch (state)
+        {
+        case WG_STATE_CHASE1:
+        case WG_STATE_CHASE3:
+            return 6;
+        case WG_STATE_CHASE1S:
+        case WG_STATE_CHASE3S:
+            return 4;
+        case WG_STATE_CHASE2:
+        case WG_STATE_CHASE4:
+            return 2;
+        default:
+            return 0;
+        }
+    }
+    switch (state)
+    {
+    case WG_STATE_CHASE1:
+    case WG_STATE_CHASE3:
+        return 10;
+    case WG_STATE_CHASE1S:
+    case WG_STATE_CHASE3S:
+        return actor->actor_class == WG_ACTOR_MECHA_HITLER ? 6 : 3;
+    case WG_STATE_CHASE2:
+    case WG_STATE_CHASE4:
+        return 8;
+    default:
+        return 0;
+    }
+}
+
+static wg_actor_state_t WL_NextChaseState(wg_actor_state_t state)
+{
+    switch (state)
+    {
+    case WG_STATE_CHASE1:
+        return WG_STATE_CHASE1S;
+    case WG_STATE_CHASE1S:
+        return WG_STATE_CHASE2;
+    case WG_STATE_CHASE2:
+        return WG_STATE_CHASE3;
+    case WG_STATE_CHASE3:
+        return WG_STATE_CHASE3S;
+    case WG_STATE_CHASE3S:
+        return WG_STATE_CHASE4;
+    default:
+        return WG_STATE_CHASE1;
+    }
+}
+
+static void WL_SetPathShape(wg_actor_t *actor)
+{
+    unsigned frame;
+
+    actor->rotate = 1U;
+    switch (actor->state)
+    {
+    case WG_STATE_PATH2:
+        frame = 1U;
+        break;
+    case WG_STATE_PATH3:
+    case WG_STATE_PATH3S:
+        frame = 2U;
+        break;
+    case WG_STATE_PATH4:
+        frame = 3U;
+        break;
+    default:
+        frame = 0U;
+        break;
+    }
+    actor->shape = (uint16_t)(actor->base_shape + frame * 8U);
+}
+
+static void WL_SetChaseShape(wg_actor_t *actor)
+{
+    unsigned frame;
+    unsigned spacing;
+
+    actor->rotate = actor->actor_class == WG_ACTOR_GUARD
+                    || actor->actor_class == WG_ACTOR_OFFICER
+                    || actor->actor_class == WG_ACTOR_MUTANT
+                    || actor->actor_class == WG_ACTOR_SS
+                    || actor->actor_class == WG_ACTOR_DOG;
+    spacing = actor->rotate ? 8U : 1U;
+
+    switch (actor->state)
+    {
+    case WG_STATE_CHASE2:
+        frame = 1U;
+        break;
+    case WG_STATE_CHASE3:
+    case WG_STATE_CHASE3S:
+        frame = 2U;
+        break;
+    case WG_STATE_CHASE4:
+        frame = 3U;
+        break;
+    default:
+        frame = 0U;
+        break;
+    }
+    actor->shape = (uint16_t)(actor->base_shape + frame * spacing);
+}
+
+static int WL_IsBlockingActor(const wg_actor_t *actor)
+{
+    return (actor->flags & WG_ACTOR_FLAG_SHOOTABLE) != 0U;
+}
+
+static int WL_ActorBlocksSpot(const wg_level_t *level, size_t actor_index,
+                              int tile_x, int tile_y)
+{
+    size_t index;
+    uint16_t occupant;
+
+    /* Blocking statics share actorat[] with actors in the DOS engine.  They
+       therefore participate in both cardinal and diagonal TryWalk tests. */
+    for (index = 0; index < level->static_count; ++index)
+    {
+        const wg_static_object_t *object = &level->statics[index];
+
+        if (object->removed == 0U && object->blocking != 0U
+            && object->tile_x == (uint8_t)tile_x
+            && object->tile_y == (uint8_t)tile_y)
+        {
+            return 1;
+        }
+    }
+
+    occupant = level->actor_at[(size_t)tile_y * WG_LEVEL_SIZE
+                               + (size_t)tile_x];
+    if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+        && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count
+        && occupant != WG_ACTOR_AT_ACTOR_BASE + actor_index
+        && WL_IsBlockingActor(&level->actors[
+               occupant - WG_ACTOR_AT_ACTOR_BASE]))
+    {
+        return 1;
+    }
+    return 0;
+}
+
+static int WL_DiagonalSpotBlocked(const wg_level_t *level,
+                                  size_t actor_index, int tile_x, int tile_y)
+{
+    return level->tiles[(size_t)tile_y * WG_LEVEL_SIZE + (size_t)tile_x] != 0U
+           || WL_ActorBlocksSpot(level, actor_index, tile_x, tile_y);
+}
+
+static int WL_TryWalk(wg_level_t *level, size_t actor_index)
+{
+    static const int direction_x[] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+    static const int direction_y[] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+    wg_actor_t *actor = &level->actors[actor_index];
+    int destination_x;
+    int destination_y;
+    uint8_t tile;
+    size_t door;
+
+    if (actor->direction >= WG_NO_DIRECTION)
+    {
+        return 0;
+    }
+    destination_x = (int)actor->tile_x + direction_x[actor->direction];
+    destination_y = (int)actor->tile_y + direction_y[actor->direction];
+    if (destination_x < 0 || destination_x >= WG_LEVEL_SIZE
+        || destination_y < 0 || destination_y >= WG_LEVEL_SIZE)
+    {
+        return 0;
+    }
+    if ((actor->direction & 1U) != 0U)
+    {
+        if (WL_DiagonalSpotBlocked(level, actor_index,
+                                   destination_x, destination_y)
+            || WL_DiagonalSpotBlocked(level, actor_index,
+                                      destination_x, actor->tile_y)
+            || WL_DiagonalSpotBlocked(level, actor_index,
+                                      actor->tile_x, destination_y))
+        {
+            return 0;
+        }
+    }
+    else if (WL_ActorBlocksSpot(level, actor_index,
+                                destination_x, destination_y))
+    {
+        return 0;
+    }
+    tile = level->tiles[(size_t)destination_y * WG_LEVEL_SIZE
+                        + (size_t)destination_x];
+    if (tile != 0U)
+    {
+        if ((tile & 0x80U) == 0U
+            || actor->actor_class == WG_ACTOR_DOG
+            || actor->actor_class == WG_ACTOR_FAKE)
+        {
+            return 0;
+        }
+        door = tile & 0x3fU;
+        if (door >= level->door_count)
+        {
+            return 0;
+        }
+        if (level->doors[door].position != 0xffffU)
+        {
+            /* Original TryWalk changes the destination tile, opens the door
+               immediately, and returns before changing the actor's area. */
+            actor->distance = -(int32_t)door - 1;
+            actor->tile_x = (uint8_t)destination_x;
+            actor->tile_y = (uint8_t)destination_y;
+            (void)WL_OpenDoor(level, door);
+            return 1;
+        }
+        actor->distance = WG_FIXED_ONE;
+    }
+    else
+    {
+        actor->distance = WG_FIXED_ONE;
+    }
+    actor->tile_x = (uint8_t)destination_x;
+    actor->tile_y = (uint8_t)destination_y;
+    if (level->areas[(size_t)destination_y * WG_LEVEL_SIZE
+                     + (size_t)destination_x] != WG_NO_AREA)
+    {
+        actor->area_number = level->areas[(size_t)destination_y * WG_LEVEL_SIZE
+                                          + (size_t)destination_x];
+    }
+    return 1;
+}
+
+static void WL_SelectPathDir(wg_level_t *level, size_t actor_index)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    uint16_t info = level->info[(size_t)actor->tile_y * WG_LEVEL_SIZE
+                                + actor->tile_x];
+
+    if (info >= 90U && info < 98U)
+    {
+        actor->direction = (uint8_t)(info - 90U);
+    }
+    actor->distance = WG_FIXED_ONE;
+    if (!WL_TryWalk(level, actor_index))
+    {
+        actor->direction = WG_NO_DIRECTION;
+    }
+}
+
+static void WL_MoveObj(wg_actor_t *actor, int32_t move)
+{
+    static const int direction_x[] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+    static const int direction_y[] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+
+    actor->x += direction_x[actor->direction] * move;
+    actor->y += direction_y[actor->direction] * move;
+    actor->distance -= move;
+}
+
+static int WL_IsBJRunState(wg_actor_state_t state)
+{
+    return state >= WG_STATE_BJ_RUN1 && state <= WG_STATE_BJ_RUN4;
+}
+
+static int32_t WL_BJStateDuration(wg_actor_state_t state)
+{
+    static const int32_t run_durations[] = { 12, 3, 8, 12, 3, 8 };
+
+    if (WL_IsBJRunState(state))
+    {
+        return run_durations[state - WG_STATE_BJ_RUN1];
+    }
+    return state == WG_STATE_BJ_JUMP4 ? 300 : 14;
+}
+
+static void WL_SetBJShape(wg_actor_t *actor)
+{
+    static const uint8_t run_frames[] = { 0, 0, 1, 2, 2, 3 };
+
+    if (WL_IsBJRunState(actor->state))
+    {
+        actor->shape = (uint16_t)(actor->base_shape
+                       + run_frames[actor->state - WG_STATE_BJ_RUN1]);
+    }
+    else
+    {
+        actor->shape = (uint16_t)(actor->base_shape + 4U
+                       + actor->state - WG_STATE_BJ_JUMP1);
+    }
+}
+
+static void WL_T_BJRun(wg_level_t *level, size_t actor_index, int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int32_t move = 2048 * tics;
+
+    while (move > 0)
+    {
+        if (move < actor->distance)
+        {
+            WL_MoveObj(actor, move);
+            return;
+        }
+        move -= actor->distance;
+        actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        WL_SelectPathDir(level, actor_index);
+        --actor->reaction_time;
+        if (actor->reaction_time == 0)
+        {
+            actor->state = WG_STATE_BJ_JUMP1;
+            actor->tic_count = WL_BJStateDuration(actor->state);
+            WL_SetBJShape(actor);
+            return;
+        }
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+}
+
+static void WL_TickBJVictory(wg_level_t *level, size_t actor_index,
+                             int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+
+    actor->tic_count -= tics;
+    while (actor->tic_count <= 0)
+    {
+        if (actor->state == WG_STATE_BJ_JUMP2)
+        {
+            (void)WG_QueueSoundAt(level, WG_SOUND_YEAH, actor->x, actor->y);
+        }
+        if (actor->state == WG_STATE_BJ_JUMP4)
+        {
+            level->level_completed = 1U;
+            actor->tic_count += 300;
+            break;
+        }
+        actor->state = actor->state == WG_STATE_BJ_RUN4
+                           ? WG_STATE_BJ_RUN1
+                           : (wg_actor_state_t)(actor->state + 1);
+        actor->tic_count += WL_BJStateDuration(actor->state);
+        WL_SetBJShape(actor);
+    }
+    if (actor->state == WG_STATE_BJ_RUN1
+        || actor->state == WG_STATE_BJ_RUN2
+        || actor->state == WG_STATE_BJ_RUN3
+        || actor->state == WG_STATE_BJ_RUN4)
+    {
+        WL_T_BJRun(level, actor_index, tics);
+    }
+    else if (actor->state >= WG_STATE_BJ_JUMP1
+             && actor->state <= WG_STATE_BJ_JUMP3)
+    {
+        WL_MoveObj(actor, 680 * tics);
+    }
+}
+
+static uint8_t WL_OppositeDirection(uint8_t direction)
+{
+    return direction < WG_NO_DIRECTION
+               ? (uint8_t)((direction + 4U) & 7U) : WG_NO_DIRECTION;
+}
+
+static uint8_t WL_DiagonalDirection(uint8_t first, uint8_t second)
+{
+    uint8_t horizontal = first == 0U || first == 4U ? first : second;
+    uint8_t vertical = first == 2U || first == 6U ? first : second;
+
+    if (horizontal == 0U)
+    {
+        return vertical == 2U ? 1U : 7U;
+    }
+    if (horizontal == 4U)
+    {
+        return vertical == 2U ? 3U : 5U;
+    }
+    return WG_NO_DIRECTION;
+}
+
+static int WL_PlayerTileX(const wg_level_t *level)
+{
+    return level->player_x / WG_FIXED_ONE;
+}
+
+static int WL_PlayerTileY(const wg_level_t *level)
+{
+    return level->player_y / WG_FIXED_ONE;
+}
+
+static void WL_SelectDodgeDir(wg_level_t *level, size_t actor_index)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    uint8_t directions[5];
+    uint8_t turnaround;
+    uint8_t temporary;
+    int delta_x;
+    int delta_y;
+    unsigned absolute_x;
+    unsigned absolute_y;
+    size_t index;
+
+    if ((actor->flags & WG_ACTOR_FLAG_FIRST_ATTACK) != 0U)
+    {
+        turnaround = WG_NO_DIRECTION;
+        actor->flags = (uint16_t)(actor->flags & 0xffdfU);
+    }
+    else
+    {
+        turnaround = WL_OppositeDirection(actor->direction);
+    }
+    delta_x = WL_PlayerTileX(level) - actor->tile_x;
+    delta_y = WL_PlayerTileY(level) - actor->tile_y;
+    if (delta_x > 0)
+    {
+        directions[1] = 0U;
+        directions[3] = 4U;
+    }
+    else
+    {
+        directions[1] = 4U;
+        directions[3] = 0U;
+    }
+    if (delta_y > 0)
+    {
+        directions[2] = 6U;
+        directions[4] = 2U;
+    }
+    else
+    {
+        directions[2] = 2U;
+        directions[4] = 6U;
+    }
+    absolute_x = (unsigned)(delta_x < 0 ? -delta_x : delta_x);
+    absolute_y = (unsigned)(delta_y < 0 ? -delta_y : delta_y);
+    if (absolute_x > absolute_y)
+    {
+        temporary = directions[1];
+        directions[1] = directions[2];
+        directions[2] = temporary;
+        temporary = directions[3];
+        directions[3] = directions[4];
+        directions[4] = temporary;
+    }
+    if (WG_RandomNext(&level->random) < 128U)
+    {
+        temporary = directions[1];
+        directions[1] = directions[2];
+        directions[2] = temporary;
+        temporary = directions[3];
+        directions[3] = directions[4];
+        directions[4] = temporary;
+    }
+    directions[0] = WL_DiagonalDirection(directions[1], directions[2]);
+    for (index = 0U; index < 5U; ++index)
+    {
+        if (directions[index] == WG_NO_DIRECTION
+            || directions[index] == turnaround)
+        {
+            continue;
+        }
+        actor->direction = directions[index];
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    if (turnaround != WG_NO_DIRECTION)
+    {
+        actor->direction = turnaround;
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    actor->direction = WG_NO_DIRECTION;
+}
+
+static void WL_SelectChaseDir(wg_level_t *level, size_t actor_index)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    uint8_t directions[3] =
+    {
+        WG_NO_DIRECTION, WG_NO_DIRECTION, WG_NO_DIRECTION
+    };
+    uint8_t old_direction = actor->direction;
+    uint8_t turnaround = WL_OppositeDirection(old_direction);
+    uint8_t temporary;
+    int delta_x = WL_PlayerTileX(level) - actor->tile_x;
+    int delta_y = WL_PlayerTileY(level) - actor->tile_y;
+    int direction;
+
+    if (delta_x > 0)
+    {
+        directions[1] = 0U;
+    }
+    else if (delta_x < 0)
+    {
+        directions[1] = 4U;
+    }
+    if (delta_y > 0)
+    {
+        directions[2] = 6U;
+    }
+    else if (delta_y < 0)
+    {
+        directions[2] = 2U;
+    }
+    if ((delta_y < 0 ? -delta_y : delta_y)
+        > (delta_x < 0 ? -delta_x : delta_x))
+    {
+        temporary = directions[1];
+        directions[1] = directions[2];
+        directions[2] = temporary;
+    }
+    if (directions[1] == turnaround)
+    {
+        directions[1] = WG_NO_DIRECTION;
+    }
+    if (directions[2] == turnaround)
+    {
+        directions[2] = WG_NO_DIRECTION;
+    }
+    if (directions[1] != WG_NO_DIRECTION)
+    {
+        actor->direction = directions[1];
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    if (directions[2] != WG_NO_DIRECTION)
+    {
+        actor->direction = directions[2];
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    if (old_direction != WG_NO_DIRECTION)
+    {
+        actor->direction = old_direction;
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    if (WG_RandomNext(&level->random) > 128U)
+    {
+        for (direction = 2; direction <= 4; ++direction)
+        {
+            if ((uint8_t)direction != turnaround)
+            {
+                actor->direction = (uint8_t)direction;
+                if (WL_TryWalk(level, actor_index))
+                {
+                    return;
+                }
+            }
+        }
+    }
+    else
+    {
+        for (direction = 4; direction >= 2; --direction)
+        {
+            if ((uint8_t)direction != turnaround)
+            {
+                actor->direction = (uint8_t)direction;
+                if (WL_TryWalk(level, actor_index))
+                {
+                    return;
+                }
+            }
+        }
+    }
+    if (turnaround != WG_NO_DIRECTION)
+    {
+        actor->direction = turnaround;
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    actor->direction = WG_NO_DIRECTION;
+}
+
+static void WL_SelectRunDir(wg_level_t *level, size_t actor_index)
+{
+    static const uint8_t forward_search[] = { 2U, 3U, 4U };
+    static const uint8_t reverse_search[] = { 4U, 3U, 2U };
+    wg_actor_t *actor = &level->actors[actor_index];
+    uint8_t directions[2];
+    uint8_t temporary;
+    const uint8_t *search;
+    int delta_x = WL_PlayerTileX(level) - actor->tile_x;
+    int delta_y = WL_PlayerTileY(level) - actor->tile_y;
+    size_t index;
+
+    directions[0] = delta_x < 0 ? 0U : 4U;
+    directions[1] = delta_y < 0 ? 6U : 2U;
+    if ((delta_y < 0 ? -delta_y : delta_y)
+        > (delta_x < 0 ? -delta_x : delta_x))
+    {
+        temporary = directions[0];
+        directions[0] = directions[1];
+        directions[1] = temporary;
+    }
+    for (index = 0U; index < 2U; ++index)
+    {
+        actor->direction = directions[index];
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    search = WG_RandomNext(&level->random) > 128U
+                 ? forward_search : reverse_search;
+    for (index = 0U; index < 3U; ++index)
+    {
+        actor->direction = search[index];
+        if (WL_TryWalk(level, actor_index))
+        {
+            return;
+        }
+    }
+    actor->direction = WG_NO_DIRECTION;
+}
+
+static void WL_MoveChase(wg_level_t *level, wg_actor_t *actor, int32_t move,
+                         int32_t tics)
+{
+    int32_t old_x = actor->x;
+    int32_t old_y = actor->y;
+    int32_t delta_x;
+    int32_t delta_y;
+
+    WL_MoveObj(actor, move);
+    if (actor->area_number >= WG_NUM_AREAS
+        || !level->area_by_player[actor->area_number])
+    {
+        return;
+    }
+    delta_x = actor->x - level->player_x;
+    delta_y = actor->y - level->player_y;
+    if (delta_x >= -WG_FIXED_ONE && delta_x <= WG_FIXED_ONE
+        && delta_y >= -WG_FIXED_ONE && delta_y <= WG_FIXED_ONE)
+    {
+        if (actor->actor_class == WG_ACTOR_GHOST
+            || actor->actor_class == WG_ACTOR_SPECTRE)
+        {
+            WL_TakeDamageFrom(level, (unsigned)tics * 2U,
+                              actor->x, actor->y);
+        }
+        actor->x = old_x;
+        actor->y = old_y;
+        actor->distance += move;
+    }
+}
+
+static void WL_MoveChasingActor(wg_level_t *level, size_t actor_index,
+                                int32_t tics, int dodge)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int32_t move;
+
+    if (actor->direction == WG_NO_DIRECTION)
+    {
+        if (dodge)
+        {
+            WL_SelectDodgeDir(level, actor_index);
+        }
+        else
+        {
+            WL_SelectChaseDir(level, actor_index);
+        }
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+    move = actor->speed * tics;
+    while (move > 0)
+    {
+        if (actor->distance < 0)
+        {
+            size_t door = (size_t)(-actor->distance - 1);
+
+            if (door >= level->door_count)
+            {
+                return;
+            }
+            (void)WL_OpenDoor(level, door);
+            if (level->doors[door].position != 0xffffU)
+            {
+                return;
+            }
+            actor->distance = WG_FIXED_ONE;
+        }
+        if (move < actor->distance)
+        {
+            WL_MoveChase(level, actor, move, tics);
+            return;
+        }
+        move -= actor->distance;
+        actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        if (dodge)
+        {
+            WL_SelectDodgeDir(level, actor_index);
+        }
+        else
+        {
+            WL_SelectChaseDir(level, actor_index);
+        }
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+}
+
+static void WL_T_Ghosts(wg_level_t *level, size_t actor_index, int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+
+    actor->tic_count -= tics;
+    while (actor->tic_count <= 0)
+    {
+        actor->shape = actor->shape == actor->base_shape
+                           ? (uint16_t)(actor->base_shape + 1U)
+                           : actor->base_shape;
+        actor->tic_count += 10;
+    }
+    WL_MoveChasingActor(level, actor_index, tics, 0);
+}
+
+static int WL_UsesStandardChase(wg_actor_class_t actor_class)
+{
+    return actor_class == WG_ACTOR_GUARD
+           || actor_class == WG_ACTOR_OFFICER
+           || actor_class == WG_ACTOR_MUTANT
+           || actor_class == WG_ACTOR_SS
+           || actor_class == WG_ACTOR_BOSS
+           || actor_class == WG_ACTOR_GRETEL
+           || actor_class == WG_ACTOR_MECHA_HITLER
+           || actor_class == WG_ACTOR_REAL_HITLER
+           || actor_class == WG_ACTOR_TRANS
+           || actor_class == WG_ACTOR_UBER;
+}
+
+static void WL_BeginDogJump(wg_actor_t *actor)
+{
+    actor->state = WG_STATE_DOG_JUMP1;
+    actor->tic_count = 10;
+    actor->shape = actor->attack_shape;
+    actor->rotate = 0U;
+}
+
+static void WL_SetDogJumpShape(wg_actor_t *actor)
+{
+    actor->rotate = 0U;
+    switch (actor->state)
+    {
+    case WG_STATE_DOG_JUMP2:
+        actor->shape = (uint16_t)(actor->attack_shape + 1U);
+        break;
+    case WG_STATE_DOG_JUMP3:
+        actor->shape = (uint16_t)(actor->attack_shape + 2U);
+        break;
+    case WG_STATE_DOG_JUMP5:
+        actor->shape = actor->base_shape;
+        break;
+    default:
+        actor->shape = actor->attack_shape;
+        break;
+    }
+}
+
+static void WL_T_Bite(wg_level_t *level, const wg_actor_t *actor)
+{
+    int32_t delta_x = level->player_x - actor->x;
+    int32_t delta_y = level->player_y - actor->y;
+
+    (void)WG_QueueSoundAt(level, WG_SOUND_DOG_ATTACK,
+                          actor->x, actor->y);
+
+    delta_x = (delta_x < 0 ? -delta_x : delta_x) - WG_FIXED_ONE;
+    if (delta_x > WG_FIXED_ONE)
+    {
+        return;
+    }
+    delta_y = (delta_y < 0 ? -delta_y : delta_y) - WG_FIXED_ONE;
+    if (delta_y <= WG_FIXED_ONE && WG_RandomNext(&level->random) < 180U)
+    {
+        WL_TakeDamageFrom(level, WG_RandomNext(&level->random) >> 4,
+                          actor->x, actor->y);
+    }
+}
+
+static void WL_T_DogChase(wg_level_t *level, size_t actor_index,
+                          int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int32_t move;
+
+    if (actor->direction == WG_NO_DIRECTION)
+    {
+        WL_SelectDodgeDir(level, actor_index);
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+    move = actor->speed * tics;
+    while (move > 0)
+    {
+        int32_t delta_x = level->player_x - actor->x;
+        int32_t delta_y = level->player_y - actor->y;
+
+        delta_x = (delta_x < 0 ? -delta_x : delta_x) - move;
+        delta_y = (delta_y < 0 ? -delta_y : delta_y) - move;
+        if (delta_x <= WG_FIXED_ONE && delta_y <= WG_FIXED_ONE)
+        {
+            WL_BeginDogJump(actor);
+            return;
+        }
+        if (actor->distance <= 0)
+        {
+            actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE
+                       + WG_FIXED_ONE / 2;
+            actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE
+                       + WG_FIXED_ONE / 2;
+            WL_SelectDodgeDir(level, actor_index);
+            if (actor->direction == WG_NO_DIRECTION)
+            {
+                return;
+            }
+            continue;
+        }
+        if (move < actor->distance)
+        {
+            WL_MoveChase(level, actor, move, tics);
+            return;
+        }
+        move -= actor->distance;
+        actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        WL_SelectDodgeDir(level, actor_index);
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+}
+
+static const wg_view_tables_t *WL_ProjectileTrigTables(void)
+{
+    static wg_view_tables_t tables;
+    static int initialized;
+
+    if (!initialized)
+    {
+        WG_ViewBuildTrigTables(&tables);
+        initialized = 1;
+    }
+    return &tables;
+}
+
+static int WL_ProjectileTryMove(const wg_level_t *level,
+                                const wg_actor_t *actor)
+{
+    int low_x;
+    int low_y;
+    int high_x;
+    int high_y;
+    int x;
+    int y;
+
+    if (actor->x < WG_PROJECTILE_COLLISION_SIZE
+        || actor->y < WG_PROJECTILE_COLLISION_SIZE
+        || actor->x >= WG_LEVEL_SIZE * WG_FIXED_ONE
+                       - WG_PROJECTILE_COLLISION_SIZE
+        || actor->y >= WG_LEVEL_SIZE * WG_FIXED_ONE
+                       - WG_PROJECTILE_COLLISION_SIZE)
+    {
+        return 0;
+    }
+    low_x = (actor->x - WG_PROJECTILE_COLLISION_SIZE) / WG_FIXED_ONE;
+    low_y = (actor->y - WG_PROJECTILE_COLLISION_SIZE) / WG_FIXED_ONE;
+    high_x = (actor->x + WG_PROJECTILE_COLLISION_SIZE) / WG_FIXED_ONE;
+    high_y = (actor->y + WG_PROJECTILE_COLLISION_SIZE) / WG_FIXED_ONE;
+    for (y = low_y; y <= high_y; ++y)
+    {
+        for (x = low_x; x <= high_x; ++x)
+        {
+            if (level->tiles[(size_t)y * WG_LEVEL_SIZE + (size_t)x] != 0U)
+            {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+static void WL_RemoveProjectile(wg_actor_t *actor)
+{
+    actor->state = WG_STATE_NONE;
+    actor->flags |= WG_ACTOR_FLAG_REMOVED;
+}
+
+static wg_actor_t *WL_AllocateTransientActor(wg_level_t *level)
+{
+    size_t index;
+    wg_actor_t *actor;
+
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        if ((level->actors[index].flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            memset(&level->actors[index], 0, sizeof(level->actors[index]));
+            actor = &level->actors[index];
+            actor->flags = WG_ACTOR_FLAG_ACTIVE | WG_ACTOR_FLAG_NEVERMARK;
+            return actor;
+        }
+    }
+    if (level->actor_count >= WG_MAX_ACTORS)
+    {
+        return NULL;
+    }
+    memset(&level->actors[level->actor_count], 0,
+           sizeof(level->actors[level->actor_count]));
+    actor = &level->actors[level->actor_count++];
+    actor->flags = WG_ACTOR_FLAG_ACTIVE | WG_ACTOR_FLAG_NEVERMARK;
+    return actor;
+}
+
+static void WL_BeginRocketExplosion(wg_actor_t *actor)
+{
+    int heavy = actor->actor_class == WG_ACTOR_HROCKET;
+
+    actor->actor_class = heavy ? WG_ACTOR_HEXPLOSION : WG_ACTOR_EXPLOSION;
+    actor->state = WG_STATE_BOOM1;
+    actor->shape = heavy ? WG_SPR_SPEAR_HBOOM1
+                         : (actor->shape < WG_SPR_ROCKET1
+                                ? WG_SPR_SPEAR_BOOM1 : WG_SPR_BOOM1);
+    actor->base_shape = actor->shape;
+    actor->rotate = 0U;
+    actor->speed = 0;
+    if (actor->tic_count <= 0)
+    {
+        actor->tic_count = 6;
+    }
+}
+
+static void WL_T_Projectile(wg_level_t *level, wg_actor_t *actor,
+                            int32_t tics)
+{
+    const wg_view_tables_t *tables = WL_ProjectileTrigTables();
+    const int32_t *cosine = WG_ViewCosineTable(tables);
+    int32_t speed = actor->speed * tics;
+    int32_t delta_x = WG_FixedByFrac(speed, cosine[actor->angle]);
+    int32_t delta_y = -WG_FixedByFrac(speed, tables->sine[actor->angle]);
+
+    if (delta_x > WG_FIXED_ONE)
+    {
+        delta_x = WG_FIXED_ONE;
+    }
+    if (delta_y > WG_FIXED_ONE)
+    {
+        delta_y = WG_FIXED_ONE;
+    }
+    actor->x += delta_x;
+    actor->y += delta_y;
+    if (!WL_ProjectileTryMove(level, actor))
+    {
+        if (actor->actor_class == WG_ACTOR_ROCKET
+            || actor->actor_class == WG_ACTOR_HROCKET)
+        {
+            (void)WG_QueueSoundAt(level, WG_SOUND_MISSILE_HIT,
+                                  actor->x, actor->y);
+            WL_BeginRocketExplosion(actor);
+        }
+        else
+        {
+            WL_RemoveProjectile(actor);
+        }
+        return;
+    }
+    delta_x = actor->x - level->player_x;
+    delta_y = actor->y - level->player_y;
+    delta_x = delta_x < 0 ? -delta_x : delta_x;
+    delta_y = delta_y < 0 ? -delta_y : delta_y;
+    if (delta_x < WG_PROJECTILE_SIZE && delta_y < WG_PROJECTILE_SIZE)
+    {
+        unsigned base_damage;
+
+        if (actor->actor_class == WG_ACTOR_ROCKET
+            || actor->actor_class == WG_ACTOR_HROCKET
+            || actor->actor_class == WG_ACTOR_SPARK)
+        {
+            base_damage = 30U;
+        }
+        else if (actor->actor_class == WG_ACTOR_FIRE)
+        {
+            base_damage = 0U;
+        }
+        else
+        {
+            base_damage = 20U;
+        }
+
+        WL_TakeDamageFrom(level, (WG_RandomNext(&level->random) >> 3)
+                                 + base_damage,
+                          actor->x, actor->y);
+        WL_RemoveProjectile(actor);
+        return;
+    }
+    actor->tile_x = (uint8_t)(actor->x / WG_FIXED_ONE);
+    actor->tile_y = (uint8_t)(actor->y / WG_FIXED_ONE);
+}
+
+static wg_actor_t *WL_SpawnAimedProjectile(wg_level_t *level,
+                                           const wg_actor_t *actor,
+                                           wg_actor_class_t projectile_class)
+{
+    wg_actor_t *projectile = WL_AllocateTransientActor(level);
+
+    if (projectile == NULL)
+    {
+        return NULL;
+    }
+    projectile->x = actor->x;
+    projectile->y = actor->y;
+    if (projectile_class == WG_ACTOR_HROCKET)
+    {
+        projectile->shape = WG_SPR_SPEAR_HROCKET1;
+    }
+    else if (projectile_class == WG_ACTOR_SPARK)
+    {
+        projectile->shape = WG_SPR_SPEAR_SPARK1;
+    }
+    else if (projectile_class == WG_ACTOR_ROCKET)
+    {
+        projectile->shape = WG_DataVariantFamily(level->variant)
+                                == WG_GAME_FAMILY_SPEAR
+                                ? WG_SPR_SPEAR_ROCKET1 : WG_SPR_ROCKET1;
+    }
+    else
+    {
+        projectile->shape = WG_SPR_HYPO1;
+    }
+    projectile->tile_x = actor->tile_x;
+    projectile->tile_y = actor->tile_y;
+    projectile->direction = WG_NO_DIRECTION;
+    projectile->area_number = actor->area_number;
+    projectile->angle = WG_PointToAngle(level->player_x - actor->x,
+                                        actor->y - level->player_y);
+    projectile->base_shape = projectile->shape;
+    projectile->rotate = projectile_class == WG_ACTOR_ROCKET
+                         || projectile_class == WG_ACTOR_HROCKET ? 1U : 0U;
+    projectile->tic_count = 1;
+    projectile->speed = 0x2000;
+    projectile->state = projectile_class == WG_ACTOR_ROCKET
+                        || projectile_class == WG_ACTOR_HROCKET
+                            ? WG_STATE_ROCKET : WG_STATE_NEEDLE1;
+    projectile->actor_class = projectile_class;
+    return projectile;
+}
+
+static void WL_T_SchabbThrow(wg_level_t *level, const wg_actor_t *actor)
+{
+    (void)WG_QueueSoundAt(level, WG_SOUND_SCHABBS_THROW,
+                          actor->x, actor->y);
+    (void)WL_SpawnAimedProjectile(level, actor, WG_ACTOR_NEEDLE);
+}
+
+static void WL_T_GiftThrow(wg_level_t *level, const wg_actor_t *actor)
+{
+    (void)WG_QueueSoundAt(level, WG_SOUND_MISSILE_FIRE,
+                          actor->x, actor->y);
+    (void)WL_SpawnAimedProjectile(level, actor, WG_ACTOR_ROCKET);
+}
+
+static void WL_T_SpearLaunch(wg_level_t *level, const wg_actor_t *actor,
+                             unsigned stage)
+{
+    wg_actor_class_t projectile_class = WG_ACTOR_ROCKET;
+    wg_actor_t *projectile;
+
+    if (actor->actor_class == WG_ACTOR_DEATH)
+    {
+        projectile_class = WG_ACTOR_HROCKET;
+        WL_T_Shoot(level, (wg_actor_t *)actor);
+        (void)WG_QueueSoundAt(level, WG_SOUND_KNIGHT_MISSILE,
+                              actor->x, actor->y);
+    }
+    else if (actor->actor_class == WG_ACTOR_ANGEL)
+    {
+        projectile_class = WG_ACTOR_SPARK;
+        (void)WG_QueueSoundAt(level, WG_SOUND_ANGEL_FIRE,
+                              actor->x, actor->y);
+    }
+    else
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_MISSILE_FIRE,
+                              actor->x, actor->y);
+    }
+    projectile = WL_SpawnAimedProjectile(level, actor, projectile_class);
+    if (projectile != NULL && actor->actor_class == WG_ACTOR_DEATH)
+    {
+        int angle = (int)projectile->angle + (stage == 2U ? -4 : 4);
+
+        if (angle < 0)
+        {
+            angle += WG_ANGLES;
+        }
+        else if (angle >= WG_ANGLES)
+        {
+            angle -= WG_ANGLES;
+        }
+        projectile->angle = (uint16_t)angle;
+    }
+}
+
+static void WL_T_FakeFire(wg_level_t *level, const wg_actor_t *actor)
+{
+    wg_actor_t *fire = WL_AllocateTransientActor(level);
+
+    (void)WG_QueueSoundAt(level, WG_SOUND_FLAMETHROWER,
+                          actor->x, actor->y);
+
+    if (fire == NULL)
+    {
+        return;
+    }
+    fire->x = actor->x;
+    fire->y = actor->y;
+    fire->shape = WG_SPR_FIRE1;
+    fire->tile_x = actor->tile_x;
+    fire->tile_y = actor->tile_y;
+    fire->direction = WG_NO_DIRECTION;
+    fire->area_number = actor->area_number;
+    fire->angle = WG_PointToAngle(level->player_x - actor->x,
+                                  actor->y - level->player_y);
+    fire->base_shape = WG_SPR_FIRE1;
+    fire->tic_count = 1;
+    fire->speed = 0x1200;
+    fire->state = WG_STATE_FIRE1;
+    fire->actor_class = WG_ACTOR_FIRE;
+}
+
+static void WL_A_Smoke(wg_level_t *level, const wg_actor_t *rocket)
+{
+    wg_actor_t *smoke = WL_AllocateTransientActor(level);
+
+    if (smoke == NULL)
+    {
+        return;
+    }
+    smoke->x = rocket->x;
+    smoke->y = rocket->y;
+    smoke->shape = rocket->actor_class == WG_ACTOR_HROCKET
+                       ? WG_SPR_SPEAR_HSMOKE1
+                       : (rocket->shape < WG_SPR_ROCKET1
+                              ? WG_SPR_SPEAR_SMOKE1 : WG_SPR_SMOKE1);
+    smoke->tile_x = rocket->tile_x;
+    smoke->tile_y = rocket->tile_y;
+    smoke->direction = WG_NO_DIRECTION;
+    smoke->area_number = rocket->area_number;
+    smoke->base_shape = smoke->shape;
+    smoke->tic_count = 6;
+    smoke->state = WG_STATE_SMOKE1;
+    smoke->actor_class = rocket->actor_class == WG_ACTOR_HROCKET
+                             ? WG_ACTOR_HSMOKE : WG_ACTOR_SMOKE;
+}
+
+static void WL_MoveSpecialBoss(wg_level_t *level, size_t actor_index,
+                               int32_t tics, int dodge, int run_close,
+                               int distance)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int32_t move;
+
+    if (actor->direction == WG_NO_DIRECTION)
+    {
+        if (dodge)
+        {
+            WL_SelectDodgeDir(level, actor_index);
+        }
+        else
+        {
+            WL_SelectChaseDir(level, actor_index);
+        }
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+    move = actor->speed * tics;
+    while (move > 0)
+    {
+        if (actor->distance < 0)
+        {
+            size_t door = (size_t)(-actor->distance - 1);
+
+            if (door >= level->door_count)
+            {
+                return;
+            }
+            (void)WL_OpenDoor(level, door);
+            if (level->doors[door].position != 0xffffU)
+            {
+                return;
+            }
+            actor->distance = WG_FIXED_ONE;
+        }
+        if (move < actor->distance)
+        {
+            WL_MoveChase(level, actor, move, tics);
+            return;
+        }
+        move -= actor->distance;
+        actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        if (run_close && distance < 4)
+        {
+            WL_SelectRunDir(level, actor_index);
+        }
+        else if (dodge)
+        {
+            WL_SelectDodgeDir(level, actor_index);
+        }
+        else
+        {
+            WL_SelectChaseDir(level, actor_index);
+        }
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+}
+
+static void WL_T_SpecialBoss(wg_level_t *level, size_t actor_index,
+                             int32_t tics, int run_close)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int delta_x = (int)actor->tile_x - WL_PlayerTileX(level);
+    int delta_y = (int)actor->tile_y - WL_PlayerTileY(level);
+    int distance;
+    int dodge = 0;
+
+    delta_x = delta_x < 0 ? -delta_x : delta_x;
+    delta_y = delta_y < 0 ? -delta_y : delta_y;
+    distance = delta_x > delta_y ? delta_x : delta_y;
+
+    if (WL_CheckLine(level, actor))
+    {
+        if (WG_RandomNext(&level->random) < tics * 8)
+        {
+            WL_BeginAttack(actor);
+            return;
+        }
+        dodge = 1;
+    }
+    WL_MoveSpecialBoss(level, actor_index, tics, dodge, run_close, distance);
+}
+
+static void WL_T_Fake(wg_level_t *level, size_t actor_index, int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+
+    if (WL_CheckLine(level, actor)
+        && WG_RandomNext(&level->random) < tics * 2)
+    {
+        WL_BeginAttack(actor);
+        return;
+    }
+    WL_MoveSpecialBoss(level, actor_index, tics, 1, 0, 0);
+}
+
+static int32_t WL_ShootStateDuration(const wg_actor_t *actor,
+                                     wg_actor_state_t state)
+{
+    unsigned stage = (unsigned)(state - WG_STATE_SHOOT1) + 1U;
+
+    switch (actor->actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        return stage <= 3U ? 20 : 0;
+    case WG_ACTOR_OFFICER:
+        if (stage == 1U)
+        {
+            return 6;
+        }
+        return stage == 2U ? 20 : (stage == 3U ? 10 : 0);
+    case WG_ACTOR_MUTANT:
+        if (stage == 1U)
+        {
+            return 6;
+        }
+        if (stage == 2U || stage == 4U)
+        {
+            return 20;
+        }
+        return stage == 3U ? 10 : 0;
+    case WG_ACTOR_SS:
+        if (stage == 1U || stage == 2U)
+        {
+            return 20;
+        }
+        return stage <= 9U ? 10 : 0;
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+        return stage == 1U ? 30 : (stage <= 8U ? 10 : 0);
+    case WG_ACTOR_MECHA_HITLER:
+    case WG_ACTOR_REAL_HITLER:
+        return stage == 1U ? 30 : (stage <= 6U ? 10 : 0);
+    case WG_ACTOR_SCHABBS:
+        return stage == 1U ? 30 : (stage == 2U ? 10 : 0);
+    case WG_ACTOR_GIFT:
+        return stage == 1U ? 30 : (stage == 2U ? 10 : 0);
+    case WG_ACTOR_FAT:
+        return stage == 1U ? 30 : (stage <= 6U ? 10 : 0);
+    case WG_ACTOR_FAKE:
+        return stage <= 9U ? 8 : 0;
+    case WG_ACTOR_TRANS:
+        return stage == 1U ? 30 : (stage <= 8U ? 10 : 0);
+    case WG_ACTOR_UBER:
+        return stage == 1U ? 30 : (stage <= 7U ? 12 : 0);
+    case WG_ACTOR_WILL:
+        return stage == 1U ? 30 : (stage <= 6U ? 10 : 0);
+    case WG_ACTOR_DEATH:
+        return stage == 1U ? 30 : (stage <= 5U ? 10 : 0);
+    case WG_ACTOR_ANGEL:
+        return stage == 1U || stage == 3U ? 10
+               : (stage == 2U ? 20 : 0);
+    default:
+        return 0;
+    }
+}
+
+static unsigned WL_ShootStateCount(wg_actor_class_t actor_class)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+    case WG_ACTOR_OFFICER:
+        return 3U;
+    case WG_ACTOR_MUTANT:
+        return 4U;
+    case WG_ACTOR_SS:
+        return 9U;
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+        return 8U;
+    case WG_ACTOR_MECHA_HITLER:
+    case WG_ACTOR_REAL_HITLER:
+        return 6U;
+    case WG_ACTOR_SCHABBS:
+        return 2U;
+    case WG_ACTOR_GIFT:
+        return 2U;
+    case WG_ACTOR_FAT:
+        return 6U;
+    case WG_ACTOR_FAKE:
+        return 9U;
+    case WG_ACTOR_TRANS:
+        return 8U;
+    case WG_ACTOR_UBER:
+        return 7U;
+    case WG_ACTOR_WILL:
+        return 6U;
+    case WG_ACTOR_DEATH:
+        return 5U;
+    case WG_ACTOR_ANGEL:
+        return 3U;
+    default:
+        return 0U;
+    }
+}
+
+static int WL_ShootStateHasAction(const wg_actor_t *actor)
+{
+    unsigned stage = (unsigned)(actor->state - WG_STATE_SHOOT1) + 1U;
+
+    switch (actor->actor_class)
+    {
+    case WG_ACTOR_GUARD:
+    case WG_ACTOR_OFFICER:
+        return stage == 2U;
+    case WG_ACTOR_MUTANT:
+        return stage == 1U || stage == 3U;
+    case WG_ACTOR_SS:
+        return stage == 2U || stage == 4U
+               || stage == 6U || stage == 8U;
+    case WG_ACTOR_BOSS:
+    case WG_ACTOR_GRETEL:
+        return stage >= 2U && stage <= 7U;
+    case WG_ACTOR_MECHA_HITLER:
+    case WG_ACTOR_REAL_HITLER:
+        return stage >= 2U && stage <= 6U;
+    case WG_ACTOR_SCHABBS:
+        return stage == 2U;
+    case WG_ACTOR_GIFT:
+        return stage == 2U;
+    case WG_ACTOR_FAT:
+        return stage >= 2U && stage <= 6U;
+    case WG_ACTOR_FAKE:
+        return stage <= 8U;
+    case WG_ACTOR_TRANS:
+        return stage >= 2U && stage <= 7U;
+    case WG_ACTOR_UBER:
+        return stage >= 2U && stage <= 6U;
+    case WG_ACTOR_WILL:
+        return stage >= 2U;
+    case WG_ACTOR_DEATH:
+        return stage >= 2U;
+    case WG_ACTOR_ANGEL:
+        return stage == 2U;
+    default:
+        return 0;
+    }
+}
+
+static unsigned WL_ShootShapeFrame(const wg_actor_t *actor)
+{
+    unsigned stage = (unsigned)(actor->state - WG_STATE_SHOOT1) + 1U;
+
+    if (actor->actor_class == WG_ACTOR_FAKE)
+    {
+        return 0U;
+    }
+    if (actor->actor_class == WG_ACTOR_TRANS)
+    {
+        static const uint8_t frames[] = {0U, 1U, 2U, 1U, 2U, 1U, 2U, 0U};
+        return frames[stage - 1U];
+    }
+    if (actor->actor_class == WG_ACTOR_UBER)
+    {
+        static const uint8_t frames[] = {0U, 1U, 2U, 3U, 2U, 1U, 0U};
+        return frames[stage - 1U];
+    }
+    if (actor->actor_class == WG_ACTOR_WILL)
+    {
+        static const uint8_t frames[] = {0U, 1U, 2U, 3U, 2U, 3U};
+        return frames[stage - 1U];
+    }
+    if (actor->actor_class == WG_ACTOR_DEATH)
+    {
+        static const uint8_t frames[] = {0U, 1U, 3U, 2U, 3U};
+        return frames[stage - 1U];
+    }
+    if (actor->actor_class == WG_ACTOR_ANGEL)
+    {
+        return stage == 2U ? 1U : 0U;
+    }
+    if ((actor->actor_class == WG_ACTOR_SS && stage >= 4U)
+        || actor->actor_class == WG_ACTOR_BOSS
+        || actor->actor_class == WG_ACTOR_GRETEL
+        || actor->actor_class == WG_ACTOR_MECHA_HITLER
+        || actor->actor_class == WG_ACTOR_REAL_HITLER)
+    {
+        if (stage == 1U
+            || ((actor->actor_class == WG_ACTOR_BOSS
+                 || actor->actor_class == WG_ACTOR_GRETEL)
+                && stage == 8U))
+        {
+            return 0U;
+        }
+        return (stage & 1U) == 0U ? 1U : 2U;
+    }
+    if (actor->actor_class == WG_ACTOR_FAT && stage >= 5U)
+    {
+        return stage == 5U ? 2U : 3U;
+    }
+    return stage - 1U;
+}
+
+static void WL_SetShootShape(wg_actor_t *actor)
+{
+    actor->shape = (uint16_t)(actor->attack_shape
+                              + WL_ShootShapeFrame(actor));
+    actor->rotate = 0U;
+}
+
+static int WL_BeginAttack(wg_actor_t *actor)
+{
+    if (actor->attack_shape == 0U || WL_ShootStateCount(actor->actor_class) == 0U)
+    {
+        actor->state = WG_STATE_ATTACK_PENDING;
+        actor->tic_count = 0;
+        actor->flags |= WG_ACTOR_FLAG_ATTACK_PENDING;
+        return 0;
+    }
+    actor->state = WG_STATE_SHOOT1;
+    if (actor->actor_class == WG_ACTOR_ANGEL)
+    {
+        actor->reaction_time = 0;
+    }
+    actor->tic_count = WL_ShootStateDuration(actor, actor->state);
+    actor->shape = actor->attack_shape;
+    actor->rotate = 0U;
+    actor->flags = (uint16_t)(actor->flags & 0xfeffU);
+    return 1;
+}
+
+static void WL_T_Shoot(wg_level_t *level, wg_actor_t *actor)
+{
+    int delta_x;
+    int delta_y;
+    int distance;
+    int hit_chance;
+    unsigned damage;
+
+    if (actor->area_number >= WG_NUM_AREAS
+        || !level->area_by_player[actor->area_number]
+        || !WL_CheckLine(level, actor))
+    {
+        return;
+    }
+    delta_x = (int)actor->tile_x - WL_PlayerTileX(level);
+    delta_y = (int)actor->tile_y - WL_PlayerTileY(level);
+    delta_x = delta_x < 0 ? -delta_x : delta_x;
+    delta_y = delta_y < 0 ? -delta_y : delta_y;
+    distance = delta_x > delta_y ? delta_x : delta_y;
+    if (actor->actor_class == WG_ACTOR_SS
+        || actor->actor_class == WG_ACTOR_BOSS)
+    {
+        distance = distance * 2 / 3;
+    }
+    if (level->player_thrust_speed >= 6000)
+    {
+        hit_chance = (actor->flags & WG_ACTOR_FLAG_VISIBLE) != 0U
+                         ? 160 - distance * 16 : 160 - distance * 8;
+    }
+    else
+    {
+        hit_chance = (actor->flags & WG_ACTOR_FLAG_VISIBLE) != 0U
+                         ? 256 - distance * 16 : 256 - distance * 8;
+    }
+    if (WG_RandomNext(&level->random) < hit_chance)
+    {
+        unsigned random_damage = WG_RandomNext(&level->random);
+
+        damage = distance < 2 ? random_damage >> 2
+                 : (distance < 4 ? random_damage >> 3
+                                  : random_damage >> 4);
+        WL_TakeDamageFrom(level, damage, actor->x, actor->y);
+    }
+    if (actor->actor_class == WG_ACTOR_SS)
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_SS_FIRE,
+                              actor->x, actor->y);
+    }
+    else if (actor->actor_class == WG_ACTOR_BOSS
+             || actor->actor_class == WG_ACTOR_MECHA_HITLER
+             || actor->actor_class == WG_ACTOR_REAL_HITLER
+             || actor->actor_class == WG_ACTOR_TRANS
+             || actor->actor_class == WG_ACTOR_UBER
+             || actor->actor_class == WG_ACTOR_WILL
+             || actor->actor_class == WG_ACTOR_DEATH)
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_BOSS_FIRE,
+                              actor->x, actor->y);
+    }
+    else
+    {
+        (void)WG_QueueSoundAt(level, WG_SOUND_NAZI_FIRE,
+                              actor->x, actor->y);
+    }
+}
+
+static void WL_T_Chase(wg_level_t *level, size_t actor_index, int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int dodge = 0;
+
+    if (level->victory_flag != 0U)
+    {
+        return;
+    }
+    if (WL_CheckLine(level, actor))
+    {
+        int delta_x = (int)actor->tile_x - WL_PlayerTileX(level);
+        int delta_y = (int)actor->tile_y - WL_PlayerTileY(level);
+        int distance;
+        int chance;
+
+        delta_x = delta_x < 0 ? -delta_x : delta_x;
+        delta_y = delta_y < 0 ? -delta_y : delta_y;
+        distance = delta_x > delta_y ? delta_x : delta_y;
+        chance = distance == 0
+                     || (distance == 1 && actor->distance < 0x4000)
+                     ? 300 : (tics * 16) / distance;
+        if (WG_RandomNext(&level->random) < chance)
+        {
+            WL_BeginAttack(actor);
+            return;
+        }
+        dodge = 1;
+    }
+    WL_MoveChasingActor(level, actor_index, tics, dodge);
+}
+
+static void WL_T_Path(wg_level_t *level, size_t actor_index, int32_t tics)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    int32_t move;
+
+    if (actor->direction == WG_NO_DIRECTION)
+    {
+        WL_SelectPathDir(level, actor_index);
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+    move = actor->speed * tics;
+    while (move > 0)
+    {
+        if (actor->distance < 0)
+        {
+            size_t door = (size_t)(-actor->distance - 1);
+
+            if (door >= level->door_count)
+            {
+                return;
+            }
+            (void)WL_OpenDoor(level, door);
+            if (level->doors[door].position != 0xffffU)
+            {
+                return;
+            }
+            actor->distance = WG_FIXED_ONE;
+        }
+        if (move < actor->distance)
+        {
+            WL_MoveObj(actor, move);
+            return;
+        }
+        move -= actor->distance;
+        actor->x = (int32_t)actor->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        actor->y = (int32_t)actor->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2;
+        WL_SelectPathDir(level, actor_index);
+        if (actor->direction == WG_NO_DIRECTION)
+        {
+            return;
+        }
+    }
+}
+
+static void WL_MarkActorAt(wg_level_t *level, size_t actor_index)
+{
+    wg_actor_t *actor = &level->actors[actor_index];
+    size_t spot;
+
+    if ((actor->flags & (WG_ACTOR_FLAG_REMOVED
+                         | WG_ACTOR_FLAG_NEVERMARK)) != 0U)
+    {
+        return;
+    }
+    spot = (size_t)actor->tile_y * WG_LEVEL_SIZE + actor->tile_x;
+    if ((actor->flags & WG_ACTOR_FLAG_NONMARK) != 0U
+        && level->actor_at[spot] != 0U)
+    {
+        return;
+    }
+    level->actor_at[spot] = (uint16_t)(WG_ACTOR_AT_ACTOR_BASE + actor_index);
+}
+
+int WL_TickActors(wg_level_t *level, unsigned tics)
+{
+    size_t index;
+    int connectivity_ready = 0;
+    int previous_processed = 0;
+
+    if (level == NULL || tics > (unsigned)(INT32_MAX / 10000))
+    {
+        return 0;
+    }
+    for (index = 0; index < level->actor_count; ++index)
+    {
+        wg_actor_t *actor = &level->actors[index];
+
+        if (previous_processed)
+        {
+            WL_MarkActorAt(level, index - 1U);
+            previous_processed = 0;
+        }
+
+        if ((actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            continue;
+        }
+        /* Original DoActor leaves an inactive object completely frozen while
+           its area is disconnected.  Patrols/projectiles start active, and
+           rendering an object makes activation permanent. */
+        if ((actor->flags & WG_ACTOR_FLAG_ACTIVE) == 0U)
+        {
+            if (!connectivity_ready)
+            {
+                if (!WL_UpdateAreaConnectivity(level))
+                {
+                    return 0;
+                }
+                connectivity_ready = 1;
+            }
+            if (actor->area_number >= WG_NUM_AREAS
+                || !level->area_by_player[actor->area_number])
+            {
+                continue;
+            }
+        }
+        if ((actor->flags & (WG_ACTOR_FLAG_NONMARK
+                             | WG_ACTOR_FLAG_NEVERMARK)) == 0U)
+        {
+            level->actor_at[(size_t)actor->tile_y * WG_LEVEL_SIZE
+                            + actor->tile_x] = 0U;
+        }
+        previous_processed = 1;
+        if (actor->actor_class == WG_ACTOR_BJ)
+        {
+            WL_TickBJVictory(level, index, (int32_t)tics);
+            continue;
+        }
+        if (actor->actor_class == WG_ACTOR_GHOST
+            && actor->state == WG_STATE_GHOST1)
+        {
+            if (!connectivity_ready)
+            {
+                if (!WL_UpdateAreaConnectivity(level))
+                {
+                    return 0;
+                }
+                connectivity_ready = 1;
+            }
+            WL_T_Ghosts(level, index, (int32_t)tics);
+            continue;
+        }
+        if (WL_IsPainState(actor->state) || WL_IsDeathState(actor->state))
+        {
+            int transition = WL_TickPainOrDeath(level, actor, tics);
+
+            if (!transition)
+            {
+                return 0;
+            }
+            if (transition == 2)
+            {
+                if (!connectivity_ready)
+                {
+                    if (!WL_UpdateAreaConnectivity(level))
+                    {
+                        return 0;
+                    }
+                    connectivity_ready = 1;
+                }
+                WL_T_Chase(level, index, (int32_t)tics);
+            }
+            continue;
+        }
+        if (actor->state == WG_STATE_DEAD)
+        {
+            int32_t terminal_duration =
+                WL_DeathTerminalDuration(actor->actor_class);
+
+            if (terminal_duration != 0)
+            {
+                actor->tic_count -= (int32_t)tics;
+                while (actor->tic_count <= 0)
+                {
+                    if (actor->actor_class == WG_ACTOR_SPECTRE)
+                    {
+                        actor->state = WG_STATE_SPECTRE_DORMANT;
+                        actor->tic_count += 10;
+                        break;
+                    }
+                    if (actor->actor_class == WG_ACTOR_ANGEL)
+                    {
+                        level->victory_flag = 1U;
+                        level->level_completed = 1U;
+                        actor->tic_count += terminal_duration;
+                        break;
+                    }
+                    if (WL_UsesDeathCam(actor->actor_class))
+                    {
+                        if (level->victory_flag)
+                        {
+                            level->level_completed = 1U;
+                        }
+                        else
+                        {
+                            level->victory_flag = 1U;
+                        }
+                    }
+                    actor->tic_count += terminal_duration;
+                }
+            }
+            continue;
+        }
+        if (actor->state == WG_STATE_SPECTRE_DORMANT)
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                if (WL_SpectreMayWake(level, actor))
+                {
+                    actor->flags |= WG_ACTOR_FLAG_AMBUSH
+                                    | WG_ACTOR_FLAG_SHOOTABLE;
+                    actor->flags = (uint16_t)(actor->flags
+                                      & ~WG_ACTOR_FLAG_ATTACK_MODE);
+                    actor->direction = WG_NO_DIRECTION;
+                    actor->state = WG_STATE_STAND;
+                    actor->shape = actor->base_shape;
+                    actor->tic_count += 10;
+                    break;
+                }
+                actor->tic_count += 10;
+            }
+            continue;
+        }
+        if (actor->actor_class == WG_ACTOR_SPECTRE
+            && actor->state == WG_STATE_STAND)
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                actor->shape = (uint16_t)(actor->base_shape
+                              + (actor->shape - actor->base_shape + 1U) % 4U);
+                actor->tic_count += 10;
+            }
+            if (tics != 0U)
+            {
+                if (!connectivity_ready)
+                {
+                    if (!WL_UpdateAreaConnectivity(level))
+                    {
+                        return 0;
+                    }
+                    connectivity_ready = 1;
+                }
+                (void)WL_SightPlayer(level, actor, tics,
+                                     level->made_noise != 0U);
+            }
+            continue;
+        }
+        if (actor->state == WG_STATE_STAND)
+        {
+            if (tics != 0U)
+            {
+                if (!connectivity_ready)
+                {
+                    if (!WL_UpdateAreaConnectivity(level))
+                    {
+                        return 0;
+                    }
+                    connectivity_ready = 1;
+                }
+                (void)WL_SightPlayer(level, actor, tics,
+                                     level->made_noise != 0U);
+            }
+            continue;
+        }
+        if (actor->state >= WG_STATE_ANGEL_TIRED1
+            && actor->state <= WG_STATE_ANGEL_TIRED7)
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                if (actor->state == WG_STATE_ANGEL_TIRED7)
+                {
+                    actor->state = WG_STATE_CHASE1;
+                    actor->tic_count += 10;
+                    actor->shape = actor->base_shape;
+                    break;
+                }
+                actor->state = (wg_actor_state_t)(actor->state + 1);
+                actor->tic_count += 40;
+                actor->shape = (uint16_t)(391U +
+                    ((actor->state - WG_STATE_ANGEL_TIRED1) & 1U));
+                if (actor->state == WG_STATE_ANGEL_TIRED3
+                    || actor->state == WG_STATE_ANGEL_TIRED5
+                    || actor->state == WG_STATE_ANGEL_TIRED7)
+                {
+                    (void)WG_QueueSound(level, WG_SOUND_ANGEL_TIRED);
+                }
+            }
+            continue;
+        }
+        if (WL_IsNeedleState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                actor->state = actor->state == WG_STATE_NEEDLE4
+                                   ? WG_STATE_NEEDLE1
+                                   : (wg_actor_state_t)(actor->state + 1);
+                actor->tic_count += 6;
+                actor->shape = (uint16_t)(WG_SPR_HYPO1
+                                          + actor->state
+                                            - WG_STATE_NEEDLE1);
+                if (actor->actor_class == WG_ACTOR_SPARK)
+                {
+                    actor->shape = (uint16_t)(actor->base_shape
+                                              + actor->state
+                                                - WG_STATE_NEEDLE1);
+                }
+            }
+            WL_T_Projectile(level, actor, (int32_t)tics);
+            continue;
+        }
+        if (WL_IsFireState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                actor->state = actor->state == WG_STATE_FIRE1
+                                   ? WG_STATE_FIRE2 : WG_STATE_FIRE1;
+                actor->tic_count += 6;
+                actor->shape = (uint16_t)(WG_SPR_FIRE1
+                                          + actor->state - WG_STATE_FIRE1);
+            }
+            WL_T_Projectile(level, actor, (int32_t)tics);
+            continue;
+        }
+        if (actor->state == WG_STATE_ROCKET)
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                WL_A_Smoke(level, actor);
+                actor->tic_count += 3;
+            }
+            WL_T_Projectile(level, actor, (int32_t)tics);
+            continue;
+        }
+        if (WL_IsSmokeState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                if (actor->state == WG_STATE_SMOKE4)
+                {
+                    WL_RemoveProjectile(actor);
+                    break;
+                }
+                actor->state = (wg_actor_state_t)(actor->state + 1);
+                actor->tic_count += 3;
+                actor->shape = (uint16_t)(actor->base_shape
+                                          + actor->state
+                                            - WG_STATE_SMOKE1);
+            }
+            continue;
+        }
+        if (WL_IsBoomState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0)
+            {
+                if (actor->state == WG_STATE_BOOM3)
+                {
+                    WL_RemoveProjectile(actor);
+                    break;
+                }
+                actor->state = (wg_actor_state_t)(actor->state + 1);
+                actor->tic_count += 6;
+                actor->shape = (uint16_t)(actor->base_shape
+                                          + actor->state
+                                            - WG_STATE_BOOM1);
+            }
+            continue;
+        }
+        if (WL_IsPathState(actor->state))
+        {
+            if (actor->tic_count != 0)
+            {
+                actor->tic_count -= (int32_t)tics;
+                while (actor->tic_count <= 0)
+                {
+                    actor->state = WL_NextPathState(actor->state);
+                    actor->tic_count += WL_StateDuration(actor->state);
+                    WL_SetPathShape(actor);
+                }
+            }
+            if (WL_PathHasThink(actor->state))
+            {
+                if (tics != 0U)
+                {
+                    if (!connectivity_ready)
+                    {
+                        if (!WL_UpdateAreaConnectivity(level))
+                        {
+                            return 0;
+                        }
+                        connectivity_ready = 1;
+                    }
+                    if (WL_SightPlayer(level, actor, tics,
+                                       level->made_noise != 0U))
+                    {
+                        continue;
+                    }
+                }
+                WL_T_Path(level, index, (int32_t)tics);
+            }
+            continue;
+        }
+        if (WL_IsChaseState(actor->state))
+        {
+            if (actor->tic_count != 0)
+            {
+                actor->tic_count -= (int32_t)tics;
+                while (actor->tic_count <= 0)
+                {
+                    WL_ChaseStateAction(level, actor);
+                    actor->state = WL_NextChaseState(actor->state);
+                    actor->tic_count += WL_ChaseStateDuration(actor,
+                                                              actor->state);
+                    WL_SetChaseShape(actor);
+                }
+            }
+            if (!WL_ChaseHasThink(actor->state))
+            {
+                continue;
+            }
+            if (actor->actor_class != WG_ACTOR_DOG
+                && actor->actor_class != WG_ACTOR_SCHABBS
+                && actor->actor_class != WG_ACTOR_FAKE
+                && actor->actor_class != WG_ACTOR_GIFT
+                && actor->actor_class != WG_ACTOR_FAT
+                && actor->actor_class != WG_ACTOR_WILL
+                && actor->actor_class != WG_ACTOR_DEATH
+                && actor->actor_class != WG_ACTOR_ANGEL
+                && actor->actor_class != WG_ACTOR_SPECTRE
+                && !WL_UsesStandardChase(actor->actor_class))
+            {
+                continue;
+            }
+            if (!connectivity_ready)
+            {
+                if (!WL_UpdateAreaConnectivity(level))
+                {
+                    return 0;
+                }
+                connectivity_ready = 1;
+            }
+            if (actor->actor_class == WG_ACTOR_DOG)
+            {
+                WL_T_DogChase(level, index, (int32_t)tics);
+            }
+            else if (actor->actor_class == WG_ACTOR_SPECTRE)
+            {
+                WL_MoveSpecialBoss(level, index, (int32_t)tics, 0, 0, 0);
+            }
+            else if (actor->actor_class == WG_ACTOR_SCHABBS)
+            {
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 0);
+            }
+            else if (actor->actor_class == WG_ACTOR_FAKE)
+            {
+                WL_T_Fake(level, index, (int32_t)tics);
+            }
+            else if (actor->actor_class == WG_ACTOR_GIFT
+                     || actor->actor_class == WG_ACTOR_FAT)
+            {
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 1);
+            }
+            else if (actor->actor_class == WG_ACTOR_WILL
+                     || actor->actor_class == WG_ACTOR_DEATH
+                     || actor->actor_class == WG_ACTOR_ANGEL)
+            {
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 1);
+            }
+            else
+            {
+                WL_T_Chase(level, index, (int32_t)tics);
+            }
+            continue;
+        }
+        if (WL_IsShootState(actor->state))
+        {
+            if (!connectivity_ready)
+            {
+                if (!WL_UpdateAreaConnectivity(level))
+                {
+                    return 0;
+                }
+                connectivity_ready = 1;
+            }
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0 && WL_IsShootState(actor->state))
+            {
+                unsigned stage = (unsigned)(actor->state - WG_STATE_SHOOT1)
+                                 + 1U;
+
+                if (WL_ShootStateHasAction(actor))
+                {
+                    if (actor->actor_class == WG_ACTOR_SCHABBS)
+                    {
+                        WL_T_SchabbThrow(level, actor);
+                    }
+                    else if (actor->actor_class == WG_ACTOR_FAKE)
+                    {
+                        WL_T_FakeFire(level, actor);
+                    }
+                    else if ((actor->actor_class == WG_ACTOR_GIFT
+                              || actor->actor_class == WG_ACTOR_FAT)
+                             && stage == 2U)
+                    {
+                        WL_T_GiftThrow(level, actor);
+                    }
+                    else if ((actor->actor_class == WG_ACTOR_WILL
+                              && stage == 2U)
+                             || (actor->actor_class == WG_ACTOR_DEATH
+                                 && (stage == 2U || stage == 4U))
+                             || (actor->actor_class == WG_ACTOR_ANGEL
+                                 && stage == 2U))
+                    {
+                        WL_T_SpearLaunch(level, actor, stage);
+                    }
+                    else
+                    {
+                        WL_T_Shoot(level, actor);
+                        if (actor->actor_class == WG_ACTOR_UBER)
+                        {
+                            int dx = (int)actor->tile_x
+                                     - WL_PlayerTileX(level);
+                            int dy = (int)actor->tile_y
+                                     - WL_PlayerTileY(level);
+
+                            dx = dx < 0 ? -dx : dx;
+                            dy = dy < 0 ? -dy : dy;
+                            if (dx <= 1 && dy <= 1)
+                            {
+                                WL_TakeDamageFrom(level, 10U,
+                                                  actor->x, actor->y);
+                            }
+                        }
+                    }
+                }
+                if (actor->actor_class == WG_ACTOR_ANGEL && stage == 3U)
+                {
+                    ++actor->reaction_time;
+                    if (actor->reaction_time == 3)
+                    {
+                        actor->state = WG_STATE_ANGEL_TIRED1;
+                        actor->tic_count += 40;
+                        actor->shape = 391U;
+                        (void)WG_QueueSound(level, WG_SOUND_ANGEL_TIRED);
+                    }
+                    else if ((WG_RandomNext(&level->random) & 1U) != 0U)
+                    {
+                        actor->state = WG_STATE_CHASE1;
+                        actor->tic_count += 10;
+                        WL_SetChaseShape(actor);
+                    }
+                    else
+                    {
+                        actor->state = WG_STATE_SHOOT2;
+                        actor->tic_count += 20;
+                        WL_SetShootShape(actor);
+                    }
+                }
+                else if (stage >= WL_ShootStateCount(actor->actor_class))
+                {
+                    actor->state = WG_STATE_CHASE1;
+                    actor->tic_count += WL_ChaseStateDuration(actor,
+                                                              actor->state);
+                    WL_SetChaseShape(actor);
+                }
+                else
+                {
+                    actor->state = (wg_actor_state_t)(actor->state + 1);
+                    actor->tic_count += WL_ShootStateDuration(actor,
+                                                              actor->state);
+                    WL_SetShootShape(actor);
+                }
+            }
+            while (actor->tic_count <= 0 && WL_IsChaseState(actor->state))
+            {
+                WL_ChaseStateAction(level, actor);
+                actor->state = WL_NextChaseState(actor->state);
+                actor->tic_count += WL_ChaseStateDuration(actor,
+                                                          actor->state);
+                WL_SetChaseShape(actor);
+            }
+            if (WL_ChaseHasThink(actor->state)
+                && WL_UsesStandardChase(actor->actor_class))
+            {
+                WL_T_Chase(level, index, (int32_t)tics);
+            }
+            else if (WL_ChaseHasThink(actor->state)
+                     && actor->actor_class == WG_ACTOR_SCHABBS)
+            {
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 0);
+            }
+            else if (WL_ChaseHasThink(actor->state)
+                     && actor->actor_class == WG_ACTOR_FAKE)
+            {
+                WL_T_Fake(level, index, (int32_t)tics);
+            }
+            else if (WL_ChaseHasThink(actor->state)
+                     && (actor->actor_class == WG_ACTOR_GIFT
+                         || actor->actor_class == WG_ACTOR_FAT))
+            {
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 1);
+            }
+            else if (WL_ChaseHasThink(actor->state)
+                     && (actor->actor_class == WG_ACTOR_WILL
+                         || actor->actor_class == WG_ACTOR_DEATH
+                         || actor->actor_class == WG_ACTOR_ANGEL))
+            {
+                WL_T_SpecialBoss(level, index, (int32_t)tics, 1);
+            }
+            else if (WL_ChaseHasThink(actor->state)
+                     && actor->actor_class == WG_ACTOR_SPECTRE)
+            {
+                WL_MoveSpecialBoss(level, index, (int32_t)tics, 0, 0, 0);
+            }
+            continue;
+        }
+        if (WL_IsDogJumpState(actor->state))
+        {
+            actor->tic_count -= (int32_t)tics;
+            while (actor->tic_count <= 0 && WL_IsDogJumpState(actor->state))
+            {
+                if (actor->state == WG_STATE_DOG_JUMP2)
+                {
+                    WL_T_Bite(level, actor);
+                }
+                if (actor->state == WG_STATE_DOG_JUMP5)
+                {
+                    actor->state = WG_STATE_CHASE1;
+                    actor->tic_count += WL_ChaseStateDuration(actor,
+                                                              actor->state);
+                    WL_SetChaseShape(actor);
+                }
+                else
+                {
+                    actor->state = (wg_actor_state_t)(actor->state + 1);
+                    actor->tic_count += 10;
+                    WL_SetDogJumpShape(actor);
+                }
+            }
+            while (actor->tic_count <= 0 && WL_IsChaseState(actor->state))
+            {
+                WL_ChaseStateAction(level, actor);
+                actor->state = WL_NextChaseState(actor->state);
+                actor->tic_count += WL_ChaseStateDuration(actor,
+                                                          actor->state);
+                WL_SetChaseShape(actor);
+            }
+            if (WL_ChaseHasThink(actor->state))
+            {
+                if (!connectivity_ready)
+                {
+                    if (!WL_UpdateAreaConnectivity(level))
+                    {
+                        return 0;
+                    }
+                    connectivity_ready = 1;
+                }
+                WL_T_DogChase(level, index, (int32_t)tics);
+            }
+        }
+    }
+    if (previous_processed)
+    {
+        WL_MarkActorAt(level, level->actor_count - 1U);
+    }
+    return 1;
+}
+
+int WL_UpdateAreaConnectivity(wg_level_t *level)
+{
+    uint8_t area_connect[WG_NUM_AREAS][WG_NUM_AREAS];
+    uint8_t pending[WG_NUM_AREAS];
+    size_t pending_count = 0U;
+    size_t door_index;
+    int player_x;
+    int player_y;
+    uint8_t player_area;
+
+    if (level == NULL)
+    {
+        return 0;
+    }
+    memset(level->area_by_player, 0, sizeof(level->area_by_player));
+    memset(area_connect, 0, sizeof(area_connect));
+    player_x = level->player_x / WG_FIXED_ONE;
+    player_y = level->player_y / WG_FIXED_ONE;
+    if (player_x < 0 || player_x >= WG_LEVEL_SIZE
+        || player_y < 0 || player_y >= WG_LEVEL_SIZE)
+    {
+        return 0;
+    }
+    player_area = level->areas[(size_t)player_y * WG_LEVEL_SIZE
+                               + (size_t)player_x];
+    if (player_area >= WG_NUM_AREAS)
+    {
+        return 0;
+    }
+    for (door_index = 0U; door_index < level->door_count; ++door_index)
+    {
+        const wg_door_t *door = &level->doors[door_index];
+        int first_x = door->tile_x;
+        int first_y = door->tile_y;
+        int second_x = door->tile_x;
+        int second_y = door->tile_y;
+        uint8_t first_area;
+        uint8_t second_area;
+
+        if ((door->action == WG_DOOR_CLOSED
+             && door->position != 0xffffU)
+            || (door->action == WG_DOOR_OPENING
+                && door->position == 0U))
+        {
+            continue;
+        }
+        if (door->vertical)
+        {
+            --first_x;
+            ++second_x;
+        }
+        else
+        {
+            --first_y;
+            ++second_y;
+        }
+        if (first_x < 0 || first_x >= WG_LEVEL_SIZE
+            || first_y < 0 || first_y >= WG_LEVEL_SIZE
+            || second_x < 0 || second_x >= WG_LEVEL_SIZE
+            || second_y < 0 || second_y >= WG_LEVEL_SIZE)
+        {
+            continue;
+        }
+        first_area = level->areas[(size_t)first_y * WG_LEVEL_SIZE
+                                  + (size_t)first_x];
+        second_area = level->areas[(size_t)second_y * WG_LEVEL_SIZE
+                                   + (size_t)second_x];
+        if (first_area < WG_NUM_AREAS && second_area < WG_NUM_AREAS)
+        {
+            area_connect[first_area][second_area] = 1U;
+            area_connect[second_area][first_area] = 1U;
+        }
+    }
+    pending[pending_count++] = player_area;
+    level->area_by_player[player_area] = 1U;
+    while (pending_count > 0U)
+    {
+        uint8_t area = pending[--pending_count];
+        size_t candidate;
+
+        for (candidate = 0U; candidate < WG_NUM_AREAS; ++candidate)
+        {
+            if (area_connect[area][candidate]
+                && !level->area_by_player[candidate])
+            {
+                level->area_by_player[candidate] = 1U;
+                pending[pending_count++] = (uint8_t)candidate;
+            }
+        }
+    }
+    return 1;
+}
+
+static int WL_LineTileClear(const wg_level_t *level, int x, int y,
+                            uint16_t intercept)
+{
+    uint8_t tile;
+    size_t door;
+
+    if (x < 0 || x >= WG_LEVEL_SIZE || y < 0 || y >= WG_LEVEL_SIZE)
+    {
+        return 0;
+    }
+    tile = level->tiles[(size_t)y * WG_LEVEL_SIZE + (size_t)x];
+    if (tile == 0U)
+    {
+        return 1;
+    }
+    if ((tile & 0x80U) == 0U)
+    {
+        return 0;
+    }
+    door = tile & 0x3fU;
+    return door < level->door_count
+           && intercept <= level->doors[door].position;
+}
+
+int WL_CheckLine(const wg_level_t *level, const wg_actor_t *actor)
+{
+    int32_t x1;
+    int32_t y1;
+    int32_t x2;
+    int32_t y2;
+    int xt1;
+    int yt1;
+    int xt2;
+    int yt2;
+    int x;
+    int y;
+    int step;
+    int partial;
+    int32_t fraction;
+    int32_t fraction_step;
+    int32_t delta_fraction;
+    int32_t delta;
+    int64_t long_step;
+
+    if (level == NULL || actor == NULL)
+    {
+        return 0;
+    }
+    x1 = actor->x >> 8;
+    y1 = actor->y >> 8;
+    x2 = level->player_x >> 8;
+    y2 = level->player_y >> 8;
+    xt1 = x1 >> 8;
+    yt1 = y1 >> 8;
+    xt2 = x2 >> 8;
+    yt2 = y2 >> 8;
+
+    if (xt2 != xt1)
+    {
+        if (xt2 > xt1)
+        {
+            partial = 256 - (x1 & 0xff);
+            step = 1;
+        }
+        else
+        {
+            partial = x1 & 0xff;
+            step = -1;
+        }
+        delta_fraction = x2 > x1 ? x2 - x1 : x1 - x2;
+        delta = y2 - y1;
+        long_step = ((int64_t)delta * 256) / delta_fraction;
+        if (long_step > 0x7fff)
+        {
+            fraction_step = 0x7fff;
+        }
+        else if (long_step < -0x7fff)
+        {
+            fraction_step = -0x7fff;
+        }
+        else
+        {
+            fraction_step = (int32_t)long_step;
+        }
+        /* The DOS expression used a signed long arithmetic right shift.
+           Division would round negative products toward zero instead. */
+        fraction = y1 + (fraction_step * partial >> 8);
+        x = xt1 + step;
+        xt2 += step;
+        do
+        {
+            uint16_t intercept;
+
+            y = fraction >> 8;
+            fraction += fraction_step;
+            /* The DOS local is a 16-bit unsigned.  Only the fractional
+               word is compared with the door's 16-bit position. */
+            intercept = (uint16_t)(fraction - fraction_step / 2);
+            if (!WL_LineTileClear(level, x, y, intercept))
+            {
+                return 0;
+            }
+            x += step;
+        } while (x != xt2);
+    }
+
+    if (yt2 != yt1)
+    {
+        if (yt2 > yt1)
+        {
+            partial = 256 - (y1 & 0xff);
+            step = 1;
+        }
+        else
+        {
+            partial = y1 & 0xff;
+            step = -1;
+        }
+        delta_fraction = y2 > y1 ? y2 - y1 : y1 - y2;
+        delta = x2 - x1;
+        long_step = ((int64_t)delta * 256) / delta_fraction;
+        if (long_step > 0x7fff)
+        {
+            fraction_step = 0x7fff;
+        }
+        else if (long_step < -0x7fff)
+        {
+            fraction_step = -0x7fff;
+        }
+        else
+        {
+            fraction_step = (int32_t)long_step;
+        }
+        fraction = x1 + (fraction_step * partial >> 8);
+        y = yt1 + step;
+        yt2 += step;
+        do
+        {
+            uint16_t intercept;
+
+            x = fraction >> 8;
+            fraction += fraction_step;
+            intercept = (uint16_t)(fraction - fraction_step / 2);
+            if (!WL_LineTileClear(level, x, y, intercept))
+            {
+                return 0;
+            }
+            y += step;
+        } while (y != yt2);
+    }
+    return 1;
+}
+
+int WL_CheckSight(const wg_level_t *level, const wg_actor_t *actor)
+{
+    int32_t delta_x;
+    int32_t delta_y;
+
+    if (level == NULL || actor == NULL
+        || actor->area_number >= WG_NUM_AREAS
+        || !level->area_by_player[actor->area_number])
+    {
+        return 0;
+    }
+    delta_x = level->player_x - actor->x;
+    delta_y = level->player_y - actor->y;
+    if (delta_x > -0x18000L && delta_x < 0x18000L
+        && delta_y > -0x18000L && delta_y < 0x18000L)
+    {
+        return 1;
+    }
+    switch (actor->direction)
+    {
+    case 0U:
+        if (delta_x < 0)
+        {
+            return 0;
+        }
+        break;
+    case 2U:
+        if (delta_y > 0)
+        {
+            return 0;
+        }
+        break;
+    case 4U:
+        if (delta_x > 0)
+        {
+            return 0;
+        }
+        break;
+    case 6U:
+        if (delta_y < 0)
+        {
+            return 0;
+        }
+        break;
+    default:
+        break;
+    }
+    return WL_CheckLine(level, actor);
+}
+
+static void WL_FirstSighting(wg_level_t *level, wg_actor_t *actor)
+{
+    switch (actor->actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        (void)WG_QueueSoundAt(level, WG_SOUND_GUARD_SIGHT,
+                              actor->x, actor->y);
+        actor->speed *= 3;
+        break;
+    case WG_ACTOR_MUTANT:
+        actor->speed *= 3;
+        break;
+    case WG_ACTOR_OFFICER:
+        (void)WG_QueueSoundAt(level, WG_SOUND_OFFICER_SIGHT,
+                              actor->x, actor->y);
+        actor->speed *= 5;
+        break;
+    case WG_ACTOR_REAL_HITLER:
+        (void)WG_QueueSound(level, WG_SOUND_DIE);
+        actor->speed *= 5;
+        break;
+    case WG_ACTOR_SS:
+        (void)WG_QueueSoundAt(level, WG_SOUND_SS_SIGHT,
+                              actor->x, actor->y);
+        actor->speed *= 4;
+        break;
+    case WG_ACTOR_DOG:
+        (void)WG_QueueSoundAt(level, WG_SOUND_DOG_BARK,
+                              actor->x, actor->y);
+        actor->speed *= 2;
+        break;
+    case WG_ACTOR_GHOST:
+        actor->speed *= 2;
+        break;
+    case WG_ACTOR_BOSS:
+        (void)WG_QueueSound(level, WG_SOUND_GUTENTAG);
+        actor->speed = 512 * 3;
+        break;
+    case WG_ACTOR_SCHABBS:
+        (void)WG_QueueSound(level, WG_SOUND_SCHABBS_HA);
+        actor->speed *= 3;
+        break;
+    case WG_ACTOR_FAKE:
+        (void)WG_QueueSound(level, WG_SOUND_TOT_HUND);
+        actor->speed *= 3;
+        break;
+    case WG_ACTOR_MECHA_HITLER:
+        (void)WG_QueueSound(level, WG_SOUND_DIE);
+        actor->speed *= 3;
+        break;
+    case WG_ACTOR_GRETEL:
+        (void)WG_QueueSound(level, WG_SOUND_KEIN);
+        actor->speed *= 3;
+        break;
+    case WG_ACTOR_GIFT:
+        (void)WG_QueueSound(level, WG_SOUND_EINE);
+        actor->speed *= 3;
+        break;
+    case WG_ACTOR_FAT:
+        (void)WG_QueueSound(level, WG_SOUND_ERLAUBEN);
+        actor->speed *= 3;
+        break;
+    case WG_ACTOR_SPECTRE:
+        (void)WG_QueueSound(level, WG_SOUND_GHOST_SIGHT);
+        actor->speed = 800;
+        break;
+    case WG_ACTOR_ANGEL:
+        (void)WG_QueueSound(level, WG_SOUND_ANGEL_SIGHT);
+        actor->speed = 1536;
+        break;
+    case WG_ACTOR_TRANS:
+        (void)WG_QueueSound(level, WG_SOUND_TRANS_SIGHT);
+        actor->speed = 1536;
+        break;
+    case WG_ACTOR_UBER:
+        actor->speed = 3000;
+        break;
+    case WG_ACTOR_WILL:
+        (void)WG_QueueSound(level, WG_SOUND_WILHELM_SIGHT);
+        actor->speed = 2048;
+        break;
+    case WG_ACTOR_DEATH:
+        (void)WG_QueueSound(level, WG_SOUND_KNIGHT_SIGHT);
+        actor->speed = 2048;
+        break;
+    default:
+        return;
+    }
+    actor->state = WG_STATE_CHASE1;
+    actor->shape = actor->base_shape;
+    actor->tic_count = actor->actor_class == WG_ACTOR_REAL_HITLER ? 6 : 10;
+    actor->reaction_time = 0;
+    if (actor->distance < 0)
+    {
+        actor->distance = 0;
+    }
+    actor->flags |= WG_ACTOR_FLAG_ATTACK_MODE | WG_ACTOR_FLAG_FIRST_ATTACK;
+}
+
+int WL_DamageActor(wg_level_t *level, size_t actor_index, unsigned damage)
+{
+    wg_actor_t *actor;
+    uint16_t pain_shape;
+
+    if (level == NULL || actor_index >= level->actor_count
+        || damage > (unsigned)(INT32_MAX / 2))
+    {
+        return 0;
+    }
+    actor = &level->actors[actor_index];
+    if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U
+        || WL_DeathTimedFrames(actor->actor_class) == 0U)
+    {
+        return 0;
+    }
+    level->made_noise = 1U;
+    if ((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) == 0U)
+    {
+        damage <<= 1;
+    }
+    actor->hit_points -= (int32_t)damage;
+    if (actor->hit_points <= 0)
+    {
+        return WL_KillActor(level, actor_index);
+    }
+    if ((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) == 0U)
+    {
+        WL_FirstSighting(level, actor);
+    }
+    pain_shape = WL_PainShape(level->variant, actor->actor_class,
+                              (actor->hit_points & 1) == 0);
+    if (pain_shape != 0U)
+    {
+        actor->state = (actor->hit_points & 1) != 0
+                           ? WG_STATE_PAIN1 : WG_STATE_PAIN2;
+        actor->shape = pain_shape;
+        actor->rotate = 2U;
+        actor->tic_count = 10;
+    }
+    return 1;
+}
+
+static int32_t WL_ReactionTime(wg_level_t *level,
+                               wg_actor_class_t actor_class)
+{
+    switch (actor_class)
+    {
+    case WG_ACTOR_GUARD:
+        return 1 + WG_RandomNext(&level->random) / 4;
+    case WG_ACTOR_OFFICER:
+        return 2;
+    case WG_ACTOR_MUTANT:
+    case WG_ACTOR_SS:
+        return 1 + WG_RandomNext(&level->random) / 6;
+    case WG_ACTOR_DOG:
+        return 1 + WG_RandomNext(&level->random) / 8;
+    default:
+        return 1;
+    }
+}
+
+/* Portable form of the original SightPlayer routine.  It is called from the
+   same actor think states as T_Stand and T_Path, rather than as a separate
+   blanket pass, so patrol pause states retain their original timing. */
+static int WL_SightPlayer(wg_level_t *level, wg_actor_t *actor,
+                          unsigned tics, int made_noise)
+{
+    if ((actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) != 0U)
+    {
+        return 0;
+    }
+    if (actor->reaction_time > 0)
+    {
+        actor->reaction_time -= (int32_t)tics;
+        if (actor->reaction_time > 0)
+        {
+            return 0;
+        }
+        actor->reaction_time = 0;
+        WL_FirstSighting(level, actor);
+        return 1;
+    }
+    if (actor->area_number >= WG_NUM_AREAS
+        || !level->area_by_player[actor->area_number])
+    {
+        return 0;
+    }
+    if ((actor->flags & WG_ACTOR_FLAG_AMBUSH) != 0U)
+    {
+        if (!WL_CheckSight(level, actor))
+        {
+            return 0;
+        }
+        actor->flags = (uint16_t)(actor->flags
+                                  & ~WG_ACTOR_FLAG_AMBUSH);
+    }
+    else if (!made_noise && !WL_CheckSight(level, actor))
+    {
+        return 0;
+    }
+    actor->reaction_time = WL_ReactionTime(level, actor->actor_class);
+    return 0;
+}
+
+int WL_TickAwareness(wg_level_t *level, unsigned tics, int made_noise)
+{
+    size_t index;
+
+    if (level == NULL || tics > (unsigned)INT32_MAX
+        || !WL_UpdateAreaConnectivity(level))
+    {
+        return 0;
+    }
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        wg_actor_t *actor = &level->actors[index];
+        int can_notice = actor->state == WG_STATE_STAND
+                         || (WL_IsPathState(actor->state)
+                             && WL_PathHasThink(actor->state));
+
+        if (!can_notice || (actor->flags & WG_ACTOR_FLAG_ATTACK_MODE) != 0U
+            || (actor->flags & WG_ACTOR_FLAG_REMOVED) != 0U)
+        {
+            continue;
+        }
+        (void)WL_SightPlayer(level, actor, tics, made_noise);
+    }
+    return 1;
+}

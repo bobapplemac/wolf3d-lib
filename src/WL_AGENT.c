@@ -1,1421 +1,1160 @@
-// WL_AGENT.C
+/* Portable player movement, interaction, combat, and status from WL_AGENT.C. */
+#include "WL_AGENT.h"
 
-#include "WL_DEF.H"
-#pragma hdrstop
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "WG_COMPAT.h"
+#include "WG_FIXED.h"
+#include "WL_ACT1.h"
+#include "WL_GAME.h"
+#include "WL_MAIN.h"
+#include "WL_STATE.h"
 
-/*
-=============================================================================
-
-						 LOCAL CONSTANTS
-
-=============================================================================
-*/
-
-#define MAXMOUSETURN	10
-
-
-#define MOVESCALE		150l
-#define BACKMOVESCALE	100l
-#define ANGLESCALE		20
-
-/*
-=============================================================================
-
-						 GLOBAL VARIABLES
-
-=============================================================================
-*/
-
-
-
-//
-// player state info
-//
-boolean		running;
-long		thrustspeed;
-
-unsigned	plux,pluy;			// player coordinates scaled to unsigned
-
-int			anglefrac;
-int			gotgatgun;	// JR
-
-objtype		*LastAttacker;
-
-/*
-=============================================================================
-
-						 LOCAL VARIABLES
-
-=============================================================================
-*/
-
-
-void	T_Player (objtype *ob);
-void	T_Attack (objtype *ob);
-
-statetype s_player = {false,0,0,T_Player,NULL,NULL};
-statetype s_attack = {false,0,0,T_Attack,NULL,NULL};
-
-
-long	playerxmove,playerymove;
-
-struct atkinf
+enum
 {
-	char	tics,attack,frame;		// attack is 1 for gun, 2 for knife
-} attackinfo[4][14] =
-
-{
-{ {6,0,1},{6,2,2},{6,0,3},{6,-1,4} },
-{ {6,0,1},{6,1,2},{6,0,3},{6,-1,4} },
-{ {6,0,1},{6,1,2},{6,3,3},{6,-1,4} },
-{ {6,0,1},{6,1,2},{6,4,3},{6,-1,4} },
+    WL_STATUS_HEIGHT = 40,
+    WL_STATUS_Y = WG_VIDEO_HEIGHT - WL_STATUS_HEIGHT,
+    WL_MOVE_SCALE = 150,
+    WL_BACK_MOVE_SCALE = 100,
+    WL_ANGLE_SCALE = 20
 };
 
+#define WL_PLAYER_SIZE WG_MIN_DISTANCE
+#define WL_MIN_ACTOR_DISTANCE WG_FIXED_ONE
 
-int	strafeangle[9] = {0,90,180,270,45,135,225,315,0};
-
-void DrawWeapon (void);
-void GiveWeapon (int weapon);
-void	GiveAmmo (int ammo);
-
-//===========================================================================
-
-//----------
-
-void Attack (void);
-void Use (void);
-void Search (objtype *ob);
-void SelectWeapon (void);
-void SelectItem (void);
-
-//----------
-
-boolean TryMove (objtype *ob);
-void T_Player (objtype *ob);
-
-void ClipMove (objtype *ob, long xmove, long ymove);
-
-/*
-=============================================================================
-
-						CONTROL STUFF
-
-=============================================================================
-*/
-
-/*
-======================
-=
-= CheckWeaponChange
-=
-= Keys 1-4 change weapons
-=
-======================
-*/
-
-void CheckWeaponChange (void)
+typedef struct wl_status_chunks
 {
-	int	i,buttons;
+    size_t status_bar;
+    size_t knife;
+    size_t no_key;
+    size_t blank_digit;
+    size_t zero_digit;
+    size_t face_1a;
+    size_t face_8a;
+    size_t got_gatling;
+    size_t spear_god_1;
+    size_t spear_waiting_1;
+    size_t spear_ouch;
+} wl_status_chunks_t;
 
-	if (!gamestate.ammo)		// must use knife with no ammo
-		return;
-
-	for (i=wp_knife ; i<=gamestate.bestweapon ; i++)
-		if (buttonstate[bt_readyknife+i-wp_knife])
-		{
-			gamestate.weapon = gamestate.chosenweapon = i;
-			DrawWeapon ();
-			return;
-		}
+static int WL_StatusChunks(wg_game_variant_t variant,
+                           wl_status_chunks_t *chunks)
+{
+    if (chunks == NULL)
+    {
+        return 0;
+    }
+    if (WG_DataUsesApogeeWolfGraphics(variant))
+    {
+        /* The supplied Apogee v1.4 WL1 graph is four chunks later than the
+           early generated GFXE_WL1.H retained in the source release. */
+        chunks->status_bar = 98U;
+        chunks->knife = 103U;
+        chunks->no_key = 107U;
+        chunks->blank_digit = 110U;
+        chunks->zero_digit = 111U;
+        chunks->face_1a = 121U;
+    }
+    else if (variant == WG_GAME_WOLF3D_FULL_GT_14)
+    {
+        chunks->status_bar = 86U;
+        chunks->knife = 91U;
+        chunks->no_key = 95U;
+        chunks->blank_digit = 98U;
+        chunks->zero_digit = 99U;
+        chunks->face_1a = 109U;
+    }
+    else if (variant == WG_GAME_SPEAR_DEMO_SDM)
+    {
+        chunks->status_bar = 76U;
+        chunks->knife = 79U;
+        chunks->no_key = 83U;
+        chunks->blank_digit = 86U;
+        chunks->zero_digit = 87U;
+        chunks->face_1a = 97U;
+    }
+    else if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        chunks->status_bar = 90U;
+        chunks->knife = 101U;
+        chunks->no_key = 105U;
+        chunks->blank_digit = 108U;
+        chunks->zero_digit = 109U;
+        chunks->face_1a = 119U;
+    }
+    else
+    {
+        return 0;
+    }
+    chunks->face_8a = chunks->face_1a + 21U;
+    chunks->got_gatling = chunks->face_8a + 1U;
+    chunks->spear_god_1 = chunks->got_gatling + 1U;
+    chunks->spear_waiting_1 = chunks->spear_god_1 + 3U;
+    chunks->spear_ouch = chunks->spear_waiting_1 + 2U;
+    return 1;
 }
 
-
-/*
-=======================
-=
-= ControlMovement
-=
-= Takes controlx,controly, and buttonstate[bt_strafe]
-=
-= Changes the player's angle and position
-=
-= There is an angle hack because when going 70 fps, the roundoff becomes
-= significant
-=
-=======================
-*/
-
-void ControlMovement (objtype *ob)
+static int WL_DrawPicture(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_graphics_t *graphics, size_t chunk, int x, int y)
 {
-	long	oldx,oldy;
-	int		angle,maxxmove;
-	int		angleunits;
-	long	speed;
+    uint8_t *pixels = NULL;
+    uint16_t width;
+    uint16_t height;
+    int result;
 
-	thrustspeed = 0;
-
-	oldx = player->x;
-	oldy = player->y;
-
-//
-// side to side move
-//
-	if (buttonstate[bt_strafe])
-	{
-	//
-	// strafing
-	//
-	//
-		if (controlx > 0)
-		{
-			angle = ob->angle - ANGLES/4;
-			if (angle < 0)
-				angle += ANGLES;
-			Thrust (angle,controlx*MOVESCALE);	// move to left
-		}
-		else if (controlx < 0)
-		{
-			angle = ob->angle + ANGLES/4;
-			if (angle >= ANGLES)
-				angle -= ANGLES;
-			Thrust (angle,-controlx*MOVESCALE);	// move to right
-		}
-	}
-	else
-	{
-	//
-	// not strafing
-	//
-		anglefrac += controlx;
-		angleunits = anglefrac/ANGLESCALE;
-		anglefrac -= angleunits*ANGLESCALE;
-		ob->angle -= angleunits;
-
-		if (ob->angle >= ANGLES)
-			ob->angle -= ANGLES;
-		if (ob->angle < 0)
-			ob->angle += ANGLES;
-
-	}
-
-//
-// forward/backwards move
-//
-	if (controly < 0)
-	{
-		Thrust (ob->angle,-controly*MOVESCALE);	// move forwards
-	}
-	else if (controly > 0)
-	{
-		angle = ob->angle + ANGLES/2;
-		if (angle >= ANGLES)
-			angle -= ANGLES;
-		Thrust (angle,controly*BACKMOVESCALE);		// move backwards
-	}
-
-	if (gamestate.victoryflag)		// watching the BJ actor
-		return;
-
-//
-// calculate total move
-//
-	playerxmove = player->x - oldx;
-	playerymove = player->y - oldy;
+    if (!WG_GraphicsDecodePicture(graphics, chunk, &pixels, &width, &height))
+    {
+        return 0;
+    }
+    result = x >= 0 && y >= 0
+             && x + width <= WG_VIDEO_WIDTH
+             && y + height <= WG_VIDEO_HEIGHT;
+    if (result)
+    {
+        WG_VideoBlit(framebuffer, x, y, pixels, width, height);
+    }
+    free(pixels);
+    return result;
 }
 
-/*
-=============================================================================
-
-					STATUS WINDOW STUFF
-
-=============================================================================
-*/
-
-
-/*
-==================
-=
-= StatusDrawPic
-=
-==================
-*/
-
-void StatusDrawPic (unsigned x, unsigned y, unsigned picnum)
+static int WL_StatusDrawPicture(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_graphics_t *graphics, size_t chunk, int x, int y)
 {
-	unsigned	temp;
-
-	temp = bufferofs;
-	bufferofs = 0;
-
-	bufferofs = PAGE1START+(200-STATUSLINES)*SCREENWIDTH;
-	LatchDrawPic (x,y,picnum);
-	bufferofs = PAGE2START+(200-STATUSLINES)*SCREENWIDTH;
-	LatchDrawPic (x,y,picnum);
-	bufferofs = PAGE3START+(200-STATUSLINES)*SCREENWIDTH;
-	LatchDrawPic (x,y,picnum);
-
-	bufferofs = temp;
+    return WL_DrawPicture(framebuffer, graphics, chunk, x * 8, WL_STATUS_Y + y);
 }
 
-
-/*
-==================
-=
-= DrawFace
-=
-==================
-*/
-
-void DrawFace (void)
+static int WL_DrawNumber(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_graphics_t *graphics, const wl_status_chunks_t *chunks,
+    int x, int y, unsigned width, uint32_t number)
 {
-	if (gamestate.health)
-	{
-		#ifdef SPEAR
-		if (godmode)
-			StatusDrawPic (17,4,GODMODEFACE1PIC+gamestate.faceframe);
-		else
-		#endif
-		StatusDrawPic (17,4,FACE1APIC+3*((100-gamestate.health)/16)+gamestate.faceframe);
-	}
-	else
-	{
-#ifndef SPEAR
-	 if (LastAttacker->obclass == needleobj)
-	   StatusDrawPic (17,4,MUTANTBJPIC);
-	 else
-#endif
-	   StatusDrawPic (17,4,FACE8APIC);
-	}
+    char digits[16];
+    int length;
+    unsigned first;
+    unsigned index;
+
+    length = snprintf(digits, sizeof(digits), "%lu", (unsigned long)number);
+    if (length < 0 || (size_t)length >= sizeof(digits))
+    {
+        return 0;
+    }
+    while ((unsigned)length < width)
+    {
+        if (!WL_StatusDrawPicture(framebuffer, graphics,
+                                  chunks->blank_digit, x++, y))
+        {
+            return 0;
+        }
+        --width;
+    }
+    first = (unsigned)length <= width ? 0U : (unsigned)length - width;
+    for (index = first; index < (unsigned)length; ++index)
+    {
+        if (!WL_StatusDrawPicture(framebuffer, graphics,
+                                  chunks->zero_digit
+                                  + (unsigned)(digits[index] - '0'),
+                                  x++, y))
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
 
-
-/*
-===============
-=
-= UpdateFace
-=
-= Calls draw face if time to change
-=
-===============
-*/
-
-#define FACETICS	70
-
-int	facecount;
-
-void	UpdateFace (void)
+void WL_StatusDefaults(wl_status_t *status)
 {
-
-	if (SD_SoundPlaying() == GETGATLINGSND)
-	  return;
-
-	facecount += tics;
-	if (facecount > US_RndT())
-	{
-		gamestate.faceframe = (US_RndT()>>6);
-		if (gamestate.faceframe==3)
-			gamestate.faceframe = 1;
-
-		facecount = 0;
-		DrawFace ();
-	}
+    if (status == NULL)
+    {
+        return;
+    }
+    memset(status, 0, sizeof(*status));
+    status->health = 100;
+    status->ammo = 8;
+    status->lives = 3;
+    status->weapon = 1;
 }
 
-
-
-/*
-===============
-=
-= LatchNumber
-=
-= right justifies and pads with blanks
-=
-===============
-*/
-
-void	LatchNumber (int x, int y, int width, long number)
+void WL_TakeDamage(struct wg_level *level, unsigned points)
 {
-	unsigned	length,c;
-	char	str[20];
-
-	ltoa (number,str,10);
-
-	length = strlen (str);
-
-	while (length<width)
-	{
-		StatusDrawPic (x,y,N_BLANKPIC);
-		x++;
-		width--;
-	}
-
-	c= length <= width ? 0 : length-width;
-
-	while (c<length)
-	{
-		StatusDrawPic (x,y,str[c]-'0'+ N_0PIC);
-		x++;
-		c++;
-	}
+    if (level != NULL)
+    {
+        WL_TakeDamageFrom(level, points, level->player_x, level->player_y);
+    }
 }
 
-
-/*
-===============
-=
-= DrawHealth
-=
-===============
-*/
-
-void	DrawHealth (void)
+void WL_TakeDamageFrom(struct wg_level *level, unsigned points,
+                       int32_t attacker_x, int32_t attacker_y)
 {
-	LatchNumber (21,16,3,gamestate.health);
+    unsigned damage;
+
+    if (level == NULL || level->player_dead || level->victory_flag
+        || level->god_mode)
+    {
+        return;
+    }
+    damage = level->difficulty == WG_DIFFICULTY_BABY ? points / 4U : points;
+    if (damage >= level->player_health)
+    {
+        level->player_health = 0U;
+        level->player_dead = 1U;
+        level->killer_x = attacker_x;
+        level->killer_y = attacker_y;
+        (void)WG_QueueSound(level, WG_SOUND_PLAYER_DEATH);
+    }
+    else
+    {
+        level->player_health = (uint16_t)(level->player_health - damage);
+    }
+    if (damage > (unsigned)UINT16_MAX - level->damage_count)
+    {
+        level->damage_count = UINT16_MAX;
+    }
+    else
+    {
+        level->damage_count = (uint16_t)(level->damage_count + damage);
+    }
 }
 
-
-/*
-===============
-=
-= TakeDamage
-=
-===============
-*/
-
-void	TakeDamage (int points,objtype *attacker)
+static void WL_HealSelf(wg_level_t *level, unsigned points)
 {
-	LastAttacker = attacker;
+    unsigned health = level->player_health + points;
 
-	if (gamestate.victoryflag)
-		return;
-	if (gamestate.difficulty==gd_baby)
-	  points>>=2;
-
-	if (!godmode)
-		gamestate.health -= points;
-
-	if (gamestate.health<=0)
-	{
-		gamestate.health = 0;
-		playstate = ex_died;
-		killerobj = attacker;
-	}
-
-	StartDamageFlash (points);
-
-	gotgatgun=0;
-
-	DrawHealth ();
-	DrawFace ();
-
-	//
-	// MAKE BJ'S EYES BUG IF MAJOR DAMAGE!
-	//
-	#ifdef SPEAR
-	if (points > 30 && gamestate.health!=0 && !godmode)
-	{
-		StatusDrawPic (17,4,BJOUCHPIC);
-		facecount = 0;
-	}
-	#endif
-
+    level->player_health = (uint16_t)(health > 100U ? 100U : health);
 }
 
-
-/*
-===============
-=
-= HealSelf
-=
-===============
-*/
-
-void	HealSelf (int points)
+static void WL_GiveExtraMan(wg_level_t *level)
 {
-	gamestate.health += points;
-	if (gamestate.health>100)
-		gamestate.health = 100;
-
-	DrawHealth ();
-	gotgatgun = 0;	// JR
-	DrawFace ();
+    if (level->player_lives < 9U)
+    {
+        ++level->player_lives;
+    }
+    (void)WG_QueueSound(level, WG_SOUND_BONUS_EXTRA_LIFE);
 }
 
-
-//===========================================================================
-
-
-/*
-===============
-=
-= DrawLevel
-=
-===============
-*/
-
-void	DrawLevel (void)
+void WL_GivePoints(struct wg_level *level, uint32_t points)
 {
-#ifdef SPEAR
-	if (gamestate.mapon == 20)
-		LatchNumber (2,16,2,18);
-	else
-#endif
-	LatchNumber (2,16,2,gamestate.mapon+1);
+    if (level == NULL)
+    {
+        return;
+    }
+    if (level->next_extra == 0U)
+    {
+        level->next_extra = 40000U;
+    }
+    if (UINT32_MAX - level->score < points)
+    {
+        level->score = UINT32_MAX;
+    }
+    else
+    {
+        level->score += points;
+    }
+    while (level->score >= level->next_extra)
+    {
+        if (UINT32_MAX - level->next_extra < 40000U)
+        {
+            level->next_extra = UINT32_MAX;
+        }
+        else
+        {
+            level->next_extra += 40000U;
+        }
+        WL_GiveExtraMan(level);
+        if (level->next_extra == UINT32_MAX)
+        {
+            break;
+        }
+    }
 }
 
-//===========================================================================
-
-
-/*
-===============
-=
-= DrawLives
-=
-===============
-*/
-
-void	DrawLives (void)
+static void WL_GiveAmmo(wg_level_t *level, unsigned ammo)
 {
-	LatchNumber (14,16,1,gamestate.lives);
+    unsigned total;
+
+    if (level->player_ammo == 0U && level->attack_frame == 0U)
+    {
+        level->player_weapon = level->player_chosen_weapon;
+    }
+    total = level->player_ammo + ammo;
+    level->player_ammo = (uint16_t)(total > 99U ? 99U : total);
 }
 
-
-/*
-===============
-=
-= GiveExtraMan
-=
-===============
-*/
-
-void	GiveExtraMan (void)
+static void WL_GiveWeapon(wg_level_t *level, wg_weapon_t weapon)
 {
-	if (gamestate.lives<9)
-		gamestate.lives++;
-	DrawLives ();
-	SD_PlaySound (BONUS1UPSND);
+    WL_GiveAmmo(level, 6U);
+    if (level->player_best_weapon < (uint8_t)weapon)
+    {
+        level->player_best_weapon = (uint8_t)weapon;
+        level->player_weapon = (uint8_t)weapon;
+        level->player_chosen_weapon = (uint8_t)weapon;
+    }
 }
 
-//===========================================================================
-
-/*
-===============
-=
-= DrawScore
-=
-===============
-*/
-
-void	DrawScore (void)
+int WL_GetBonus(struct wg_level *level, size_t static_index)
 {
-	LatchNumber (6,16,6,gamestate.score);
+    wg_static_object_t *object;
+    wg_sound_t sound;
+
+    if (level == NULL || static_index >= level->static_count)
+    {
+        return 0;
+    }
+    object = &level->statics[static_index];
+    if (object->removed != 0U || object->item == WG_ITEM_NONE)
+    {
+        return 0;
+    }
+    switch (object->item)
+    {
+    case WG_ITEM_FIRSTAID:
+        if (level->player_health == 100U)
+        {
+            return 0;
+        }
+        WL_HealSelf(level, 25U);
+        sound = WG_SOUND_HEALTH_2;
+        break;
+    case WG_ITEM_KEY1:
+    case WG_ITEM_KEY2:
+        level->player_keys |= (uint8_t)(1U << (object->item - WG_ITEM_KEY1));
+        sound = WG_SOUND_GET_KEY;
+        break;
+    case WG_ITEM_CROSS:
+        WL_GivePoints(level, 100U);
+        ++level->treasure_count;
+        sound = WG_SOUND_BONUS_1;
+        break;
+    case WG_ITEM_CHALICE:
+        WL_GivePoints(level, 500U);
+        ++level->treasure_count;
+        sound = WG_SOUND_BONUS_2;
+        break;
+    case WG_ITEM_BIBLE:
+        WL_GivePoints(level, 1000U);
+        ++level->treasure_count;
+        sound = WG_SOUND_BONUS_3;
+        break;
+    case WG_ITEM_CROWN:
+        WL_GivePoints(level, 5000U);
+        ++level->treasure_count;
+        sound = WG_SOUND_BONUS_4;
+        break;
+    case WG_ITEM_CLIP:
+        if (level->player_ammo == 99U)
+        {
+            return 0;
+        }
+        WL_GiveAmmo(level, 8U);
+        sound = WG_SOUND_GET_AMMO;
+        break;
+    case WG_ITEM_CLIP2:
+        if (level->player_ammo == 99U)
+        {
+            return 0;
+        }
+        WL_GiveAmmo(level, 4U);
+        sound = WG_SOUND_GET_AMMO;
+        break;
+    case WG_ITEM_AMMO25:
+        if (level->player_ammo == 99U)
+        {
+            return 0;
+        }
+        WL_GiveAmmo(level, 25U);
+        sound = WG_SOUND_GET_AMMO_BOX;
+        break;
+    case WG_ITEM_MACHINEGUN:
+        WL_GiveWeapon(level, WG_WEAPON_MACHINEGUN);
+        sound = WG_SOUND_GET_MACHINEGUN;
+        break;
+    case WG_ITEM_CHAINGUN:
+        WL_GiveWeapon(level, WG_WEAPON_CHAINGUN);
+        sound = WG_SOUND_GET_GATLING;
+        break;
+    case WG_ITEM_FULLHEAL:
+        WL_HealSelf(level, 99U);
+        WL_GiveAmmo(level, 25U);
+        WL_GiveExtraMan(level);
+        ++level->treasure_count;
+        sound = WG_SOUND_BONUS_EXTRA_LIFE;
+        break;
+    case WG_ITEM_FOOD:
+        if (level->player_health == 100U)
+        {
+            return 0;
+        }
+        WL_HealSelf(level, 10U);
+        sound = WG_SOUND_HEALTH_1;
+        break;
+    case WG_ITEM_ALPO:
+        if (level->player_health == 100U)
+        {
+            return 0;
+        }
+        WL_HealSelf(level, 4U);
+        sound = WG_SOUND_HEALTH_1;
+        break;
+    case WG_ITEM_GIBS:
+        if (level->player_health > 10U)
+        {
+            return 0;
+        }
+        WL_HealSelf(level, 1U);
+        sound = WG_SOUND_SLURPIE;
+        break;
+    case WG_ITEM_SPEAR:
+        level->spear_found = 1U;
+        level->spear_x = level->player_x;
+        level->spear_y = level->player_y;
+        level->spear_angle = level->player_angle;
+        level->victory_flag = 1U;
+        level->bonus_count = 18U;
+        (void)WG_QueueSound(level, WG_SOUND_GET_SPEAR);
+        object->removed = 1U;
+        object->blocking = 0U;
+        return 1;
+    default:
+        return 0;
+    }
+    level->bonus_count = 18U;
+    (void)WG_QueueSound(level, sound);
+    object->removed = 1U;
+    object->blocking = 0U;
+    return 1;
 }
 
-/*
-===============
-=
-= GivePoints
-=
-===============
-*/
-
-void	GivePoints (long points)
+unsigned WL_CollectPlayerTileBonuses(struct wg_level *level)
 {
-	gamestate.score += points;
-	while (gamestate.score >= gamestate.nextextra)
-	{
-		gamestate.nextextra += EXTRAPOINTS;
-		GiveExtraMan ();
-	}
-	DrawScore ();
+    size_t index;
+    unsigned collected = 0U;
+
+    if (level == NULL)
+    {
+        return 0U;
+    }
+    for (index = 0U; index < level->static_count; ++index)
+    {
+        const wg_static_object_t *object = &level->statics[index];
+
+        if (object->tile_x == level->player_tile_x
+            && object->tile_y == level->player_tile_y
+            && WL_GetBonus(level, index))
+        {
+            ++collected;
+        }
+    }
+    return collected;
 }
 
-//===========================================================================
-
-/*
-==================
-=
-= DrawWeapon
-=
-==================
-*/
-
-void DrawWeapon (void)
+static int WL_FixedTile(int32_t value)
 {
-	StatusDrawPic (32,8,KNIFEPIC+gamestate.weapon);
+    if (value >= 0)
+    {
+        return value / WG_FIXED_ONE;
+    }
+    return -(int)((-(int64_t)value + WG_FIXED_ONE - 1) / WG_FIXED_ONE);
 }
 
-
-/*
-==================
-=
-= DrawKeys
-=
-==================
-*/
-
-void DrawKeys (void)
+int WL_TryMove(const struct wg_level *level, int32_t x, int32_t y)
 {
-	if (gamestate.keys & 1)
-		StatusDrawPic (30,4,GOLDKEYPIC);
-	else
-		StatusDrawPic (30,4,NOKEYPIC);
+    int low_x;
+    int low_y;
+    int high_x;
+    int high_y;
+    int tile_x;
+    int tile_y;
+    size_t index;
 
-	if (gamestate.keys & 2)
-		StatusDrawPic (30,20,SILVERKEYPIC);
-	else
-		StatusDrawPic (30,20,NOKEYPIC);
+    if (level == NULL)
+    {
+        return 0;
+    }
+    low_x = WL_FixedTile(x - WL_PLAYER_SIZE);
+    low_y = WL_FixedTile(y - WL_PLAYER_SIZE);
+    high_x = WL_FixedTile(x + WL_PLAYER_SIZE);
+    high_y = WL_FixedTile(y + WL_PLAYER_SIZE);
+    for (tile_y = low_y; tile_y <= high_y; ++tile_y)
+    {
+        for (tile_x = low_x; tile_x <= high_x; ++tile_x)
+        {
+            /* actorat[] stores either a low-valued wall/door token or an
+               object pointer.  A non-shootable actor pointer can therefore
+               replace a door token, an original quirk used by the demos. */
+            if (level->actor_at[(size_t)tile_y * WG_LEVEL_SIZE
+                                + (size_t)tile_x] != 0U
+                && level->actor_at[(size_t)tile_y * WG_LEVEL_SIZE
+                                   + (size_t)tile_x]
+                       < WG_ACTOR_AT_ACTOR_BASE)
+            {
+                return 0;
+            }
+        }
+    }
+    for (index = 0U; index < level->static_count; ++index)
+    {
+        const wg_static_object_t *object = &level->statics[index];
+
+        if (object->removed == 0U && object->blocking != 0U
+            && object->tile_x >= low_x && object->tile_x <= high_x
+            && object->tile_y >= low_y && object->tile_y <= high_y)
+        {
+            return 0;
+        }
+    }
+    if (low_y > 0)
+    {
+        --low_y;
+    }
+    if (high_y < WG_LEVEL_SIZE - 1)
+    {
+        ++high_y;
+    }
+    if (low_x > 0)
+    {
+        --low_x;
+    }
+    if (high_x < WG_LEVEL_SIZE - 1)
+    {
+        ++high_x;
+    }
+    for (tile_y = low_y; tile_y <= high_y; ++tile_y)
+    {
+        for (tile_x = low_x; tile_x <= high_x; ++tile_x)
+        {
+            uint16_t occupant = level->actor_at[(size_t)tile_y
+                                                * WG_LEVEL_SIZE + tile_x];
+            const wg_actor_t *actor;
+            int32_t delta_x;
+            int32_t delta_y;
+
+            if (occupant < WG_ACTOR_AT_ACTOR_BASE
+                || occupant >= WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
+            {
+                continue;
+            }
+            actor = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) == 0U)
+            {
+                continue;
+            }
+            delta_x = x - actor->x;
+            delta_y = y - actor->y;
+            if (delta_x >= -WL_MIN_ACTOR_DISTANCE
+                && delta_x <= WL_MIN_ACTOR_DISTANCE
+                && delta_y >= -WL_MIN_ACTOR_DISTANCE
+                && delta_y <= WL_MIN_ACTOR_DISTANCE)
+            {
+                return 0;
+            }
+        }
+    }
+    return 1;
 }
 
-
-
-/*
-==================
-=
-= GiveWeapon
-=
-==================
-*/
-
-void GiveWeapon (int weapon)
+int WL_ClipMove(struct wg_level *level, int32_t x_move, int32_t y_move)
 {
-	GiveAmmo (6);
+    int32_t base_x;
+    int32_t base_y;
 
-	if (gamestate.bestweapon<weapon)
-		gamestate.bestweapon = gamestate.weapon
-		= gamestate.chosenweapon = weapon;
-
-	DrawWeapon ();
+    if (level == NULL)
+    {
+        return 0;
+    }
+    base_x = level->player_x;
+    base_y = level->player_y;
+    if (WL_TryMove(level, base_x + x_move, base_y + y_move))
+    {
+        level->player_x = base_x + x_move;
+        level->player_y = base_y + y_move;
+        return 1;
+    }
+    if (WL_TryMove(level, base_x + x_move, base_y))
+    {
+        level->player_x = base_x + x_move;
+        return 1;
+    }
+    if (WL_TryMove(level, base_x, base_y + y_move))
+    {
+        level->player_y = base_y + y_move;
+        return 1;
+    }
+    return 1;
 }
 
-
-//===========================================================================
-
-/*
-===============
-=
-= DrawAmmo
-=
-===============
-*/
-
-void	DrawAmmo (void)
+int WL_Thrust(struct wg_level *level, const struct wg_view_tables *tables,
+              uint16_t angle, int32_t speed)
 {
-	LatchNumber (27,16,2,gamestate.ammo);
+    const int32_t *cosine;
+    int32_t move_speed;
+    int32_t x_move;
+    int32_t y_move;
+    size_t tile_index;
+
+    if (level == NULL || tables == NULL || angle >= WG_ANGLES || speed < 0)
+    {
+        return 0;
+    }
+    if (INT32_MAX - level->player_thrust_speed < speed)
+    {
+        level->player_thrust_speed = INT32_MAX;
+    }
+    else
+    {
+        level->player_thrust_speed += speed;
+    }
+    move_speed = speed >= WG_MIN_DISTANCE * 2
+                     ? WG_MIN_DISTANCE * 2 - 1 : speed;
+    cosine = WG_ViewCosineTable(tables);
+    x_move = WG_FixedByFrac(move_speed, cosine[angle]);
+    y_move = -WG_FixedByFrac(move_speed, tables->sine[angle]);
+    if (!WL_ClipMove(level, x_move, y_move))
+    {
+        return 0;
+    }
+    level->player_tile_x = (uint8_t)WL_FixedTile(level->player_x);
+    level->player_tile_y = (uint8_t)WL_FixedTile(level->player_y);
+    tile_index = (size_t)level->player_tile_y * WG_LEVEL_SIZE
+                 + level->player_tile_x;
+    if (level->areas[tile_index] < WG_NUM_AREAS)
+    {
+        (void)WL_UpdateAreaConnectivity(level);
+    }
+    if (level->info[tile_index] == 99U)
+    {
+        if (WG_DataVariantFamily(level->variant) != WG_GAME_FAMILY_SPEAR
+            && !WL_SpawnBJVictory(level))
+        {
+            return 0;
+        }
+        level->victory_flag = 1U;
+    }
+    return 1;
 }
 
-
-/*
-===============
-=
-= GiveAmmo
-=
-===============
-*/
-
-void	GiveAmmo (int ammo)
+static int32_t WL_ScaledControl(int control, int scale)
 {
-	if (!gamestate.ammo)				// knife was out
-	{
-		if (!gamestate.attackframe)
-		{
-			gamestate.weapon = gamestate.chosenweapon;
-			DrawWeapon ();
-		}
-	}
-	gamestate.ammo += ammo;
-	if (gamestate.ammo > 99)
-		gamestate.ammo = 99;
-	DrawAmmo ();
+    int64_t magnitude = control < 0 ? -(int64_t)control : control;
+    int64_t speed = magnitude * scale;
+
+    return speed > INT32_MAX ? INT32_MAX : (int32_t)speed;
 }
 
-//===========================================================================
-
-/*
-==================
-=
-= GiveKey
-=
-==================
-*/
-
-void GiveKey (int key)
+int WL_ControlMovement(struct wg_level *level,
+                       const struct wg_view_tables *tables,
+                       int control_x, int control_y, int strafe)
 {
-	gamestate.keys |= (1<<key);
-	DrawKeys ();
+    int angle;
+
+    if (level == NULL || tables == NULL)
+    {
+        return 0;
+    }
+    level->player_thrust_speed = 0;
+    if (strafe != 0)
+    {
+        if (control_x > 0)
+        {
+            angle = (int)level->player_angle - WG_ANGLE_QUADRANT;
+            if (angle < 0)
+            {
+                angle += WG_ANGLES;
+            }
+            if (!WL_Thrust(level, tables, (uint16_t)angle,
+                           WL_ScaledControl(control_x, WL_MOVE_SCALE)))
+            {
+                return 0;
+            }
+        }
+        else if (control_x < 0)
+        {
+            angle = (int)level->player_angle + WG_ANGLE_QUADRANT;
+            if (angle >= WG_ANGLES)
+            {
+                angle -= WG_ANGLES;
+            }
+            if (!WL_Thrust(level, tables, (uint16_t)angle,
+                           WL_ScaledControl(control_x, WL_MOVE_SCALE)))
+            {
+                return 0;
+            }
+        }
+    }
+    else
+    {
+        int angle_units;
+
+        level->player_angle_fraction += control_x;
+        angle_units = level->player_angle_fraction / WL_ANGLE_SCALE;
+        level->player_angle_fraction -= angle_units * WL_ANGLE_SCALE;
+        angle = (int)level->player_angle - angle_units;
+        while (angle >= WG_ANGLES)
+        {
+            angle -= WG_ANGLES;
+        }
+        while (angle < 0)
+        {
+            angle += WG_ANGLES;
+        }
+        level->player_angle = (uint16_t)angle;
+    }
+    if (control_y < 0
+        && !WL_Thrust(level, tables, level->player_angle,
+                      WL_ScaledControl(control_y, WL_MOVE_SCALE)))
+    {
+        return 0;
+    }
+    if (control_y > 0)
+    {
+        angle = (int)level->player_angle + WG_ANGLES / 2;
+        if (angle >= WG_ANGLES)
+        {
+            angle -= WG_ANGLES;
+        }
+        if (!WL_Thrust(level, tables, (uint16_t)angle,
+                       WL_ScaledControl(control_y, WL_BACK_MOVE_SCALE)))
+        {
+            return 0;
+        }
+    }
+    return 1;
 }
 
-
-
-/*
-=============================================================================
-
-							MOVEMENT
-
-=============================================================================
-*/
-
-
-/*
-===================
-=
-= GetBonus
-=
-===================
-*/
-void GetBonus (statobj_t *check)
+void WL_VictorySpin(struct wg_level *level, unsigned tics)
 {
-	switch (check->itemnumber)
-	{
-	case	bo_firstaid:
-		if (gamestate.health == 100)
-			return;
+    int32_t destination_y;
+    uint32_t change;
 
-		SD_PlaySound (HEALTH2SND);
-		HealSelf (25);
-		break;
+    if (level == NULL || tics == 0U)
+    {
+        return;
+    }
+    change = tics > UINT32_MAX / 4096U ? UINT32_MAX : tics * 4096U;
+    if (level->player_angle > 270U)
+    {
+        unsigned angle_change = tics > UINT_MAX / 3U
+                                    ? UINT_MAX : tics * 3U;
 
-	case	bo_key1:
-	case	bo_key2:
-	case	bo_key3:
-	case	bo_key4:
-		GiveKey (check->itemnumber - bo_key1);
-		SD_PlaySound (GETKEYSND);
-		break;
+        level->player_angle = angle_change >= level->player_angle - 270U
+                                  ? 270U
+                                  : (uint16_t)(level->player_angle
+                                               - angle_change);
+    }
+    else if (level->player_angle < 270U)
+    {
+        unsigned angle_change = tics > UINT_MAX / 3U
+                                    ? UINT_MAX : tics * 3U;
 
-	case	bo_cross:
-		SD_PlaySound (BONUS1SND);
-		GivePoints (100);
-		gamestate.treasurecount++;
-		break;
-	case	bo_chalice:
-		SD_PlaySound (BONUS2SND);
-		GivePoints (500);
-		gamestate.treasurecount++;
-		break;
-	case	bo_bible:
-		SD_PlaySound (BONUS3SND);
-		GivePoints (1000);
-		gamestate.treasurecount++;
-		break;
-	case	bo_crown:
-		SD_PlaySound (BONUS4SND);
-		GivePoints (5000);
-		gamestate.treasurecount++;
-		break;
+        level->player_angle = angle_change >= 270U - level->player_angle
+                                  ? 270U
+                                  : (uint16_t)(level->player_angle
+                                               + angle_change);
+    }
+    destination_y = ((int32_t)level->player_tile_y - 5) * WG_FIXED_ONE
+                    - INT32_C(0x3000);
+    if (level->player_y > destination_y)
+    {
+        int64_t moved_y = (int64_t)level->player_y - change;
 
-	case	bo_clip:
-		if (gamestate.ammo == 99)
-			return;
-
-		SD_PlaySound (GETAMMOSND);
-		GiveAmmo (8);
-		break;
-	case	bo_clip2:
-		if (gamestate.ammo == 99)
-			return;
-
-		SD_PlaySound (GETAMMOSND);
-		GiveAmmo (4);
-		break;
-
-#ifdef SPEAR
-	case	bo_25clip:
-		if (gamestate.ammo == 99)
-		  return;
-
-		SD_PlaySound (GETAMMOBOXSND);
-		GiveAmmo (25);
-		break;
-#endif
-
-	case	bo_machinegun:
-		SD_PlaySound (GETMACHINESND);
-		GiveWeapon (wp_machinegun);
-		break;
-	case	bo_chaingun:
-		SD_PlaySound (GETGATLINGSND);
-		GiveWeapon (wp_chaingun);
-
-		StatusDrawPic (17,4,GOTGATLINGPIC);
-		facecount = 0;
-		gotgatgun = 1;
-		break;
-
-	case	bo_fullheal:
-		SD_PlaySound (BONUS1UPSND);
-		HealSelf (99);
-		GiveAmmo (25);
-		GiveExtraMan ();
-		gamestate.treasurecount++;
-		break;
-
-	case	bo_food:
-		if (gamestate.health == 100)
-			return;
-
-		SD_PlaySound (HEALTH1SND);
-		HealSelf (10);
-		break;
-
-	case	bo_alpo:
-		if (gamestate.health == 100)
-			return;
-
-		SD_PlaySound (HEALTH1SND);
-		HealSelf (4);
-		break;
-
-	case	bo_gibs:
-		if (gamestate.health >10)
-			return;
-
-		SD_PlaySound (SLURPIESND);
-		HealSelf (1);
-		break;
-
-	case	bo_spear:
-		spearflag = true;
-		spearx = player->x;
-		speary = player->y;
-		spearangle = player->angle;
-		playstate = ex_completed;
-	}
-
-	StartBonusFlash ();
-	check->shapenum = -1;			// remove from list
+        level->player_y = moved_y < destination_y
+                              ? destination_y : (int32_t)moved_y;
+    }
 }
 
-
-/*
-===================
-=
-= TryMove
-=
-= returns true if move ok
-= debug: use pointers to optimize
-===================
-*/
-
-boolean TryMove (objtype *ob)
+int WL_CmdUseHeld(struct wg_level *level, int button_held)
 {
-	int			xl,yl,xh,yh,x,y;
-	objtype		*check;
-	long		deltax,deltay;
+    int check_x;
+    int check_y;
+    uint8_t direction;
+    int elevator_ok;
+    size_t index;
+    uint8_t tile;
 
-	xl = (ob->x-PLAYERSIZE) >>TILESHIFT;
-	yl = (ob->y-PLAYERSIZE) >>TILESHIFT;
-
-	xh = (ob->x+PLAYERSIZE) >>TILESHIFT;
-	yh = (ob->y+PLAYERSIZE) >>TILESHIFT;
-
-//
-// check for solid walls
-//
-	for (y=yl;y<=yh;y++)
-		for (x=xl;x<=xh;x++)
-		{
-			check = actorat[x][y];
-			if (check && check<objlist)
-				return false;
-		}
-
-//
-// check for actors
-//
-	if (yl>0)
-		yl--;
-	if (yh<MAPSIZE-1)
-		yh++;
-	if (xl>0)
-		xl--;
-	if (xh<MAPSIZE-1)
-		xh++;
-
-	for (y=yl;y<=yh;y++)
-		for (x=xl;x<=xh;x++)
-		{
-			check = actorat[x][y];
-			if (check > objlist
-			&& (check->flags & FL_SHOOTABLE) )
-			{
-				deltax = ob->x - check->x;
-				if (deltax < -MINACTORDIST || deltax > MINACTORDIST)
-					continue;
-				deltay = ob->y - check->y;
-				if (deltay < -MINACTORDIST || deltay > MINACTORDIST)
-					continue;
-
-				return false;
-			}
-		}
-
-	return true;
+    if (level == NULL || level->player_angle >= WG_ANGLES)
+    {
+        return 0;
+    }
+    if (level->player_angle < WG_ANGLES / 8
+        || level->player_angle > 7 * WG_ANGLES / 8)
+    {
+        check_x = level->player_tile_x + 1;
+        check_y = level->player_tile_y;
+        direction = 0U;
+        elevator_ok = 1;
+    }
+    else if (level->player_angle < 3 * WG_ANGLES / 8)
+    {
+        check_x = level->player_tile_x;
+        check_y = level->player_tile_y - 1;
+        direction = 2U;
+        elevator_ok = 0;
+    }
+    else if (level->player_angle < 5 * WG_ANGLES / 8)
+    {
+        check_x = level->player_tile_x - 1;
+        check_y = level->player_tile_y;
+        direction = 4U;
+        elevator_ok = 1;
+    }
+    else
+    {
+        check_x = level->player_tile_x;
+        check_y = level->player_tile_y + 1;
+        direction = 6U;
+        elevator_ok = 0;
+    }
+    if (check_x < 0 || check_x >= WG_LEVEL_SIZE
+        || check_y < 0 || check_y >= WG_LEVEL_SIZE)
+    {
+        return 0;
+    }
+    index = (size_t)check_y * WG_LEVEL_SIZE + (size_t)check_x;
+    if (level->info[index] == 98U)
+    {
+        return WL_PushWall(level, (uint8_t)check_x, (uint8_t)check_y,
+                           direction);
+    }
+    tile = level->tiles[index];
+    if (!button_held && tile == 21U && elevator_ok)
+    {
+        ++level->tiles[index];
+        index = (size_t)level->player_tile_y * WG_LEVEL_SIZE
+                + level->player_tile_x;
+        level->secret_level = (uint8_t)(level->areas[index] == 0U);
+        level->level_completed = 1U;
+        (void)WG_QueueSound(level, WG_SOUND_LEVEL_DONE);
+        return 1;
+    }
+    if (!button_held && (tile & 0x80U) != 0U)
+    {
+        return WL_OperateDoor(level, tile & 0x3fU);
+    }
+    (void)WG_QueueSound(level, WG_SOUND_DO_NOTHING);
+    return 0;
 }
 
-
-/*
-===================
-=
-= ClipMove
-=
-===================
-*/
-
-void ClipMove (objtype *ob, long xmove, long ymove)
+int WL_CmdUse(struct wg_level *level)
 {
-	long	basex,basey;
-
-	basex = ob->x;
-	basey = ob->y;
-
-	ob->x = basex+xmove;
-	ob->y = basey+ymove;
-	if (TryMove (ob))
-		return;
-
-	if (noclip && ob->x > 2*TILEGLOBAL && ob->y > 2*TILEGLOBAL &&
-	ob->x < (((long)(mapwidth-1))<<TILESHIFT)
-	&& ob->y < (((long)(mapheight-1))<<TILESHIFT) )
-		return;		// walk through walls
-
-	if (!SD_SoundPlaying())
-		SD_PlaySound (HITWALLSND);
-
-	ob->x = basex+xmove;
-	ob->y = basey;
-	if (TryMove (ob))
-		return;
-
-	ob->x = basex;
-	ob->y = basey+ymove;
-	if (TryMove (ob))
-		return;
-
-	ob->x = basex;
-	ob->y = basey;
+    return WL_CmdUseHeld(level, 0);
 }
 
-//==========================================================================
-
-/*
-===================
-=
-= VictoryTile
-=
-===================
-*/
-
-void VictoryTile (void)
+static int WL_PlayerAttackTarget(const wg_level_t *level, size_t *target_index,
+                                 int knife)
 {
-#ifndef SPEAR
-	SpawnBJVictory ();
-#endif
+    int32_t closest_distance = INT32_MAX;
+    size_t closest = 0U;
+    size_t index;
+    int found = 0;
+    int view_width = level->view_width != 0U
+                         ? level->view_width : WG_VIDEO_WIDTH;
 
-	gamestate.victoryflag = true;
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        const wg_actor_t *actor = &level->actors[index];
+        int32_t screen_delta = actor->view_x - (view_width / 2 - 1);
+
+        if ((actor->flags & (WG_ACTOR_FLAG_SHOOTABLE
+                             | WG_ACTOR_FLAG_VISIBLE))
+                != (WG_ACTOR_FLAG_SHOOTABLE | WG_ACTOR_FLAG_VISIBLE)
+            || screen_delta <= -(view_width / 10)
+            || screen_delta >= view_width / 10
+            || actor->trans_x >= closest_distance)
+        {
+            continue;
+        }
+        closest_distance = actor->trans_x;
+        closest = index;
+        found = 1;
+    }
+    if (!found || (knife && closest_distance > INT32_C(0x18000)))
+    {
+        return 0;
+    }
+    *target_index = closest;
+    return 1;
 }
 
-
-/*
-===================
-=
-= Thrust
-=
-===================
-*/
-
-void Thrust (int angle, long speed)
+int WL_KnifeAttack(struct wg_level *level)
 {
-	long xmove,ymove;
-	long	slowmax;
-	unsigned	offset;
+    size_t target_index;
 
-
-	//
-	// ZERO FUNNY COUNTER IF MOVED!
-	//
-	#ifdef SPEAR
-	if (speed)
-		funnyticount = 0;
-	#endif
-
-	thrustspeed += speed;
-//
-// moving bounds speed
-//
-	if (speed >= MINDIST*2)
-		speed = MINDIST*2-1;
-
-	xmove = FixedByFrac(speed,costable[angle]);
-	ymove = -FixedByFrac(speed,sintable[angle]);
-
-	ClipMove(player,xmove,ymove);
-
-	player->tilex = player->x >> TILESHIFT;		// scale to tile values
-	player->tiley = player->y >> TILESHIFT;
-
-	offset = farmapylookup[player->tiley]+player->tilex;
-	player->areanumber = *(mapsegs[0] + offset) -AREATILE;
-
-	if (*(mapsegs[1] + offset) == EXITTILE)
-		VictoryTile ();
+    if (level == NULL)
+    {
+        return 0;
+    }
+    (void)WG_QueueSound(level, WG_SOUND_ATTACK_KNIFE);
+    if (WL_PlayerAttackTarget(level, &target_index, 1))
+    {
+        (void)WL_DamageActor(level, target_index,
+                             WG_RandomNext(&level->random) >> 4);
+    }
+    return 1;
 }
 
-
-/*
-=============================================================================
-
-								ACTIONS
-
-=============================================================================
-*/
-
-
-/*
-===============
-=
-= Cmd_Fire
-=
-===============
-*/
-
-void Cmd_Fire (void)
+int WL_GunAttack(struct wg_level *level)
 {
-	buttonheld[bt_attack] = true;
+    size_t target_index;
+    wg_actor_t *target;
+    unsigned distance_x;
+    unsigned distance_y;
+    unsigned distance;
+    unsigned damage;
 
-	gamestate.weaponframe = 0;
-
-	player->state = &s_attack;
-
-	gamestate.attackframe = 0;
-	gamestate.attackcount =
-		attackinfo[gamestate.weapon][gamestate.attackframe].tics;
-	gamestate.weaponframe =
-		attackinfo[gamestate.weapon][gamestate.attackframe].frame;
+    if (level == NULL)
+    {
+        return 0;
+    }
+    if (level->player_weapon == WG_WEAPON_PISTOL)
+    {
+        (void)WG_QueueSound(level, WG_SOUND_ATTACK_PISTOL);
+    }
+    else if (level->player_weapon == WG_WEAPON_MACHINEGUN)
+    {
+        (void)WG_QueueSound(level, WG_SOUND_ATTACK_MACHINEGUN);
+    }
+    else if (level->player_weapon == WG_WEAPON_CHAINGUN)
+    {
+        (void)WG_QueueSound(level, WG_SOUND_ATTACK_GATLING);
+    }
+    level->made_noise = 1U;
+    if (!WL_PlayerAttackTarget(level, &target_index, 0))
+    {
+        return 1;
+    }
+    target = &level->actors[target_index];
+    if (!WL_CheckLine(level, target))
+    {
+        return 1;
+    }
+    distance_x = target->tile_x > level->player_tile_x
+                     ? target->tile_x - level->player_tile_x
+                     : level->player_tile_x - target->tile_x;
+    distance_y = target->tile_y > level->player_tile_y
+                     ? target->tile_y - level->player_tile_y
+                     : level->player_tile_y - target->tile_y;
+    distance = distance_x > distance_y ? distance_x : distance_y;
+    if (distance < 2U)
+    {
+        damage = WG_RandomNext(&level->random) / 4U;
+    }
+    else if (distance < 4U)
+    {
+        damage = WG_RandomNext(&level->random) / 6U;
+    }
+    else
+    {
+        if (WG_RandomNext(&level->random) / 12U < distance)
+        {
+            return 1;
+        }
+        damage = WG_RandomNext(&level->random) / 6U;
+    }
+    (void)WL_DamageActor(level, target_index, damage);
+    return 1;
 }
 
-//===========================================================================
-
-/*
-===============
-=
-= Cmd_Use
-=
-===============
-*/
-
-void Cmd_Use (void)
+typedef struct wl_attack_info
 {
-	objtype 	*check;
-	int			checkx,checky,doornum,dir;
-	boolean		elevatorok;
+    int8_t tics;
+    int8_t attack;
+    int8_t frame;
+} wl_attack_info_t;
 
+static const wl_attack_info_t wl_attack_info[4][4] =
+{
+    {{6, 0, 1}, {6, 2, 2}, {6, 0, 3}, {6, -1, 4}},
+    {{6, 0, 1}, {6, 1, 2}, {6, 0, 3}, {6, -1, 4}},
+    {{6, 0, 1}, {6, 1, 2}, {6, 3, 3}, {6, -1, 4}},
+    {{6, 0, 1}, {6, 1, 2}, {6, 4, 3}, {6, -1, 4}}
+};
 
-//
-// find which cardinal direction the player is facing
-//
-	if (player->angle < ANGLES/8 || player->angle > 7*ANGLES/8)
-	{
-		checkx = player->tilex + 1;
-		checky = player->tiley;
-		dir = di_east;
-		elevatorok = true;
-	}
-	else if (player->angle < 3*ANGLES/8)
-	{
-		checkx = player->tilex;
-		checky = player->tiley-1;
-		dir = di_north;
-		elevatorok = false;
-	}
-	else if (player->angle < 5*ANGLES/8)
-	{
-		checkx = player->tilex - 1;
-		checky = player->tiley;
-		dir = di_west;
-		elevatorok = true;
-	}
-	else
-	{
-		checkx = player->tilex;
-		checky = player->tiley + 1;
-		dir = di_south;
-		elevatorok = false;
-	}
-
-	doornum = tilemap[checkx][checky];
-	if (*(mapsegs[1]+farmapylookup[checky]+checkx) == PUSHABLETILE)
-	{
-	//
-	// pushable wall
-	//
-
-		PushWall (checkx,checky,dir);
-		return;
-	}
-	if (!buttonheld[bt_use] && doornum == ELEVATORTILE && elevatorok)
-	{
-	//
-	// use elevator
-	//
-		buttonheld[bt_use] = true;
-
-		tilemap[checkx][checky]++;		// flip switch
-		if (*(mapsegs[0]+farmapylookup[player->tiley]+player->tilex) == ALTELEVATORTILE)
-			playstate = ex_secretlevel;
-		else
-			playstate = ex_completed;
-		SD_PlaySound (LEVELDONESND);
-		SD_WaitSoundDone();
-	}
-	else if (!buttonheld[bt_use] && doornum & 0x80)
-	{
-		buttonheld[bt_use] = true;
-		OperateDoor (doornum & ~0x80);
-	}
-	else
-		SD_PlaySound (DONOTHINGSND);
-
+int WL_StartAttack(struct wg_level *level)
+{
+    if (level == NULL || level->player_dead || level->victory_flag
+        || level->attack_active || level->player_weapon > WG_WEAPON_CHAINGUN
+        || level->player_chosen_weapon > WG_WEAPON_CHAINGUN)
+    {
+        return 0;
+    }
+    level->attack_active = 1U;
+    level->attack_frame = 0U;
+    level->attack_count = wl_attack_info[level->player_weapon][0].tics;
+    level->weapon_frame = (uint8_t)wl_attack_info[level->player_weapon][0].frame;
+    return 1;
 }
 
-/*
-=============================================================================
-
-						   PLAYER CONTROL
-
-=============================================================================
-*/
-
-
-
-/*
-===============
-=
-= SpawnPlayer
-=
-===============
-*/
-
-void SpawnPlayer (int tilex, int tiley, int dir)
+int WL_SelectWeapon(struct wg_level *level, unsigned weapon)
 {
-	player->obclass = playerobj;
-	player->active = true;
-	player->tilex = tilex;
-	player->tiley = tiley;
-	player->areanumber =
-		*(mapsegs[0] + farmapylookup[player->tiley]+player->tilex);
-	player->x = ((long)tilex<<TILESHIFT)+TILEGLOBAL/2;
-	player->y = ((long)tiley<<TILESHIFT)+TILEGLOBAL/2;
-	player->state = &s_player;
-	player->angle = (1-dir)*90;
-	if (player->angle<0)
-		player->angle += ANGLES;
-	player->flags = FL_NEVERMARK;
-	Thrust (0,0);				// set some variables
-
-	InitAreas ();
+    if (level == NULL || weapon > WG_WEAPON_CHAINGUN
+        || weapon > level->player_best_weapon || level->player_ammo == 0U
+        || level->attack_active || level->player_dead || level->victory_flag)
+    {
+        return 0;
+    }
+    level->player_weapon = (uint8_t)weapon;
+    level->player_chosen_weapon = (uint8_t)weapon;
+    level->weapon_frame = 0U;
+    return 1;
 }
 
-
-//===========================================================================
-
-/*
-===============
-=
-= T_KnifeAttack
-=
-= Update player hands, and try to do damage when the proper frame is reached
-=
-===============
-*/
-
-void	KnifeAttack (objtype *ob)
+int WL_TickPlayerAttack(struct wg_level *level, unsigned tics,
+                        int attack_held)
 {
-	objtype *check,*closest;
-	long	dist;
+    if (level == NULL || tics > (unsigned)INT32_MAX)
+    {
+        return 0;
+    }
+    if (!level->attack_active)
+    {
+        return 1;
+    }
+    level->attack_count -= (int32_t)tics;
+    while (level->attack_count <= 0)
+    {
+        const wl_attack_info_t *current =
+            &wl_attack_info[level->player_weapon][level->attack_frame];
 
-	SD_PlaySound (ATKKNIFESND);
-// actually fire
-	dist = 0x7fffffff;
-	closest = NULL;
-	for (check=ob->next ; check ; check=check->next)
-		if ( (check->flags & FL_SHOOTABLE)
-		&& (check->flags & FL_VISABLE)
-		&& abs (check->viewx-centerx) < shootdelta
-		)
-		{
-			if (check->transx < dist)
-			{
-				dist = check->transx;
-				closest = check;
-			}
-		}
-
-	if (!closest || dist> 0x18000l)
-	{
-	// missed
-
-		return;
-	}
-
-// hit something
-	DamageActor (closest,US_RndT() >> 4);
+        switch (current->attack)
+        {
+        case -1:
+            level->attack_active = 0U;
+            level->player_weapon = level->player_ammo == 0U
+                                       ? WG_WEAPON_KNIFE
+                                       : level->player_chosen_weapon;
+            level->attack_frame = 0U;
+            level->weapon_frame = 0U;
+            return 1;
+        case 4:
+            if (level->player_ammo == 0U)
+            {
+                break;
+            }
+            if (attack_held)
+            {
+                level->attack_frame = (uint8_t)(level->attack_frame - 2U);
+            }
+            /* fall through */
+        case 1:
+            if (level->player_ammo == 0U)
+            {
+                ++level->attack_frame;
+                break;
+            }
+            if (!WL_GunAttack(level))
+            {
+                return 0;
+            }
+            --level->player_ammo;
+            break;
+        case 2:
+            if (!WL_KnifeAttack(level))
+            {
+                return 0;
+            }
+            break;
+        case 3:
+            if (level->player_ammo != 0U && attack_held)
+            {
+                level->attack_frame = (uint8_t)(level->attack_frame - 2U);
+            }
+            break;
+        default:
+            break;
+        }
+        level->attack_count += current->tics;
+        ++level->attack_frame;
+        level->weapon_frame = (uint8_t)
+            wl_attack_info[level->player_weapon][level->attack_frame].frame;
+    }
+    return 1;
 }
 
-
-
-void	GunAttack (objtype *ob)
+unsigned WL_StatusDisplayFloor(wg_game_variant_t variant, unsigned map)
 {
-	objtype *check,*closest,*oldclosest;
-	int		damage;
-	int		dx,dy,dist;
-	long	viewdist;
-
-	switch (gamestate.weapon)
-	{
-	case wp_pistol:
-		SD_PlaySound (ATKPISTOLSND);
-		break;
-	case wp_machinegun:
-		SD_PlaySound (ATKMACHINEGUNSND);
-		break;
-	case wp_chaingun:
-		SD_PlaySound (ATKGATLINGSND);
-		break;
-	}
-
-	madenoise = true;
-
-//
-// find potential targets
-//
-	viewdist = 0x7fffffffl;
-	closest = NULL;
-
-	while (1)
-	{
-		oldclosest = closest;
-
-		for (check=ob->next ; check ; check=check->next)
-			if ( (check->flags & FL_SHOOTABLE)
-			&& (check->flags & FL_VISABLE)
-			&& abs (check->viewx-centerx) < shootdelta
-			)
-			{
-				if (check->transx < viewdist)
-				{
-					viewdist = check->transx;
-					closest = check;
-				}
-			}
-
-		if (closest == oldclosest)
-			return;						// no more targets, all missed
-
-	//
-	// trace a line from player to enemey
-	//
-		if (CheckLine(closest))
-			break;
-
-	}
-
-//
-// hit something
-//
-	dx = abs(closest->tilex - player->tilex);
-	dy = abs(closest->tiley - player->tiley);
-	dist = dx>dy ? dx:dy;
-
-	if (dist<2)
-		damage = US_RndT() / 4;
-	else if (dist<4)
-		damage = US_RndT() / 6;
-	else
-	{
-		if ( (US_RndT() / 12) < dist)		// missed
-			return;
-		damage = US_RndT() / 6;
-	}
-
-	DamageActor (closest,damage);
+    if (WG_DataVariantFamily(variant) == WG_GAME_FAMILY_SPEAR && map == 20U)
+    {
+        return 18U;
+    }
+    return map + 1U;
 }
 
-//===========================================================================
-
-/*
-===============
-=
-= VictorySpin
-=
-===============
-*/
-
-void VictorySpin (void)
+int WL_DrawStatusBar(
+    uint8_t framebuffer[WG_VIDEO_WIDTH * WG_VIDEO_HEIGHT],
+    const wg_graphics_t *graphics, const wl_status_t *status)
 {
-	long	desty;
+    wl_status_chunks_t chunks;
+    size_t face;
 
-	if (player->angle > 270)
-	{
-		player->angle -= tics * 3;
-		if (player->angle < 270)
-			player->angle = 270;
-	}
-	else if (player->angle < 270)
-	{
-		player->angle += tics * 3;
-		if (player->angle > 270)
-			player->angle = 270;
-	}
+    if (framebuffer == NULL || graphics == NULL || status == NULL
+        || status->health > 100U || status->weapon > 3U
+        || status->face_frame > 2U || status->face > WL_STATUS_FACE_OUCH
+        || !WL_StatusChunks(graphics->variant, &chunks)
+        || !WL_DrawPicture(framebuffer, graphics, chunks.status_bar,
+                           0, WL_STATUS_Y))
+    {
+        return 0;
+    }
 
-	desty = (((long)player->tiley-5)<<TILESHIFT)-0x3000;
-
-	if (player->y > desty)
-	{
-		player->y -= tics*4096;
-		if (player->y < desty)
-			player->y = desty;
-	}
+    if (status->health == 0U || status->face == WL_STATUS_FACE_DEAD)
+    {
+        face = chunks.face_8a;
+    }
+    else if (status->face == WL_STATUS_FACE_GATLING)
+    {
+        face = chunks.got_gatling;
+    }
+    else if (status->face >= WL_STATUS_FACE_GOD)
+    {
+        if (WG_DataVariantFamily(graphics->variant) != WG_GAME_FAMILY_SPEAR)
+        {
+            return 0;
+        }
+        if (status->face == WL_STATUS_FACE_GOD)
+        {
+            face = chunks.spear_god_1 + status->face_frame;
+        }
+        else if (status->face == WL_STATUS_FACE_WAITING_1
+                 || status->face == WL_STATUS_FACE_WAITING_2)
+        {
+            face = chunks.spear_waiting_1
+                   + (status->face - WL_STATUS_FACE_WAITING_1);
+        }
+        else
+        {
+            face = chunks.spear_ouch;
+        }
+    }
+    else
+    {
+        face = chunks.face_1a
+               + 3U * ((100U - status->health) / 16U)
+               + status->face_frame;
+    }
+    return WL_StatusDrawPicture(framebuffer, graphics, face, 17, 4)
+           && WL_DrawNumber(framebuffer, graphics, &chunks,
+                            21, 16, 3, status->health)
+           && WL_DrawNumber(framebuffer, graphics, &chunks,
+                            14, 16, 1, status->lives)
+           && WL_DrawNumber(framebuffer, graphics, &chunks,
+                            2, 16, 2,
+                            WL_StatusDisplayFloor(graphics->variant,
+                                                  status->map))
+           && WL_DrawNumber(framebuffer, graphics, &chunks,
+                            27, 16, 2, status->ammo)
+           && WL_StatusDrawPicture(framebuffer, graphics,
+                                   (status->keys & 1U) != 0U
+                                   ? chunks.no_key + 1U : chunks.no_key,
+                                   30, 4)
+           && WL_StatusDrawPicture(framebuffer, graphics,
+                                   (status->keys & 2U) != 0U
+                                   ? chunks.no_key + 2U : chunks.no_key,
+                                   30, 20)
+           && WL_StatusDrawPicture(framebuffer, graphics,
+                                   chunks.knife + status->weapon, 32, 8)
+           && WL_DrawNumber(framebuffer, graphics, &chunks,
+                            6, 16, 6, status->score);
 }
-
-
-//===========================================================================
-
-/*
-===============
-=
-= T_Attack
-=
-===============
-*/
-
-void	T_Attack (objtype *ob)
-{
-	struct	atkinf	*cur;
-
-	UpdateFace ();
-
-	if (gamestate.victoryflag)		// watching the BJ actor
-	{
-		VictorySpin ();
-		return;
-	}
-
-	if ( buttonstate[bt_use] && !buttonheld[bt_use] )
-		buttonstate[bt_use] = false;
-
-	if ( buttonstate[bt_attack] && !buttonheld[bt_attack])
-		buttonstate[bt_attack] = false;
-
-	ControlMovement (ob);
-	if (gamestate.victoryflag)		// watching the BJ actor
-		return;
-
-	plux = player->x >> UNSIGNEDSHIFT;			// scale to fit in unsigned
-	pluy = player->y >> UNSIGNEDSHIFT;
-	player->tilex = player->x >> TILESHIFT;		// scale to tile values
-	player->tiley = player->y >> TILESHIFT;
-
-//
-// change frame and fire
-//
-	gamestate.attackcount -= tics;
-	while (gamestate.attackcount <= 0)
-	{
-		cur = &attackinfo[gamestate.weapon][gamestate.attackframe];
-		switch (cur->attack)
-		{
-		case -1:
-			ob->state = &s_player;
-			if (!gamestate.ammo)
-			{
-				gamestate.weapon = wp_knife;
-				DrawWeapon ();
-			}
-			else
-			{
-				if (gamestate.weapon != gamestate.chosenweapon)
-				{
-					gamestate.weapon = gamestate.chosenweapon;
-					DrawWeapon ();
-				}
-			};
-			gamestate.attackframe = gamestate.weaponframe = 0;
-			return;
-
-		case 4:
-			if (!gamestate.ammo)
-				break;
-			if (buttonstate[bt_attack])
-				gamestate.attackframe -= 2;
-		case 1:
-			if (!gamestate.ammo)
-			{	// can only happen with chain gun
-				gamestate.attackframe++;
-				break;
-			}
-			GunAttack (ob);
-			gamestate.ammo--;
-			DrawAmmo ();
-			break;
-
-		case 2:
-			KnifeAttack (ob);
-			break;
-
-		case 3:
-			if (gamestate.ammo && buttonstate[bt_attack])
-				gamestate.attackframe -= 2;
-			break;
-		}
-
-		gamestate.attackcount += cur->tics;
-		gamestate.attackframe++;
-		gamestate.weaponframe =
-			attackinfo[gamestate.weapon][gamestate.attackframe].frame;
-	}
-
-}
-
-
-
-//===========================================================================
-
-/*
-===============
-=
-= T_Player
-=
-===============
-*/
-
-void	T_Player (objtype *ob)
-{
-	if (gamestate.victoryflag)		// watching the BJ actor
-	{
-		VictorySpin ();
-		return;
-	}
-
-	UpdateFace ();
-	CheckWeaponChange ();
-
-	if ( buttonstate[bt_use] )
-		Cmd_Use ();
-
-	if ( buttonstate[bt_attack] && !buttonheld[bt_attack])
-		Cmd_Fire ();
-
-	ControlMovement (ob);
-	if (gamestate.victoryflag)		// watching the BJ actor
-		return;
-
-
-	plux = player->x >> UNSIGNEDSHIFT;			// scale to fit in unsigned
-	pluy = player->y >> UNSIGNEDSHIFT;
-	player->tilex = player->x >> TILESHIFT;		// scale to tile values
-	player->tiley = player->y >> TILESHIFT;
-}
-
-

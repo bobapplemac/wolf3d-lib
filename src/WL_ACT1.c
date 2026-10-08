@@ -1,900 +1,469 @@
-// WL_ACT1.C
+/* Portable door and pushwall actions from the original WL_ACT1.C. */
+#include "WL_ACT1.h"
 
-#include "WL_DEF.H"
-#pragma hdrstop
+#include <stddef.h>
 
-/*
-=============================================================================
+#include "WG_FIXED.h"
+#include "WL_GAME.h"
+#include "WL_MAIN.h"
+#include "WL_STATE.h"
 
-							STATICS
+#define WG_DOOR_OPEN_TICS 300U
 
-=============================================================================
-*/
-
-
-statobj_t	statobjlist[MAXSTATS],*laststatobj;
-
-
-struct
+static int WL_DoorSoundConnected(const wg_level_t *level,
+                                 const wg_door_t *door)
 {
-	int		picnum;
-	stat_t	type;
-} statinfo[] =
-{
-{SPR_STAT_0},					// puddle          spr1v
-{SPR_STAT_1,block},				// Green Barrel    "
-{SPR_STAT_2,block},				// Table/chairs    "
-{SPR_STAT_3,block},				// Floor lamp      "
-{SPR_STAT_4},					// Chandelier      "
-{SPR_STAT_5,block},				// Hanged man      "
-{SPR_STAT_6,bo_alpo},			// Bad food        "
-{SPR_STAT_7,block},				// Red pillar      "
-//
-// NEW PAGE
-//
-{SPR_STAT_8,block},				// Tree            spr2v
-{SPR_STAT_9},					// Skeleton flat   "
-{SPR_STAT_10,block},			// Sink            " (SOD:gibs)
-{SPR_STAT_11,block},			// Potted plant    "
-{SPR_STAT_12,block},			// Urn             "
-{SPR_STAT_13,block},			// Bare table      "
-{SPR_STAT_14},					// Ceiling light   "
-#ifndef SPEAR
-{SPR_STAT_15},					// Kitchen stuff   "
-#else
-{SPR_STAT_15,block},			// Gibs!
-#endif
-//
-// NEW PAGE
-//
-{SPR_STAT_16,block},			// suit of armor   spr3v
-{SPR_STAT_17,block},			// Hanging cage    "
-{SPR_STAT_18,block},			// SkeletoninCage  "
-{SPR_STAT_19},					// Skeleton relax  "
-{SPR_STAT_20,bo_key1},			// Key 1           "
-{SPR_STAT_21,bo_key2},			// Key 2           "
-{SPR_STAT_22,block},			// stuff				(SOD:gibs)
-{SPR_STAT_23},					// stuff
-//
-// NEW PAGE
-//
-{SPR_STAT_24,bo_food}, 			// Good food       spr4v
-{SPR_STAT_25,bo_firstaid},		// First aid       "
-{SPR_STAT_26,bo_clip},			// Clip            "
-{SPR_STAT_27,bo_machinegun},	// Machine gun     "
-{SPR_STAT_28,bo_chaingun},		// Gatling gun     "
-{SPR_STAT_29,bo_cross},			// Cross           "
-{SPR_STAT_30,bo_chalice},		// Chalice         "
-{SPR_STAT_31,bo_bible},			// Bible           "
-//
-// NEW PAGE
-//
-{SPR_STAT_32,bo_crown},			// crown           spr5v
-{SPR_STAT_33,bo_fullheal},		// one up          "
-{SPR_STAT_34,bo_gibs},			// gibs            "
-{SPR_STAT_35,block},			// barrel          "
-{SPR_STAT_36,block},			// well            "
-{SPR_STAT_37,block},			// Empty well      "
-{SPR_STAT_38,bo_gibs},			// Gibs 2          "
-{SPR_STAT_39,block},			// flag				"
-//
-// NEW PAGE
-//
-#ifndef SPEAR
-{SPR_STAT_40,block},			// Call Apogee		spr7v
-#else
-{SPR_STAT_40},					// Red light
-#endif
-//
-// NEW PAGE
-//
-{SPR_STAT_41},					// junk            "
-{SPR_STAT_42},					// junk 		   "
-{SPR_STAT_43},					// junk            "
-#ifndef SPEAR
-{SPR_STAT_44},					// pots            "
-#else
-{SPR_STAT_44,block},			// Gibs!
-#endif
-{SPR_STAT_45,block},			// stove           " (SOD:gibs)
-{SPR_STAT_46,block},			// spears          " (SOD:gibs)
-{SPR_STAT_47},					// vines			"
-//
-// NEW PAGE
-//
-#ifdef SPEAR
-{SPR_STAT_48,block},			// marble pillar
-{SPR_STAT_49,bo_25clip},		// bonus 25 clip
-{SPR_STAT_50,block},			// truck
-{SPR_STAT_51,bo_spear},			// SPEAR OF DESTINY!
-#endif
+    uint8_t area = level->areas[(size_t)door->tile_y * WG_LEVEL_SIZE
+                                + door->tile_x];
 
-{SPR_STAT_26,bo_clip2},			// Clip            "
-{-1}							// terminator
-};
-
-/*
-===============
-=
-= InitStaticList
-=
-===============
-*/
-
-void InitStaticList (void)
-{
-	laststatobj = &statobjlist[0];
+    return area < WG_NUM_AREAS && level->area_by_player[area] != 0U;
 }
 
-
-
-/*
-===============
-=
-= SpawnStatic
-=
-===============
-*/
-
-void SpawnStatic (int tilex, int tiley, int type)
+static int WL_DoorIsObstructed(const wg_level_t *level,
+                               const wg_door_t *door)
 {
-	laststatobj->shapenum = statinfo[type].picnum;
-	laststatobj->tilex = tilex;
-	laststatobj->tiley = tiley;
-	laststatobj->visspot = &spotvis[tilex][tiley];
+    uint16_t occupant;
+    const wg_actor_t *check;
 
-	switch (statinfo[type].type)
-	{
-	case block:
-		(unsigned)actorat[tilex][tiley] = 1;		// consider it a blocking tile
-	case dressing:
-		laststatobj->flags = 0;
-		break;
-
-	case	bo_cross:
-	case	bo_chalice:
-	case	bo_bible:
-	case	bo_crown:
-	case	bo_fullheal:
-		if (!loadedgame)
-		  gamestate.treasuretotal++;
-
-	case	bo_firstaid:
-	case	bo_key1:
-	case	bo_key2:
-	case	bo_key3:
-	case	bo_key4:
-	case	bo_clip:
-	case	bo_25clip:
-	case	bo_machinegun:
-	case	bo_chaingun:
-	case	bo_food:
-	case	bo_alpo:
-	case	bo_gibs:
-	case	bo_spear:
-		laststatobj->flags = FL_BONUS;
-		laststatobj->itemnumber = statinfo[type].type;
-		break;
-	}
-
-	laststatobj++;
-
-	if (laststatobj == &statobjlist[MAXSTATS])
-		Quit ("Too many static objects!\n");
+    occupant = level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE
+                               + door->tile_x];
+    if (occupant != 0U)
+    {
+        return 1;
+    }
+    if (level->player_tile_x == door->tile_x
+        && level->player_tile_y == door->tile_y)
+    {
+        return 1;
+    }
+    if (door->vertical != 0U && level->player_tile_y == door->tile_y
+        && (((level->player_x + WG_MIN_DISTANCE) / WG_FIXED_ONE
+             == door->tile_x)
+            || ((level->player_x - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_x)))
+    {
+        return 1;
+    }
+    if (door->vertical == 0U && level->player_tile_x == door->tile_x
+        && (((level->player_y + WG_MIN_DISTANCE) / WG_FIXED_ONE
+             == door->tile_y)
+            || ((level->player_y - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_y)))
+    {
+        return 1;
+    }
+    if (door->vertical != 0U)
+    {
+        occupant = level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE
+                                   + door->tile_x - 1U];
+        if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+            && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
+        {
+            check = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((check->x + WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_x)
+            {
+                return 1;
+            }
+        }
+        occupant = level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE
+                                   + door->tile_x + 1U];
+        if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+            && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
+        {
+            check = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((check->x - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_x)
+            {
+                return 1;
+            }
+        }
+    }
+    else
+    {
+        occupant = level->actor_at[((size_t)door->tile_y - 1U)
+                                   * WG_LEVEL_SIZE + door->tile_x];
+        if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+            && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
+        {
+            check = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((check->y + WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_y)
+            {
+                return 1;
+            }
+        }
+        occupant = level->actor_at[((size_t)door->tile_y + 1U)
+                                   * WG_LEVEL_SIZE + door->tile_x];
+        if (occupant >= WG_ACTOR_AT_ACTOR_BASE
+            && occupant < WG_ACTOR_AT_ACTOR_BASE + level->actor_count)
+        {
+            check = &level->actors[occupant - WG_ACTOR_AT_ACTOR_BASE];
+            if ((check->y - WG_MIN_DISTANCE) / WG_FIXED_ONE
+                == door->tile_y)
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
-
-/*
-===============
-=
-= PlaceItemType
-=
-= Called during game play to drop actors' items.  It finds the proper
-= item number based on the item type (bo_???).  If there are no free item
-= spots, nothing is done.
-=
-===============
-*/
-
-void PlaceItemType (int itemtype, int tilex, int tiley)
+static int WL_ClosingDoorIsObstructed(const wg_level_t *level,
+                                      const wg_door_t *door,
+                                      size_t door_index)
 {
-	int			type;
-	statobj_t	*spot;
+    size_t spot = (size_t)door->tile_y * WG_LEVEL_SIZE + door->tile_x;
 
-//
-// find the item number
-//
-	for (type=0 ;  ; type++)
-	{
-		if (statinfo[type].picnum == -1)		// end of list
-			Quit ("PlaceItemType: couldn't find type!");
-		if (statinfo[type].type == itemtype)
-			break;
-	}
-
-//
-// find a spot in statobjlist to put it in
-//
-	for (spot=&statobjlist[0] ; ; spot++)
-	{
-		if (spot==laststatobj)
-		{
-			if (spot == &statobjlist[MAXSTATS])
-				return;							// no free spots
-			laststatobj++;						// space at end
-			break;
-		}
-
-		if (spot->shapenum == -1)				// -1 is a free spot
-			break;
-	}
-//
-// place it
-//
-	spot->shapenum = statinfo[type].picnum;
-	spot->tilex = tilex;
-	spot->tiley = tiley;
-	spot->visspot = &spotvis[tilex][tiley];
-	spot->flags = FL_BONUS;
-	spot->itemnumber = statinfo[type].type;
+    /* DoorClosing in the DOS source deliberately performs a narrower test
+       than CloseDoor: once closing has begun, only an object that replaced
+       the door token in actorat[] or the player standing in the door tile
+       makes it reopen.  Repeating CloseDoor's adjacent-overlap test here
+       keeps doors open when a guard merely brushes their threshold. */
+    return level->actor_at[spot] != (uint16_t)(0x80U | door_index)
+           || (level->player_tile_x == door->tile_x
+               && level->player_tile_y == door->tile_y);
 }
 
-
-
-/*
-=============================================================================
-
-							DOORS
-
-doorobjlist[] holds most of the information for the doors
-
-doorposition[] holds the amount the door is open, ranging from 0 to 0xffff
-	this is directly accessed by AsmRefresh during rendering
-
-The number of doors is limited to 64 because a spot in tilemap holds the
-	door number in the low 6 bits, with the high bit meaning a door center
-	and bit 6 meaning a door side tile
-
-Open doors conect two areas, so sounds will travel between them and sight
-	will be checked when the player is in a connected area.
-
-Areaconnect is incremented/decremented by each door. If >0 they connect
-
-Every time a door opens or closes the areabyplayer matrix gets recalculated.
-	An area is true if it connects with the player's current spor.
-
-=============================================================================
-*/
-
-#define DOORWIDTH	0x7800
-#define OPENTICS	300
-
-doorobj_t	doorobjlist[MAXDOORS],*lastdoorobj;
-int			doornum;
-
-unsigned	doorposition[MAXDOORS];		// leading edge of door 0=closed
-										// 0xffff = fully open
-
-byte		far areaconnect[NUMAREAS][NUMAREAS];
-
-boolean		areabyplayer[NUMAREAS];
-
-
-/*
-==============
-=
-= ConnectAreas
-=
-= Scans outward from playerarea, marking all connected areas
-=
-==============
-*/
-
-void RecursiveConnect (int areanumber)
+int WL_OpenDoor(struct wg_level *level, size_t door_index)
 {
-	int	i;
+    wg_door_t *door;
 
-	for (i=0;i<NUMAREAS;i++)
-	{
-		if (areaconnect[areanumber][i] && !areabyplayer[i])
-		{
-			areabyplayer[i] = true;
-			RecursiveConnect (i);
-		}
-	}
+    if (level == NULL || door_index >= level->door_count)
+    {
+        return 0;
+    }
+    door = &level->doors[door_index];
+    if (door->action == WG_DOOR_OPEN)
+    {
+        door->tic_count = 0U;
+    }
+    else
+    {
+        door->action = WG_DOOR_OPENING;
+    }
+    return 1;
 }
 
-
-void ConnectAreas (void)
+int WL_CloseDoor(struct wg_level *level, size_t door_index)
 {
-	memset (areabyplayer,0,sizeof(areabyplayer));
-	areabyplayer[player->areanumber] = true;
-	RecursiveConnect (player->areanumber);
+    wg_door_t *door;
+
+    if (level == NULL || door_index >= level->door_count)
+    {
+        return 0;
+    }
+    door = &level->doors[door_index];
+    if (WL_DoorIsObstructed(level, door))
+    {
+        return 0;
+    }
+    if (WL_DoorSoundConnected(level, door))
+    {
+        (void)WG_QueueSoundAt(
+            level, WG_SOUND_CLOSE_DOOR,
+            door->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+            door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+    }
+    door->action = WG_DOOR_CLOSING;
+    level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE + door->tile_x]
+        = (uint16_t)(0x80U | door_index);
+    return 1;
 }
 
-
-void InitAreas (void)
+int WL_OperateDoor(struct wg_level *level, size_t door_index)
 {
-	memset (areabyplayer,0,sizeof(areabyplayer));
-	areabyplayer[player->areanumber] = true;
+    wg_door_t *door;
+
+    if (level == NULL || door_index >= level->door_count)
+    {
+        return 0;
+    }
+    door = &level->doors[door_index];
+    if (door->lock >= WG_DOOR_LOCK_1 && door->lock <= WG_DOOR_LOCK_4
+        && (level->player_keys
+            & (1U << (door->lock - WG_DOOR_LOCK_1))) == 0U)
+    {
+        (void)WG_QueueSound(level, WG_SOUND_NOWAY);
+        return 0;
+    }
+    if (door->action == WG_DOOR_CLOSED
+        || door->action == WG_DOOR_CLOSING)
+    {
+        return WL_OpenDoor(level, door_index);
+    }
+    return WL_CloseDoor(level, door_index);
 }
 
-
-
-/*
-===============
-=
-= InitDoorList
-=
-===============
-*/
-
-void InitDoorList (void)
+int WL_MoveDoors(struct wg_level *level, unsigned tics)
 {
-	memset (areabyplayer,0,sizeof(areabyplayer));
-	_fmemset (areaconnect,0,sizeof(areaconnect));
+    size_t index;
 
-	lastdoorobj = &doorobjlist[0];
-	doornum = 0;
+    if (level == NULL)
+    {
+        return 0;
+    }
+    if (level->victory_flag != 0U)
+    {
+        return 1;
+    }
+    for (index = 0U; index < level->door_count; ++index)
+    {
+        wg_door_t *door = &level->doors[index];
+
+        if (door->action == WG_DOOR_OPEN)
+        {
+            uint64_t elapsed = (uint64_t)door->tic_count + tics;
+
+            door->tic_count = (uint16_t)(elapsed > UINT16_MAX
+                                             ? UINT16_MAX : elapsed);
+            if (elapsed >= WG_DOOR_OPEN_TICS)
+            {
+                (void)WL_CloseDoor(level, index);
+            }
+        }
+        else if (door->action == WG_DOOR_OPENING)
+        {
+            int just_started = door->position == 0U;
+
+            if (tics >= 64U
+                || (uint32_t)door->position + ((uint32_t)tics << 10)
+                       >= 0xffffU)
+            {
+                door->position = 0xffffU;
+                door->tic_count = 0U;
+                door->action = WG_DOOR_OPEN;
+                level->actor_at[(size_t)door->tile_y * WG_LEVEL_SIZE
+                                + door->tile_x] = 0U;
+            }
+            else
+            {
+                door->position = (uint16_t)(door->position
+                                             + ((uint32_t)tics << 10));
+            }
+            (void)WL_UpdateAreaConnectivity(level);
+            if (just_started && WL_DoorSoundConnected(level, door))
+            {
+                (void)WG_QueueSoundAt(
+                    level, WG_SOUND_OPEN_DOOR,
+                    door->tile_x * WG_FIXED_ONE + WG_FIXED_ONE / 2,
+                    door->tile_y * WG_FIXED_ONE + WG_FIXED_ONE / 2);
+            }
+        }
+        else if (door->action == WG_DOOR_CLOSING)
+        {
+            uint32_t movement = tics >= 64U ? 0xffffU
+                                            : (uint32_t)tics << 10;
+
+            if (WL_ClosingDoorIsObstructed(level, door, index))
+            {
+                (void)WL_OpenDoor(level, index);
+            }
+            else if (movement >= door->position)
+            {
+                door->position = 0U;
+                door->action = WG_DOOR_CLOSED;
+                (void)WL_UpdateAreaConnectivity(level);
+            }
+            else
+            {
+                door->position = (uint16_t)(door->position - movement);
+            }
+        }
+    }
+    return 1;
 }
 
-
-/*
-===============
-=
-= SpawnDoor
-=
-===============
-*/
-
-void SpawnDoor (int tilex, int tiley, boolean vertical, int lock)
+static int WL_PushWallSpotBlocked(const wg_level_t *level, int tile_x,
+                                  int tile_y)
 {
-	int	areanumber;
-	unsigned	far *map;
+    size_t index;
 
-	if (doornum==64)
-		Quit ("64+ doors on level!");
+    if (tile_x < 0 || tile_x >= WG_LEVEL_SIZE
+        || tile_y < 0 || tile_y >= WG_LEVEL_SIZE
+        || level->tiles[(size_t)tile_y * WG_LEVEL_SIZE
+                        + (size_t)tile_x] != 0U)
+    {
+        return 1;
+    }
+    for (index = 0U; index < level->actor_count; ++index)
+    {
+        const wg_actor_t *actor = &level->actors[index];
 
-	doorposition[doornum] = 0;		// doors start out fully closed
-	lastdoorobj->tilex = tilex;
-	lastdoorobj->tiley = tiley;
-	lastdoorobj->vertical = vertical;
-	lastdoorobj->lock = lock;
-	lastdoorobj->action = dr_closed;
+        if ((actor->flags & WG_ACTOR_FLAG_SHOOTABLE) != 0U
+            && (actor->flags & WG_ACTOR_FLAG_REMOVED) == 0U
+            && actor->tile_x == (uint8_t)tile_x
+            && actor->tile_y == (uint8_t)tile_y)
+        {
+            return 1;
+        }
+    }
+    for (index = 0U; index < level->static_count; ++index)
+    {
+        const wg_static_object_t *object = &level->statics[index];
 
-	(unsigned)actorat[tilex][tiley] = doornum | 0x80;	// consider it a solid wall
-
-//
-// make the door tile a special tile, and mark the adjacent tiles
-// for door sides
-//
-	tilemap[tilex][tiley] = doornum | 0x80;
-	map = mapsegs[0] + farmapylookup[tiley]+tilex;
-	if (vertical)
-	{
-		*map = *(map-1);                        // set area number
-		tilemap[tilex][tiley-1] |= 0x40;
-		tilemap[tilex][tiley+1] |= 0x40;
-	}
-	else
-	{
-		*map = *(map-mapwidth);					// set area number
-		tilemap[tilex-1][tiley] |= 0x40;
-		tilemap[tilex+1][tiley] |= 0x40;
-	}
-
-	doornum++;
-	lastdoorobj++;
+        if (object->removed == 0U && object->blocking != 0U
+            && object->tile_x == (uint8_t)tile_x
+            && object->tile_y == (uint8_t)tile_y)
+        {
+            return 1;
+        }
+    }
+    return 0;
 }
 
-//===========================================================================
-
-/*
-=====================
-=
-= OpenDoor
-=
-=====================
-*/
-
-void OpenDoor (int door)
+static int WL_PushWallStep(uint8_t direction, int *delta_x, int *delta_y)
 {
-	if (doorobjlist[door].action == dr_open)
-		doorobjlist[door].ticcount = 0;			// reset open time
-	else
-		doorobjlist[door].action = dr_opening;	// start it opening
+    if (delta_x == NULL || delta_y == NULL)
+    {
+        return 0;
+    }
+    *delta_x = 0;
+    *delta_y = 0;
+    switch (direction)
+    {
+    case 0U:
+        *delta_x = 1;
+        return 1;
+    case 2U:
+        *delta_y = -1;
+        return 1;
+    case 4U:
+        *delta_x = -1;
+        return 1;
+    case 6U:
+        *delta_y = 1;
+        return 1;
+    default:
+        return 0;
+    }
 }
 
-
-/*
-=====================
-=
-= CloseDoor
-=
-=====================
-*/
-
-void CloseDoor (int door)
+int WL_PushWall(struct wg_level *level, uint8_t tile_x, uint8_t tile_y,
+                uint8_t direction)
 {
-	int	tilex,tiley,area;
-	objtype *check;
+    int delta_x;
+    int delta_y;
+    int destination_x;
+    int destination_y;
+    size_t source;
+    size_t destination;
+    uint8_t old_tile;
 
-//
-// don't close on anything solid
-//
-	tilex = doorobjlist[door].tilex;
-	tiley = doorobjlist[door].tiley;
-
-	if (actorat[tilex][tiley])
-		return;
-
-	if (player->tilex == tilex && player->tiley == tiley)
-		return;
-
-	if (doorobjlist[door].vertical)
-	{
-		if ( player->tiley == tiley )
-		{
-			if ( ((player->x+MINDIST) >>TILESHIFT) == tilex )
-				return;
-			if ( ((player->x-MINDIST) >>TILESHIFT) == tilex )
-				return;
-		}
-		check = actorat[tilex-1][tiley];
-		if (check && ((check->x+MINDIST) >> TILESHIFT) == tilex )
-			return;
-		check = actorat[tilex+1][tiley];
-		if (check && ((check->x-MINDIST) >> TILESHIFT) == tilex )
-			return;
-	}
-	else if (!doorobjlist[door].vertical)
-	{
-		if (player->tilex == tilex)
-		{
-			if ( ((player->y+MINDIST) >>TILESHIFT) == tiley )
-				return;
-			if ( ((player->y-MINDIST) >>TILESHIFT) == tiley )
-				return;
-		}
-		check = actorat[tilex][tiley-1];
-		if (check && ((check->y+MINDIST) >> TILESHIFT) == tiley )
-			return;
-		check = actorat[tilex][tiley+1];
-		if (check && ((check->y-MINDIST) >> TILESHIFT) == tiley )
-			return;
-	}
-
-
-//
-// play door sound if in a connected area
-//
-	area = *(mapsegs[0] + farmapylookup[doorobjlist[door].tiley]
-			+doorobjlist[door].tilex)-AREATILE;
-	if (areabyplayer[area])
-	{
-		PlaySoundLocTile(CLOSEDOORSND,doorobjlist[door].tilex,doorobjlist[door].tiley);	// JAB
-	}
-
-	doorobjlist[door].action = dr_closing;
-//
-// make the door space solid
-//
-	(unsigned)actorat[tilex][tiley]
-		= door | 0x80;
+    if (level == NULL || level->pushwall_state != 0U
+        || tile_x >= WG_LEVEL_SIZE || tile_y >= WG_LEVEL_SIZE
+        || !WL_PushWallStep(direction, &delta_x, &delta_y))
+    {
+        return 0;
+    }
+    source = (size_t)tile_y * WG_LEVEL_SIZE + tile_x;
+    old_tile = level->tiles[source];
+    if ((old_tile & 63U) == 0U || (old_tile & 0x80U) != 0U)
+    {
+        return 0;
+    }
+    destination_x = (int)tile_x + delta_x;
+    destination_y = (int)tile_y + delta_y;
+    if (WL_PushWallSpotBlocked(level, destination_x, destination_y))
+    {
+        (void)WG_QueueSound(level, WG_SOUND_NOWAY);
+        return 0;
+    }
+    destination = (size_t)destination_y * WG_LEVEL_SIZE
+                  + (size_t)destination_x;
+    level->tiles[destination] = old_tile;
+    level->actor_at[destination] = old_tile;
+    ++level->secret_count;
+    level->pushwall_x = tile_x;
+    level->pushwall_y = tile_y;
+    level->pushwall_direction = direction;
+    level->pushwall_state = 1U;
+    level->pushwall_position = 0U;
+    level->tiles[source] = (uint8_t)(old_tile | 0xc0U);
+    level->info[source] = 0U;
+    (void)WG_QueueSound(level, WG_SOUND_PUSHWALL);
+    return 1;
 }
 
-
-
-/*
-=====================
-=
-= OperateDoor
-=
-= The player wants to change the door's direction
-=
-=====================
-*/
-
-void OperateDoor (int door)
+int WL_MovePushWalls(struct wg_level *level, unsigned tics)
 {
-	int	lock;
+    static const int direction_x[] = { 1, 0, -1, 0 };
+    static const int direction_y[] = { 0, -1, 0, 1 };
+    unsigned old_block;
+    unsigned direction_index;
+    unsigned next_state;
+    int delta_x;
+    int delta_y;
+    int next_x;
+    int next_y;
+    size_t current;
+    size_t next;
+    uint8_t old_tile;
+    uint8_t player_area = 0U;
 
-	lock = doorobjlist[door].lock;
-	if (lock >= dr_lock1 && lock <= dr_lock4)
-	{
-		if ( ! (gamestate.keys & (1 << (lock-dr_lock1) ) ) )
-		{
-			SD_PlaySound (NOWAYSND);		// locked
-			return;
-		}
-	}
+    if (level == NULL)
+    {
+        return 0;
+    }
+    if (level->pushwall_state == 0U)
+    {
+        return 1;
+    }
+    if (tics > (unsigned)UINT16_MAX - level->pushwall_state)
+    {
+        return 0;
+    }
+    old_block = level->pushwall_state / 128U;
+    next_state = level->pushwall_state + tics;
+    level->pushwall_state = (uint16_t)next_state;
+    if (next_state / 128U != old_block)
+    {
+        current = (size_t)level->pushwall_y * WG_LEVEL_SIZE
+                  + level->pushwall_x;
+        old_tile = (uint8_t)(level->tiles[current] & 63U);
+        level->tiles[current] = 0U;
+        level->actor_at[current] = 0U;
+        if (level->player_tile_x < WG_LEVEL_SIZE
+            && level->player_tile_y < WG_LEVEL_SIZE)
+        {
+            uint8_t area = level->areas[(size_t)level->player_tile_y
+                                        * WG_LEVEL_SIZE
+                                        + level->player_tile_x];
 
-	switch (doorobjlist[door].action)
-	{
-	case dr_closed:
-	case dr_closing:
-		OpenDoor (door);
-		break;
-	case dr_open:
-	case dr_opening:
-		CloseDoor (door);
-		break;
-	}
+            if (area < WG_NUM_AREAS)
+            {
+                player_area = area;
+            }
+        }
+        level->areas[current] = player_area;
+        if (next_state > 256U)
+        {
+            level->pushwall_state = 0U;
+            return 1;
+        }
+        direction_index = level->pushwall_direction / 2U;
+        if (direction_index >= 4U)
+        {
+            return 0;
+        }
+        delta_x = direction_x[direction_index];
+        delta_y = direction_y[direction_index];
+        level->pushwall_x = (uint8_t)((int)level->pushwall_x + delta_x);
+        level->pushwall_y = (uint8_t)((int)level->pushwall_y + delta_y);
+        next_x = (int)level->pushwall_x + delta_x;
+        next_y = (int)level->pushwall_y + delta_y;
+        if (WL_PushWallSpotBlocked(level, next_x, next_y))
+        {
+            level->pushwall_state = 0U;
+            return 1;
+        }
+        next = (size_t)next_y * WG_LEVEL_SIZE + (size_t)next_x;
+        level->tiles[next] = old_tile;
+        level->actor_at[next] = old_tile;
+        current = (size_t)level->pushwall_y * WG_LEVEL_SIZE
+                  + level->pushwall_x;
+        level->tiles[current] = (uint8_t)(old_tile | 0xc0U);
+    }
+    level->pushwall_position = (uint8_t)((next_state / 2U) & 63U);
+    return 1;
 }
-
-
-//===========================================================================
-
-/*
-===============
-=
-= DoorOpen
-=
-= Close the door after three seconds
-=
-===============
-*/
-
-void DoorOpen (int door)
-{
-	if ( (doorobjlist[door].ticcount += tics) >= OPENTICS)
-		CloseDoor (door);
-}
-
-
-
-/*
-===============
-=
-= DoorOpening
-=
-===============
-*/
-
-void DoorOpening (int door)
-{
-	int		area1,area2;
-	unsigned	far	*map;
-	long	position;
-
-	position = doorposition[door];
-	if (!position)
-	{
-	//
-	// door is just starting to open, so connect the areas
-	//
-		map = mapsegs[0] + farmapylookup[doorobjlist[door].tiley]
-			+doorobjlist[door].tilex;
-
-		if (doorobjlist[door].vertical)
-		{
-			area1 =	*(map+1);
-			area2 =	*(map-1);
-		}
-		else
-		{
-			area1 =	*(map-mapwidth);
-			area2 =	*(map+mapwidth);
-		}
-		area1 -= AREATILE;
-		area2 -= AREATILE;
-		areaconnect[area1][area2]++;
-		areaconnect[area2][area1]++;
-		ConnectAreas ();
-		if (areabyplayer[area1])
-		{
-			PlaySoundLocTile(OPENDOORSND,doorobjlist[door].tilex,doorobjlist[door].tiley);	// JAB
-		}
-	}
-
-//
-// slide the door by an adaptive amount
-//
-	position += tics<<10;
-	if (position >= 0xffff)
-	{
-	//
-	// door is all the way open
-	//
-		position = 0xffff;
-		doorobjlist[door].ticcount = 0;
-		doorobjlist[door].action = dr_open;
-		actorat[doorobjlist[door].tilex][doorobjlist[door].tiley] = 0;
-	}
-
-	doorposition[door] = position;
-}
-
-
-/*
-===============
-=
-= DoorClosing
-=
-===============
-*/
-
-void DoorClosing (int door)
-{
-	int		area1,area2,move;
-	unsigned	far	*map;
-	long	position;
-	int		tilex,tiley;
-
-	tilex = doorobjlist[door].tilex;
-	tiley = doorobjlist[door].tiley;
-
-	if ( ((unsigned)actorat[tilex][tiley] != (door | 0x80))
-	|| (player->tilex == tilex && player->tiley == tiley) )
-	{			// something got inside the door
-		OpenDoor (door);
-		return;
-	};
-
-	position = doorposition[door];
-
-//
-// slide the door by an adaptive amount
-//
-	position -= tics<<10;
-	if (position <= 0)
-	{
-	//
-	// door is closed all the way, so disconnect the areas
-	//
-		position = 0;
-
-		doorobjlist[door].action = dr_closed;
-
-		map = mapsegs[0] + farmapylookup[doorobjlist[door].tiley]
-			+doorobjlist[door].tilex;
-
-		if (doorobjlist[door].vertical)
-		{
-			area1 =	*(map+1);
-			area2 =	*(map-1);
-		}
-		else
-		{
-			area1 =	*(map-mapwidth);
-			area2 =	*(map+mapwidth);
-		}
-		area1 -= AREATILE;
-		area2 -= AREATILE;
-		areaconnect[area1][area2]--;
-		areaconnect[area2][area1]--;
-
-		ConnectAreas ();
-	}
-
-	doorposition[door] = position;
-}
-
-
-
-
-/*
-=====================
-=
-= MoveDoors
-=
-= Called from PlayLoop
-=
-=====================
-*/
-
-void MoveDoors (void)
-{
-	int		door;
-
-	if (gamestate.victoryflag)		// don't move door during victory sequence
-		return;
-
-	for (door = 0 ; door < doornum ; door++)
-		switch (doorobjlist[door].action)
-		{
-		case dr_open:
-			DoorOpen (door);
-			break;
-
-		case dr_opening:
-			DoorOpening(door);
-			break;
-
-		case dr_closing:
-			DoorClosing(door);
-			break;
-		}
-}
-
-
-/*
-=============================================================================
-
-						PUSHABLE WALLS
-
-=============================================================================
-*/
-
-unsigned	pwallstate;
-unsigned	pwallpos;			// amount a pushable wall has been moved (0-63)
-unsigned	pwallx,pwally;
-int			pwalldir;
-
-/*
-===============
-=
-= PushWall
-=
-===============
-*/
-
-void PushWall (int checkx, int checky, int dir)
-{
-	int		oldtile;
-
-	if (pwallstate)
-	  return;
-
-
-	oldtile = tilemap[checkx][checky];
-	if (!oldtile)
-		return;
-
-	switch (dir)
-	{
-	case di_north:
-		if (actorat[checkx][checky-1])
-		{
-			SD_PlaySound (NOWAYSND);
-			return;
-		}
-		(unsigned)actorat[checkx][checky-1] =
-		tilemap[checkx][checky-1] = oldtile;
-		break;
-
-	case di_east:
-		if (actorat[checkx+1][checky])
-		{
-			SD_PlaySound (NOWAYSND);
-			return;
-		}
-		(unsigned)actorat[checkx+1][checky] =
-		tilemap[checkx+1][checky] = oldtile;
-		break;
-
-	case di_south:
-		if (actorat[checkx][checky+1])
-		{
-			SD_PlaySound (NOWAYSND);
-			return;
-		}
-		(unsigned)actorat[checkx][checky+1] =
-		tilemap[checkx][checky+1] = oldtile;
-		break;
-
-	case di_west:
-		if (actorat[checkx-1][checky])
-		{
-			SD_PlaySound (NOWAYSND);
-			return;
-		}
-		(unsigned)actorat[checkx-1][checky] =
-		tilemap[checkx-1][checky] = oldtile;
-		break;
-	}
-
-	gamestate.secretcount++;
-	pwallx = checkx;
-	pwally = checky;
-	pwalldir = dir;
-	pwallstate = 1;
-	pwallpos = 0;
-	tilemap[pwallx][pwally] |= 0xc0;
-	*(mapsegs[1]+farmapylookup[pwally]+pwallx) = 0;	// remove P tile info
-
-	SD_PlaySound (PUSHWALLSND);
-}
-
-
-
-/*
-=================
-=
-= MovePWalls
-=
-=================
-*/
-
-void MovePWalls (void)
-{
-	int		oldblock,oldtile;
-
-	if (!pwallstate)
-		return;
-
-	oldblock = pwallstate/128;
-
-	pwallstate += tics;
-
-	if (pwallstate/128 != oldblock)
-	{
-	// block crossed into a new block
-		oldtile = tilemap[pwallx][pwally] & 63;
-
-		//
-		// the tile can now be walked into
-		//
-		tilemap[pwallx][pwally] = 0;
-		(unsigned)actorat[pwallx][pwally] = 0;
-		*(mapsegs[0]+farmapylookup[pwally]+pwallx) = player->areanumber+AREATILE;
-
-		//
-		// see if it should be pushed farther
-		//
-		if (pwallstate>256)
-		{
-		//
-		// the block has been pushed two tiles
-		//
-			pwallstate = 0;
-			return;
-		}
-		else
-		{
-			switch (pwalldir)
-			{
-			case di_north:
-				pwally--;
-				if (actorat[pwallx][pwally-1])
-				{
-					pwallstate = 0;
-					return;
-				}
-				(unsigned)actorat[pwallx][pwally-1] =
-				tilemap[pwallx][pwally-1] = oldtile;
-				break;
-
-			case di_east:
-				pwallx++;
-				if (actorat[pwallx+1][pwally])
-				{
-					pwallstate = 0;
-					return;
-				}
-				(unsigned)actorat[pwallx+1][pwally] =
-				tilemap[pwallx+1][pwally] = oldtile;
-				break;
-
-			case di_south:
-				pwally++;
-				if (actorat[pwallx][pwally+1])
-				{
-					pwallstate = 0;
-					return;
-				}
-				(unsigned)actorat[pwallx][pwally+1] =
-				tilemap[pwallx][pwally+1] = oldtile;
-				break;
-
-			case di_west:
-				pwallx--;
-				if (actorat[pwallx-1][pwally])
-				{
-					pwallstate = 0;
-					return;
-				}
-				(unsigned)actorat[pwallx-1][pwally] =
-				tilemap[pwallx-1][pwally] = oldtile;
-				break;
-			}
-
-			tilemap[pwallx][pwally] = oldtile | 0xc0;
-		}
-	}
-
-
-	pwallpos = (pwallstate/2)&63;
-
-}
-
