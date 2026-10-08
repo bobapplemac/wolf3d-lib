@@ -58,6 +58,9 @@ typedef struct wg_data_set
 } wg_data_set_t;
 
 int WG_DataOpen(wg_data_set_t *data_set, const char *root);
+int WG_DataPath(char *destination, size_t destination_size,
+                const char *root, const char *base,
+                const char *extension);
 int WG_DataOpenSelected(wg_data_set_t *data_set, const char *root,
                         wg_game_variant_t requested_variant,
                         wg_game_family_t preferred_family);

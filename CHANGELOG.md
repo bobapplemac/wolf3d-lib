@@ -6,6 +6,14 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.60 - 2026-10-08 - Dataset-local configuration and saves
+
+- Store `CONFIG.<EXT>` and `SAVEGAMn.<EXT>` in the selected game-data
+  directory so recursively discovered installations retain their own settings
+  and save slots.
+- Centralized separator-safe dataset path construction and covered nested and
+  trailing-separator paths in the library tests.
+
 ## 1.4.59 - 2026-10-08 - Historical game-selection aliases
 
 - Added case-insensitive `-WL1`, `-WL6`, `-SDM`, `-SOD`, `-SD1`, `-SD2`, and

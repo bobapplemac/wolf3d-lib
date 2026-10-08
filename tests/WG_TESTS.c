@@ -5322,6 +5322,16 @@ static void TestPortableConfig(void)
 static void TestGameSelection(void)
 {
     wg_game_variant_t variant = WG_GAME_UNKNOWN;
+    char path[64];
+
+    CHECK(WG_DataPath(path, sizeof(path), "GAMEDATA/WL1", "CONFIG",
+                      ".WL1"));
+    CHECK(strcmp(path, "GAMEDATA/WL1/CONFIG.WL1") == 0);
+    CHECK(WG_DataPath(path, sizeof(path), "GAMEDATA/WL1/", "SAVEGAM0",
+                      ".WL1"));
+    CHECK(strcmp(path, "GAMEDATA/WL1/SAVEGAM0.WL1") == 0);
+    CHECK(!WG_DataPath(path, 8U, "GAMEDATA/WL1", "CONFIG", ".WL1"));
+    CHECK(!WG_DataPath(NULL, sizeof(path), "GAMEDATA", "CONFIG", ".WL1"));
 
     CHECK(WG_DataVariantFromExtension("WL1")
           == WG_GAME_WOLF3D_SHAREWARE_14);

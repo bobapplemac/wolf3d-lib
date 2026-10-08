@@ -1823,38 +1823,27 @@ static int WG_DrawConfirmScreen(wg_confirm_action_t action)
 
 static int WG_SavePath(char *path, size_t path_size, unsigned slot)
 {
-    const char *extension;
+    char base[16];
     int length;
 
     if (path == NULL || slot >= WL_SAVE_SLOTS)
     {
         return 0;
     }
-    extension = WG_DataVariantExtension(wg_data_set.variant);
-    if (extension == NULL)
-    {
-        return 0;
-    }
-    length = snprintf(path, path_size, "SAVEGAM%u.%s", slot, extension);
-    return length >= 0 && (size_t)length < path_size;
+    length = snprintf(base, sizeof(base), "SAVEGAM%u", slot);
+    return length >= 0 && (size_t)length < sizeof(base)
+        && WG_DataPath(path, path_size, wg_data_set.root, base,
+                       wg_data_set.extension);
 }
 
 static int WG_ConfigPath(char *path, size_t path_size)
 {
-    const char *extension;
-    int length;
-
     if (path == NULL)
     {
         return 0;
     }
-    extension = WG_DataVariantExtension(wg_data_set.variant);
-    if (extension == NULL)
-    {
-        return 0;
-    }
-    length = snprintf(path, path_size, "CONFIG.%s", extension);
-    return length >= 0 && (size_t)length < path_size;
+    return WG_DataPath(path, path_size, wg_data_set.root, "CONFIG",
+                       wg_data_set.extension);
 }
 
 static void WG_ApplyConfig(const wg_config_t *config)
@@ -1905,7 +1894,7 @@ static void WG_CaptureConfig(wg_config_t *config)
 static void WG_LoadConfig(void)
 {
     wg_config_t config;
-    char path[32];
+    char path[1200];
 
     WG_ConfigDefaults(&config);
     if (wg_data_loaded && WG_IsInteractive()
@@ -1920,7 +1909,7 @@ static void WG_LoadConfig(void)
 static void WG_WriteConfig(void)
 {
     wg_config_t config;
-    char path[32];
+    char path[1200];
 
     if (!wg_config_ready || !wg_data_loaded || !WG_IsInteractive()
         || !WG_ConfigPath(path, sizeof(path)))
@@ -1942,7 +1931,7 @@ static void WG_RefreshSaveSlots(void)
     memset(wg_save_names, 0, sizeof(wg_save_names));
     for (slot = 0U; slot < WL_SAVE_SLOTS; ++slot)
     {
-        char path[32];
+        char path[1200];
         wg_file_buffer_t file;
         char name[WG_SAVE_NAME_BYTES];
 
@@ -2369,7 +2358,7 @@ static int WG_GameSessionOpenControlPanel(void)
 static int WG_GameSessionSave(unsigned slot)
 {
     wg_save_state_t state;
-    char path[32];
+    char path[1200];
     char name[WG_SAVE_NAME_BYTES];
 
     if (!wg_game.active || slot >= WL_SAVE_SLOTS
@@ -2400,7 +2389,7 @@ static int WG_GameSessionSave(unsigned slot)
 static int WG_GameSessionLoad(unsigned slot)
 {
     wg_save_state_t state;
-    char path[32];
+    char path[1200];
     char name[WG_SAVE_NAME_BYTES];
 
     if (slot >= WL_SAVE_SLOTS || !wg_save_available[slot]

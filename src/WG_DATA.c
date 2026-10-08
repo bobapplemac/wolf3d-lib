@@ -105,12 +105,25 @@ static const wg_data_profile_t *WG_DataProfile(wg_game_variant_t variant)
     return NULL;
 }
 
-static int WG_DataPath(char *destination, size_t destination_size,
-                       const char *root, const char *base,
-                       const char *extension)
+int WG_DataPath(char *destination, size_t destination_size,
+                const char *root, const char *base,
+                const char *extension)
 {
-    int result = snprintf(destination, destination_size, "%s/%s%s",
-                          root, base, extension);
+    size_t root_length;
+    const char *separator;
+    int result;
+
+    if (destination == NULL || root == NULL || base == NULL
+        || extension == NULL)
+    {
+        return 0;
+    }
+    root_length = strlen(root);
+    separator = root_length != 0U
+                    && (root[root_length - 1U] == '/'
+                        || root[root_length - 1U] == '\\') ? "" : "/";
+    result = snprintf(destination, destination_size, "%s%s%s%s",
+                      root, separator, base, extension);
     return result >= 0 && (size_t)result < destination_size;
 }
 
