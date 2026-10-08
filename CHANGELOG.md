@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.57 - 2026-10-08 - Public command-line help
+
+- Added `wolf3d_GetCommandLineHelp()` as the authoritative user-facing list
+  of game selection, input, audio, and original DOS-compatible options.
+- Kept host-only switches in the companion wrappers so each launcher can
+  append only the options that its platform actually supports.
+
 ## 1.4.56 - 2026-10-08 - Engine-directed mouse capture
 
 - Added an optional platform callback that synchronizes OS mouse capture with

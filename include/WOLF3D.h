@@ -162,6 +162,7 @@ WOLF3D_API extern uint8_t wolf3d_Palette[WOLF3D_PALETTE_COLORS * 3];
 
 WOLF3D_API wolf3d_result_t wolf3d_SetPlatform(
     const wolf3d_platform_api_t *platform);
+WOLF3D_API const char *wolf3d_GetCommandLineHelp(void);
 WOLF3D_API wolf3d_result_t wolf3d_Create(int argc, char **argv);
 WOLF3D_API wolf3d_result_t wolf3d_Run(void);
 WOLF3D_API void wolf3d_Shutdown(void);

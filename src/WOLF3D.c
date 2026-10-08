@@ -4662,6 +4662,33 @@ cleanup:
     return success;
 }
 
+const char *wolf3d_GetCommandLineHelp(void)
+{
+    return
+        "Game selection:\n"
+        "  --data PATH          Directory containing original game data\n"
+        "  --game EXT           Data extension: WL1, WL6, SDM, SOD, SD1, SD2, or SD3\n"
+        "  --signon NAME        SIGNON: auto, apogee, gt, id, activision, or spear\n"
+        "  --signon-palette SET SIGNON palette: auto, wolf, or spear\n"
+        "\n"
+        "Input:\n"
+        "  --mouse / --nomouse  Force mouse hardware present or absent\n"
+        "  --joy / --nojoy      Force joystick hardware present or absent\n"
+        "\n"
+        "Audio:\n"
+        "  --opl NAME           Select a compiled OPL driver\n"
+        "  --sample-rate HZ     Preferred PCM rate from 8000 through 192000 Hz\n"
+        "  --adlib              Use AdLib music/effects without digitized sound\n"
+        "  --pc-speaker         Use PC-speaker sound effects\n"
+        "\n"
+        "Original command-line options:\n"
+        "  -goobers             Enable Wolf3D debug keys\n"
+        "  -debugmode           Enable Spear debug keys\n"
+        "  -tedlevel N          Start map N directly (0-59 Wolf3D, 0-20 Spear)\n"
+        "  -baby|-easy|-normal|-hard  Difficulty used with -tedlevel\n"
+        "  -nowait              Skip the title screen\n";
+}
+
 wolf3d_result_t wolf3d_Create(int argc, char **argv)
 {
     size_t framebuffer_size;

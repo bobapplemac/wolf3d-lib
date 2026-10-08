@@ -5380,6 +5380,10 @@ static void TestPlatformAPI(void)
 
     memset(&platform, 0, sizeof(platform));
     CHECK(wolf3d_SetPlatform(NULL) == WOLF3D_RESULT_INVALID_ARGUMENT);
+    CHECK(wolf3d_GetCommandLineHelp() != NULL);
+    CHECK(strstr(wolf3d_GetCommandLineHelp(), "--data PATH") != NULL);
+    CHECK(strstr(wolf3d_GetCommandLineHelp(), "-goobers") != NULL);
+
     platform.api_version = WOLF3D_PLATFORM_API_VERSION;
     platform.struct_size = sizeof(platform);
     CHECK(wolf3d_SetPlatform(&platform)
