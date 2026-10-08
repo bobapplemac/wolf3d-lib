@@ -100,6 +100,7 @@ make test CC=clang      # same validation with Clang
 make portable JOBS=8    # Debian 10 / glibc 2.28 package in Docker
 make musl JOBS=8        # Alpine/musl package in Docker
 make openwatcom         # 32-bit protected-mode DOS OMF SDK in Docker
+make windows-cross      # Win9x/XP/Win7/Win10 native PE SDK matrix in Docker
 make test OPL_DEFAULT=dbopl
 make test OPL_DRIVERS=silent OPL_DEFAULT=silent
 make help               # complete command and variable reference
@@ -157,6 +158,10 @@ linking into a 32-bit protected-mode DOS host; it is a cross-build SDK, not
 itself a playable DOS application. A native IDE workspace is also available
 at `ide/open-watcom/wolf3d-lib.wpj`; launch it through the adjacent
 `open-ide.cmd` so the canonical include paths and driver definitions are set.
+Linux/Docker can also cross-build native Windows DLL SDKs with Open Watcom,
+MinGW-w64, and LLVM-MinGW; use `make windows-cross` or an individual
+`windows-win9x`, `windows-xp`, `windows-win7`, `windows-llvm-win7`, or
+`windows-win10` target. These builds use no Wine and include PE/import audits.
 See the [build and compatibility matrix](docs/support-matrix.md) for supported
 compilers, build entry points, artifacts, and validated destination operating
 systems. [docs/building.md](docs/building.md) contains the complete command and

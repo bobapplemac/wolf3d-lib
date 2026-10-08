@@ -49,6 +49,14 @@ OPENWATCOM_BUILD_IMAGE ?= wolf3d-lib-build-openwatcom-20261001
 OPENWATCOM_OPL_DRIVERS ?= nuked,dbopl,silent
 OPENWATCOM_DEFAULT_OPL ?= nuked
 OPENWATCOM_SAMPLE_RATE ?= 44100
+WINDOWS_MINGW_BUILD_IMAGE ?= wolf3d-lib-build-windows-mingw-debian12
+WINDOWS_LLVM_MINGW_MSVC_IMAGE ?= wolf3d-lib-build-llvm-mingw-20260908-msvcrt
+WINDOWS_LLVM_MINGW_UCRT_IMAGE ?= wolf3d-lib-build-llvm-mingw-20260908-ucrt
+WINDOWS_LLVM_MINGW_RELEASE ?= 20260908
+WINDOWS_LLVM_MINGW_MSVC_SHA256 ?= 4d905bae713182f1a2b4d33875fe5aa544ce9fc04cc153acb47755a90ca62f16
+WINDOWS_LLVM_MINGW_UCRT_SHA256 ?= 2258c745e3155870c80793f3e8c80b28fbde11b9ff73c4c78783635b3440b092
+WINDOWS_OPENWATCOM_BUILD_DIR ?= build/openwatcom-win9x-x86
+WINDOWS_OPENWATCOM_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-windows-x86-openwatcom-win9x
 DOCKER_RUN_ARGS ?=
 
 CMAKE_COMPILER_ARG := -DCMAKE_C_COMPILER="$(CC)"
@@ -67,7 +75,14 @@ PARALLEL_ARG := --parallel $(JOBS)
 	portable-library-release portable-image portable-glibc-audit \
 	musl musl-library musl-library-release musl-image musl-audit \
 	openwatcom openwatcom-library-release openwatcom-image \
-	print-config clean clean-release clean-portable clean-musl clean-openwatcom
+	windows-cross windows-win9x windows-win9x-library-release \
+	windows-xp windows-xp-library-release windows-win7 \
+	windows-win7-library-release windows-llvm-win7 \
+	windows-llvm-win7-library-release windows-win10 \
+	windows-win10-library-release windows-mingw-image \
+	windows-llvm-msvcrt-image windows-llvm-ucrt-image \
+	print-config clean clean-release clean-portable clean-musl clean-openwatcom \
+	clean-windows-cross
 
 all: library-release
 
@@ -81,6 +96,12 @@ help:
 		'  make portable-library-release Build and audit the Debian 10/glibc 2.28 package.' \
 		'  make musl-library-release    Build and audit the Alpine/musl package.' \
 		'  make openwatcom              Build the 32-bit DOS Open Watcom library SDK.' \
+		'  make windows-win9x          Cross-build the Open Watcom Win9x x86 DLL SDK.' \
+		'  make windows-xp             Cross-build the MinGW/MSVCRT XP x86 DLL SDK.' \
+		'  make windows-win7           Cross-build MinGW/MSVCRT Win7 x86 and x64 SDKs.' \
+		'  make windows-llvm-win7      Cross-build independent LLVM/MSVCRT Win7 SDKs.' \
+		'  make windows-win10          Cross-build the LLVM/UCRT Win10 x64 DLL SDK.' \
+		'  make windows-cross          Build every Linux-hosted Windows DLL SDK.' \
 		'' \
 		'Short aliases:' \
 		'  make dist | make library | make release  Same as library-release.' \
@@ -102,6 +123,7 @@ help:
 		'  make clean-portable          Clean the portable tree and builder image.' \
 		'  make clean-musl              Clean the musl tree and builder image.' \
 		'  make clean-openwatcom        Clean the DOS32 tree and builder image.' \
+		'  make clean-windows-cross     Clean Windows cross-build trees and images.' \
 		'' \
 		'Common variables:' \
 		'  CC=gcc|clang                 C compiler (default: gcc).' \
@@ -252,12 +274,96 @@ openwatcom-library-release: openwatcom-image
 		"$(OPENWATCOM_BUILD_IMAGE)" \
 		sh scripts/linux/openwatcom/build-library.sh
 
+windows-mingw-image:
+	$(DOCKER) build --tag "$(WINDOWS_MINGW_BUILD_IMAGE)" packaging/windows-mingw
+
+windows-llvm-msvcrt-image:
+	$(DOCKER) build --tag "$(WINDOWS_LLVM_MINGW_MSVC_IMAGE)" \
+		--build-arg LLVM_MINGW_RELEASE="$(WINDOWS_LLVM_MINGW_RELEASE)" \
+		--build-arg LLVM_MINGW_CRT=msvcrt \
+		--build-arg LLVM_MINGW_SHA256="$(WINDOWS_LLVM_MINGW_MSVC_SHA256)" \
+		packaging/windows-llvm-mingw
+
+windows-llvm-ucrt-image:
+	$(DOCKER) build --tag "$(WINDOWS_LLVM_MINGW_UCRT_IMAGE)" \
+		--build-arg LLVM_MINGW_RELEASE="$(WINDOWS_LLVM_MINGW_RELEASE)" \
+		--build-arg LLVM_MINGW_CRT=ucrt \
+		--build-arg LLVM_MINGW_SHA256="$(WINDOWS_LLVM_MINGW_UCRT_SHA256)" \
+		packaging/windows-llvm-mingw
+
+windows-win9x-library-release: openwatcom-image
+	$(DOCKER) run --rm --user "$$(id -u):$$(id -g)" \
+		--volume "$(CURDIR):/src" --workdir /src $(DOCKER_RUN_ARGS) \
+		--env WG_OPENWATCOM_WINDOWS_BUILD_DIR="/src/$(WINDOWS_OPENWATCOM_BUILD_DIR)" \
+		--env WG_OPENWATCOM_WINDOWS_DIST_DIR="/src/$(WINDOWS_OPENWATCOM_DIST_DIR)" \
+		--env WG_OPENWATCOM_WINDOWS_OPL_DRIVERS="$(OPL_DRIVERS)" \
+		--env WG_OPENWATCOM_WINDOWS_DEFAULT_OPL="$(OPL_DEFAULT)" \
+		--env WG_OPENWATCOM_WINDOWS_SAMPLE_RATE="$(SAMPLE_RATE)" \
+		"$(OPENWATCOM_BUILD_IMAGE)" \
+		sh scripts/linux/openwatcom/build-windows-library.sh
+
+windows-xp-library-release: windows-mingw-image
+	$(DOCKER) run --rm --user "$$(id -u):$$(id -g)" \
+		--volume "$(CURDIR):/src" --workdir /src $(DOCKER_RUN_ARGS) \
+		--env WG_WINDOWS_CROSS_PROFILE=mingw-xp-x86 \
+		--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
+		--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(OPL_DRIVERS)" \
+		--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(OPL_DEFAULT)" \
+		--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
+		"$(WINDOWS_MINGW_BUILD_IMAGE)" \
+		sh scripts/linux/windows-cross/build-library.sh
+
+windows-win7-library-release: windows-mingw-image
+	@for profile in mingw-win7-x86 mingw-win7-x64; do \
+		$(DOCKER) run --rm --user "$$(id -u):$$(id -g)" \
+			--volume "$(CURDIR):/src" --workdir /src $(DOCKER_RUN_ARGS) \
+			--env WG_WINDOWS_CROSS_PROFILE="$$profile" \
+			--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
+			--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(OPL_DRIVERS)" \
+			--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(OPL_DEFAULT)" \
+			--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
+			"$(WINDOWS_MINGW_BUILD_IMAGE)" \
+			sh scripts/linux/windows-cross/build-library.sh || exit $$?; \
+	done
+
+windows-llvm-win7-library-release: windows-llvm-msvcrt-image
+	@for profile in llvm-mingw-win7-x86 llvm-mingw-win7-x64; do \
+		$(DOCKER) run --rm --user "$$(id -u):$$(id -g)" \
+			--volume "$(CURDIR):/src" --workdir /src $(DOCKER_RUN_ARGS) \
+			--env WG_WINDOWS_CROSS_PROFILE="$$profile" \
+			--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
+			--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(OPL_DRIVERS)" \
+			--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(OPL_DEFAULT)" \
+			--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
+			"$(WINDOWS_LLVM_MINGW_MSVC_IMAGE)" \
+			sh scripts/linux/windows-cross/build-library.sh || exit $$?; \
+	done
+
+windows-win10-library-release: windows-llvm-ucrt-image
+	$(DOCKER) run --rm --user "$$(id -u):$$(id -g)" \
+		--volume "$(CURDIR):/src" --workdir /src $(DOCKER_RUN_ARGS) \
+		--env WG_WINDOWS_CROSS_PROFILE=llvm-mingw-win10-x64 \
+		--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
+		--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(OPL_DRIVERS)" \
+		--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(OPL_DEFAULT)" \
+		--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
+		"$(WINDOWS_LLVM_MINGW_UCRT_IMAGE)" \
+		sh scripts/linux/windows-cross/build-library.sh
+
 dist library release: library-release
 portable portable-library: portable-library-release
 musl musl-library: musl-library-release
 openwatcom: openwatcom-library-release
+windows-win9x: windows-win9x-library-release
+windows-xp: windows-xp-library-release
+windows-win7: windows-win7-library-release
+windows-llvm-win7: windows-llvm-win7-library-release
+windows-win10: windows-win10-library-release
+windows-cross: windows-win9x-library-release windows-xp-library-release \
+	windows-win7-library-release windows-llvm-win7-library-release \
+	windows-win10-library-release
 
-clean: clean-release clean-portable clean-musl clean-openwatcom
+clean: clean-release clean-portable clean-musl clean-openwatcom clean-windows-cross
 	@if [ -f "$(BUILD_DIR)/CMakeCache.txt" ]; then \
 		$(CMAKE) --build "$(BUILD_DIR)" --target clean; \
 	fi
@@ -314,4 +420,18 @@ clean-openwatcom:
 	@if command -v "$(firstword $(DOCKER))" >/dev/null 2>&1 && \
 	    $(DOCKER) image inspect "$(OPENWATCOM_BUILD_IMAGE)" >/dev/null 2>&1; then \
 		$(DOCKER) image rm "$(OPENWATCOM_BUILD_IMAGE)"; \
+	fi
+
+clean-windows-cross:
+	$(CMAKE) -E remove_directory "$(WINDOWS_OPENWATCOM_BUILD_DIR)"
+	$(CMAKE) -E remove_directory build/windows-cross-mingw-xp-x86
+	$(CMAKE) -E remove_directory build/windows-cross-mingw-win7-x86
+	$(CMAKE) -E remove_directory build/windows-cross-mingw-win7-x64
+	$(CMAKE) -E remove_directory build/windows-cross-llvm-mingw-win7-x86
+	$(CMAKE) -E remove_directory build/windows-cross-llvm-mingw-win7-x64
+	$(CMAKE) -E remove_directory build/windows-cross-llvm-mingw-win10-x64
+	@if command -v "$(firstword $(DOCKER))" >/dev/null 2>&1; then \
+		$(DOCKER) image rm "$(WINDOWS_MINGW_BUILD_IMAGE)" >/dev/null 2>&1 || true; \
+		$(DOCKER) image rm "$(WINDOWS_LLVM_MINGW_MSVC_IMAGE)" >/dev/null 2>&1 || true; \
+		$(DOCKER) image rm "$(WINDOWS_LLVM_MINGW_UCRT_IMAGE)" >/dev/null 2>&1 || true; \
 	fi

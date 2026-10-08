@@ -5,7 +5,8 @@ ARG OPEN_WATCOM_INSTALLER=open-watcom-2_0-c-linux-x64
 ARG OPEN_WATCOM_SHA256=a961f3e02ce27bcd88428345dc57483457a623b6e718b6cee52c48d24ab8065f
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y ca-certificates curl unzip \
+    && apt-get install --no-install-recommends -y \
+       binutils-mingw-w64-i686 ca-certificates curl unzip \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/watcom \

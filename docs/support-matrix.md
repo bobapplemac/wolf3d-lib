@@ -25,6 +25,7 @@ an OMF `WOLF3D.LIB` to link into a protected-mode DOS host.
 | Linux + Docker | Guided Bash configurator / GNU Make | `./build.sh` or `make portable` | Debian 10 / glibc 2.28 x86-64 SDK |
 | Linux + Docker | Guided Bash configurator / GNU Make | `./build.sh` or `make musl CC=clang` | Alpine/musl x86-64 SDK |
 | Linux + Docker | Guided Bash configurator / GNU Make | `./build.sh` or `make openwatcom` | Open Watcom 32-bit DOS OMF SDK |
+| Linux + Docker | Guided Bash configurator / GNU Make | `make windows-cross` | Complete Win9x/XP/Win7/Win10 Windows cross-SDK matrix |
 | Linux | CMake presets | `cmake --preset linux-library` then `cmake --build --preset linux-library` | Native library build/package |
 | Windows, VS2008--VS2026 | Guided PowerShell dispatcher | `.\build.ps1` or `.\build.ps1 -Compiler vs2019 -Action package` | Compiler-labelled SDK under `dist/` |
 | Windows, MinGW UCRT64 | Guided PowerShell dispatcher | `.\build.ps1 -Compiler mingw-ucrt64 -Action package` | Native x64 SDK with static GCC support runtime |
@@ -42,6 +43,11 @@ backend, test-data, and direct-CMake details.
 | Compiler environment | Toolset | Architecture | CRT modes | Build status | Destination validation |
 | --- | --- | --- | --- | --- | --- |
 | MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Validated | Package, API, deterministic tests, and all runtime-selectable OPL drivers validated on Windows 11 x64 |
+| Linux Docker / Open Watcom | Open Watcom 2 (pinned) | x86 | Watcom runtime | Build validated | Native PE DLL and consumer import-library link; Win9x runtime pending |
+| Linux Docker / MinGW-w64 | GCC 12 / MSVCRT | x86 | static GCC support runtime | Build validated | Windows XP profile; PE/import audit passed; runtime pending |
+| Linux Docker / MinGW-w64 | GCC 12 / MSVCRT | x86, x64 | static GCC support runtime | Build validated | Windows 7 profile; PE/import audit passed; runtime pending |
+| Linux Docker / LLVM-MinGW | LLVM 23 / MSVCRT | x86, x64 | compiler-rt | Build validated | Independent Windows 7 profile; PE/import audit passed; runtime pending |
+| Linux Docker / LLVM-MinGW | LLVM 23 / UCRT | x64 | compiler-rt | Build validated | Windows 10 profile; PE/import audit passed; runtime pending |
 | Visual Studio 2026 18.10 | v145 / MSVC 19.51 | x86, x64 | static, dynamic | Validated | Windows 11 compatibility host |
 | Visual Studio 2022 17.14 | v143 / MSVC 19.44 | x86, x64 | static, dynamic | Validated | Current Windows development host |
 | Visual Studio 2019 16.11 | v142 / MSVC 19.29 | x86, x64 | static, dynamic | Validated | Current Windows development host |

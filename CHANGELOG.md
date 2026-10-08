@@ -6,6 +6,16 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.61 - 2026-10-08 - Linux-hosted Windows cross-build matrix
+
+- Added pinned Docker profiles for Open Watcom Win9x x86, MinGW-w64/MSVCRT
+  XP x86 and Win7 x86/x64, and LLVM-MinGW MSVCRT Win7 x86/x64 plus UCRT
+  Win10 x64.
+- Added CMake cross-toolchain files, compiler/OS-labelled SDK staging, public
+  consumer linking, and PE architecture/import audits without Wine.
+- Integrated every profile into GNU Make, the guided Linux configurator,
+  documentation, and project-specific cleanup.
+
 ## 1.4.60 - 2026-10-08 - Dataset-local configuration and saves
 
 - Store `CONFIG.<EXT>` and `SAVEGAMn.<EXT>` in the selected game-data

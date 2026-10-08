@@ -40,8 +40,8 @@ if ready cmake && ready make; then
     labels+=('native library distribution' 'validation tests' 'development build' 'clean local build outputs')
 fi
 if ready docker && ready make; then
-    targets+=(portable-library-release musl-library-release openwatcom-library-release)
-    labels+=('portable glibc 2.28 distribution (Docker)' 'relocatable musl distribution (Docker)' 'DOS32 Open Watcom library SDK (Docker)')
+    targets+=(portable-library-release musl-library-release openwatcom-library-release windows-win9x windows-xp windows-win7 windows-llvm-win7 windows-win10 windows-cross)
+    labels+=('portable glibc 2.28 distribution (Docker)' 'relocatable musl distribution (Docker)' 'DOS32 Open Watcom library SDK (Docker)' 'Windows 95 x86 Open Watcom SDK (Docker)' 'Windows XP x86 MinGW/MSVCRT SDK (Docker)' 'Windows 7 x86/x64 MinGW/MSVCRT SDKs (Docker)' 'Windows 7 x86/x64 LLVM/MSVCRT SDKs (Docker)' 'Windows 10 x64 LLVM/UCRT SDK (Docker)' 'all Linux-hosted Windows SDKs (Docker)')
 fi
 if [ ${#targets[@]} -eq 0 ]; then
     printf '\nNo usable build path was detected. See docs/building.md for prerequisites.\n' >&2
@@ -55,7 +55,7 @@ for ((i=0; i<${#labels[@]}; ++i)); do
 done
 
 compiler=gcc
-if [[ $target != portable-* && $target != musl-* && $target != openwatcom-* && $target != clean ]]; then
+if [[ $target != portable-* && $target != musl-* && $target != openwatcom-* && $target != windows-* && $target != clean ]]; then
     compilers=()
     ready gcc && compilers+=(gcc)
     ready clang && compilers+=(clang)
@@ -74,14 +74,14 @@ if [[ $target != clean ]]; then
         IFS=- read -r -a defaults <<< "$drivers"
         default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
     fi
-    if [[ $target == openwatcom-* ]]; then
+    if [[ $target == openwatcom-* || $target == windows-win9x ]]; then
         sample_rate=$(choose 'Preferred PCM sample rate' 44100 48000)
     else
         sample_rate=$(choose 'Preferred PCM sample rate' 48000 44100)
     fi
 fi
 jobs=''
-if [[ $target != openwatcom-* ]]; then
+if [[ $target != openwatcom-* && $target != windows-win9x ]]; then
     read -r -p 'Parallel jobs (blank lets the build tool decide): ' jobs
 fi
 
@@ -90,6 +90,9 @@ opl_drivers=${drivers//-/,}
 if [[ $target == openwatcom-* ]]; then
     compiler='Open Watcom 2 (2026-10-01)'
     args=("$target" "OPENWATCOM_OPL_DRIVERS=$opl_drivers" "OPENWATCOM_DEFAULT_OPL=$default_opl" "OPENWATCOM_SAMPLE_RATE=$sample_rate")
+elif [[ $target == windows-win9x ]]; then
+    compiler='Open Watcom 2 (2026-10-01)'
+    args=("$target" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
 else
     args=("$target" "CC=$compiler" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
 fi

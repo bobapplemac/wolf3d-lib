@@ -217,6 +217,26 @@ The legacy definition compiles the canonical `src/` tree; it contains no fork
 of the engine. SDL3 is deliberately outside this compiler band. Production
 applications use the companion repository's Win32/GDI wrapper.
 
+## Windows cross-compilation from Linux
+
+Docker-pinned profiles build native Windows DLL SDKs without Wine:
+
+```text
+make windows-win9x       # Open Watcom, x86, Windows 95 profile
+make windows-xp          # MinGW-w64/GCC + MSVCRT, x86
+make windows-win7        # MinGW-w64/GCC + MSVCRT, x86 and x64
+make windows-llvm-win7   # LLVM-MinGW + MSVCRT, x86 and x64
+make windows-win10       # LLVM-MinGW + UCRT, x64
+make windows-cross       # all of the above
+```
+
+The first invocation downloads the pinned Open Watcom or LLVM-MinGW archive
+and verifies its SHA-256, or installs Debian's versioned MinGW packages into a
+project-specific image. Subsequent builds reuse those images. Each package is
+checked with a PE architecture/import audit; Wine is neither installed nor
+used. `make clean-windows-cross` removes the corresponding build trees and
+project images. Destination-OS gameplay remains a separate validation step.
+
 ## Windows with CMake
 
 ```powershell
