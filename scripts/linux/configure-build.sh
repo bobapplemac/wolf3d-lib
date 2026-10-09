@@ -66,7 +66,20 @@ fi
 drivers=all
 default_opl=nuked
 sample_rate=48000
-if [[ $target != clean ]]; then
+if [[ $target == openwatcom-* || $target == windows-win9x ]]; then
+    drivers=$(choose 'Compiled OPL drivers' dbopl-silent-adlib nuked-dbopl-silent-adlib dbopl-silent dbopl silent adlib)
+    IFS=- read -r -a defaults <<< "$drivers"
+    if [[ $drivers == *adlib* ]]; then
+        available_defaults=(adlib)
+        for driver in "${defaults[@]}"; do
+            [ "$driver" = adlib ] || available_defaults+=("$driver")
+        done
+        default_opl=$(choose 'Default OPL driver' "${available_defaults[@]}")
+    else
+        default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
+    fi
+    sample_rate=$(choose 'Preferred PCM sample rate' 44100 48000)
+elif [[ $target != clean ]]; then
     drivers=$(choose 'Compiled OPL drivers' all nuked-dbopl nuked-silent dbopl-silent nuked dbopl silent)
     if [ "$drivers" = all ]; then
         default_opl=$(choose 'Default OPL driver' nuked dbopl silent)
@@ -95,6 +108,9 @@ elif [[ $target == windows-win9x ]]; then
     args=("$target" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
 else
     args=("$target" "CC=$compiler" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
+fi
+if [[ $target == windows-cross ]]; then
+    args+=("WIN9X_OPL_DRIVERS=dbopl,silent,adlib" "WIN9X_OPL_DEFAULT=adlib")
 fi
 [ -n "$jobs" ] && args+=("JOBS=$jobs")
 printf '\nBuild plan:\n  Target:      %s\n  Compiler:    %s\n  OPL drivers: %s (default: %s)\n  Sample rate: %s Hz\n' "$target" "$compiler" "$opl_drivers" "$default_opl" "$sample_rate"

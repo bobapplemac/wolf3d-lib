@@ -33,6 +33,14 @@ for file in "$directory"/*.exe "$directory"/*.dll; do
     fi
     case "$profile" in
         win9x-x86)
+            case "$file" in
+                *.exe)
+                    echo "$headers" | grep -Eq 'Subsystem[[:space:]]+00000003' || {
+                        echo "Win9x launchers must inherit a console: $file" >&2
+                        exit 1
+                    }
+                    ;;
+            esac
             if echo "$headers" | grep -Eqi \
                 'DLL Name: (api-ms-|ucrtbase)|GetMonitorInfoW|GetWindowLongPtrW|RegisterRawInputDevices|GetRawInputData|CommandLineToArgvW'; then
                 echo "Post-Win9x dependency found: $file" >&2

@@ -5,12 +5,12 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 version=$(sed -n '1p' "$root/VERSION")
 build_dir=${WG_OPENWATCOM_WINDOWS_BUILD_DIR:-$root/build/openwatcom-win9x-x86}
 dist_dir=${WG_OPENWATCOM_WINDOWS_DIST_DIR:-$root/dist/wolf3d-$version-library-windows-x86-openwatcom-win9x}
-drivers=${WG_OPENWATCOM_WINDOWS_OPL_DRIVERS:-nuked,dbopl,silent}
-default_driver=${WG_OPENWATCOM_WINDOWS_DEFAULT_OPL:-nuked}
+drivers=${WG_OPENWATCOM_WINDOWS_OPL_DRIVERS:-dbopl,silent,adlib}
+default_driver=${WG_OPENWATCOM_WINDOWS_DEFAULT_OPL:-adlib}
 sample_rate=${WG_OPENWATCOM_WINDOWS_SAMPLE_RATE:-48000}
 
 case ",$drivers," in
-    *,nuked,*|*,dbopl,*|*,silent,*) ;;
+    *,nuked,*|*,dbopl,*|*,silent,*|*,adlib,*) ;;
     *) echo "At least one Open Watcom Windows OPL driver must be selected." >&2; exit 2 ;;
 esac
 case ",$drivers," in
@@ -40,6 +40,13 @@ case ",$drivers," in
     *,silent,*)
         defines="$defines -dWG_OPL_ENABLE_SILENT=1"
         opl_sources="$opl_sources $root/src/WG_OPL_SILENT.c"
+        ;;
+esac
+
+case ",$drivers," in
+    *,adlib,*)
+        defines="$defines -dWG_OPL_ENABLE_ADLIB=1"
+        opl_sources="$opl_sources $root/src/WG_OPL_ADLIB.c"
         ;;
 esac
 

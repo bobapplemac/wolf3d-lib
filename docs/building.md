@@ -81,8 +81,8 @@ The image uses official Open Watcom 2 release `2026-10-01-Build`, verifies
 the downloaded Linux x64 archive against its checked-in SHA-256, and emits a
 Pentium-targeted OMF SDK at
 `dist/wolf3d-<version>-library-dos32-openwatcom-x86`. The default build
-includes Nuked-OPL3, DBOPL, and timing-preserving silence, selects Nuked by
-default, and requests 44100 Hz PCM. `WOLF3D.LIB` contains the engine and
+includes DBOPL, timing-preserving silence, and native AdLib, selects AdLib by
+default, and requests 44100 Hz PCM. Nuked is opt-in. `WOLF3D.LIB` contains the engine and
 adapters; `NUKEDOPL.LIB` remains separate when that driver is selected.
 
 The build also compiles and links the public API consumer into a temporary

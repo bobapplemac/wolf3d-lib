@@ -186,3 +186,10 @@ in CMake and is enabled by setting the documented `WG_TEST_*` data paths.
 
 Architecture, provenance, supported-data fingerprints, and porting guidance
 are collected under [docs/](docs/).
+
+DOS and Win9x defaults include `dbopl,silent,adlib` and select native `adlib`.
+Nuked remains available as an explicit build choice. Use `--opl dbopl` for
+software OPL (the spelling is `dbopl`, not `dbpol`) or `--opl silent`.
+Win9x native AdLib requires accessible ISA OPL hardware at 388h/389h; it is
+not available on NT-based Windows. The Win9x console-subsystem launcher prints
+help/diagnostics in its invoking command prompt while the game opens a GDI window.
