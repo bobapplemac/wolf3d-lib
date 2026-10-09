@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.72 - 2026-10-09 - Normalize legacy solutions and ignore IntelliSense caches
+
+- Order legacy solution configurations as Visual Studio saves them and add
+  final newlines, avoiding formatting-only changes after opening/building.
+- Ignore `.sdf` and `.opensdf` IntelliSense databases under the IDE tree.
+
 ## 1.4.71 - 2026-10-09 - Use IDE-supported C++ project items
 
 - Replace wildcard C++ project items with explicit relative file paths in

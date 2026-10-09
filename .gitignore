@@ -10,6 +10,8 @@
 
 # Legacy Visual Studio browse databases, workspace state, and build logs.
 /ide/visual-studio/**/*.ncb
+/ide/visual-studio/**/*.sdf
+/ide/visual-studio/**/*.opensdf
 /ide/visual-studio/**/*.opt
 /ide/visual-studio/**/*.plg
 /ide/visual-studio/**/obj/

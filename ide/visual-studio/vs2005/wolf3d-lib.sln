@@ -5,16 +5,16 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
-		Release|Win32 = Release|Win32
 		Publish|Win32 = Publish|Win32
+		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Debug|Win32.ActiveCfg = Debug|Win32
 		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Debug|Win32.Build.0 = Debug|Win32
-		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release|Win32.ActiveCfg = Release|Win32
-		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release|Win32.Build.0 = Release|Win32
 		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Publish|Win32.ActiveCfg = Publish|Win32
 		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Publish|Win32.Build.0 = Publish|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release|Win32.ActiveCfg = Release|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

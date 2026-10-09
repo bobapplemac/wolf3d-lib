@@ -218,6 +218,9 @@ bash "$1" "$2"
         for band in ('vs2002', 'vs2003', 'vs2005'):
             generated += ['ide/visual-studio/' + band + '/project.ncb',
                           'ide/visual-studio/' + band + '/obj/Debug/BuildLog.htm']
+        for band in ('vs2010', 'vs2012', 'vs2013'):
+            generated += ['ide/visual-studio/' + band + '/project.' + suffix
+                          for suffix in ('sdf', 'opensdf')]
         for name in generated:
             cache = self.clone / name
             cache.parent.mkdir(parents=True, exist_ok=True)

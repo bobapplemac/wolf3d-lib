@@ -4,16 +4,16 @@ EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
 		Debug = Debug
-		Release = Release
 		Publish = Publish
+		Release = Release
 	EndGlobalSection
 	GlobalSection(ProjectConfiguration) = postSolution
 		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Debug.ActiveCfg = Debug|Win32
 		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Debug.Build.0 = Debug|Win32
-		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release.ActiveCfg = Release|Win32
-		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release.Build.0 = Release|Win32
 		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Publish.ActiveCfg = Publish|Win32
 		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Publish.Build.0 = Publish|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release.ActiveCfg = Release|Win32
+		{1BCB2175-FBFC-4BE2-870C-28AB662D86E1}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection
