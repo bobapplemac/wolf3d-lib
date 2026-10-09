@@ -58,11 +58,11 @@ if not exist "%BUILD_DIR%" (
 )
 
 pushd "%BUILD_DIR%"
-cmake -G "%GENERATOR%" -DWG_ENABLE_OPL_NUKED=%ENABLE_NUKED% -DWG_ENABLE_OPL_DBOPL=%ENABLE_DBOPL% -DWG_ENABLE_OPL_SILENT=%ENABLE_SILENT% -DWG_DEFAULT_OPL_DRIVER=%DEFAULT_OPL% -DWG_STATIC_MSVC_RUNTIME=%STATIC_RUNTIME% "%ROOT%\cmake\legacy"
+call "%~dp0cmake-driver.cmd" -G "%GENERATOR%" -DWG_ENABLE_OPL_NUKED=%ENABLE_NUKED% -DWG_ENABLE_OPL_DBOPL=%ENABLE_DBOPL% -DWG_ENABLE_OPL_SILENT=%ENABLE_SILENT% -DWG_DEFAULT_OPL_DRIVER=%DEFAULT_OPL% -DWG_STATIC_MSVC_RUNTIME=%STATIC_RUNTIME% "%ROOT%\cmake\legacy"
 if errorlevel 1 goto failed_popd
 
 if /I "%ACTION%"=="package" goto package
-cmake --build . --config %CONFIG%
+call "%~dp0cmake-driver.cmd" --build . --config %CONFIG%
 if errorlevel 1 goto failed_popd
 
 if /I "%ACTION%"=="test" (
@@ -75,7 +75,7 @@ if /I "%ACTION%"=="test" (
 goto completed
 
 :package
-cmake --build . --config %CONFIG% --target library_release
+call "%~dp0cmake-driver.cmd" --build . --config %CONFIG% --target library_release
 if errorlevel 1 goto failed_popd
 
 :completed

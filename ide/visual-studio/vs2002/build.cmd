@@ -21,7 +21,7 @@ exit /b %errorlevel%
 :clean_build
 if not exist "%BUILD_DIR%\CMakeCache.txt" exit /b 0
 pushd "%BUILD_DIR%"
-cmake --build . --config %CONFIG% --target clean
+call "%ROOT%\scripts\windows\legacy\cmake-driver.cmd" --build . --config %CONFIG% --target clean
 set "RESULT=%errorlevel%"
 popd
 exit /b %RESULT%

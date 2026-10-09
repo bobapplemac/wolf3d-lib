@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.68 - 2026-10-09 - Locate CMake from legacy IDEs
+
+- Resolve legacy CMake from an explicit override, the existing build cache,
+  PATH, or standard installation directories so IDE builds work even when
+  the IDE cannot find the command used by a standalone terminal.
+- Apply the same resolution to configure, build, clean, rebuild, and publish.
+
 ## 1.4.67 - 2026-10-09 - Repair legacy IDE build commands
 
 - Replace obsolete `standard` OPL arguments with `all` in VC6 through VS2005

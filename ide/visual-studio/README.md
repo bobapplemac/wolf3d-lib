@@ -28,3 +28,8 @@ workflow. VS2008 and newer use `.sln` plus the native project format for that
 generation. VC6 uses its period `.dsw`/`.dsp` pair. The pre-VS2008 projects
 delegate compilation to the XP-native dispatcher under `scripts/windows/`
 while remaining directly buildable from their matching IDE.
+
+Legacy VC6--VS2005 builds require CMake 3.5. The build helpers check the
+existing build cache, PATH, and standard CMake installation directories.
+For a custom location, set `WOLF3D_LEGACY_CMAKE` to the full `cmake.exe` path
+before opening the IDE. This overrides automatic discovery.
