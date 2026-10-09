@@ -89,10 +89,10 @@ help:
 		'  make musl-library-release    Build and audit the Alpine/musl package.' \
 		'  make openwatcom              Build the 32-bit DOS Open Watcom library SDK.' \
 		'  make windows-win9x          Cross-build the Open Watcom Win9x x86 DLL SDK.' \
-		'  make windows-xp             Cross-build the MinGW/MSVCRT XP x86 DLL SDK.' \
-		'  make windows-win7           Cross-build MinGW/MSVCRT Win7 x86 and x64 SDKs.' \
-		'  make windows-llvm-win7      Cross-build independent LLVM/MSVCRT Win7 SDKs.' \
-		'  make windows-win10          Cross-build the LLVM/UCRT Win10 x64 DLL SDK.' \
+		'  make windows-xp             Cross-build the MinGW GCC/MSVCRT XP x86 DLL SDK.' \
+		'  make windows-win7           Cross-build MinGW GCC/MSVCRT Win7 x86 and x64 SDKs.' \
+		'  make windows-llvm-win7      Cross-build independent LLVM-MinGW/MSVCRT Win7 SDKs.' \
+		'  make windows-win10          Cross-build the LLVM-MinGW/UCRT Win10 x64 DLL SDK.' \
 		'  make windows-cross          Build every Linux-hosted Windows DLL SDK.' \
 		'' \
 		'Short aliases:' \

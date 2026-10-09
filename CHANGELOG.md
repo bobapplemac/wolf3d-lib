@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.74 - 2026-10-09 - Align build menu terminology
+
+- Use GDI, SDL3, VGA, and KMS/fbdev in guided build choices, summaries, and
+  Make help; distinguish local toolchains from backend names.
+- Clarify MinGW GCC and LLVM-MinGW labels while preserving existing command
+  arguments and build target names.
+
 ## 1.4.73 - 2026-10-09 - Standardize distribution identity and build metadata
 
 - Use underscore-delimited product/version/platform/architecture/backend/toolchain

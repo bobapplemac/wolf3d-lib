@@ -37,11 +37,11 @@ targets=()
 labels=()
 if ready cmake && ready make; then
     targets+=(library-release test build clean)
-    labels+=('native library distribution' 'validation tests' 'development build' 'clean local build outputs')
+    labels+=('Linux library distribution (local toolchain)' 'validation tests' 'development build' 'clean local build outputs')
 fi
 if ready docker && ready make; then
     targets+=(portable-library-release musl-library-release openwatcom-library-release windows-win9x windows-xp windows-win7 windows-llvm-win7 windows-win10 windows-cross)
-    labels+=('portable glibc 2.28 distribution (Docker)' 'relocatable musl distribution (Docker)' 'DOS32 Open Watcom library SDK (Docker)' 'Windows 95 x86 Open Watcom SDK (Docker)' 'Windows XP x86 MinGW/MSVCRT SDK (Docker)' 'Windows 7 x86/x64 MinGW/MSVCRT SDKs (Docker)' 'Windows 7 x86/x64 LLVM/MSVCRT SDKs (Docker)' 'Windows 10 x64 LLVM/UCRT SDK (Docker)' 'all Linux-hosted Windows SDKs (Docker)')
+    labels+=('Linux glibc 2.28 library distribution (Docker)' 'Linux musl library distribution (Docker)' 'DOS32 Open Watcom library SDK (Docker)' 'Win9x x86 Open Watcom SDK (Docker)' 'Windows XP x86 MinGW GCC/MSVCRT SDK (Docker)' 'Windows 7 x86/x64 MinGW GCC/MSVCRT SDKs (Docker)' 'Windows 7 x86/x64 LLVM-MinGW/MSVCRT SDKs (Docker)' 'Windows 10 x64 LLVM-MinGW/UCRT SDK (Docker)' 'all Linux-hosted Windows SDKs (Docker)')
 fi
 if [ ${#targets[@]} -eq 0 ]; then
     printf '\nNo usable build path was detected. See docs/building.md for prerequisites.\n' >&2
@@ -113,7 +113,11 @@ if [[ $target == windows-cross ]]; then
     args+=("WIN9X_OPL_DRIVERS=dbopl,silent,adlib" "WIN9X_OPL_DEFAULT=adlib")
 fi
 [ -n "$jobs" ] && args+=("JOBS=$jobs")
-printf '\nBuild plan:\n  Target:      %s\n  Compiler:    %s\n  OPL drivers: %s (default: %s)\n  Sample rate: %s Hz\n' "$target" "$compiler" "$opl_drivers" "$default_opl" "$sample_rate"
+compiler_display=$compiler
+if [[ $target == windows-* && $target != windows-win9x ]]; then
+    compiler_display='selected Docker profile (see package above)'
+fi
+printf '\nBuild plan:\n  Package:     %s\n  Compiler:    %s\n  OPL drivers: %s (default: %s)\n  Sample rate: %s Hz\n' "$label" "$compiler_display" "$opl_drivers" "$default_opl" "$sample_rate"
 printf '\nReproducible command:\n  ./scripts/linux/invoke-build.sh'
 printf ' %q' "${args[@]}"
 printf '\n\n'

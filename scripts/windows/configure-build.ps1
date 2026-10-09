@@ -61,7 +61,11 @@ if ($available.Count -eq 0) {
     throw 'No complete supported Windows build environment was detected. See docs/building.md for prerequisite details.'
 }
 
-$compiler = Read-Choice 'Compiler' $available 'Name'
+foreach ($toolchain in $available) {
+    $displayName = if ($toolchain.Name -eq 'mingw-ucrt64') { 'MinGW GCC / UCRT (MSYS2)' } else { "MSVC $($toolchain.Toolset) ($($toolchain.Name) installation)" }
+    $toolchain | Add-Member -NotePropertyName DisplayName -NotePropertyValue $displayName -Force
+}
+$compiler = Read-Choice 'Toolchain' $available 'DisplayName'
 $architectures = if ($compiler.Name -eq 'mingw-ucrt64') { @('x64') } else { @('x64', 'x86') }
 $architecture = Read-Choice 'Architecture' $architectures
 $action = Read-Choice 'What would you like to produce?' @('package', 'test', 'build', 'clean')
