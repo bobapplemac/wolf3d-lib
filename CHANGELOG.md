@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.71 - 2026-10-09 - Use IDE-supported C++ project items
+
+- Replace wildcard C++ project items with explicit relative file paths in
+  Visual Studio projects, removing an unsupported IDE construct documented
+  to cause crashes and unreliable project loading/saving.
+- Preserve the existing source inventory and build configurations.
+
 ## 1.4.70 - 2026-10-09 - Distinguish Git inspection errors from local edits
 
 - Stop source-update checks on Git inspection errors, including ownership

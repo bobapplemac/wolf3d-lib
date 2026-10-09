@@ -10,6 +10,26 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 
+class ProjectItemsTests(unittest.TestCase):
+    def test_native_cpp_projects_use_explicit_existing_files(self):
+        namespace = '{http://schemas.microsoft.com/developer/msbuild/2003}'
+        for project in (ROOT / 'ide/visual-studio').glob('*/*.vcxproj'):
+            with self.subTest(project=project):
+                tree = ET.parse(project)
+                entries = []
+                for kind in ('ClCompile', 'ClInclude', 'None'):
+                    for item in tree.iter(namespace + kind):
+                        name = item.attrib.get('Include')
+                        if name is None:
+                            continue
+                        for unsupported in ('*', '?', ';', '$(', '@('):
+                            self.assertNotIn(unsupported, name)
+                        resolved = (project.parent / name.replace('\\', '/')).resolve()
+                        self.assertTrue(resolved.is_file(), str(resolved))
+                        self.assertNotIn((kind, resolved), entries)
+                        entries.append((kind, resolved))
+                self.assertTrue(entries)
+
 @unittest.skipUnless(os.name == 'nt', 'Windows CMD and Windows PowerShell required')
 class LegacyIDETests(unittest.TestCase):
     def test_legacy_ide_actions(self):
