@@ -6,6 +6,15 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.76 - 2026-10-09 - Repository documentation review
+
+- Condense the root README into a quick start and link to indexed topic guides.
+- Document every source-directory responsibility and separate source layout
+  from generated package layout; retain established build/source paths.
+- Consolidate source-update guidance and correct stale workflow descriptions.
+- Add a maintainer audit for local documentation links, anchors, tables and
+  documentation-index coverage.
+
 ## 1.4.75 - 2026-10-09 - Consistent distribution documentation
 
 - Keep README.TXT at the root and collect build metadata, package-specific

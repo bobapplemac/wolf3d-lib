@@ -1,5 +1,8 @@
 # Reference corpus index
 
+This inventories the external development reference corpus. Local paths describe
+that workspace, not files or dependencies shipped by this repository.
+
 This index describes the external reference corpus used during development.
 It is an aid for documenting provenance and research coverage; the corpus and
 its reference projects are not vendored into `wolf3d-lib`.

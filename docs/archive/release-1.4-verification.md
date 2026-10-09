@@ -1,5 +1,9 @@
 # Release 1.4 verification
 
+> Historical checkpoint from the combined wolf3dgeneric project. Commands,
+> API descriptions and validation counts below describe that period; use the
+> [current documentation index](../README.md) for maintained guidance.
+
 - [x] Apogee shareware v1.4 (`WL1`) resource corpus validated.
 - [x] GT/ID/Activision full v1.4 (`WL6`) resource corpus validated.
 - [x] Spear (`SOD`), demo (`SDM`), and all three mission-pack resource corpora

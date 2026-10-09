@@ -7,6 +7,8 @@ The [build and compatibility matrix](support-matrix.md) is the concise record
 of supported compilers, produced artifacts, and runtime-validated destination
 operating systems. This document supplies the detailed commands and options.
 
+For cloning and confirmed updates, see [source updates](source-updates.md).
+
 ## Requirements
 
 - CMake 3.16 or newer (3.20 or newer for presets) for modern builds

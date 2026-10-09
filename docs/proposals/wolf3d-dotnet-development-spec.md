@@ -1,5 +1,8 @@
 # wolf3d-dotnet Development Specification
 
+> Proposal for a separate managed-engine project; not the current build or
+> implementation plan for wolf3d-lib. The original specification is preserved below.
+
 ## Instructions to the implementing agent
 
 This document is the authoritative project brief for a new, separate Git
@@ -807,4 +810,3 @@ The overall project is complete when:
   corpus passes across maintained engines and hosts.
 - A reader can follow the source progression and understand both the original
   implementation and the readable life of a rendered frame.
-

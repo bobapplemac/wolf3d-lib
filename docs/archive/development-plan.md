@@ -1,5 +1,9 @@
 # wolf3dgeneric development plan
 
+> Historical checkpoint from the combined wolf3dgeneric project. Commands,
+> API descriptions and validation counts below describe that period; use the
+> [current documentation index](../README.md) for maintained guidance.
+
 ## Completion status
 
 The original Wolfenstein 3D and Spear of Destiny scope is complete. The Apogee

@@ -115,5 +115,4 @@ corresponding dispatcher/CMake options documented in
 | Target | Integration | Validation |
 | --- | --- | --- |
 | DOS/32A portable host | `wolf3d-portable` links this OMF library with direct VGA, IRQ 1 keyboard, 700 Hz PIT, SB16 PCM, and DOS/32A | Interactive DOSBox gameplay confirmed; physical DOS hardware remains untested |
-| Native AdLib/OPL backend | The v4 platform callbacks keep port I/O in the host while the library's `adlib` adapter preserves the 700 Hz engine clock | Native port-388h operation confirmed under DOSBox; DBOPL and silent fallbacks also confirmed |
-
+| Native AdLib/OPL backend | The native-OPL platform callbacks keep port I/O in the host while the library's `adlib` adapter preserves the 700 Hz engine clock | Native port-388h operation confirmed under DOSBox; DBOPL and silent fallbacks also confirmed |

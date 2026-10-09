@@ -515,3 +515,11 @@ Events distinguish centered player/interface sounds from positioned actors and
 doors. While the selected digitized sound remains active, its world coordinate
 is transformed again each game tic so turning or walking changes the stereo
 image as it did through `UpdateSoundLoc` on Sound Blaster Pro hardware.
+
+## Preservation policy
+
+Keep original gameplay and audiovisual behavior rather than introducing modern
+gameplay changes. Preserve deterministic arithmetic, random-number generation,
+tic batching and demo playback. Host integrations use public callbacks and must
+not depend on private engine headers; source lineage stays visible through the
+original ID_/WL_ filenames and documented WG_ portability boundaries.

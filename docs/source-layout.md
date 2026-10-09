@@ -44,7 +44,7 @@ They are deliberately small portability or safety layers:
 | `WG_PALETTE` | Read-only portable ownership of the VGA palette |
 | `WG_RENDERER` | Composition layer over the translated drawing routines |
 | `WG_PLATFORM` | The doomgeneric-style host contract |
-| `WG_HEADLESS`, `WG_WIN32` | Reference implementations of that host contract |
+| `WG_HEADLESS` | Internal validation host; production hosts live in wolf3d-portable |
 
 `third_party/Nuked-OPL3` is intentionally outside both groups: it is the
 unaltered LGPL OPL emulator selected by the project, built as its own library.

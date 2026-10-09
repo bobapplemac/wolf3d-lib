@@ -1,45 +1,47 @@
 # Repository layout
 
-`wolf3d-lib` owns the portable engine, public ABI, deterministic oracle,
-tests, and library packaging. Production host wrappers live in the companion
-`wolf3d-portable` repository.
+wolf3d-lib owns the reusable engine, public API and deterministic validation.
+Playable hosts belong in wolf3d-portable.
 
-| Path | Contents |
+| Path | Responsibility |
 | --- | --- |
-| `src/` | Portable engine. Original `WL_*` and `ID_*` filenames remain comparable with the DOS source; genuinely new modules use `WG_*`. |
-| `include/` | Public C99 ABI, currently `WOLF3D.h`. |
-| `platforms/headless/` | Internal deterministic validation host. |
-| `platforms/WG_TEXT_OUTPUT.*` | Shared diagnostic text helper used by internal validation. |
-| `tests/` | Unit, archive, demo, rendering, timing, and data regression suite. |
-| `third_party/Nuked-OPL3/` | Replaceable LGPL OPL emulator source. |
-| `packaging/` | Library-package template and portable Linux builder. |
-| `tools/` | Maintainer generators and release/audit tools. |
-| `cmake/legacy/` | Isolated CMake 3.5 definition for x86 VC6 through VS2005 builds. |
-| `docs/` | Architecture, building, porting, provenance, supported-data, and historical development records. |
-| `VERSION` | Authoritative `1.4.REVISION` library identity. |
-| `ide/visual-studio/vsYYYY/` | One native, toolset-pinned solution/project pair per supported Visual Studio IDE generation. |
-| `build.ps1` | Modern Windows toolchain detector and human-facing build dispatcher. |
-| `scripts/windows/` | Modern Visual Studio/MinGW PowerShell implementation and XP-native legacy CMD dispatcher. |
-| `scripts/linux/` | Linux build dispatchers plus Docker helpers for portable glibc, musl, and Open Watcom DOS32 cross-builds. |
-| `build/` | Ignored compiler output and local diagnostics. |
-| `dist/` | Ignored clean library SDK packages. |
+| `src/` | Private engine implementation; original ID_/WL_ filenames preserve source correspondence. |
+| `include/` | Public ABI headers, including legacy fixed-width-type compatibility. |
+| `compat/` | Private compiler compatibility support. |
+| `platforms/` | Internal headless validation host and diagnostic helpers; playable hosts live in portable. |
+| `third_party/` | Vendored Nuked-OPL3 and DBOPL, with their upstream provenance. |
+| `LICENSES/` | Historical licensing evidence; distinct from licenses assembled into binary packages. |
+| `.github/` | CI and repository automation. |
+| `cmake/` | Build graph helpers; legacy/ isolates CMake 3.5-era generators. |
+| `docs/` | User and developer guides; README.md is the navigation and ownership index. |
+| `ide/` | Version-specific native IDE descriptors; generated workspace caches stay ignored. |
+| `packaging/` | Container definitions, package templates, license resources and notice fragments. |
+| `scripts/` | Build entry-point implementations and packaging orchestration, grouped by host/toolchain. |
+| `tests/` | Runtime, API, build and packaging regression fixtures; external game data remains external. |
+| `tools/` | Focused audits and generators; scripts may invoke these during validation. |
+| `build/` | Ignored intermediate binaries, logs, local diagnostics and caches. |
+| `dist/` | Ignored complete redistributable packages; layout is a separate published contract. |
 
-## Stable build trees
+Root build.sh, build.ps1 and build.cmd are stable user entry points. Makefile,
+CMakeLists.txt and CMakePresets.json remain at the root for their tools. README,
+CHANGELOG, LICENSE and THIRD_PARTY are discoverable repository metadata.
+VERSION is the authoritative engine revision.
 
-| Preset or command | Directory |
-| --- | --- |
-| `windows-dev-x64` | `build/windows-vs2019-dev-x64` |
-| `windows-dev-x86` | `build/windows-vs2019-dev-x86` |
-| `windows-library-x64` | `build/windows-vs2019-library-x64` |
-| `windows-library-x86` | `build/windows-vs2019-library-x86` |
-| `windows-vs2022-dev-x64` | `build/windows-vs2022-dev-x64` |
-| `windows-vs2022-dev-x86` | `build/windows-vs2022-dev-x86` |
-| `windows-vs2022-library-x64` | `build/windows-vs2022-library-x64` |
-| `windows-vs2022-library-x86` | `build/windows-vs2022-library-x86` |
-| `linux-dev` | `build/linux-dev` |
-| `linux-library` | `build/linux-library` |
-| `make ... CC=gcc` | `build/linux-gcc` or `build/linux-library-gcc` |
-| `make ... CC=clang` | `build/linux-clang` or `build/linux-library-clang` |
+## Placement and maintenance rules
 
-Game-derived PPM/WAV diagnostics stay in ignored build folders and are never
-part of a library distribution.
+- Keep source paths stable: native IDE descriptors, scripts and tools reference
+  them. A backend vocabulary change does not require renaming its source directory.
+- Put orchestration in scripts/, standalone audits/generators in tools/, and
+  test fixtures in tests/. A tool used by packaging may remain in tools/.
+- Put Dockerfiles, distribution text and licensing inputs in packaging/; keep
+  runtime host implementation in platforms/ and CMake logic in cmake/.
+- Do not move vendored dependencies or their upstream documents for visual tidiness.
+- Generated outputs belong in ignored build/ or dist/, never among tracked source.
+- Keep the root README short. Each topic has an owning guide in the
+  [documentation index](README.md); link there instead of duplicating option tables.
+- Archive completed plans and checkpoint evidence rather than presenting them as
+  current support claims. Keep original source/provenance records intact.
+
+[Build naming](BUILD-NAMING.md) defines output directory identities;
+[distribution contents](DISTRIBUTION-CONTENTS.md) defines the package payload.
+Source-tree organization and distribution organization serve different readers.

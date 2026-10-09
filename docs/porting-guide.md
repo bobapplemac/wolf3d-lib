@@ -99,9 +99,49 @@ every callback, set `api_version` to `WOLF3D_PLATFORM_API_VERSION`, set
 `wolf3d_SetPlatform`. Then call `wolf3d_Create`, followed by
 `wolf3d_Run`, and always finish with `wolf3d_Shutdown` after
 successful creation. The companion hosts demonstrate this exact dynamic
-library boundary and build the library as a pinned submodule.
+library boundary and build the library from their selected submodule checkout.
 
 Game data is external. Pass its directory through `--data`; never compile or
 package the commercial files into a host. A new platform should first reproduce
 the headless title/menu hashes, then exercise interactive input and continuous
 PCM under its native event loop.
+
+## Lifecycle and runtime choices
+
+Hosts include `WOLF3D.h`, fill a `wolf3d_platform_api_t`, then call:
+
+1. `wolf3d_SetPlatform()`
+2. `wolf3d_Create()`
+3. `wolf3d_Run()`
+4. `wolf3d_Shutdown()`
+
+The library also exports read-only OPL-driver discovery functions plus the
+indexed 320x200 `wolf3d_ScreenBuffer` and 256-color `wolf3d_Palette`. Default modern
+builds include Nuked-OPL3, pure-C DBOPL, and timing-preserving silent drivers;
+`--opl nuked|dbopl|silent` selects among the compiled choices at runtime.
+Nuked-OPL3 remains a separate, replaceable LGPL shared library.
+
+The platform table also exposes optional native-OPL lifecycle and
+register-write callbacks. They support constrained hardware hosts without
+adding raw I/O to the portable engine; ordinary Windows and Linux builds leave
+them unset and do not compile the `adlib` adapter.
+
+The in-tree `wolf3d::wolf3d` CMake target is the supported target for a
+parent project. The public header is under `include/`; private `src/`
+headers are not a host interface.
+
+Runtime audio selection is intentionally host-independent:
+
+```text
+--opl nuked|dbopl|silent  Select an implementation compiled into the library
+--sample-rate HZ          Request 8000--192000 Hz PCM (default: 48000)
+--adlib / -nosb           Emulate an AdLib-only machine
+--pc-speaker / -noal      Emulate no sound card; default to PC-speaker effects
+--no-sound                Emulate no sound card and select no audio
+```
+
+The host may negotiate another application-facing PCM rate. The library then
+constructs the selected emulator at that obtained rate while preserving the
+exact rational 700 Hz IMF clock and 140 Hz effect clock.
+Hardware profiles are independent of the selected OPL implementation and of
+whether the host opens a physical audio device.

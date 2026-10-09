@@ -1,5 +1,12 @@
 # Development log
 
+> Historical checkpoint from the combined wolf3dgeneric project. Commands,
+> API descriptions and validation counts below describe that period; use the
+> [current documentation index](../README.md) for maintained guidance.
+
+The capture paths below identify local, ignored validation artifacts; those files
+are not distributed with this repository.
+
 ## 2026-10-06: Compile-time audio sets and runtime selection
 
 - Added a small OPL-driver registry around the existing common register/write/
@@ -316,17 +323,17 @@ hash so the milestone remains verifiable even when the screenshot is absent.
   (`f49d01316c7fdd4c`); palette hashes distinguish Wolf3D
   (`1e14f48394b7e6fd`) from Spear (`eba126e8df00d1cb`).
 
-![Restored original PC-13 startup screen](../build/artifacts/pc13-wl6.png)
+Restored original PC-13 startup screen (local artifact: `build/artifacts/pc13-wl6.png`)
 
-![Embedded GT SIGNON with restored detection overlays](../build/artifacts/signon-gt-filled.png)
+Embedded GT SIGNON with restored detection overlays (local artifact: `build/artifacts/signon-gt-filled.png`)
 
-![Embedded Spear SIGNON with restored detection overlays](../build/artifacts/signon-spear-filled.png)
+Embedded Spear SIGNON with restored detection overlays (local artifact: `build/artifacts/signon-spear-filled.png`)
 
 - Added `--adlib` as a hardware-profile override: OPL music and AdLib effects
   remain active, digitized Sound Blaster effects are disabled, and SIGNON uses
   the original mutually exclusive AdLib marker instead of Sound Blaster.
 
-![AdLib-only SIGNON hardware marker](../build/artifacts/signon-gt-adlib.png)
+AdLib-only SIGNON hardware marker (local artifact: `build/artifacts/signon-gt-adlib.png`)
 
 ## 2026-09-26: Original status faces and Spear F1 behavior
 
@@ -361,7 +368,7 @@ hash so the milestone remains verifiable even when the screenshot is absent.
 - 320x200 indexed-frame FNV-1a: `52a9cf2dd9dcab66`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![Initial E1M1 wall and door view](../build/artifacts/initial-play-view.png)
+Initial E1M1 wall and door view (local artifact: `build/artifacts/initial-play-view.png`)
 
 ## 2026-09-23: Original static status bar
 
@@ -370,7 +377,7 @@ hash so the milestone remains verifiable even when the screenshot is absent.
 - 320x200 indexed-frame FNV-1a: `b2f43cae26b556f5`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![Initial E1M1 view with status bar](../build/artifacts/initial-hud-view.png)
+Initial E1M1 view with status bar (local artifact: `build/artifacts/initial-hud-view.png`)
 
 Regenerate the latest capture with:
 
@@ -388,7 +395,7 @@ created locally for visual inspection.
 - 320x200 indexed-frame FNV-1a, including the HUD: `ab0c1a3f48fece62`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![Initial E1M1 view with pistol and status bar](../build/artifacts/initial-weapon-view.png)
+Initial E1M1 view with pistol and status bar (local artifact: `build/artifacts/initial-weapon-view.png`)
 
 ## 2026-09-23: Static objects and wall occlusion
 
@@ -405,7 +412,7 @@ created locally for visual inspection.
   world scale; the earlier capture incorrectly reused `SimpleScaleShape`'s
   first-person weapon scale.
 
-![E1M1 open-door static-object rendering](../build/artifacts/open-door-static-objects.png)
+E1M1 open-door static-object rendering (local artifact: `build/artifacts/open-door-static-objects.png`)
 
 Regenerate the diagnostic capture with:
 
@@ -424,7 +431,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors 
 - The diagnostic pose is three tiles west of E1M1's final map-order guard and
   does not alter ordinary level initialization.
 
-![E1M1 standing guard rendering](../build/artifacts/standing-guard.png)
+E1M1 standing guard rendering (local artifact: `build/artifacts/standing-guard.png`)
 
 Regenerate the guard capture with:
 
@@ -444,7 +451,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --guard-view 
 - The corpse and locked door in this normal starting pose are both original
   E1M1 map objects; no diagnostic level-state changes are applied.
 
-![E1M1 original dead guard and locked door](../build/artifacts/initial-standard-actors.png)
+E1M1 original dead guard and locked door (local artifact: `build/artifacts/initial-standard-actors.png`)
 
 Regenerate the capture with:
 
@@ -463,7 +470,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --dump-frame 
 - 320x200 indexed-frame FNV-1a: `a38a57b87c979508`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![Hans Grosse on the original Episode 1 boss map](../build/artifacts/hans-grosse.png)
+Hans Grosse on the original Episode 1 boss map (local artifact: `build/artifacts/hans-grosse.png`)
 
 Regenerate the capture with:
 
@@ -484,7 +491,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --bos
 - 320x200 indexed-frame FNV-1a: `0460cc1c73d44f60`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 guard following his original patrol path](../build/artifacts/moving-patrol.png)
+E1M1 guard following his original patrol path (local artifact: `build/artifacts/moving-patrol.png`)
 
 Regenerate the capture with:
 
@@ -507,7 +514,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --open-doors 
 - 320x200 indexed-frame FNV-1a: `63df8fa451a6ba6b`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 guard after first sighting](../build/artifacts/alerted-guard.png)
+E1M1 guard after first sighting (local artifact: `build/artifacts/alerted-guard.png`)
 
 Regenerate the capture with:
 
@@ -532,7 +539,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --alert-view 
 - 320x200 indexed-frame FNV-1a: `8485e203e6d30079`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 guard beginning his chase](../build/artifacts/chasing-guard.png)
+E1M1 guard beginning his chase (local artifact: `build/artifacts/chasing-guard.png`)
 
 Regenerate the capture with:
 
@@ -557,7 +564,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --chase-view 
 - 320x200 indexed-frame FNV-1a: `dbfa84e64bb68acf`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 guard firing and damaging the player](../build/artifacts/guard-firing.png)
+E1M1 guard firing and damaging the player (local artifact: `build/artifacts/guard-firing.png`)
 
 Regenerate the capture with:
 
@@ -579,7 +586,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --fire-view -
 - 320x200 indexed-frame FNV-1a: `2391755b562c8744`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 dog landing a bite](../build/artifacts/dog-bite.png)
+E1M1 dog landing a bite (local artifact: `build/artifacts/dog-bite.png`)
 
 Regenerate the capture with:
 
@@ -600,7 +607,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --bite-view -
 - 320x200 indexed-frame FNV-1a: `cd8a4e5001298ee6`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![Hans Grosse firing his original burst](../build/artifacts/hans-firing.png)
+Hans Grosse firing his original burst (local artifact: `build/artifacts/hans-firing.png`)
 
 Regenerate the capture with:
 
@@ -622,7 +629,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --bos
 - This checkpoint requires WL6 because the shareware WL1 data contains only
   Episode 1.
 
-![Dr. Schabbs throwing a syringe](../build/artifacts/schabbs-needle.png)
+Dr. Schabbs throwing a syringe (local artifact: `build/artifacts/schabbs-needle.png`)
 
 Regenerate the capture with:
 
@@ -644,7 +651,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 18 --ne
 - This checkpoint requires WL6 because the shareware WL1 data contains only
   Episode 1.
 
-![Giftmacher firing a rocket](../build/artifacts/gift-rocket.png)
+Giftmacher firing a rocket (local artifact: `build/artifacts/gift-rocket.png`)
 
 Regenerate the capture with:
 
@@ -666,7 +673,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 38 --ro
 - This checkpoint requires WL6 because the shareware WL1 data contains only
   Episode 1.
 
-![Fake Hitler's flame burst](../build/artifacts/fake-flames.png)
+Fake Hitler's flame burst (local artifact: `build/artifacts/fake-flames.png`)
 
 Regenerate the capture with:
 
@@ -693,7 +700,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 28 --fl
 - 320x200 indexed-frame FNV-1a: `48bdacd231ece2d9`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 portrait pushwall halfway into motion](../build/artifacts/moving-pushwall.png)
+E1M1 portrait pushwall halfway into motion (local artifact: `build/artifacts/moving-pushwall.png`)
 
 Regenerate the capture with:
 
@@ -719,7 +726,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pushwall-vi
   runtime score was connected to the HUD)
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 guard in the third death frame](../build/artifacts/guard-death.png)
+E1M1 guard in the third death frame (local artifact: `build/artifacts/guard-death.png`)
 
 Regenerate the capture with:
 
@@ -746,7 +753,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --death-view 
   runtime score was connected to the HUD)
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![Hans Grosse in the third death frame](../build/artifacts/hans-death.png)
+Hans Grosse in the third death frame (local artifact: `build/artifacts/hans-death.png`)
 
 Regenerate the capture with:
 
@@ -772,7 +779,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --map 8 --bos
 - 320x200 indexed-frame FNV-1a: `6fb9a7201588ef0c`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![BJ firing the pistol at an E1M1 guard](../build/artifacts/player-pistol.png)
+BJ firing the pistol at an E1M1 guard (local artifact: `build/artifacts/player-pistol.png`)
 
 Regenerate the capture with:
 
@@ -802,7 +809,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-fire
 - 320x200 indexed-frame FNV-1a: `3745f8af67b60f69`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 treasure room after collecting a cross](../build/artifacts/pickup-cross.png)
+E1M1 treasure room after collecting a cross (local artifact: `build/artifacts/pickup-cross.png`)
 
 Regenerate the capture with:
 
@@ -837,7 +844,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pickup-view
 - 320x200 indexed-frame FNV-1a: `d5720a5ad520646d`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 door halfway open after use](../build/artifacts/door-use.png)
+E1M1 door halfway open after use (local artifact: `build/artifacts/door-use.png`)
 
 Regenerate the capture with:
 
@@ -865,7 +872,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --door-use-vi
 - 320x200 indexed-frame FNV-1a: `41b5819e00a95446`
 - Identical result with the supplied WL1 and WL6 data sets.
 
-![E1M1 after 35 forward play-loop tics](../build/artifacts/play-loop-forward.png)
+E1M1 after 35 forward play-loop tics (local artifact: `build/artifacts/play-loop-forward.png`)
 
 Regenerate the capture with:
 
@@ -896,7 +903,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --forward-tic
 - The ten-second WAV fixture is 48 kHz, stereo, signed 16-bit PCM with SHA-256
   `40ecca1c103a8e38dab7e7eb4725f268348c18e8120a6c5e996984544df15e1e`.
 
-![Ten-second E1M1 Nuked-OPL3 reference render](../build/artifacts/e1m1-nuked-opl3.wav)
+Ten-second E1M1 Nuked-OPL3 reference render (local artifact: `build/artifacts/e1m1-nuked-opl3.wav`)
 
 Regenerate it with:
 
@@ -923,7 +930,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --dump-music out\
 - The ten-second mixed WAV has SHA-256
   `ebe613d9a705ab31add505e3bf581646ed9ed71ea4ac5951179d9983efb701fd`.
 
-![E1M1 music with the original AdLib pistol effect](../build/artifacts/e1m1-pistol-opl.wav)
+E1M1 music with the original AdLib pistol effect (local artifact: `build/artifacts/e1m1-pistol-opl.wav`)
 
 Regenerate it with:
 
@@ -953,7 +960,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --dump
 - The ten-second E1M1-plus-pistol WAV has SHA-256
   `61376fcbeb1199d909ef084cbaa6ba4a3db4a4e5d0609758f21fc7f4083f86b5`.
 
-![E1M1 music with the original digitized pistol sample](../build/artifacts/e1m1-pistol-digital.wav)
+E1M1 music with the original digitized pistol sample (local artifact: `build/artifacts/e1m1-pistol-digital.wav`)
 
 Regenerate the ten-second reference render with:
 
@@ -982,7 +989,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digi
 - The right-biased ten-second pistol fixture has SHA-256
   `54aeae4d8a7e70efee58d2915e8236c67979301fd005a14d0bbea34bd0213a59`.
 
-![Right-biased digitized pistol spatial-audio fixture](../build/artifacts/e1m1-pistol-panned.wav)
+Right-biased digitized pistol spatial-audio fixture (local artifact: `build/artifacts/e1m1-pistol-panned.wav`)
 
 Regenerate it with:
 
@@ -1007,7 +1014,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 0 --sound 24 --digi
 - Added identical WL1/WL6 and x86/x64 regression coverage for Episode 1,
   Floor 2. Its initial 320x200 indexed-frame FNV-1a is `dd20149a5592b546`.
 
-![Episode 1 Floor 2 after campaign transition](../build/artifacts/e1f2-start.png)
+Episode 1 Floor 2 after campaign transition (local artifact: `build/artifacts/e1f2-start.png`)
 
 Regenerate the destination frame with:
 
@@ -1042,7 +1049,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --map 1 --play-view --fra
 - The complete E1M1 paused view is identical for WL1 and WL6, with indexed
   framebuffer FNV-1a `fb088c39d6f75570`.
 
-![Original pause plaque over the live E1M1 view](../build/artifacts/paused.png)
+Original pause plaque over the live E1M1 view (local artifact: `build/artifacts/paused.png`)
 
 Regenerate the capture with:
 
@@ -1067,7 +1074,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --pause-view 
   archive uses chunk 43. Both decode to the same completed screen, with indexed
   framebuffer FNV-1a `85b3dfdb33f1fb4d`.
 
-![Perfect E1M1 level-complete result](../build/artifacts/e1m1-intermission.png)
+Perfect E1M1 level-complete result (local artifact: `build/artifacts/e1m1-intermission.png`)
 
 Regenerate the capture with:
 
@@ -1087,9 +1094,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --intermissio
   independent deterministic oracle. The 40-point damage fixture hashes to
   `d6969024db3bdb40`; the initial bonus fixture hashes to `8b16358ec3225130`.
 
-![Original 40-point damage palette shift](../build/artifacts/damage-flash.png)
+Original 40-point damage palette shift (local artifact: `build/artifacts/damage-flash.png`)
 
-![Original pickup bonus palette shift](../build/artifacts/bonus-flash.png)
+Original pickup bonus palette shift (local artifact: `build/artifacts/bonus-flash.png`)
 
 ## 2026-09-24: Original player-death presentation
 
@@ -1107,7 +1114,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --intermissio
   WL1/WL6 visual oracle. The half-fizzle indexed framebuffer is identical in
   both editions, with FNV-1a `110c844dbc2a3366`.
 
-![Player death halfway through the original red fizzle](../build/artifacts/player-death.png)
+Player death halfway through the original red fizzle (local artifact: `build/artifacts/player-death.png`)
 
 Regenerate the capture with:
 
@@ -1129,7 +1136,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --player-deat
   floor. Both supplied WL1 and WL6 archives produce indexed framebuffer FNV-1a
   `8e828f1563f3c064` despite their different graphics chunk numbering.
 
-![Original episode victory totals screen](../build/artifacts/victory.png)
+Original episode victory totals screen (local artifact: `build/artifacts/victory.png`)
 
 Regenerate the capture with:
 
@@ -1151,7 +1158,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --victory-vie
 - The supplied WL1 and WL6 archives again resolve to identical pixels despite
   shifted chunk indices: default-table FNV-1a `7b063c0fb260132e`.
 
-![Original Wolf3D high-score table](../build/artifacts/high-scores.png)
+Original Wolf3D high-score table (local artifact: `build/artifacts/high-scores.png`)
 
 Regenerate the capture with:
 
@@ -1172,7 +1179,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --high-score-
 - Added scan-to-ASCII unit coverage and an edition-independent `BJ` editing
   frame. WL1 and WL6 both hash to `3b75e429fe454ad8`.
 
-![BJ high-score name with the original I-bar cursor](../build/artifacts/high-score-entry.png)
+BJ high-score name with the original I-bar cursor (local artifact: `build/artifacts/high-score-entry.png`)
 
 Regenerate the capture with:
 
@@ -1202,7 +1209,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --high-score-
   `7aeca6c61a08514b` for WL6's twelve pages. First-page headless
   fixtures both hash to `9751906604fce502`.
 
-![Original Episode 1 ending article](../build/artifacts/end-text.png)
+Original Episode 1 ending article (local artifact: `build/artifacts/end-text.png`)
 
 Regenerate the capture with:
 
@@ -1225,7 +1232,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --end-text-vi
   consequently produce the identical indexed framebuffer hash
   `cdbff8b31548b64e`.
 
-![Original Wolf3D control-panel main menu](../build/artifacts/main-menu.png)
+Original Wolf3D control-panel main menu (local artifact: `build/artifacts/main-menu.png`)
 
 Regenerate the capture with:
 
@@ -1249,9 +1256,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --main-menu-v
   `45053c7411aec10f` for the fully enabled WL6 screen. The medium difficulty
   screen is edition-independent at `6ef5da5dc52ae5b0`.
 
-![Original shareware episode selector](../build/artifacts/episode-menu.png)
+Original shareware episode selector (local artifact: `build/artifacts/episode-menu.png`)
 
-![Original medium difficulty selector](../build/artifacts/difficulty-menu.png)
+Original medium difficulty selector (local artifact: `build/artifacts/difficulty-menu.png`)
 
 Regenerate the captures with:
 
@@ -1272,7 +1279,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --difficulty-
   `0c09b4fdb0b59e80` for WL6; the common first page hashes to
   `afa188f7e955ec42` in both editions.
 
-![Original Wolf3D Read This help article](../build/artifacts/help.png)
+Original Wolf3D Read This help article (local artifact: `build/artifacts/help.png`)
 
 Regenerate the capture with:
 
@@ -1297,9 +1304,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --help-view -
   streams also run without parser, simulation, or renderer failure. Automatic
   attract-loop sequencing remains the next front-end integration step.
 
-![Shareware embedded-demo checkpoint](../build/artifacts/demo-wl1.png)
+Shareware embedded-demo checkpoint (local artifact: `build/artifacts/demo-wl1.png`)
 
-![Full-release embedded-demo checkpoint](../build/artifacts/demo-wl6.png)
+Full-release embedded-demo checkpoint (local artifact: `build/artifacts/demo-wl6.png`)
 
 Regenerate the captures with:
 
@@ -1325,7 +1332,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --demo-view -
 - Added an edition-independent credits fixture with indexed framebuffer hash
   `877dd0b7c8d5bf6d`.
 
-![Original Wolfenstein 3D credits screen](../build/artifacts/credits.png)
+Original Wolfenstein 3D credits screen (local artifact: `build/artifacts/credits.png`)
 
 Regenerate the capture with:
 
@@ -1348,7 +1355,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --credits-vie
 - Added edition-specific renderer fixtures: WL1 hashes to `ccbead18acb8b045`
   and WL6 hashes to `f311bc2002d7a216`.
 
-![Original Wolfenstein 3D sound menu](../build/artifacts/sound-menu.png)
+Original Wolfenstein 3D sound menu (local artifact: `build/artifacts/sound-menu.png`)
 
 Regenerate the capture with:
 
@@ -1372,9 +1379,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --sound-menu-
   `466d386e2915c931` (WL6), plus the shared sensitivity-dialog hash
   `f7dc4f44ff382c6b`.
 
-![Original Wolfenstein 3D control menu](../build/artifacts/control-menu.png)
+Original Wolfenstein 3D control menu (local artifact: `build/artifacts/control-menu.png`)
 
-![Original mouse sensitivity dialog](../build/artifacts/mouse-sensitivity.png)
+Original mouse sensitivity dialog (local artifact: `build/artifacts/mouse-sensitivity.png`)
 
 Regenerate the captures with:
 
@@ -1399,7 +1406,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --mouse-sensi
 - Added renderer hashes `f94ac3381beb5e83` (WL1) and `2ac0b2270dc20b66`
   (WL6), plus scan-name and menu-navigation regression coverage.
 
-![Original Wolfenstein 3D custom-control table](../build/artifacts/customize-controls.png)
+Original Wolfenstein 3D custom-control table (local artifact: `build/artifacts/customize-controls.png`)
 
 Regenerate the capture with:
 
@@ -1422,9 +1429,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --customize-c
 - Added shared WL1/WL6 hashes `fe964b945ec6d203` for the Change View panel and
   `063d5289c4c1414e` for the authored default-size gameplay presentation.
 
-![Original Change View panel at size 15](../build/artifacts/change-view.png)
+Original Change View panel at size 15 (local artifact: `build/artifacts/change-view.png`)
 
-![E1M1 using the original default size-15 viewport](../build/artifacts/default-view.png)
+E1M1 using the original default size-15 viewport (local artifact: `build/artifacts/default-view.png`)
 
 Regenerate the captures with:
 
@@ -1455,11 +1462,11 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --view-size 1
   `d81cecaa1eef0887` (WL1) and `55f762913ddab4c7` (WL6). All 85 tests pass in
   MSVC x86 and x64 builds.
 
-![Original in-game control panel](../build/artifacts/in-game-menu.png)
+Original in-game control panel (local artifact: `build/artifacts/in-game-menu.png`)
 
-![Original Load Game panel](../build/artifacts/load-game.png)
+Original Load Game panel (local artifact: `build/artifacts/load-game.png`)
 
-![Original Save Game panel](../build/artifacts/save-game.png)
+Original Save Game panel (local artifact: `build/artifacts/save-game.png`)
 
 Regenerate the captures with:
 
@@ -1556,7 +1563,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --save-game-v
 - The enabled control panel hashes to `6a7611870fce1ab5` (WL1) and
   `07dc46006dc97b99` (WL6). The project-specific GitLab CI file was removed.
 
-![Original control panel with joystick enabled](../build/artifacts/joystick-menu-wl6.png)
+Original control panel with joystick enabled (local artifact: `build/artifacts/joystick-menu-wl6.png`)
 
 Regenerate the capture with:
 
@@ -1585,11 +1592,11 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   checked. Spear bosses, intermission/victory sequences, and semantic sound
   remapping remain the next fidelity tranche.
 
-![Spear of Destiny title decoded from the original archives](../build/artifacts/sod-title.png)
+Spear of Destiny title decoded from the original archives (local artifact: `build/artifacts/sod-title.png`)
 
-![Spear of Destiny options menu](../build/artifacts/sod-main-menu.png)
+Spear of Destiny options menu (local artifact: `build/artifacts/sod-main-menu.png`)
 
-![Spear of Destiny difficulty menu](../build/artifacts/sod-difficulty.png)
+Spear of Destiny difficulty menu (local artifact: `build/artifacts/sod-difficulty.png`)
 
 ## 2026-09-26: Spear palette, SDM corpus, and selectable SIGNON screens
 
@@ -1606,7 +1613,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Regression fixtures now cover all five supplied SIGNON variants and their
   correct Wolf or Spear palette, alongside SOD and SDM menu palette hashes.
 
-![Original Spear hardware-detection SIGNON screen](../build/artifacts/signon-spear.png)
+Original Spear hardware-detection SIGNON screen (local artifact: `build/artifacts/signon-spear.png`)
 
 ## 2026-09-26: Original Spear actors and projectiles
 
@@ -1626,7 +1633,7 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   indexed frame hashes to `dd1b3992157d8354` under Spear's corrected palette
   and original map-specific ceiling color.
 
-![Trans Grosse decoded and rendered from the original SOD archives](../build/artifacts/sod-trans-boss.png)
+Trans Grosse decoded and rendered from the original SOD archives (local artifact: `build/artifacts/sod-trans-boss.png`)
 
 ## 2026-09-26: Spear campaign, intermission, and ending flow
 
@@ -1648,13 +1655,13 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   boss intermission, collapse, victory summary, illustrated ending, SOD high
   scores, and SDM final intermission with their proper palettes.
 
-![Spear boss-floor intermission](../build/artifacts/sod-trans-intermission.png)
+Spear boss-floor intermission (local artifact: `build/artifacts/sod-trans-intermission.png`)
 
-![Spear victory summary](../build/artifacts/sod-victory.png)
+Spear victory summary (local artifact: `build/artifacts/sod-victory.png`)
 
-![Spear illustrated ending debrief](../build/artifacts/sod-end-1.png)
+Spear illustrated ending debrief (local artifact: `build/artifacts/sod-end-1.png`)
 
-![Spear high-score table](../build/artifacts/sod-high-scores.png)
+Spear high-score table (local artifact: `build/artifacts/sod-high-scores.png`)
 
 ## 2026-09-26: Semantic Spear sound mapping
 
@@ -1694,9 +1701,9 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
   `4f0e225bd4412cbc`; both use the corrected Spear palette and original
   ceiling-color table.
 
-![Return to Danger opening map](../build/artifacts/sd2-opening.png)
+Return to Danger opening map (local artifact: `build/artifacts/sd2-opening.png`)
 
-![Ultimate Challenge opening map](../build/artifacts/sd3-opening.png)
+Ultimate Challenge opening map (local artifact: `build/artifacts/sd3-opening.png`)
 
 ## 2026-09-26: Spear attract loop and SDM conclusion
 
@@ -1714,11 +1721,11 @@ wolf3dgeneric-headless --data "C:\path\to\Wolf3D data" --play-view --joystick-me
 - Added real-archive gates for the full SOD and SDM demo streams, each hashing
   to `525cbfb8e59bee04` after 70 recorded commands.
 
-![Spear embedded attract demo](../build/artifacts/sod-demo.png)
+Spear embedded attract demo (local artifact: `build/artifacts/sod-demo.png`)
 
-![Spear credits](../build/artifacts/sod-credits.png)
+Spear credits (local artifact: `build/artifacts/sod-credits.png`)
 
-![SDM completion message](../build/artifacts/sdm-conclusion.png)
+SDM completion message (local artifact: `build/artifacts/sdm-conclusion.png`)
 
 ## 2026-09-26: Original Spear ceiling colors
 
