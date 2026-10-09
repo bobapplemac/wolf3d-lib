@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.77 - 2026-10-09 - Generated and mirrored asset checks
+
+- Inventory mirrored helpers and manual/dynamic support assets; add read-only
+  reference, ownership and mirror checks with explicit peer selection.
+- Add non-mutating Open Watcom generator checks and isolated drift regressions.
+- Document generator ownership, external regeneration inputs and retained manual tests.
+
 ## 1.4.76 - 2026-10-09 - Repository documentation review
 
 - Condense the root README into a quick start and link to indexed topic guides.

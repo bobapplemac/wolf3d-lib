@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "mirrors": {
+    "default_edit_in": "wolf3d-lib",
+    "edit_in_overrides": {
+      "docs/source-updates.md": "wolf3d-portable"
+    },
+    "paths": [
+      "cmake/WGDistribution.cmake",
+      "cmake/WGPackageDocs.cmake",
+      "cmake/WGStampBuildInfo.cmake",
+      "docs/BUILD-NAMING.md",
+      "docs/DISTRIBUTION-CONTENTS.md",
+      "docs/maintenance.md",
+      "docs/source-updates.md",
+      "packaging/notices/BASE.TXT",
+      "packaging/notices/DBOPL.TXT",
+      "packaging/notices/DOS32A.TXT",
+      "packaging/notices/NUKED.TXT",
+      "packaging/notices/PORTABLE.TXT",
+      "packaging/notices/SDL3.TXT",
+      "scripts/dist-openwatcom.sh",
+      "scripts/git-preflight.sh",
+      "scripts/linux/invoke-build.sh",
+      "scripts/package-docs.sh",
+      "scripts/windows/cmake-driver.cmd",
+      "scripts/windows/git-preflight.cmd",
+      "scripts/windows/legacy/cmake-driver.cmd",
+      "tests/WG_BUILD_ENV_TEST.ps1",
+      "tests/WG_DIST_NAMING_TEST.py",
+      "tests/WG_GIT_PREFLIGHT_TEST.py",
+      "tests/WG_LEGACY_IDE_TEST.py",
+      "tests/WG_MAINTENANCE_TEST.py",
+      "tests/WG_PACKAGE_DOCS_TEST.py",
+      "tools/WG_DOCS_AUDIT.py",
+      "tools/WG_GLIBC_AUDIT.sh",
+      "tools/WG_MAINTENANCE_AUDIT.py",
+      "tools/maintenance-inventory.json"
+    ]
+  },
+  "repositories": {
+    "wolf3d-lib": {
+      "generator": "tools/WG_GENERATE_OPENWATCOM_IDE.py",
+      "generated_outputs": [
+        "ide/open-watcom/engine/wolf3d-lib.tgt",
+        "ide/open-watcom/nuked-opl3/nuked-opl3.tgt",
+        "ide/open-watcom/wolf3d-lib.wpj"
+      ],
+      "manual_checks": {
+        "tests/WG_BUILD_ENV_TEST.ps1": "PowerShell/MSYS2 dispatcher PATH restoration test; requires an installed MSYS2 toolchain.",
+        "tests/WG_LEGACY_IDE_TEST.py": "Legacy IDE dispatcher and project-reference regression; Windows-specific cases need CMD/PowerShell.",
+        "tests/WG_MAINTENANCE_TEST.py": "Isolated positive/negative generator and mirror-check tests; Python only."
+      },
+      "dynamic_references": {
+        "packaging/notices/*.TXT": "Selected by component names in cmake/WGPackageDocs.cmake and scripts/package-docs.sh; the common fragment set is mirrored."
+      },
+      "external_generated": [
+        {
+          "output": "src/WG_SIGNON_ASSETS.inc",
+          "generator": "tools/GENERATE_SIGNON_ASSETS.ps1",
+          "inputs": "Five original 64000-byte SIGNON_*.BIN files, supplied separately; see docs/provenance.md."
+        }
+      ]
+    },
+    "wolf3d-portable": {
+      "generator": "tools/W3P_GENERATE_OPENWATCOM_IDE.py",
+      "generated_outputs": [
+        "ide/open-watcom/game/wolf3d-dos.tgt",
+        "ide/open-watcom/wgadlib/wgadlib.tgt",
+        "ide/open-watcom/wolf3d-portable.wpj"
+      ],
+      "manual_checks": {
+        "tests/WG_BUILD_ENV_TEST.ps1": "PowerShell/MSYS2 dispatcher PATH restoration test; requires an installed MSYS2 toolchain.",
+        "tests/WG_LEGACY_IDE_TEST.py": "Legacy IDE dispatcher and project-reference regression; Windows-specific cases need CMD/PowerShell.",
+        "tests/WG_WIN32_LEGACY_SDK_TEST.py": "Legacy SDK compile regression; requires MinGW via W3P_MINGW_CC or detected GCC.",
+        "tests/WG_MAINTENANCE_TEST.py": "Isolated positive/negative generator and mirror-check tests; Python only."
+      },
+      "dynamic_references": {
+        "packaging/notices/*.TXT": "Selected by component names in cmake/WGPackageDocs.cmake and scripts/package-docs.sh; the common fragment set is mirrored."
+      },
+      "external_generated": []
+    }
+  }
+}

@@ -31,3 +31,7 @@
 *.SDM
 CONFIG.*
 SAVEGAM?.*
+
+# Python maintainer-tool caches (never runtime/build inputs).
+__pycache__/
+*.pyc

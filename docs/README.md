@@ -12,6 +12,8 @@ reference evidence and preserved historical material.
 
 ## Develop and package
 
+- [maintenance](maintenance.md) — Generated/mirrored file ownership and reference-audit findings.
+
 - [testing](testing.md) — Test commands, external-data coverage and maintainer checks.
 
 - [repository-layout](repository-layout.md) — Source directory ownership and file-placement rules.

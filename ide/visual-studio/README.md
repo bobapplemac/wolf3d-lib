@@ -33,3 +33,8 @@ Legacy VC6--VS2005 builds require CMake 3.5. The build helpers check the
 existing build cache, PATH, and standard CMake installation directories.
 For a custom location, set `WOLF3D_LEGACY_CMAKE` to the full `cmake.exe` path
 before opening the IDE. This overrides automatic discovery.
+
+These native descriptors are maintained in the repository; no in-repository
+generator currently owns them. Run `python tests/WG_LEGACY_IDE_TEST.py` after
+changes. See [maintenance checks](../../docs/maintenance.md) for generated and
+mirrored file ownership.

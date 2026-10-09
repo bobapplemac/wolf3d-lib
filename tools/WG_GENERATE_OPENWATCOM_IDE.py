@@ -1,11 +1,27 @@
 #!/usr/bin/env python3
 """Regenerate Open Watcom IDE descriptors from the canonical source list."""
 
+import argparse
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 IDE = ROOT / "ide" / "open-watcom"
+
+CHECK = False
+DRIFT = []
+
+
+def write_output(path, lines):
+    expected = ("\n".join(lines) + "\n").encode("ascii")
+    if CHECK:
+        actual = path.read_bytes().replace(b"\r\n", b"\n") if path.exists() else None
+        if actual != expected:
+            DRIFT.append(str(path.relative_to(IDE)))
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(expected)
 
 
 def emit_string(lines, object_id, class_name, value):
@@ -35,8 +51,7 @@ def write_target(path, output_name, sources):
                       "WVList", "0", "-1" if index == 0 else str(wildcard_id),
                       "1", "1", "0"))
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(("\n".join(lines) + "\n").encode("ascii"))
+    write_output(path, lines)
 
 
 def write_project(path, targets):
@@ -56,10 +71,17 @@ def write_project(path, targets):
         emit_string(lines, component_id + 2, "WFileName", target)
         lines.extend(("0", "-1"))
     lines.append(str(first_component))
-    path.write_bytes(("\n".join(lines) + "\n").encode("ascii"))
+    write_output(path, lines)
 
 
 def main():
+    global CHECK, IDE
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check', action='store_true', help='fail on drift without writing files')
+    parser.add_argument('--output-dir', type=Path, default=IDE, help='alternative descriptor directory')
+    args = parser.parse_args()
+    CHECK, IDE = args.check, args.output_dir
+    DRIFT.clear()
     core = [line.strip() for line in
             (ROOT / "cmake" / "WGCoreSources.txt").read_text().splitlines()
             if line.strip()]
@@ -80,6 +102,13 @@ def main():
                   ["engine\\wolf3d-lib.tgt",
                    "nuked-opl3\\nuked-opl3.tgt"])
 
+    if DRIFT:
+        print('Generated descriptor drift: ' + ', '.join(DRIFT), file=sys.stderr)
+        return 1
+    if CHECK:
+        print('Open Watcom descriptors match the generator.')
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -25,3 +25,11 @@ python tools\WG_GENERATE_OPENWATCOM_IDE.py
 The generated descriptors are checked with Open Watcom's own `ide2make`
 utility during maintainer validation. The Docker/Make build remains the
 reproducible release path; this workspace is the first-class native IDE path.
+
+Check for drift without changing files:
+
+```text
+python tools/WG_GENERATE_OPENWATCOM_IDE.py --check
+```
+
+See [maintenance ownership and checks](../../docs/maintenance.md).
