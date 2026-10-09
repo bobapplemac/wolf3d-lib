@@ -112,6 +112,49 @@ void WG_ConfigDefaults(wg_config_t *config)
     config->view_size = WL_VIEW_SIZE_DEFAULT;
 }
 
+void WG_ConfigResolveStartup(wg_config_t *config, int saved,
+                             int mouse_present, unsigned joystick_devices,
+                             int adlib_present, int sound_blaster_present,
+                             int no_sound)
+{
+    if (!saved)
+    {
+        config->mouse_enabled = (uint8_t)(mouse_present != 0);
+        config->joystick_enabled = 0U;
+        config->sound_mode = (adlib_present || sound_blaster_present) ? 2U : 1U;
+        config->music_enabled = (uint8_t)(adlib_present || sound_blaster_present);
+        config->digitized_effects = (uint8_t)(sound_blaster_present != 0);
+    }
+    if (!mouse_present)
+    {
+        config->mouse_enabled = 0U;
+    }
+    if (config->joystick_port > 1U
+        || (joystick_devices & (1U << config->joystick_port)) == 0U)
+    {
+        config->joystick_enabled = 0U;
+    }
+    if (!adlib_present && !sound_blaster_present)
+    {
+        /* Original ReadConfig ultimately turns unavailable saved AdLib off. */
+        if (config->sound_mode == 2U)
+        {
+            config->sound_mode = 0U;
+        }
+        config->music_enabled = 0U;
+    }
+    if (!sound_blaster_present)
+    {
+        config->digitized_effects = 0U;
+    }
+    if (no_sound)
+    {
+        config->sound_mode = 0U;
+        config->music_enabled = 0U;
+        config->digitized_effects = 0U;
+    }
+}
+
 static int WG_ConfigValid(const wg_config_t *config)
 {
     unsigned index;

@@ -71,7 +71,7 @@ Runtime audio selection is intentionally host-independent:
 --opl nuked|dbopl|silent  Select an implementation compiled into the library
 --sample-rate HZ          Request 8000--192000 Hz PCM (default: 48000)
 --adlib / -nosb           Emulate an AdLib-only machine
---pc-speaker / -noal      Emulate no sound card and use PC-speaker effects
+--pc-speaker / -noal      Emulate no sound card; default to PC-speaker effects
 --no-sound                Emulate no sound card and select no audio
 ```
 

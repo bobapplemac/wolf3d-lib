@@ -5495,6 +5495,63 @@ static void TestSignonAssets(void)
     free(framebuffer);
 }
 
+static void TestStartupPreferences(void)
+{
+    unsigned hardware, mouse, joysticks, port, enabled, sound, mute;
+    wg_config_t saved, actual;
+    uint8_t bytes[WG_CONFIG_BUFFER_SIZE];
+    size_t size;
+
+    /* Exercise serialized preferences, including either selected joystick port,
+       against every supported hardware profile and explicit mute. */
+    for (hardware = 0U; hardware < 3U; ++hardware)
+    for (mouse = 0U; mouse < 2U; ++mouse)
+    for (joysticks = 0U; joysticks < 4U; ++joysticks)
+    for (port = 0U; port < 2U; ++port)
+    for (enabled = 0U; enabled < 2U; ++enabled)
+    for (sound = 0U; sound < 3U; ++sound)
+    for (mute = 0U; mute < 2U; ++mute)
+    {
+        WG_ConfigDefaults(&saved);
+        saved.mouse_enabled = (uint8_t)enabled;
+        saved.joystick_enabled = (uint8_t)enabled;
+        saved.joystick_port = (uint8_t)port;
+        saved.sound_mode = (uint8_t)sound;
+        saved.music_enabled = (uint8_t)enabled;
+        saved.digitized_effects = (uint8_t)enabled;
+        CHECK(WG_ConfigEncode(bytes, sizeof(bytes), &size,
+                               WG_GAME_WOLF3D_SHAREWARE_14, &saved));
+        CHECK(WG_ConfigDecode(bytes, size, WG_GAME_WOLF3D_SHAREWARE_14,
+                               &actual));
+        WG_ConfigResolveStartup(&actual, 1, mouse, joysticks,
+                                 hardware != 0U, hardware == 2U, mute);
+        CHECK(actual.mouse_enabled == (enabled && mouse));
+        CHECK(actual.joystick_enabled
+              == (enabled && (joysticks & (1U << port)) != 0U));
+        CHECK(actual.joystick_port == port);
+        CHECK(actual.sound_mode
+              == ((mute || (sound == 2U && hardware == 0U)) ? 0U : sound));
+        CHECK(actual.music_enabled == (!mute && enabled && hardware != 0U));
+        CHECK(actual.digitized_effects == (!mute && enabled && hardware == 2U));
+        CHECK(actual.mouse_adjustment == saved.mouse_adjustment);
+    }
+    for (hardware = 0U; hardware < 3U; ++hardware)
+    for (mouse = 0U; mouse < 2U; ++mouse)
+    for (mute = 0U; mute < 2U; ++mute)
+    {
+        WG_ConfigDefaults(&actual);
+        /* A missing or rejected file must use hardware defaults. */
+        CHECK(!WG_ConfigDecode(bytes, 1U, WG_GAME_WOLF3D_SHAREWARE_14, &actual));
+        WG_ConfigResolveStartup(&actual, 0, mouse, 3U,
+                                 hardware != 0U, hardware == 2U, mute);
+        CHECK(actual.mouse_enabled == mouse);
+        CHECK(actual.joystick_enabled == 0U);
+        CHECK(actual.sound_mode == (mute ? 0U : hardware ? 2U : 1U));
+        CHECK(actual.music_enabled == (!mute && hardware != 0U));
+        CHECK(actual.digitized_effects == (!mute && hardware == 2U));
+    }
+}
+
 int main(int argc, char **argv)
 {
     TestPlatformAPI();
@@ -5539,6 +5596,7 @@ int main(int argc, char **argv)
     TestMenuMovement();
     TestPortableSave();
     TestPortableConfig();
+    TestStartupPreferences();
     TestGameSelection();
     TestPaletteShifts();
     TestPlayerDeathCamera();

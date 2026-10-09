@@ -1891,17 +1891,22 @@ static void WG_CaptureConfig(wg_config_t *config)
     config->view_size = (uint8_t)wg_view_size;
 }
 
-static void WG_LoadConfig(void)
+static void WG_LoadConfig(int no_sound)
 {
     wg_config_t config;
     char path[1200];
+    int saved = 0;
 
     WG_ConfigDefaults(&config);
     if (wg_data_loaded && WG_IsInteractive()
         && WG_ConfigPath(path, sizeof(path)))
     {
-        (void)WG_ConfigReadFile(path, wg_data_set.variant, &config);
+        saved = WG_ConfigReadFile(path, wg_data_set.variant, &config);
     }
+    WG_ConfigResolveStartup(&config, saved, wg_mouse_present,
+        (ID_IN_JoystickPresent(0U) ? 1U : 0U)
+            | (ID_IN_JoystickPresent(1U) ? 2U : 0U),
+        wg_adlib_present, wg_sound_blaster_present, no_sound);
     WG_ApplyConfig(&config);
     wg_config_ready = 1U;
 }
@@ -4722,7 +4727,7 @@ const char *wolf3d_GetCommandLineHelp(void)
         "  --opl NAME           Select a compiled OPL driver\n"
         "  --sample-rate HZ     Preferred PCM rate from 8000 through 192000 Hz\n"
         "  --adlib              Emulate an AdLib-only machine\n"
-        "  --pc-speaker         Emulate no sound card; use PC-speaker effects\n"
+        "  --pc-speaker         Emulate no sound card; default to PC-speaker effects\n"
         "  --no-sound           Emulate no sound card; select no audio\n"
         "\n"
         "Original command-line options:\n"
@@ -4910,33 +4915,8 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
         return WOLF3D_RESULT_PLATFORM_ERROR;
     }
     wg_start_map = map_number;
-    WG_LoadConfig();
-    /* Retain the serialized field for format compatibility and in-session
-       menu changes, but make mouse control opt-in at each startup. */
-    wg_mouse_enabled = wg_mouse_present;
+    WG_LoadConfig(sound_profile == WG_SOUND_PROFILE_NONE);
     WG_SetMouseCapture(wg_mouse_enabled);
-    if (force_joystick)
-    {
-        wg_joystick_enabled = 1U;
-    }
-    if (sound_profile == WG_SOUND_PROFILE_PC_SPEAKER)
-    {
-        wg_sound_mode = 1U;
-        wg_digitized_effects = 0U;
-        wg_music_enabled = 0U;
-    }
-    else if (sound_profile == WG_SOUND_PROFILE_ADLIB)
-    {
-        wg_sound_mode = 2U;
-        wg_digitized_effects = 0U;
-        wg_music_enabled = 1U;
-    }
-    else if (sound_profile == WG_SOUND_PROFILE_NONE)
-    {
-        wg_sound_mode = 0U;
-        wg_digitized_effects = 0U;
-        wg_music_enabled = 0U;
-    }
     if (WG_HasArgument(argc, argv, "--view-size"))
     {
         wg_view_size = view_size;

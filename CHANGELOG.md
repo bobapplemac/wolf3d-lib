@@ -6,6 +6,16 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.62 - 2026-10-09 - Preserve saved startup preferences
+
+- Resolve detected/forced hardware before applying saved CONFIG preferences;
+  available devices no longer re-enable disabled mouse, joystick, or sound.
+- Use hardware defaults only for missing/invalid configuration, disable choices
+  whose hardware (including the selected joystick port) is absent, and retain
+  the explicit `--no-sound` mute override.
+- Add serialized startup preference regression coverage across input devices,
+  sound profiles, saved off/PC/AdLib choices, and missing/invalid configuration.
+
 ## 1.4.61 - 2026-10-08 - Linux-hosted Windows cross-build matrix
 
 - Added pinned Docker profiles for Open Watcom Win9x x86, MinGW-w64/MSVCRT

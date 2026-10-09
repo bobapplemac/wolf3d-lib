@@ -113,8 +113,10 @@ Platform API v6 reports the host's initially detected mouse and joystick
 devices. The engine uses those results for the original input manager's
 hardware-presence state and SIGNON indicators. `--mouse` and `--joy` force a
 device present, while `--nomouse` and `--nojoy` force it absent; contradictory
-pairs are invalid. When a mouse is present, mouse control starts enabled and
-the Controls menu may then disable or re-enable it for the running session.
+pairs are invalid. Saved CONFIG choices take precedence over detected presence;
+missing hardware disables the saved choice. Without a valid config, a present
+mouse starts enabled and joystick control starts disabled. The selected saved
+joystick port must be available; startup never silently switches ports.
 Joystick hot-plug state continues to arrive through ordinary input events.
 An optional engine-to-host callback synchronizes native cursor capture with
 the live Mouse Enabled setting rather than requiring a host to infer menu
@@ -497,8 +499,11 @@ corresponding AdLib effect at runtime.
 The default hardware profile exposes both Sound Blaster digitized playback and
 its AdLib-compatible OPL synthesis. `--adlib` and original `-nosb` model an
 AdLib-only machine. `--pc-speaker` and original `-noal` model a machine with no
-AdLib or Sound Blaster and initially select PC-speaker effects; `--no-sound`
+AdLib or Sound Blaster and default to PC-speaker effects without a config; `--no-sound`
 uses that same detected hardware with all in-game sound initially off. These
+profiles preserve supported saved sound choices (including Off). Unavailable
+saved AdLib effects/music and Sound Blaster digitized effects are disabled.
+The explicit `--no-sound` override mutes all three choices. Hardware
 profiles control SIGNON markers and Sound-menu availability independently of
 the OPL driver and host output device. This follows original `IntroScreen`:
 `SoundBlasterPresent` selects only the Sound Blaster indicator, AdLib is marked

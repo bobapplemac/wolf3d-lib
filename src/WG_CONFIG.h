@@ -29,6 +29,12 @@ typedef struct wg_config
 } wg_config_t;
 
 void WG_ConfigDefaults(wg_config_t *config);
+/* Resolve defaults or saved preferences against startup hardware availability.
+   joystick_devices uses bit 0/1 for the corresponding joystick port. */
+void WG_ConfigResolveStartup(wg_config_t *config, int saved,
+                             int mouse_present, unsigned joystick_devices,
+                             int adlib_present, int sound_blaster_present,
+                             int no_sound);
 int WG_ConfigEncode(uint8_t *data, size_t capacity, size_t *size,
                     wg_game_variant_t variant,
                     const wg_config_t *config);

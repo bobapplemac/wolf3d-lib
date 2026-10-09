@@ -102,7 +102,7 @@ omit unneeded implementations at compile time:
 
 Emulated hardware is selected separately: the default exposes Sound Blaster
 and AdLib-compatible hardware, `--adlib`/`-nosb` exposes AdLib only,
-`--pc-speaker`/`-noal` exposes neither card and selects PC-speaker effects, and
+`--pc-speaker`/`-noal` exposes neither card and defaults to PC-speaker effects without a config, and
 `--no-sound` exposes neither card with all in-game sound initially off. Every
 profile preserves the internal audio clock.
 
