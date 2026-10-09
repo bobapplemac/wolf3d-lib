@@ -52,6 +52,16 @@ case "$profile" in
         ;;
 esac
 
+case "$profile" in
+    *-xp-*) dist_platform=winxp ;;
+    *-win7-*) dist_platform=win7 ;;
+    *-win10-*) dist_platform=win10 ;;
+esac
+case "$profile" in
+    llvm-mingw-win10-*) dist_crt=ucrt ;;
+    *) dist_crt=msvcrt ;;
+esac
+
 build_dir=${WG_WINDOWS_CROSS_BUILD_DIR:-$root/build/windows-cross-$profile}
 parallel_args=
 if [ -n "$jobs" ]; then
@@ -61,6 +71,7 @@ fi
 cmake -S "$root" -B "$build_dir" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$root/cmake/toolchains/$toolchain" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DWG_DIST_PLATFORM="$dist_platform" -DWG_DIST_CRT="$dist_crt" \
     -DCMAKE_C_FLAGS="-D_WIN32_WINNT=$nt_version -DWINVER=$nt_version" \
     -DBUILD_TESTING=OFF -DWG_BUILD_HEADLESS=OFF \
     -DWG_WARNINGS_AS_ERRORS=ON -DWG_STATIC_GNU_RUNTIME=ON \
@@ -75,5 +86,5 @@ cmake -S "$root" -B "$build_dir" -G Ninja \
 # shellcheck disable=SC2086
 cmake --build "$build_dir" --target library-release $parallel_args
 
-dist_dir="$root/dist/wolf3d-$version-library-windows-$arch-$compiler_label"
+dist_dir="$root/$(cat "$build_dir/WG_LIBRARY_RELEASE_DIR-Release.path")"
 sh "$root/tools/WG_WINDOWS_PE_AUDIT.sh" "$profile" "$dist_dir"

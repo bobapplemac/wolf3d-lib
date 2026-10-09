@@ -31,3 +31,6 @@ THIRD_PARTY_NOTICES.txt for provenance.
 Emulated hardware is selected separately: --adlib/-nosb for AdLib-only,
 --pc-speaker/-noal for no sound card with PC-speaker effects, or --no-sound
 for no sound card with all in-game sound initially off.
+
+BUILD-INFO.txt records the complete configured build options, compiler and
+source details. See docs/BUILD-NAMING.md in the source tree for package naming.

@@ -6,6 +6,15 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.73 - 2026-10-09 - Standardize distribution identity and build metadata
+
+- Use underscore-delimited product/version/platform/architecture/backend/toolchain
+  fields, detected compiler versions, and explicit configuration/runtime variants.
+- Record audio choices and the complete build configuration in BUILD-INFO.txt;
+  audio-only variants intentionally share one package name.
+- Make audits and bundlers consume generated package paths; document the full
+  vocabulary and extension rules and add naming regression coverage.
+
 ## 1.4.72 - 2026-10-09 - Normalize legacy solutions and ignore IntelliSense caches
 
 - Order legacy solution configurations as Visual Studio saves them and add

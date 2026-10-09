@@ -23,28 +23,17 @@ comma := ,
 
 BACKEND_SUFFIX :=
 
-AUDIO_SUFFIX :=
-ifneq ("$(OPL_DRIVERS)","nuked,dbopl,silent")
-AUDIO_SUFFIX := $(AUDIO_SUFFIX)-opl-$(subst $(comma),-,$(OPL_DRIVERS))
-endif
-ifneq ("$(OPL_DEFAULT)","nuked")
-AUDIO_SUFFIX := $(AUDIO_SUFFIX)-default-$(OPL_DEFAULT)
-endif
-ifneq ("$(SAMPLE_RATE)","48000")
-AUDIO_SUFFIX := $(AUDIO_SUFFIX)-$(SAMPLE_RATE)hz
-endif
-
 BUILD_DIR ?= build/linux-$(COMPILER_NAME)$(BACKEND_SUFFIX)
 RELEASE_BUILD_DIR ?= build/linux-library-$(COMPILER_NAME)$(BACKEND_SUFFIX)
 PORTABLE_BUILD_DIR ?= build/linux-library-portable-debian10-gcc
-PORTABLE_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-linux-x64$(BACKEND_SUFFIX)$(AUDIO_SUFFIX)
+PORTABLE_DIST_DIR ?= $$(cat "$(PORTABLE_BUILD_DIR)/WG_LIBRARY_RELEASE_DIR-Release.path")
 PORTABLE_BUILD_IMAGE ?= wolf3d-lib-build-debian10
 PORTABLE_GLIBC_MAX ?= 2.28
 MUSL_BUILD_DIR ?= build/linux-library-musl-$(COMPILER_NAME)$(BACKEND_SUFFIX)
-MUSL_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-linux-musl-x64$(BACKEND_SUFFIX)$(AUDIO_SUFFIX)
+MUSL_DIST_DIR ?= $$(cat "$(MUSL_BUILD_DIR)/WG_LIBRARY_RELEASE_DIR-Release.path")
 MUSL_BUILD_IMAGE ?= wolf3d-lib-build-alpine-musl
 OPENWATCOM_BUILD_DIR ?= build/openwatcom-dos32
-OPENWATCOM_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-dos32-openwatcom-x86
+OPENWATCOM_DIST_DIR ?=
 OPENWATCOM_BUILD_IMAGE ?= wolf3d-lib-build-openwatcom-20261001
 OPENWATCOM_OPL_DRIVERS ?= dbopl,silent,adlib
 OPENWATCOM_DEFAULT_OPL ?= adlib
@@ -59,7 +48,7 @@ WINDOWS_LLVM_MINGW_UCRT_SHA256 ?= 2258c745e3155870c80793f3e8c80b28fbde11b9ff73c4
 WIN9X_OPL_DRIVERS ?= $(if $(filter file default undefined,$(origin OPL_DRIVERS)),dbopl$(comma)silent$(comma)adlib,$(OPL_DRIVERS))
 WIN9X_OPL_DEFAULT ?= $(if $(filter file default undefined,$(origin OPL_DEFAULT)),adlib,$(OPL_DEFAULT))
 WINDOWS_OPENWATCOM_BUILD_DIR ?= build/openwatcom-win9x-x86
-WINDOWS_OPENWATCOM_DIST_DIR ?= dist/wolf3d-$(PROJECT_VERSION)-library-windows-x86-openwatcom-win9x
+WINDOWS_OPENWATCOM_DIST_DIR ?=
 DOCKER_RUN_ARGS ?=
 
 CMAKE_COMPILER_ARG := -DCMAKE_C_COMPILER="$(CC)"
@@ -95,7 +84,7 @@ help:
 		'' \
 		'Release targets:' \
 		'  make | make all              Stage the native shared-library package.' \
-		'  make library-release         Stage dist/wolf3d-<version>-library-linux-<arch>.' \
+		'  make library-release         Stage dist/wolf3d-lib_<version>_linux-glibc_<arch>_<toolchain>.' \
 		'  make portable-library-release Build and audit the Debian 10/glibc 2.28 package.' \
 		'  make musl-library-release    Build and audit the Alpine/musl package.' \
 		'  make openwatcom              Build the 32-bit DOS Open Watcom library SDK.' \
@@ -270,7 +259,7 @@ openwatcom-library-release: openwatcom-image
 		--workdir /src \
 		$(DOCKER_RUN_ARGS) \
 		--env WG_OPENWATCOM_BUILD_DIR="/src/$(OPENWATCOM_BUILD_DIR)" \
-		--env WG_OPENWATCOM_DIST_DIR="/src/$(OPENWATCOM_DIST_DIR)" \
+		--env WG_OPENWATCOM_DIST_DIR="$(if $(OPENWATCOM_DIST_DIR),/src/$(OPENWATCOM_DIST_DIR))" \
 		--env WG_OPENWATCOM_OPL_DRIVERS="$(OPENWATCOM_OPL_DRIVERS)" \
 		--env WG_OPENWATCOM_DEFAULT_OPL="$(OPENWATCOM_DEFAULT_OPL)" \
 		--env WG_OPENWATCOM_SAMPLE_RATE="$(OPENWATCOM_SAMPLE_RATE)" \
@@ -298,7 +287,7 @@ windows-win9x-library-release: openwatcom-image
 	$(DOCKER) run --rm --user "$$(id -u):$$(id -g)" \
 		--volume "$(CURDIR):/src" --workdir /src $(DOCKER_RUN_ARGS) \
 		--env WG_OPENWATCOM_WINDOWS_BUILD_DIR="/src/$(WINDOWS_OPENWATCOM_BUILD_DIR)" \
-		--env WG_OPENWATCOM_WINDOWS_DIST_DIR="/src/$(WINDOWS_OPENWATCOM_DIST_DIR)" \
+		--env WG_OPENWATCOM_WINDOWS_DIST_DIR="$(if $(WINDOWS_OPENWATCOM_DIST_DIR),/src/$(WINDOWS_OPENWATCOM_DIST_DIR))" \
 		--env WG_OPENWATCOM_WINDOWS_OPL_DRIVERS="$(WIN9X_OPL_DRIVERS)" \
 		--env WG_OPENWATCOM_WINDOWS_DEFAULT_OPL="$(WIN9X_OPL_DEFAULT)" \
 		--env WG_OPENWATCOM_WINDOWS_SAMPLE_RATE="$(SAMPLE_RATE)" \

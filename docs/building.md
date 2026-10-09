@@ -38,7 +38,7 @@ make test OPL_DRIVERS=silent OPL_DEFAULT=silent
 ```
 
 The native package is staged at
-`dist/wolf3d-<version>-library-linux-<architecture>`. Build trees are isolated
+`dist/wolf3d-lib_<version>_linux-glibc_<arch>_gcc<major>`. Build trees are isolated
 by compiler under `build/`.
 
 The portable path builds inside the digest-pinned Debian 10 container and
@@ -61,7 +61,7 @@ make musl CC=clang JOBS=8
 make musl OPL_DEFAULT=dbopl JOBS=8
 ```
 
-It stages `dist/wolf3d-<version>-library-linux-musl-<architecture>` and audits
+It stages `dist/wolf3d-lib_<version>_linux-musl_<arch>_gcc<major>` and audits
 the resulting ELF objects for accidental glibc symbol references. A musl
 shared library must be loaded by a musl process; the companion portable
 repository combines these artifacts with a bundled musl loader to create a
@@ -80,7 +80,7 @@ make openwatcom OPENWATCOM_OPL_DRIVERS=silent OPENWATCOM_DEFAULT_OPL=silent
 The image uses official Open Watcom 2 release `2026-10-01-Build`, verifies
 the downloaded Linux x64 archive against its checked-in SHA-256, and emits a
 Pentium-targeted OMF SDK at
-`dist/wolf3d-<version>-library-dos32-openwatcom-x86`. The default build
+`dist/wolf3d-lib_<version>_dos32_x86_openwatcom<major>`. The default build
 includes DBOPL, timing-preserving silence, and native AdLib, selects AdLib by
 default, and requests 44100 Hz PCM. Nuked is opt-in. `WOLF3D.LIB` contains the engine and
 adapters; `NUKEDOPL.LIB` remains separate when that driver is selected.

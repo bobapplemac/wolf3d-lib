@@ -4,7 +4,8 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 version=$(sed -n '1p' "$root/VERSION")
 build_dir=${WG_OPENWATCOM_WINDOWS_BUILD_DIR:-$root/build/openwatcom-win9x-x86}
-dist_dir=${WG_OPENWATCOM_WINDOWS_DIST_DIR:-$root/dist/wolf3d-$version-library-windows-x86-openwatcom-win9x}
+. "$root/scripts/dist-openwatcom.sh"
+dist_dir=${WG_OPENWATCOM_WINDOWS_DIST_DIR:-$root/dist/wolf3d-lib_${version}_win9x_x86_${toolchain}}
 drivers=${WG_OPENWATCOM_WINDOWS_OPL_DRIVERS:-dbopl,silent,adlib}
 default_driver=${WG_OPENWATCOM_WINDOWS_DEFAULT_OPL:-adlib}
 sample_rate=${WG_OPENWATCOM_WINDOWS_SAMPLE_RATE:-48000}
@@ -145,3 +146,5 @@ EOF
 
 echo "Open Watcom Win9x library staged: $dist_dir"
 sh "$root/tools/WG_WINDOWS_PE_AUDIT.sh" win9x-x86 "$dist_dir"
+
+write_build_info wolf3d-lib win9x "" "$root"

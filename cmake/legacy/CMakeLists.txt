@@ -123,55 +123,8 @@ target_link_libraries(wolf3d-public-api-consumer PRIVATE wolf3d)
 target_include_directories(wolf3d-public-api-consumer PRIVATE
     "${WG_ROOT}/include")
 
-if(MSVC_VERSION EQUAL 1200)
-    set(WG_COMPILER_LABEL vc6)
-elseif(MSVC_VERSION EQUAL 1300)
-    set(WG_COMPILER_LABEL vs2002)
-elseif(MSVC_VERSION EQUAL 1310)
-    set(WG_COMPILER_LABEL vs2003)
-elseif(MSVC_VERSION EQUAL 1400)
-    set(WG_COMPILER_LABEL vs2005)
-else()
-    set(WG_COMPILER_LABEL msvc-legacy)
-endif()
-
-set(WG_RUNTIME_SUFFIX "")
-if(NOT WG_STATIC_MSVC_RUNTIME)
-    set(WG_RUNTIME_SUFFIX "-dynamic-crt")
-endif()
-set(WG_AUDIO_SUFFIX "")
-if(NOT WG_ENABLE_OPL_NUKED OR NOT WG_ENABLE_OPL_DBOPL
-   OR NOT WG_ENABLE_OPL_SILENT)
-    set(WG_ENABLED_OPL_LABEL "")
-    if(WG_ENABLE_OPL_NUKED)
-        set(WG_ENABLED_OPL_LABEL nuked)
-    endif()
-    if(WG_ENABLE_OPL_DBOPL)
-        if(WG_ENABLED_OPL_LABEL)
-            set(WG_ENABLED_OPL_LABEL "${WG_ENABLED_OPL_LABEL}-dbopl")
-        else()
-            set(WG_ENABLED_OPL_LABEL dbopl)
-        endif()
-    endif()
-    if(WG_ENABLE_OPL_SILENT)
-        if(WG_ENABLED_OPL_LABEL)
-            set(WG_ENABLED_OPL_LABEL "${WG_ENABLED_OPL_LABEL}-silent")
-        else()
-            set(WG_ENABLED_OPL_LABEL silent)
-        endif()
-    endif()
-    set(WG_AUDIO_SUFFIX "-opl-${WG_ENABLED_OPL_LABEL}")
-endif()
-if(NOT WG_DEFAULT_OPL_DRIVER STREQUAL "nuked")
-    set(WG_AUDIO_SUFFIX
-        "${WG_AUDIO_SUFFIX}-default-${WG_DEFAULT_OPL_DRIVER}")
-endif()
-if(NOT WG_DEFAULT_SAMPLE_RATE STREQUAL "48000")
-    set(WG_AUDIO_SUFFIX
-        "${WG_AUDIO_SUFFIX}-${WG_DEFAULT_SAMPLE_RATE}hz")
-endif()
-set(WG_RELEASE_DIR
-    "${WG_DIST_ROOT}/wolf3d-${WG_PROJECT_VERSION}-library-windows-x86-${WG_COMPILER_LABEL}${WG_RUNTIME_SUFFIX}${WG_AUDIO_SUFFIX}")
+include("${WG_ROOT}/cmake/WGDistribution.cmake")
+wg_distribution(WG_RELEASE_DIR wolf3d-lib "${WG_PROJECT_VERSION}" "" "${WG_ROOT}" "${WG_DIST_ROOT}")
 
 configure_file("${WG_ROOT}/packaging/LIBRARY-README.txt.in"
                "${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt" @ONLY)
@@ -179,6 +132,13 @@ configure_file("${WG_ROOT}/packaging/LIBRARY-README.txt.in"
 set(WG_RELEASE_COMMANDS
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${WG_RELEASE_DIR}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${WG_RELEASE_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${WG_RELEASE_DIR_INFO}" "${WG_RELEASE_DIR}/BUILD-INFO.txt"
+        COMMAND ${CMAKE_COMMAND} "-DINFO=${WG_RELEASE_DIR}/BUILD-INFO.txt"
+            "-DROOT=${WG_ROOT}" "-DENGINE=${WG_ROOT}"
+            "-DCACHE=${CMAKE_BINARY_DIR}/CMakeCache.txt"
+            "-DSETTINGS=${CMAKE_CURRENT_BINARY_DIR}/distribution-target-settings.txt"
+            -P "${WG_ROOT}/cmake/WGStampBuildInfo.cmake"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${WG_RELEASE_DIR}/LICENSES"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:wolf3d>" "${WG_RELEASE_DIR}/wolf3d.dll"
@@ -231,3 +191,5 @@ else()
         target_compile_options(nuked-opl3 PRIVATE /W4)
     endif()
 endif()
+
+wg_distribution_target_info("${CMAKE_CURRENT_SOURCE_DIR}")

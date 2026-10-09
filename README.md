@@ -225,3 +225,6 @@ software OPL (the spelling is `dbopl`, not `dbpol`) or `--opl silent`.
 Win9x native AdLib requires accessible ISA OPL hardware at 388h/389h; it is
 not available on NT-based Windows. The Win9x console-subsystem launcher prints
 help/diagnostics in its invoking command prompt while the game opens a GDI window.
+
+Distribution folders and generated build metadata follow the shared
+[build/dist naming convention](docs/BUILD-NAMING.md).
