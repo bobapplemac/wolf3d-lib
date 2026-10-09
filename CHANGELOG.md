@@ -6,6 +6,15 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.64 - 2026-10-09 - Confirmed source updates before builds
+
+- Check for published source updates from all three root build scripts, with
+  one confirmation to update clean source and required components.
+- Follow compatible engine main from portable without requiring a parent
+  commit for each engine fix; preserve local work and unattended/offline builds.
+- Add local Git integration tests for confirmation, source preservation, and
+  independent engine updates and API compatibility.
+
 ## 1.4.63 - 2026-10-09 - Native OPL defaults for DOS and Win9x
 
 - Compile DBOPL, silent, and native AdLib by default in DOS and Win9x SDKs,

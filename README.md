@@ -8,8 +8,8 @@ placing operating-system services behind a compact C99 callback API.
 This repository owns the engine only. Ready-to-run Win32, SDL3, and Linux
 direct-console applications live in the companion
 [`wolf3d-portable`](https://github.com/bobapplemac/wolf3d-portable)
-repository. Every portable-host build compiles the exact pinned revision of
-this library.
+repository. Portable builds compile their selected engine source; its build scripts offer
+the latest compatible engine from `main`.
 
 The project's relationship to id Software's original repository and the
 licensing evidence behind this modernization are documented in
@@ -82,6 +82,38 @@ Hardware profiles are independent of the selected OPL implementation and of
 whether the host opens a physical audio device.
 
 ## Build
+
+The root `build.sh`, `build.ps1`, and `build.cmd` scripts check for newer
+published source before building. For a clean older copy, answer **Yes** to
+update the source and its required components together, or **No** (the default)
+to build your current copy. Local edits, local development commits, and
+explicitly selected source versions are preserved. The check follows your
+configured branch (normally `main`); it never switches branches.
+
+Portable normally offers to build against the latest compatible `wolf3d-lib`
+`main`, including engine fixes published without an application update. The
+same confirmation covers application updates and engine updates. The host
+independently declares its supported API in `platforms/WG_ENGINE_COMPAT.h`;
+an incompatible engine update is skipped with an explanation, and compilation
+also rejects an incompatible engine selected manually. Breaking contract
+changes must advance the engine API version.
+
+The recorded engine commit remains a reproducible/offline starting point;
+third-party components such as SDL3 stay at their recorded versions. An engine
+update accepted through these scripts is remembered locally so later checks
+can continue updating it. Edits or other custom component selections are
+preserved. Build/package versions identify the engine actually selected.
+
+The check needs Git (and Git for Windows Bash on Windows). Source archives,
+unavailable tools, and failed network checks continue with existing sources.
+An accepted update that fails stops the build so incomplete dependencies are
+not used. Unattended runs never accept updates automatically. Set
+`WOLF3D_GIT_CHECK=0` to skip the check entirely, or
+`WOLF3D_GIT_INTERACTIVE=0` to check without prompting; PowerShell's
+`-NonInteractive` also disables update prompts. Direct Make/CMake and executor
+scripts retain their existing behavior. Regression coverage can be run with
+`python tests/WG_GIT_PREFLIGHT_TEST.py` (Python 3 and Git/Bash required).
+
 
 On Linux, run the dependency-free guided configurator and choose from the
 detected native, portable-glibc, and musl build paths:
