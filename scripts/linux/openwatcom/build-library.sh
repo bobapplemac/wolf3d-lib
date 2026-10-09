@@ -20,7 +20,7 @@ case ",$drivers," in
 esac
 objects="$build_dir/objects"
 rm -rf "$build_dir" "$dist_dir"
-mkdir -p "$objects" "$dist_dir/include" "$dist_dir/licenses"
+mkdir -p "$objects" "$dist_dir/include" "$dist_dir/DOCS/LICENSES"
 
 defines="-dWOLF3D_STATIC -dWG_DEFAULT_OPL_DRIVER=\"$default_driver\" -dWG_DEFAULT_SAMPLE_RATE=${sample_rate}U"
 opl_sources="$root/src/WG_OPL.c"
@@ -101,22 +101,21 @@ wlink system dos4g option quiet \
     library "$link_libraries"
 
 cp "$root/include/WOLF3D.h" "$dist_dir/include/WOLF3D.H"
-cp "$root/LICENSE" "$dist_dir/LICENSE.txt"
-cp "$root/THIRD_PARTY.md" "$dist_dir/licenses/THIRD-PARTY.txt"
+cp "$root/LICENSE" "$dist_dir/DOCS/LICENSES/GPL-2.TXT"
 case ",$drivers," in
     *,nuked,*)
         cp "$root/third_party/Nuked-OPL3/LICENSE" \
-           "$dist_dir/licenses/NUKED-OPL3-LGPL-2.1.txt"
+           "$dist_dir/DOCS/LICENSES/LGPL-21.TXT"
         ;;
 esac
 case ",$drivers," in
     *,dbopl,*)
         cp "$root/third_party/DBOPL/README.wolf3d-lib.md" \
-           "$dist_dir/licenses/DBOPL-PROVENANCE.txt"
+           "$dist_dir/DOCS/DBOPL.TXT"
         ;;
 esac
 
-cat > "$dist_dir/WOLF3D-LIB.txt" <<EOF
+cat > "$dist_dir/README.TXT" <<EOF
 wolf3d-lib $version
 
 Target: 32-bit protected-mode DOS (Open Watcom OMF library)
@@ -132,3 +131,5 @@ EOF
 echo "Open Watcom DOS32 library staged: $dist_dir"
 
 write_build_info wolf3d-lib dos32 "" "$root"
+
+sh "$root/scripts/package-docs.sh" "$root" "$dist_dir" wolf3d-lib

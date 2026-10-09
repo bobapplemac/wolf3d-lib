@@ -17,7 +17,7 @@ the output target, never the build machine, IDE, or invocation method.
 
 The product is `wolf3d-lib` or `wolf3d-portable`. The version is the engine's
 `VERSION` value, also used by portable. Both repository revisions are recorded
-in `BUILD-INFO.txt`; the version alone does not identify an exact source tree.
+in `DOCS/BUILD.TXT`; the version alone does not identify an exact source tree.
 
 ## Platform vocabulary
 
@@ -125,7 +125,7 @@ packages that use the former naming convention.
 
 ## Build information
 
-Every staged package includes generated `BUILD-INFO.txt`. It records the full
+Every staged package includes generated `DOCS/BUILD.TXT`. It records the full
 configuration, not just options visible in the folder name:
 
 - Product/version, target platform/architecture/backend, configuration,
@@ -187,3 +187,6 @@ When adding a platform, architecture, backend, compiler, or package variant:
 
 Developer regression command: `python tests/WG_DIST_NAMING_TEST.py` with CMake
 and a generator's build tool on PATH (or set `CMAKE` to its executable).
+
+The [distribution contents contract](DISTRIBUTION-CONTENTS.md) defines the
+README.TXT and DOCS layout, notices, licenses, and packaging extension rules.

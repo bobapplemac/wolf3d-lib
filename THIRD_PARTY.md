@@ -9,7 +9,7 @@
 Nuked-OPL3 is the project's reference OPL implementation. It is intentionally
 built and distributed as a separate replaceable shared library so recipients
 can exercise the LGPL relinking/replacement rights. Its upstream license is
-included as `COPYING.Nuked-OPL3.txt` in staged packages.
+included as `DOCS/LICENSES/LGPL-21.TXT` in staged packages.
 
 ## DBOPL C port
 

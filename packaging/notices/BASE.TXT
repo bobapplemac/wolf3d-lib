@@ -1,0 +1,12 @@
+Component notices
+=================
+
+wolf3d-lib: GPL-2.0-or-later; see LICENSES/GPL-2.TXT.
+Source: https://github.com/bobapplemac/wolf3d-lib
+Exact source revisions and all build options are recorded in BUILD.TXT.
+Wolfenstein 3D game data is not included and is not covered by this license.
+This software is provided without warranty; see the included license terms.
+
+Source distributions must correspond to the binaries, including modifications
+and build scripts. Release publishers must provide corresponding source under
+the applicable licenses; the upstream links alone are not a source offer.

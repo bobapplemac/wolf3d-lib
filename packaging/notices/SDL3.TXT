@@ -1,0 +1,4 @@
+
+SDL3: zlib license; copyright and full terms in LICENSES/SDL3.TXT.
+Source: https://github.com/libsdl-org/SDL
+See BUILD.TXT for the configured SDL version and source/build settings.

@@ -6,6 +6,15 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.75 - 2026-10-09 - Consistent distribution documentation
+
+- Keep README.TXT at the root and collect build metadata, package-specific
+  notices and complete license texts under DOCS, using DOS-safe filenames.
+- Merge engine/audio metadata into DOCS/BUILD.TXT and DBOPL provenance into
+  DOCS/NOTICES.TXT; share identical GPL/LGPL license texts.
+- Apply the layout to CMake, legacy Visual Studio and Open Watcom packages,
+  retain functional relinking materials, and add documentation regression tests.
+
 ## 1.4.74 - 2026-10-09 - Align build menu terminology
 
 - Use GDI, SDL3, VGA, and KMS/fbdev in guided build choices, summaries, and

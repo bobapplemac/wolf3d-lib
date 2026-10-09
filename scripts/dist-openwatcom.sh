@@ -31,10 +31,12 @@ write_build_info()
         cat "$0"
         if [ "$product" = wolf3d-portable ]; then
             printf '\n===== Engine build configuration =====\n'
-            if [ -f "$library_dist/BUILD-INFO.txt" ]; then
+            if [ -f "$library_dist/DOCS/BUILD.TXT" ]; then
+                cat "$library_dist/DOCS/BUILD.TXT"
+            elif [ -f "$library_dist/BUILD-INFO.txt" ]; then
                 cat "$library_dist/BUILD-INFO.txt"
             else
-                # Older compatible engines predate BUILD-INFO.txt. Preserve
+                # Older compatible engines predate DOCS/BUILD.TXT. Preserve
                 # their recipe; resolved audio options above were passed in.
                 case "$platform" in
                     dos32) recipe=build-library.sh ;;
@@ -43,5 +45,5 @@ write_build_info()
                 cat "$engine/scripts/linux/openwatcom/$recipe"
             fi
         fi
-    } > "$dist_dir/BUILD-INFO.txt"
+    } > "$dist_dir/DOCS/BUILD.TXT"
 }

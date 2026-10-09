@@ -131,15 +131,15 @@ configure_file("${WG_ROOT}/packaging/LIBRARY-README.txt.in"
 
 set(WG_RELEASE_COMMANDS
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${WG_RELEASE_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${WG_RELEASE_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${WG_RELEASE_DIR}/DOCS/LICENSES"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${WG_RELEASE_DIR_INFO}" "${WG_RELEASE_DIR}/BUILD-INFO.txt"
-        COMMAND ${CMAKE_COMMAND} "-DINFO=${WG_RELEASE_DIR}/BUILD-INFO.txt"
+            "${WG_RELEASE_DIR_INFO}" "${WG_RELEASE_DIR}/DOCS/BUILD.TXT"
+        COMMAND ${CMAKE_COMMAND} "-DINFO=${WG_RELEASE_DIR}/DOCS/BUILD.TXT"
             "-DROOT=${WG_ROOT}" "-DENGINE=${WG_ROOT}"
             "-DCACHE=${CMAKE_BINARY_DIR}/CMakeCache.txt"
             "-DSETTINGS=${CMAKE_CURRENT_BINARY_DIR}/distribution-target-settings.txt"
             -P "${WG_ROOT}/cmake/WGStampBuildInfo.cmake"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${WG_RELEASE_DIR}/LICENSES"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${WG_RELEASE_DIR}/DOCS/LICENSES"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:wolf3d>" "${WG_RELEASE_DIR}/wolf3d.dll"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -150,13 +150,10 @@ set(WG_RELEASE_COMMANDS
         "${WG_ROOT}/include/WOLF3D_STDINT.h"
         "${WG_RELEASE_DIR}/WOLF3D_STDINT.h"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${WG_ROOT}/LICENSE" "${WG_RELEASE_DIR}/LICENSE.txt"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${WG_ROOT}/THIRD_PARTY.md"
-        "${WG_RELEASE_DIR}/THIRD_PARTY_NOTICES.txt"
+        "${WG_ROOT}/LICENSE" "${WG_RELEASE_DIR}/DOCS/LICENSES/GPL-2.TXT"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_BINARY_DIR}/LIBRARY-README.txt"
-        "${WG_RELEASE_DIR}/README.txt")
+        "${WG_RELEASE_DIR}/README.TXT")
 
 set(WG_RELEASE_DEPENDS wolf3d)
 if(WG_OPL_LIBRARY)
@@ -166,18 +163,20 @@ if(WG_OPL_LIBRARY)
             "${WG_RELEASE_DIR}/Nuked-OPL3.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${WG_ROOT}/third_party/Nuked-OPL3/LICENSE"
-            "${WG_RELEASE_DIR}/LICENSES/Nuked-OPL3-LGPL-2.1.txt")
+            "${WG_RELEASE_DIR}/DOCS/LICENSES/LGPL-21.TXT")
     list(APPEND WG_RELEASE_DEPENDS nuked-opl3)
 endif()
 if(WG_ENABLE_OPL_DBOPL)
     list(APPEND WG_RELEASE_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${WG_ROOT}/third_party/DBOPL/README.wolf3d-lib.md"
-            "${WG_RELEASE_DIR}/README.DBOPL.txt")
+            "${WG_RELEASE_DIR}/DOCS/DBOPL.TXT")
 endif()
 
 add_custom_target(library_release
     ${WG_RELEASE_COMMANDS}
+    COMMAND ${CMAKE_COMMAND} "-DDIST=${WG_RELEASE_DIR}" "-DROOT=${WG_ROOT}" "-DPRODUCT=wolf3d-lib"
+        -P "${WG_ROOT}/cmake/WGPackageDocs.cmake"
     DEPENDS ${WG_RELEASE_DEPENDS})
 
 if(MSVC_VERSION LESS 1300)

@@ -1,0 +1,3 @@
+
+wolf3d-portable: GPL-2.0-or-later; see LICENSES/GPL-2.TXT.
+Source: https://github.com/bobapplemac/wolf3d-portable

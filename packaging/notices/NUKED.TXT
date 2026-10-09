@@ -1,0 +1,7 @@
+
+Nuked-OPL3: LGPL-2.1-or-later; see LICENSES/LGPL-21.TXT.
+Copyright (C) 2013-2020 Nuke.YKT.
+Source: https://github.com/nukeykt/Nuked-OPL3
+The shipped shared library may be replaced with a compatible modified build.
+Static DOS packages instead include object code and instructions in RELINK.
+See BUILD.TXT and the engine source tree for the exact included revision.

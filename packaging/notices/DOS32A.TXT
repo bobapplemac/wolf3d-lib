@@ -1,0 +1,5 @@
+
+DOS/32A: copyright and full license in LICENSES/DOS32A.TXT.
+Source: https://dos32a.sourceforge.net/
+The supplied DOS4GW.EXE is the DOS/32A compatible loader from the Open Watcom
+toolchain, not the proprietary DOS/4GW binary. See BUILD.TXT for the recipe.
