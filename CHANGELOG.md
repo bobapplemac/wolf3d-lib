@@ -6,6 +6,11 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.70 - 2026-10-09 - Distinguish Git inspection errors from local edits
+
+- Stop source-update checks on Git inspection errors, including ownership
+  failures, instead of misreporting them as local edits.
+
 ## 1.4.69 - 2026-10-09 - Ignore legacy Visual Studio generated files
 
 - Ignore legacy IDE browse databases (`.ncb`), workspace options (`.opt`),

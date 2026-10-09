@@ -6,7 +6,7 @@ root=${1:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}
 command -v git >/dev/null 2>&1 || { echo 'Git not found; building existing sources.'; exit 0; }
 cd -- "$root" || exit 1
 [ -e .git ] || { echo 'Source export: update check skipped.'; exit 0; }
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+git rev-parse --is-inside-work-tree >/dev/null || { echo 'Git could not inspect this checkout. Resolve the Git error above before building.' >&2; exit 1; }
 export GIT_TERMINAL_PROMPT=0
 export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o BatchMode=yes -o ConnectTimeout=10}"
 confirm() {
@@ -28,13 +28,13 @@ fetch_remote() {
 # All other edits, commits, and custom component selections are preserved.
 clean_tree() {
     local status managed current
-    status=$(git status --porcelain --untracked-files=normal --ignore-submodules=none) || return 1
+    status=$(git status --porcelain --untracked-files=normal --ignore-submodules=none) || return 2
     [ -n "$status" ] || return 0
     [ "$status" = ' M lib/wolf3d' ] || return 1
     managed=$(git config --local --get wolf3d.buildEngineRevision || true)
-    current=$(git -C lib/wolf3d rev-parse HEAD) || return 1
+    current=$(git -C lib/wolf3d rev-parse HEAD) || return 2
     [ -n "$managed" ] && [ "$current" = "$managed" ] || return 1
-    status=$(git -C lib/wolf3d status --porcelain --untracked-files=normal --ignore-submodules=none) || return 1
+    status=$(git -C lib/wolf3d status --porcelain --untracked-files=normal --ignore-submodules=none) || return 2
     [ -z "$status" ]
 }
 update_pins() {
@@ -64,7 +64,13 @@ original_head=$(git rev-parse HEAD) || exit 1
 target=$(git rev-parse '@{upstream}') || exit 1
 counts=$(git rev-list --left-right --count "HEAD...$target") || exit 1
 read -r ahead behind <<< "$counts"
-if ! clean_tree; then
+clean_tree
+tree_status=$?
+if [ "$tree_status" -eq 2 ]; then
+    echo 'Git could not inspect the source or a component. Resolve the Git error above before building.' >&2
+    exit 1
+fi
+if [ "$tree_status" -ne 0 ]; then
     echo 'Local changes detected. Building your current copy and keeping your work.'
     exit 0
 fi

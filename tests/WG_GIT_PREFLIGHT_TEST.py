@@ -97,6 +97,42 @@ class PreflightTests(unittest.TestCase):
         self.git(self.clone, 'checkout', '-b', 'local-branch')
         self.assertIn('No published update source', self.run_check('y\n'))
 
+    def test_git_inspection_error_is_not_local_work(self):
+        wrapper = self.base / 'fail-status.sh'
+        wrapper.write_bytes(b'''#!/usr/bin/env bash
+git() {
+    if [ "$1" = status ]; then
+        echo 'fatal: detected dubious ownership in repository' >&2
+        return 128
+    fi
+    command git "$@"
+}
+export -f git
+bash "$1" "$2"
+''')
+        run = subprocess.run([BASH, str(wrapper), str(ROOT / 'scripts/git-preflight.sh'), str(self.clone)],
+                             env=self.env, text=True, input='y\n', capture_output=True)
+        output = run.stdout + run.stderr
+        self.assertNotEqual(run.returncode, 0, output)
+        self.assertIn('Git could not inspect', output)
+        self.assertNotIn('Local changes detected', output)
+        self.assertEqual(self.head(), self.initial)
+
+    def test_engine_minimum_version_diagnostic(self):
+        module = ROOT / 'cmake/W3PCheckEngineVersion.cmake'
+        cmake = os.environ.get('W3P_CMAKE') or shutil.which('cmake')
+        if not module.exists() or not cmake:
+            self.skipTest('portable CMake version check required')
+        script = self.base / 'version.cmake'
+        for version, succeeds in (('1.4.56', False), ('1.4.57', True), ('1.4.70', True)):
+            with self.subTest(version=version):
+                script.write_text('include("' + module.as_posix() + '")\nw3p_check_engine_version("' + version + '")\n')
+                run = subprocess.run([cmake, '-P', str(script)], capture_output=True, text=True)
+                self.assertEqual(run.returncode == 0, succeeds, run.stdout + run.stderr)
+                if not succeeds:
+                    self.assertIn('wolf3d_GetCommandLineHelp', run.stderr)
+                    self.assertIn('too old', run.stderr)
+
     def test_offline(self):
         self.git(self.clone, 'remote', 'set-url', 'origin', str(self.base / 'absent.git'))
         self.assertIn('a newer version may be available', self.run_check('y\n'))
