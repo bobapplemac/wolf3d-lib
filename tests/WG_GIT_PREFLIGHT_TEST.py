@@ -235,6 +235,13 @@ class PreflightTests(unittest.TestCase):
                 self.assertIn('Local changes', result.stdout)
                 self.assertIn(expected, result.stdout)
 
+    def test_msys2_frontends_find_bash(self):
+        msys_bin = Path(os.environ.get('MSYS2_ROOT', r'C:\msys64')) / 'usr/bin'
+        if os.name != 'nt' or not (msys_bin / 'git.exe').exists():
+            self.skipTest('MSYS2 installation required')
+        self.env['PATH'] = str(msys_bin) + os.pathsep + self.env['PATH']
+        self.test_root_frontends_forward_arguments()
+
     def test_missing_dependency_confirmation(self):
         self.dependency(False)
         self.git(self.clone, 'pull', '--ff-only')

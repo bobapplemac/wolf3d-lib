@@ -7,11 +7,16 @@ Run without arguments for the dependency-free guided configurator. Explicit
 arguments are forwarded unchanged to the deterministic executor for scripts
 and automation.
 #>
-# Git for Windows supplies Bash without requiring PowerShell 7 or WSL.
+# Git for Windows and MSYS2 supply Bash without requiring PowerShell 7 or WSL.
 $git = Get-Command git -ErrorAction SilentlyContinue
 if ($git -and $env:WOLF3D_GIT_CHECK -ne '0') {
     $execPath = & $git.Source --exec-path
+    # MSYS2 reports a POSIX exec-path; locate Bash beside its native git.exe.
+    $gitDirectory = Split-Path -Parent $git.Source
     $shell = @(
+        "$gitDirectory/bash.exe",
+        "$gitDirectory/../bin/bash.exe",
+        "$gitDirectory/../usr/bin/bash.exe",
         "$execPath/../../../bin/bash.exe",
         "$execPath/../../../usr/bin/bash.exe",
         "$execPath/../../bin/bash.exe"
@@ -26,7 +31,7 @@ if ($git -and $env:WOLF3D_GIT_CHECK -ne '0') {
             $env:WOLF3D_GIT_INTERACTIVE = $savedInteractive
         }
     } else {
-        Write-Warning 'Git Bash was not found; building existing sources without an update check.'
+        Write-Warning 'Bash for Git was not found; building existing sources without an update check.'
     }
 } elseif (-not $git) {
     Write-Warning 'Git was not found; building existing sources.'

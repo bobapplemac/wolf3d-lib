@@ -311,10 +311,6 @@ if ($selected.Name -eq 'mingw-ucrt64' -and $Architecture -ne 'x64') {
 if ($selected.Name -eq 'mingw-ucrt64' -and $Runtime -ne 'static') {
     throw 'MinGW packages require the statically linked GCC support runtime.'
 }
-if ($selected.Name -eq 'mingw-ucrt64') {
-    $env:PATH = $selected.Bin + ';' +
-        (Join-Path $selected.Installation 'usr\bin') + ';' + $env:PATH
-}
 
 $archPreset = if ($Architecture -eq 'x86') { 'x86' } else { 'x64' }
 $devPreset = "$($selected.PresetPrefix)-dev-$archPreset"
@@ -343,8 +339,17 @@ function Invoke-DisplayedCommand {
     }
     Write-Host ('> "{0}" {1}' -f $Executable, ($displayArguments -join ' '))
     if (-not $DryRun) {
-        & $Executable @Arguments
-        if ($LASTEXITCODE -ne 0) { throw "Command failed with exit code $LASTEXITCODE." }
+        $savedBuildPath = $env:PATH
+        try {
+            if ($selected.Name -eq 'mingw-ucrt64') {
+                $env:PATH = $selected.Bin + ';' +
+                    (Join-Path $selected.Installation 'usr\bin') + ';' + $savedBuildPath
+            }
+            & $Executable @Arguments
+            if ($LASTEXITCODE -ne 0) { throw "Command failed with exit code $LASTEXITCODE." }
+        } finally {
+            $env:PATH = $savedBuildPath
+        }
     }
 }
 

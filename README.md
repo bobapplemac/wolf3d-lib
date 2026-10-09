@@ -104,7 +104,7 @@ update accepted through these scripts is remembered locally so later checks
 can continue updating it. Edits or other custom component selections are
 preserved. Build/package versions identify the engine actually selected.
 
-The check needs Git (and Git for Windows Bash on Windows). Source archives,
+The check needs Git (and Git for Windows or MSYS2 Bash on Windows). Source archives,
 unavailable tools, and failed network checks continue with existing sources.
 An accepted update that fails stops the build so incomplete dependencies are
 not used. Unattended runs never accept updates automatically. Set
