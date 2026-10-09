@@ -6,6 +6,12 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.67 - 2026-10-09 - Repair legacy IDE build commands
+
+- Replace obsolete `standard` OPL arguments with `all` in VC6 through VS2005
+  IDE helpers and align build, rebuild, clean, and project output paths.
+- Exercise the legacy IDE command chain for all four compiler profiles.
+
 ## 1.4.66 - 2026-10-09 - Keep IDE caches out of source update checks
 
 - Ignore Visual Studio `.vs` caches at every directory level so opening an

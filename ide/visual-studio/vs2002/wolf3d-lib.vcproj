@@ -7,11 +7,11 @@
 	<Platforms><Platform Name="Win32" /></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|Win32" OutputDirectory="$(ProjectDir)obj\Debug" IntermediateDirectory="$(ProjectDir)obj\Debug" ConfigurationType="0" CharacterSet="2">
-			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug build" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2002-standard-nuked-static\Debug\wolf3d.dll" />
+			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug build" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Debug clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2002-all-nuked-static\Debug\wolf3d.dll" />
 		</Configuration>		<Configuration Name="Release|Win32" OutputDirectory="$(ProjectDir)obj\Release" IntermediateDirectory="$(ProjectDir)obj\Release" ConfigurationType="0" CharacterSet="2">
-			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release build" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2002-standard-nuked-static\Release\wolf3d.dll" />
+			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release build" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2002-all-nuked-static\Release\wolf3d.dll" />
 		</Configuration>		<Configuration Name="Publish|Win32" OutputDirectory="$(ProjectDir)obj\Publish" IntermediateDirectory="$(ProjectDir)obj\Publish" ConfigurationType="0" CharacterSet="2">
-			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release publish" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2002-standard-nuked-static\Release\wolf3d.dll" />
+			<Tool Name="VCNMakeTool" BuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release publish" ReBuildCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release rebuild" CleanCommandLine="call &quot;$(ProjectDir)build.cmd&quot; Release clean" Output="$(ProjectDir)..\..\..\build\legacy-vs2002-all-nuked-static\Release\wolf3d.dll" />
 		</Configuration>	</Configurations>
 	<References />
 	<Files>
