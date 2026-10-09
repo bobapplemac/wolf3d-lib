@@ -8,6 +8,12 @@
 *.VC.db
 *.VC.VC.opendb
 
+# Legacy Visual Studio browse databases, workspace state, and build logs.
+/ide/visual-studio/**/*.ncb
+/ide/visual-studio/**/*.opt
+/ide/visual-studio/**/*.plg
+/ide/visual-studio/**/obj/
+
 # Open Watcom IDE/ide2make output (the descriptors themselves are tracked).
 /ide/open-watcom/*.mk
 /ide/open-watcom/**/*.mk1

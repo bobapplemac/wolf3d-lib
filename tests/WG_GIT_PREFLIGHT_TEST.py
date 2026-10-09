@@ -177,13 +177,23 @@ class PreflightTests(unittest.TestCase):
         self.commit(self.seed)
         self.git(self.seed, 'push')
         self.git(self.clone, 'pull', '--ff-only')
-        cache = self.clone / 'ide/visual-studio/vs2019/.vs/Solution/cache'
-        cache.parent.mkdir(parents=True)
-        cache.write_text('generated IDE data')
+        generated = ['ide/visual-studio/vs2019/.vs/Solution/cache']
+        generated += ['ide/visual-studio/vc6/project.' + suffix for suffix in ('ncb', 'opt', 'plg')]
+        for band in ('vs2002', 'vs2003', 'vs2005'):
+            generated += ['ide/visual-studio/' + band + '/project.ncb',
+                          'ide/visual-studio/' + band + '/obj/Debug/BuildLog.htm']
+        for name in generated:
+            cache = self.clone / name
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text('generated IDE data')
         target = self.advance()
         self.run_check('y\n')
         self.assertEqual(self.head(), target)
-        self.assertEqual(cache.read_text(), 'generated IDE data')
+        for name in generated:
+            self.assertEqual((self.clone / name).read_text(), 'generated IDE data')
+        solution = self.clone / 'ide/visual-studio/vs2005/project.sln'
+        solution.write_text('local solution')
+        self.assertIn('Local changes', self.run_check('y\n'))
 
     def test_untracked_work_preserved(self):
         self.advance()

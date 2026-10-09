@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.69 - 2026-10-09 - Ignore legacy Visual Studio generated files
+
+- Ignore legacy IDE browse databases (`.ncb`), workspace options (`.opt`),
+  build logs (`.plg`), and `obj` directories under `ide/visual-studio`.
+- Keep solution/project changes visible and verify generated files do not
+  block the confirmed source-update workflow.
+
 ## 1.4.68 - 2026-10-09 - Locate CMake from legacy IDEs
 
 - Resolve legacy CMake from an explicit override, the existing build cache,
