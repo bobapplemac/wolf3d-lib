@@ -1,7 +1,7 @@
 /build/
 /dist/
 /CMakeUserPresets.json
-/.vs/
+.vs/
 /CMakeSettings.json
 *.user
 *.suo

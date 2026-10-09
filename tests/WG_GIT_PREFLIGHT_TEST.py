@@ -172,6 +172,19 @@ class PreflightTests(unittest.TestCase):
         self.commit(self.clone / 'lib/wolf3d')
         self.assertIn('Local changes', self.run_check('y\n'))
 
+    def test_visual_studio_cache_does_not_block_updates(self):
+        shutil.copyfile(ROOT / '.gitignore', self.seed / '.gitignore')
+        self.commit(self.seed)
+        self.git(self.seed, 'push')
+        self.git(self.clone, 'pull', '--ff-only')
+        cache = self.clone / 'ide/visual-studio/vs2019/.vs/Solution/cache'
+        cache.parent.mkdir(parents=True)
+        cache.write_text('generated IDE data')
+        target = self.advance()
+        self.run_check('y\n')
+        self.assertEqual(self.head(), target)
+        self.assertEqual(cache.read_text(), 'generated IDE data')
+
     def test_untracked_work_preserved(self):
         self.advance()
         (self.clone / 'my-notes').write_text('keep me')

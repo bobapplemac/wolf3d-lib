@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.66 - 2026-10-09 - Keep IDE caches out of source update checks
+
+- Ignore Visual Studio `.vs` caches at every directory level so opening an
+  in-tree solution does not block source updates as apparent local work.
+- Verify generated IDE caches allow updates while genuine untracked files
+  continue to protect the local checkout.
+
 ## 1.4.65 - 2026-10-09 - Detect MSYS2 Bash for source updates
 
 - Locate Bash beside the selected Git executable in PowerShell and CMD,
