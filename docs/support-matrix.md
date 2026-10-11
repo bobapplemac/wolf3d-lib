@@ -40,7 +40,12 @@ backend, test-data, and direct-CMake details.
 
 ## Windows compiler matrix
 
-| Compiler environment | Toolset | Architecture | CRT modes | Build status | Destination validation |
+Microsoft entries list the toolset generation first, then the compiler version.
+`v60`, `v70`, and `v71` are project shorthand for legacy VC generations;
+see [Microsoft version vocabulary](BUILD-NAMING.md#microsoft-version-vocabulary)
+for the mapping and the distinction from MSBuild toolset selection.
+
+| Compiler environment | Toolset / compiler | Architecture | CRT modes | Build status | Destination validation |
 | --- | --- | --- | --- | --- | --- |
 | MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Validated | Package, API, deterministic tests, and all runtime-selectable OPL drivers validated on Windows 11 x64 |
 | Linux Docker / Open Watcom | Open Watcom 2 (pinned) | x86 | Watcom runtime | Build validated | Native PE DLL and consumer import-library link; Win9x runtime pending |
@@ -58,10 +63,10 @@ backend, test-data, and direct-CMake details.
 | Visual Studio 2012 Update 5 | v110 / MSVC 17.00.61030 | x86, x64 | static, dynamic | Validated | No legacy-OS minimum claimed |
 | Visual Studio 2010 SP1 | v100 / MSVC 16.00.40219 | x86, x64 | static, dynamic | Validated | No legacy-OS minimum claimed |
 | Visual Studio 2008 SP1 | v90 / MSVC 15.00.30729 | x86, x64 | static, dynamic | Validated | No legacy-OS minimum claimed |
-| Visual Studio 2005 SP1 | MSVC 14.00.50727.762 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
-| Visual Studio .NET 2003 SP1 | MSVC 13.10.6030 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
-| Visual Studio .NET 2002 SP1 | MSVC 13.00.9466 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
-| Visual C++ 6.0 SP6 | MSVC 12.00.8804 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86; VC6 DLL exercised by the Win32/GDI game on Windows 11 x64 under WOW64 |
+| Visual Studio 2005 SP1 | v80 / MSVC 14.00.50727.762 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
+| Visual Studio .NET 2003 SP1 | v71 / MSVC 13.10.6030 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
+| Visual Studio .NET 2002 SP1 | v70 / MSVC 13.00.9466 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86 |
+| Visual C++ 6.0 SP6 | v60 / MSVC 12.00.8804 | x86 | static, dynamic | Validated | Runtime/API validated on Windows XP SP3 x86; VC6 DLL exercised by the Win32/GDI game on Windows 11 x64 under WOW64 |
 
 The selected toolset, Windows SDK, CRT mode, and imports jointly determine a
 Windows binary's actual OS floor. Consequently, a successful historical

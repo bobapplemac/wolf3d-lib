@@ -100,6 +100,51 @@ when it cannot be determined from an existing profile label. Existing
 `WG_COMPILER_LABEL`/`W3P_COMPILER_LABEL` inputs remain accepted for CRT hints;
 they no longer override the detected compiler identity.
 
+### Microsoft version vocabulary
+
+Use the toolset generation when discussing build choices. The IDE's marketing
+name, the compiler executable's version, and runtime versions are separate.
+Our matrices label their combined column **Toolset / compiler** and retain
+exact compiler versions as validation evidence.
+
+| Environment | Toolset generation label | Compiler version family | `_MSC_VER` | Package toolchain field |
+| --- | --- | --- | --- | --- |
+| Visual C++ 6.0 | `v60` | 12.00 | 1200 | `msvc-6.0` |
+| Visual Studio .NET 2002 | `v70` | 13.00 | 1300 | `msvc-7.0` |
+| Visual Studio .NET 2003 | `v71` | 13.10 | 1310 | `msvc-7.1` |
+| Visual Studio 2005 | `v80` | 14.00 | 1400 | `msvc-v80` |
+| Visual Studio 2008 | `v90` | 15.00 | 1500 | `msvc-v90` |
+| Visual Studio 2010 | `v100` | 16.00 | 1600 | `msvc-v100` |
+| Visual Studio 2012 | `v110` | 17.00 | 1700 | `msvc-v110` |
+| Visual Studio 2013 | `v120` | 18.00 | 1800 | `msvc-v120` |
+| Visual Studio 2015 | `v140` | 19.00 | 1900 | `msvc-v140` |
+
+`v60`, `v70`, and `v71` are our shorthand for the legacy VC 6.0, 7.0, and
+7.1 generations, not modern MSBuild `PlatformToolset` identifiers. The legacy
+VC6--VS2005 build path selects the matching CMake generator and installed
+tools; these labels do not imply that `-T v60` or `-T v80` works. Existing
+package fields for the first three generations retain their dotted spelling.
+
+- **Visual Studio release** identifies the IDE/product, such as VS2013
+  (IDE 12.0). Modern IDEs can use multiple installed toolsets.
+- **Toolset** identifies the selected build tools, such as `v120` or `v143`.
+  Servicing updates can change the compiler version without changing this label.
+- **Compiler version** is the `cl.exe` version, such as 18.00 for VS2013.
+  `_MSC_VER` encodes its major/minor numbers as 1800. `_MSC_FULL_VER`
+  (the correct macro spelling) adds build detail; `_MSC_BUILD`, where available,
+  identifies the revision. Do not assume modern macro availability or digit
+  widths in legacy compiler checks.
+- **Runtime version** identifies the CRT/runtime libraries and redistributable,
+  not the IDE or compiler. Since VS2015, multiple toolset generations share the
+  v14 runtime family, subject to Microsoft's compatibility restrictions.
+  Static/dynamic runtime linkage is a separate build choice. Record actual
+  runtime dependencies and full compiler identity in `DOCS/BUILD.TXT`;
+  the target OS still needs its own compatibility checks.
+
+Microsoft documents the [compiler and product version mapping](https://learn.microsoft.com/en-us/cpp/overview/compiler-versions),
+[predefined macros](https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros),
+and [runtime binary compatibility and restrictions](https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017).
+
 ## Optional fields
 
 Configuration comes before runtime. Ordinary `Release` is implicit; other

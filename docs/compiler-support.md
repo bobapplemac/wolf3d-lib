@@ -9,7 +9,12 @@ compiler-checkpoint policy and evidence.
 
 ## Validated Windows checkpoints
 
-| Environment | Toolset | Architectures | Runtime modes | Status |
+Microsoft entries list the toolset generation first, then the compiler version.
+`v60`, `v70`, and `v71` are project shorthand for legacy VC generations;
+see [Microsoft version vocabulary](BUILD-NAMING.md#microsoft-version-vocabulary)
+for the mapping and the distinction from MSBuild toolset selection.
+
+| Environment | Toolset / compiler | Architectures | Runtime modes | Status |
 | --- | --- | --- | --- | --- |
 | MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Build/package/API/tests and runtime OPL selection validated on Windows 11 x64 |
 | Visual Studio 2026 18.10 | v145 / MSVC 19.51 | x86, x64 | static, dynamic | Validated |
@@ -22,10 +27,10 @@ compiler-checkpoint policy and evidence.
 | Visual Studio 2012 Update 5 | v110 / MSVC 17.00.61030 | x86, x64 | static, dynamic | Validated |
 | Visual Studio 2010 SP1 | v100 / MSVC 16.00.40219 | x86, x64 | static, dynamic | Validated |
 | Visual Studio 2008 SP1 | v90 / MSVC 15.00.30729 | x86, x64 | static, dynamic | Validated |
-| Visual Studio 2005 SP1 | MSVC 14.00.50727.762 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
-| Visual Studio .NET 2003 SP1 | MSVC 13.10.6030 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
-| Visual Studio .NET 2002 SP1 | MSVC 13.00.9466 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
-| Visual C++ 6.0 SP6 | MSVC 12.00.8804 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
+| Visual Studio 2005 SP1 | v80 / MSVC 14.00.50727.762 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
+| Visual Studio .NET 2003 SP1 | v71 / MSVC 13.10.6030 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
+| Visual Studio .NET 2002 SP1 | v70 / MSVC 13.00.9466 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
+| Visual C++ 6.0 SP6 | v60 / MSVC 12.00.8804 | x86 | static, dynamic | Build/API runtime validated on XP SP3 |
 
 Each checkpoint must configure and compile the shared library with warnings as
 errors, run the internal tests and the public-header consumer, and stage an SDK
