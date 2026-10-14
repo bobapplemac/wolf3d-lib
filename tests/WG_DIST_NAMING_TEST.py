@@ -15,13 +15,13 @@ CMAKE = os.environ.get('CMAKE', shutil.which('cmake') or 'cmake')
 
 
 class Naming(unittest.TestCase):
-    def test_win2000(self):
-        self.configure('wolf3d-portable_1.4.73_win2000_x86_gdi_mingw-gcc12-msvcrt',
+    def test_win2k(self):
+        self.configure('wolf3d-portable_1.4.73_win2k_x86_gdi_mingw-gcc12-msvcrt',
                        backend='gdi', WIN32='TRUE', MINGW='TRUE',
-                       WG_DIST_PLATFORM='win2000', WG_DIST_CRT='msvcrt',
+                       WG_DIST_PLATFORM='win2k', WG_DIST_CRT='msvcrt',
                        CMAKE_SYSTEM_NAME='Windows', CMAKE_SYSTEM_PROCESSOR='i686',
                        CMAKE_SIZEOF_VOID_P='4', CMAKE_C_COMPILER_VERSION='12.2.0')
-        self.configure(None, backend='sdl3', WIN32='TRUE', WG_DIST_PLATFORM='win2000')
+        self.configure(None, backend='sdl3', WIN32='TRUE', WG_DIST_PLATFORM='win2k')
 
     def configure(self, expected, backend='', **settings):
         defaults = dict(CMAKE_SYSTEM_NAME='Linux', CMAKE_SYSTEM_PROCESSOR='x86_64',

@@ -6,6 +6,11 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.82 - 2026-10-14 - Windows 2000 shorthand
+
+- Standardize Windows 2000 identifiers, build targets, profiles and package
+  names on `win2k`; keep Windows 2000 as the display name.
+
 ## 1.4.81 - 2026-10-14 - Windows 2000 Docker target
 
 - Add a Windows 2000 x86 MinGW/MSVCRT Docker target, guided build choice and

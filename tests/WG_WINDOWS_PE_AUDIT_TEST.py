@@ -24,7 +24,7 @@ class Audit(unittest.TestCase):
             objdump.chmod(0o755)
             env = dict(os.environ, OBJDUMP=str(objdump))
             result = subprocess.run(['sh', str(ROOT / 'tools/WG_WINDOWS_PE_AUDIT.sh'),
-                                     'mingw-win2000-x86', str(package)],
+                                     'mingw-win2k-x86', str(package)],
                                     env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode != 0, fail, result.stdout + result.stderr)
 

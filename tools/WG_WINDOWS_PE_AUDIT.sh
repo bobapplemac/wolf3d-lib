@@ -47,7 +47,7 @@ for file in "$directory"/*.exe "$directory"/*.dll; do
                 exit 1
             fi
             ;;
-        *win2000*)
+        *win2k*)
             # This catches known loader incompatibilities, not all possible
             # API-semantic differences. Destination runtime testing is required.
             if echo "$headers" | grep -Eqi 'DLL Name: (api-ms-|ext-ms-|ucrtbase|msvcr[0-9]|vcruntime)|RegisterRawInputDevices|GetRawInputData|GetRawInputBuffer|GetModuleHandleEx[AW]|GetTickCount64|InitializeCriticalSectionEx|EncodePointer|DecodePointer|GetSystemTimePreciseAsFileTime|GetFileInformationByHandleEx|GetFinalPathNameByHandle[AW]|SetThreadStackGuarantee'; then
