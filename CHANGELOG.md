@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.85 - 2026-10-14 - Game frames during host modal loops
+
+- Extract the normal frame update into a shared, guarded frame pump for host
+  modal loops, preserving the simulation clock, demo progression and pauses.
+- Add wolf3d_PumpFrame with optional host presentation; framebuffer rendering
+  and audio continue even when the host skips an expensive display blit.
+
 ## 1.4.84 - 2026-10-14 - Timestamped native OPL writes
 
 - Advance platform API to v7 with an optional sample-positioned native OPL

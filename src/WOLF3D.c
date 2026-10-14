@@ -5511,11 +5511,162 @@ wolf3d_result_t wolf3d_PumpAudio(void)
     return ok ? WOLF3D_RESULT_OK : WOLF3D_RESULT_PLATFORM_ERROR;
 }
 
-wolf3d_result_t wolf3d_Run(void)
+/* Run and modal frames share one clock. Modal calls are legal only while
+   the engine is suspended inside the host event pump, never during mutation. */
+static uint32_t wg_run_last_ticks, wg_run_accumulator;
+static int wg_run_active, wg_run_polling, wg_run_frame_busy;
+static wolf3d_result_t wg_run_result;
+
+static wolf3d_result_t WG_RunFrame(int present)
+{
+    WG_MenuMoveSoundAdvance();
+    if (!wg_game.active && wg_attract_phase != WG_ATTRACT_NONE
+        && wg_attract_deadline != 0U
+        && (int32_t)(WG_GetTicksMs() - wg_attract_deadline) >= 0)
+    {
+        if (!WG_AttractAdvance())
+        {
+            WG_ReportFatalError("The Wolf3D attract loop failed.");
+            return WOLF3D_RESULT_PLATFORM_ERROR;
+        }
+        wg_run_last_ticks = WG_GetTicksMs();
+        wg_run_accumulator = 0U;
+    }
+    if (wg_game.active)
+    {
+        uint32_t now = WG_GetTicksMs();
+        uint32_t elapsed = now - wg_run_last_ticks;
+        unsigned ticks_run = 0U;
+
+        wg_run_last_ticks = now;
+        if (wg_game.paused || wg_game.cheat_message
+            || wg_game.control_panel
+            || wg_confirm_action != WG_CONFIRM_NONE)
+        {
+            wg_run_accumulator = 0U;
+            elapsed = 0U;
+        }
+        if (elapsed > 250U)
+        {
+            elapsed = 250U;
+        }
+        wg_run_accumulator += elapsed * 70U;
+        while (wg_run_accumulator >= 1000U && ticks_run < 18U)
+        {
+            int was_intermission = wg_game.intermission;
+            unsigned step_tics = 1U;
+
+            if (WG_GameSessionUsesAdaptiveTics())
+            {
+                unsigned available_tics = wg_run_accumulator / 1000U;
+
+                step_tics = available_tics > WL_MAX_TICS
+                                ? WL_MAX_TICS : available_tics;
+                if (available_tics > WL_MAX_TICS)
+                {
+                    /* CalcTics backs excess time out of TimeCount when
+                       MAXTICS is exceeded. Retain only the sub-tic host
+                       fraction and the ten tics that will be simulated. */
+                    wg_run_accumulator = step_tics * 1000U
+                                  + wg_run_accumulator % 1000U;
+                }
+            }
+
+            if (was_intermission)
+            {
+                if (!WG_GameSessionAdvanceIntermission())
+                {
+                    WG_ReportFatalError(
+                        "The Wolf3D intermission animation failed.");
+                    return WOLF3D_RESULT_PLATFORM_ERROR;
+                }
+            }
+            else if (!WG_GameSessionTick(step_tics))
+            {
+                WG_ReportFatalError("The Wolf3D game simulation failed.");
+                return WOLF3D_RESULT_PLATFORM_ERROR;
+            }
+            wg_run_accumulator -= step_tics * 1000U;
+            ticks_run += step_tics;
+            if (!was_intermission && wg_game.intermission)
+            {
+                /* LevelCompleted starts with a fresh presentation clock. */
+                wg_run_accumulator = 0U;
+                break;
+            }
+            if (wg_game.demo_finished)
+            {
+                WG_GameSessionClose();
+                if (!WG_DrawTitleScreen())
+                {
+                    return WOLF3D_RESULT_PLATFORM_ERROR;
+                }
+                wg_run_last_ticks = WG_GetTicksMs();
+                wg_run_accumulator = 0U;
+                ticks_run = 0U;
+                break;
+            }
+        }
+        if (wg_game.active && ticks_run != 0U
+            && !wg_game.intermission && !wg_game.victory
+            && !wg_game.high_scores
+            && wg_game.preload_tics == 0U
+            && !wg_game.entry_fizzle_active
+            && wg_game.death_phase < WG_DEATH_FIZZLE
+            && !WG_GameSessionRender())
+        {
+            WG_ReportFatalError("The Wolf3D game renderer failed.");
+            return WOLF3D_RESULT_PLATFORM_ERROR;
+        }
+        if (wg_game.active && !WG_GameSessionPumpAudio())
+        {
+            WG_ReportFatalError("The Wolf3D audio stream failed.");
+            return WOLF3D_RESULT_PLATFORM_ERROR;
+        }
+    }
+    else if (!WG_FrontMusicPump())
+    {
+        WG_ReportFatalError("The Wolf3D front-end audio stream failed.");
+        return WOLF3D_RESULT_PLATFORM_ERROR;
+    }
+    if (!WG_MenuCursorAdvance())
+    {
+        WG_ReportFatalError("Unable to animate the menu cursor.");
+        return WOLF3D_RESULT_PLATFORM_ERROR;
+    }
+    if (present) WG_Present(wolf3d_ScreenBuffer, wolf3d_Palette);
+    return WOLF3D_RESULT_OK;
+}
+
+static wolf3d_result_t WG_RunFrameGuarded(int present)
+{
+    if (wg_run_result != WOLF3D_RESULT_OK) return wg_run_result;
+    if (wg_run_frame_busy) return WOLF3D_RESULT_OK;
+    wg_run_frame_busy = 1;
+    wg_run_result = WG_RunFrame(present);
+    wg_run_frame_busy = 0;
+    return wg_run_result;
+}
+
+wolf3d_result_t wolf3d_PumpFrame(int present)
+{
+    if (!wg_run_active || !wg_run_polling) return WOLF3D_RESULT_OK;
+    return WG_RunFrameGuarded(present != 0);
+}
+
+static int WG_RunPollEvent(wolf3d_event_t *event)
+{
+    int available;
+    if (wg_run_result != WOLF3D_RESULT_OK) return 0;
+    wg_run_polling = 1;
+    available = WG_PollEvent(event);
+    wg_run_polling = 0;
+    return wg_run_result == WOLF3D_RESULT_OK && available;
+}
+
+static wolf3d_result_t WG_RunLoop(void)
 {
     wolf3d_event_t event;
-    uint32_t last_ticks;
-    uint32_t accumulator = 0U;
 
     if (!wg_initialized)
     {
@@ -5535,10 +5686,10 @@ wolf3d_result_t wolf3d_Run(void)
         WG_AttractSet(WG_ATTRACT_SIGNON_WAIT, WG_SIGNON_WORK_MIN_MS);
     }
 
-    last_ticks = WG_GetTicksMs();
+    wg_run_last_ticks = WG_GetTicksMs();
     for (;;)
     {
-        while (WG_PollEvent(&event))
+        while (WG_RunPollEvent(&event))
         {
             if (event.type == WOLF3D_EVENT_QUIT)
             {
@@ -5697,8 +5848,8 @@ wolf3d_result_t wolf3d_Run(void)
                     {
                         return confirm_result;
                     }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
+                    wg_run_last_ticks = WG_GetTicksMs();
+                    wg_run_accumulator = 0U;
                 }
                 continue;
             }
@@ -5720,8 +5871,8 @@ wolf3d_result_t wolf3d_Run(void)
                     WG_ReportFatalError("The Wolf3D startup sequence failed.");
                     return WOLF3D_RESULT_PLATFORM_ERROR;
                 }
-                last_ticks = WG_GetTicksMs();
-                accumulator = 0U;
+                wg_run_last_ticks = WG_GetTicksMs();
+                wg_run_accumulator = 0U;
                 continue;
             }
             if (!wg_game.active
@@ -5754,8 +5905,8 @@ wolf3d_result_t wolf3d_Run(void)
                         {
                             return confirm_result;
                         }
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                     }
                     continue;
                 }
@@ -5767,8 +5918,8 @@ wolf3d_result_t wolf3d_Run(void)
                         {
                             return WOLF3D_RESULT_PLATFORM_ERROR;
                         }
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                     }
                     continue;
                 }
@@ -5850,8 +6001,8 @@ wolf3d_result_t wolf3d_Run(void)
                         {
                             return WOLF3D_RESULT_PLATFORM_ERROR;
                         }
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                         continue;
                     }
                     if (!WG_GameSessionHighScoreKey(event.key, event.pressed))
@@ -5864,8 +6015,8 @@ wolf3d_result_t wolf3d_Run(void)
                         {
                             return WOLF3D_RESULT_PLATFORM_ERROR;
                         }
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                     }
                     continue;
                 }
@@ -5877,8 +6028,8 @@ wolf3d_result_t wolf3d_Run(void)
                         {
                             return WOLF3D_RESULT_PLATFORM_ERROR;
                         }
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                     }
                     continue;
                 }
@@ -5888,8 +6039,8 @@ wolf3d_result_t wolf3d_Run(void)
                     {
                         return WOLF3D_RESULT_PLATFORM_ERROR;
                     }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
+                    wg_run_last_ticks = WG_GetTicksMs();
+                    wg_run_accumulator = 0U;
                     continue;
                 }
                 if (wg_game.active && wg_game.paused && event.pressed)
@@ -5898,8 +6049,8 @@ wolf3d_result_t wolf3d_Run(void)
                     {
                         return WOLF3D_RESULT_PLATFORM_ERROR;
                     }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
+                    wg_run_last_ticks = WG_GetTicksMs();
+                    wg_run_accumulator = 0U;
                     continue;
                 }
                 if (wg_game.active && !wg_game.control_panel
@@ -5910,8 +6061,8 @@ wolf3d_result_t wolf3d_Run(void)
                     {
                         return WOLF3D_RESULT_PLATFORM_ERROR;
                     }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
+                    wg_run_last_ticks = WG_GetTicksMs();
+                    wg_run_accumulator = 0U;
                     continue;
                 }
                 if (!wg_game.active || wg_game.control_panel)
@@ -6576,8 +6727,8 @@ wolf3d_result_t wolf3d_Run(void)
                     }
                     if (wg_game.active)
                     {
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                     }
                     continue;
                 }
@@ -6587,8 +6738,8 @@ wolf3d_result_t wolf3d_Run(void)
                     {
                         return WOLF3D_RESULT_PLATFORM_ERROR;
                     }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
+                    wg_run_last_ticks = WG_GetTicksMs();
+                    wg_run_accumulator = 0U;
                     continue;
                 }
                 if (event.pressed && event.key >= WOLF3D_KEY_F1
@@ -6600,8 +6751,8 @@ wolf3d_result_t wolf3d_Run(void)
                     {
                         return quick_result;
                     }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
+                    wg_run_last_ticks = WG_GetTicksMs();
+                    wg_run_accumulator = 0U;
                     continue;
                 }
                 if (event.key < sizeof(wg_game.keys))
@@ -6629,8 +6780,8 @@ wolf3d_result_t wolf3d_Run(void)
                             {
                                 return WOLF3D_RESULT_PLATFORM_ERROR;
                             }
-                            last_ticks = WG_GetTicksMs();
-                            accumulator = 0U;
+                            wg_run_last_ticks = WG_GetTicksMs();
+                            wg_run_accumulator = 0U;
                             continue;
                         }
                         debug_result = WG_GameDebugKey(event.key);
@@ -6962,8 +7113,8 @@ wolf3d_result_t wolf3d_Run(void)
                     }
                     if (wg_game.active)
                     {
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                     }
                 }
             }
@@ -6982,8 +7133,8 @@ wolf3d_result_t wolf3d_Run(void)
                         {
                             return WOLF3D_RESULT_PLATFORM_ERROR;
                         }
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                     }
                     continue;
                 }
@@ -7047,8 +7198,8 @@ wolf3d_result_t wolf3d_Run(void)
                         {
                             return WOLF3D_RESULT_PLATFORM_ERROR;
                         }
-                        last_ticks = WG_GetTicksMs();
-                        accumulator = 0U;
+                        wg_run_last_ticks = WG_GetTicksMs();
+                        wg_run_accumulator = 0U;
                     }
                     continue;
                 }
@@ -7058,8 +7209,8 @@ wolf3d_result_t wolf3d_Run(void)
                     {
                         return WOLF3D_RESULT_PLATFORM_ERROR;
                     }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
+                    wg_run_last_ticks = WG_GetTicksMs();
+                    wg_run_accumulator = 0U;
                     continue;
                 }
                 if (wg_game.intermission && event.pressed)
@@ -7068,8 +7219,8 @@ wolf3d_result_t wolf3d_Run(void)
                     {
                         return WOLF3D_RESULT_PLATFORM_ERROR;
                     }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
+                    wg_run_last_ticks = WG_GetTicksMs();
+                    wg_run_accumulator = 0U;
                     continue;
                 }
                 if (event.pressed)
@@ -7083,124 +7234,25 @@ wolf3d_result_t wolf3d_Run(void)
                 }
             }
         }
-        WG_MenuMoveSoundAdvance();
-        if (!wg_game.active && wg_attract_phase != WG_ATTRACT_NONE
-            && wg_attract_deadline != 0U
-            && (int32_t)(WG_GetTicksMs() - wg_attract_deadline) >= 0)
         {
-            if (!WG_AttractAdvance())
-            {
-                WG_ReportFatalError("The Wolf3D attract loop failed.");
-                return WOLF3D_RESULT_PLATFORM_ERROR;
-            }
-            last_ticks = WG_GetTicksMs();
-            accumulator = 0U;
+            wolf3d_result_t result = WG_RunFrameGuarded(1);
+            if (result != WOLF3D_RESULT_OK) return result;
         }
-        if (wg_game.active)
-        {
-            uint32_t now = WG_GetTicksMs();
-            uint32_t elapsed = now - last_ticks;
-            unsigned ticks_run = 0U;
-
-            last_ticks = now;
-            if (wg_game.paused || wg_game.cheat_message
-                || wg_game.control_panel
-                || wg_confirm_action != WG_CONFIRM_NONE)
-            {
-                accumulator = 0U;
-                elapsed = 0U;
-            }
-            if (elapsed > 250U)
-            {
-                elapsed = 250U;
-            }
-            accumulator += elapsed * 70U;
-            while (accumulator >= 1000U && ticks_run < 18U)
-            {
-                int was_intermission = wg_game.intermission;
-                unsigned step_tics = 1U;
-
-                if (WG_GameSessionUsesAdaptiveTics())
-                {
-                    unsigned available_tics = accumulator / 1000U;
-
-                    step_tics = available_tics > WL_MAX_TICS
-                                    ? WL_MAX_TICS : available_tics;
-                    if (available_tics > WL_MAX_TICS)
-                    {
-                        /* CalcTics backs excess time out of TimeCount when
-                           MAXTICS is exceeded. Retain only the sub-tic host
-                           fraction and the ten tics that will be simulated. */
-                        accumulator = step_tics * 1000U
-                                      + accumulator % 1000U;
-                    }
-                }
-
-                if (was_intermission)
-                {
-                    if (!WG_GameSessionAdvanceIntermission())
-                    {
-                        WG_ReportFatalError(
-                            "The Wolf3D intermission animation failed.");
-                        return WOLF3D_RESULT_PLATFORM_ERROR;
-                    }
-                }
-                else if (!WG_GameSessionTick(step_tics))
-                {
-                    WG_ReportFatalError("The Wolf3D game simulation failed.");
-                    return WOLF3D_RESULT_PLATFORM_ERROR;
-                }
-                accumulator -= step_tics * 1000U;
-                ticks_run += step_tics;
-                if (!was_intermission && wg_game.intermission)
-                {
-                    /* LevelCompleted starts with a fresh presentation clock. */
-                    accumulator = 0U;
-                    break;
-                }
-                if (wg_game.demo_finished)
-                {
-                    WG_GameSessionClose();
-                    if (!WG_DrawTitleScreen())
-                    {
-                        return WOLF3D_RESULT_PLATFORM_ERROR;
-                    }
-                    last_ticks = WG_GetTicksMs();
-                    accumulator = 0U;
-                    ticks_run = 0U;
-                    break;
-                }
-            }
-            if (wg_game.active && ticks_run != 0U
-                && !wg_game.intermission && !wg_game.victory
-                && !wg_game.high_scores
-                && wg_game.preload_tics == 0U
-                && !wg_game.entry_fizzle_active
-                && wg_game.death_phase < WG_DEATH_FIZZLE
-                && !WG_GameSessionRender())
-            {
-                WG_ReportFatalError("The Wolf3D game renderer failed.");
-                return WOLF3D_RESULT_PLATFORM_ERROR;
-            }
-            if (wg_game.active && !WG_GameSessionPumpAudio())
-            {
-                WG_ReportFatalError("The Wolf3D audio stream failed.");
-                return WOLF3D_RESULT_PLATFORM_ERROR;
-            }
-        }
-        else if (!WG_FrontMusicPump())
-        {
-            WG_ReportFatalError("The Wolf3D front-end audio stream failed.");
-            return WOLF3D_RESULT_PLATFORM_ERROR;
-        }
-        if (!WG_MenuCursorAdvance())
-        {
-            WG_ReportFatalError("Unable to animate the menu cursor.");
-            return WOLF3D_RESULT_PLATFORM_ERROR;
-        }
-        WG_Present(wolf3d_ScreenBuffer, wolf3d_Palette);
         WG_SleepMs(wg_game.active ? 1U : 10U);
     }
+}
+
+wolf3d_result_t wolf3d_Run(void)
+{
+    wolf3d_result_t result;
+    if (wg_run_active) return WOLF3D_RESULT_INVALID_ARGUMENT;
+    wg_run_active = 1;
+    wg_run_polling = wg_run_frame_busy = 0;
+    wg_run_accumulator = 0U;
+    wg_run_result = WOLF3D_RESULT_OK;
+    result = WG_RunLoop();
+    wg_run_active = wg_run_polling = wg_run_frame_busy = 0;
+    return result;
 }
 
 size_t wolf3d_GetOPLDriverCount(void)

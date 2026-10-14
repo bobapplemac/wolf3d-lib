@@ -162,3 +162,21 @@ engine/window thread to continue producing PCM and timestamped OPL events
 without advancing gameplay. Do not call it concurrently from an audio thread.
 `tests/WG_ADLIB_CLOCK_TEST.c` verifies positions, negotiated rates, 64-bit
 progression and fresh-instance reset without hardware access.
+
+## Full frames in modal loops
+
+Starting with 1.4.85, `wolf3d_PumpFrame(present)` runs the same simulation,
+attract/demo progression, audio production and framebuffer rendering as Run.
+Call it only on the engine thread from a modal loop nested inside `poll_event`.
+Calls outside that safe boundary or recursive calls during a frame are no-ops.
+A frame failure is latched and returned by Run once event polling resumes.
+The modal and ordinary loops share their timing accumulator, avoiding duplicate
+elapsed time or a catch-up burst when a drag ends. Game pause/menu rules remain
+in effect. This function does not poll events or sleep.
+
+Use `present=0` to omit only the host presentation callback; internal rendering
+continues. GDI uses this during dragging/resizing to avoid expensive scaled
+blits, then pumps with `present=1` on leaving the modal loop. The window may
+look frozen during a drag even though its game state and framebuffer advance.
+`tests/WG_MODAL_FRAME_TEST.c` exercises the production update and guard code,
+including simulation, memory rendering, pauses, reentry and shared-clock resume.

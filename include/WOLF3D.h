@@ -171,6 +171,9 @@ WOLF3D_API wolf3d_result_t wolf3d_Create(int argc, char **argv);
 WOLF3D_API wolf3d_result_t wolf3d_Run(void);
 /* Main-thread only: keep PCM/native events supplied during a host modal loop. */
 WOLF3D_API wolf3d_result_t wolf3d_PumpAudio(void);
+/* Main-thread modal callback during poll_event only. Runs simulation/audio and
+   framebuffer rendering; present=0 skips only the host presentation callback. */
+WOLF3D_API wolf3d_result_t wolf3d_PumpFrame(int present);
 WOLF3D_API void wolf3d_Shutdown(void);
 WOLF3D_API size_t wolf3d_GetOPLDriverCount(void);
 WOLF3D_API const char *wolf3d_GetOPLDriverName(size_t index);
