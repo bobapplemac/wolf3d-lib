@@ -6,6 +6,14 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.80 - 2026-10-14 - Validated DOS and Win9x audio integration
+
+- Record physical Pentium III/Yamaha OPL3-SAx validation through the portable
+  host: DOS SB Pro digital output, native AdLib and DBOPL playback, and Win9x
+  native AdLib and DBOPL playback.
+- Advance the shared package revision for the companion host's Sound Blaster,
+  OPL3 initialization and DOS exit cleanup fixes; no public API change.
+
 ## 1.4.79 - 2026-10-14 - Period-hardware audio defaults
 
 - Default Open Watcom DOS and Win9x builds to 22050 Hz PCM, retaining explicit

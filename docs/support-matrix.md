@@ -48,7 +48,7 @@ for the mapping and the distinction from MSBuild toolset selection.
 | Compiler environment | Toolset / compiler | Architecture | CRT modes | Build status | Destination validation |
 | --- | --- | --- | --- | --- | --- |
 | MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Validated | Package, API, deterministic tests, and all runtime-selectable OPL drivers validated on Windows 11 x64 |
-| Linux Docker / Open Watcom | Open Watcom 2 (pinned) | x86 | Watcom runtime | Build validated | Native PE DLL and consumer import-library link; Win9x runtime pending |
+| Linux Docker / Open Watcom | Open Watcom 2 (pinned) | x86 | Watcom runtime | Build validated | Native PE DLL and consumer import-library link; companion Win9x host playback confirmed on Pentium III/Yamaha OPL3-SAx hardware |
 | Linux Docker / MinGW-w64 | GCC 12 / MSVCRT | x86 | static GCC support runtime | Build validated | Windows XP profile; PE/import audit passed; runtime pending |
 | Linux Docker / MinGW-w64 | GCC 12 / MSVCRT | x86, x64 | static GCC support runtime | Build validated | Windows 7 profile; PE/import audit passed; runtime pending |
 | Linux Docker / LLVM-MinGW | LLVM 23 / MSVCRT | x86, x64 | compiler-rt | Build validated | Independent Windows 7 profile; PE/import audit passed; runtime pending |
@@ -86,7 +86,7 @@ MinGW UCRT64; the XP-native CMD dispatcher backs the VC6--VS2005 IDE projects.
 | Native | GCC, Clang | Host (currently x86-64) | Build host glibc | Validated | Same or newer compatible glibc; exact floor is the build host |
 | Portable glibc | GCC | x86-64 | Debian 10, audited maximum `GLIBC_2.28` | Validated | x86-64 Linux with glibc 2.28 or newer |
 | musl | GCC, Clang | x86-64 | Alpine musl | Validated | A musl process with a compatible musl ABI; not loadable into a glibc process |
-| Open Watcom DOS32 | Open Watcom 2 `2026-10-01-Build` | Pentium-class x86 | 32-bit protected-mode DOS OMF | Build and public-consumer link validated in pinned Docker image | Integrated runtime validated by the companion DOS/32A host under DOSBox 0.74; physical DOS hardware remains untested |
+| Open Watcom DOS32 | Open Watcom 2 `2026-10-01-Build` | Pentium-class x86 | 32-bit protected-mode DOS OMF | Build and public-consumer link validated in pinned Docker image | Integrated runtime validated by the companion DOS/32A host under DOSBox 0.74; physical Pentium III/Yamaha OPL3-SAx playback confirmed through the companion host |
 
 glibc is forward-compatible in the direction useful here: an artifact limited
 to glibc 2.28 symbols is intended to run on newer glibc releases. The audit
@@ -119,5 +119,5 @@ corresponding dispatcher/CMake options documented in
 
 | Target | Integration | Validation |
 | --- | --- | --- |
-| DOS/32A portable host | `wolf3d-portable` links this OMF library with direct VGA, IRQ 1 keyboard, 700 Hz PIT, SB16 PCM, and DOS/32A | Interactive DOSBox gameplay confirmed; physical DOS hardware remains untested |
+| DOS/32A portable host | `wolf3d-portable` links this OMF library with direct VGA, IRQ 1 keyboard, 700 Hz PIT, SB16 PCM, and DOS/32A | Interactive DOSBox gameplay confirmed; physical Pentium III/Yamaha OPL3-SAx playback confirmed through the companion host |
 | Native AdLib/OPL backend | The native-OPL platform callbacks keep port I/O in the host while the library's `adlib` adapter preserves the 700 Hz engine clock | Native port-388h operation confirmed under DOSBox; DBOPL and silent fallbacks also confirmed |
