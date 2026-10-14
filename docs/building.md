@@ -84,7 +84,7 @@ the downloaded Linux x64 archive against its checked-in SHA-256, and emits a
 Pentium-targeted OMF SDK at
 `dist/wolf3d-lib_<version>_dos32_x86_openwatcom<major>`. The default build
 includes DBOPL, timing-preserving silence, and native AdLib, selects AdLib by
-default, and requests 44100 Hz PCM. Nuked is opt-in. `WOLF3D.LIB` contains the engine and
+default, and requests 22050 Hz PCM. Nuked is opt-in. `WOLF3D.LIB` contains the engine and
 adapters; `NUKEDOPL.LIB` remains separate when that driver is selected.
 
 The build also compiles and links the public API consumer into a temporary
@@ -322,3 +322,12 @@ optional replaceable `NUKEDOPL.LIB`.
 
 Production executables and OS-specific dependencies deliberately belong to
 the companion `wolf3d-portable` repository.
+
+DOS and Open Watcom Win9x packages default to 22050 Hz PCM to reduce CPU cost
+on period hardware. `--sample-rate HZ` accepts integer requests from 8000 to
+192000; the host may negotiate a lower or rounded hardware rate. DOS build
+rates can be overridden with `OPENWATCOM_SAMPLE_RATE`; use
+`WIN9X_SAMPLE_RATE` for Win9x only. Explicit `SAMPLE_RATE` also overrides the
+Win9x default for compatibility with existing build commands. Modern targets
+retain their 48000 Hz default. Native OPL pitch and tempo do not depend on the
+PCM rate when the audio clock is correctly paced.

@@ -6,6 +6,11 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.79 - 2026-10-14 - Period-hardware audio defaults
+
+- Default Open Watcom DOS and Win9x builds to 22050 Hz PCM, retaining explicit
+  rate overrides and modern-platform defaults.
+
 ## 1.4.78 - 2026-10-11 - Microsoft toolset version vocabulary
 
 - Correct legacy toolset labels in the support matrices while retaining compiler versions.

@@ -105,7 +105,11 @@ static uint8_t wg_debug_parameter;
 static uint8_t wg_debug_keys_enabled;
 
 #ifndef WG_DEFAULT_SAMPLE_RATE
+#if defined(__WATCOMC__) && (defined(__DOS__) || defined(__NT__))
+#define WG_DEFAULT_SAMPLE_RATE 22050U
+#else
 #define WG_DEFAULT_SAMPLE_RATE 48000U
+#endif
 #endif
 static uint32_t wg_preferred_sample_rate = WG_DEFAULT_SAMPLE_RATE;
 

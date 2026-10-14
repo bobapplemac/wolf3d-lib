@@ -37,7 +37,7 @@ OPENWATCOM_DIST_DIR ?=
 OPENWATCOM_BUILD_IMAGE ?= wolf3d-lib-build-openwatcom-20261001
 OPENWATCOM_OPL_DRIVERS ?= dbopl,silent,adlib
 OPENWATCOM_DEFAULT_OPL ?= adlib
-OPENWATCOM_SAMPLE_RATE ?= 44100
+OPENWATCOM_SAMPLE_RATE ?= 22050
 WINDOWS_MINGW_BUILD_IMAGE ?= wolf3d-lib-build-windows-mingw-debian12
 WINDOWS_LLVM_MINGW_MSVC_IMAGE ?= wolf3d-lib-build-llvm-mingw-20260908-msvcrt
 WINDOWS_LLVM_MINGW_UCRT_IMAGE ?= wolf3d-lib-build-llvm-mingw-20260908-ucrt
@@ -47,6 +47,7 @@ WINDOWS_LLVM_MINGW_UCRT_SHA256 ?= 2258c745e3155870c80793f3e8c80b28fbde11b9ff73c4
 # Win9x defaults follow DOS; explicit OPL_* overrides still apply.
 WIN9X_OPL_DRIVERS ?= $(if $(filter file default undefined,$(origin OPL_DRIVERS)),dbopl$(comma)silent$(comma)adlib,$(OPL_DRIVERS))
 WIN9X_OPL_DEFAULT ?= $(if $(filter file default undefined,$(origin OPL_DEFAULT)),adlib,$(OPL_DEFAULT))
+WIN9X_SAMPLE_RATE ?= $(if $(filter file default undefined,$(origin SAMPLE_RATE)),22050,$(SAMPLE_RATE))
 WINDOWS_OPENWATCOM_BUILD_DIR ?= build/openwatcom-win9x-x86
 WINDOWS_OPENWATCOM_DIST_DIR ?=
 DOCKER_RUN_ARGS ?=
@@ -123,13 +124,14 @@ help:
 		'  OPL_DRIVERS=nuked,dbopl,silent Drivers compiled into the library (default: all).' \
 		'  OPL_DEFAULT=nuked|dbopl|silent Runtime default (default: nuked).' \
 		'  SAMPLE_RATE=Hz               Preferred host PCM rate (default: 48000).' \
+		'  WIN9X_SAMPLE_RATE=Hz        Win9x preferred PCM rate (default: 22050).' \
 		'  JOBS=N                       Parallel job limit.' \
 		'  CMAKE_ARGS="..."             Extra CMake -D settings.' \
 		'  TEST_ARGS="..."              Extra arguments passed to CTest.' \
 		'  DOCKER_RUN_ARGS="..."        Extra docker-run options.' \
 		'  OPENWATCOM_OPL_DRIVERS=...   DOS drivers (default: dbopl,silent,adlib).' \
 		'  OPENWATCOM_DEFAULT_OPL=...   DOS runtime default (default: adlib).' \
-		'  OPENWATCOM_SAMPLE_RATE=Hz    DOS preferred PCM rate (default: 44100).' \
+		'  OPENWATCOM_SAMPLE_RATE=Hz    DOS preferred PCM rate (default: 22050).' \
 		'' \
 		'Examples:' \
 		'  make' \
@@ -290,7 +292,7 @@ windows-win9x-library-release: openwatcom-image
 		--env WG_OPENWATCOM_WINDOWS_DIST_DIR="$(if $(WINDOWS_OPENWATCOM_DIST_DIR),/src/$(WINDOWS_OPENWATCOM_DIST_DIR))" \
 		--env WG_OPENWATCOM_WINDOWS_OPL_DRIVERS="$(WIN9X_OPL_DRIVERS)" \
 		--env WG_OPENWATCOM_WINDOWS_DEFAULT_OPL="$(WIN9X_OPL_DEFAULT)" \
-		--env WG_OPENWATCOM_WINDOWS_SAMPLE_RATE="$(SAMPLE_RATE)" \
+		--env WG_OPENWATCOM_WINDOWS_SAMPLE_RATE="$(WIN9X_SAMPLE_RATE)" \
 		"$(OPENWATCOM_BUILD_IMAGE)" \
 		sh scripts/linux/openwatcom/build-windows-library.sh
 

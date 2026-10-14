@@ -78,7 +78,7 @@ if [[ $target == openwatcom-* || $target == windows-win9x ]]; then
     else
         default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
     fi
-    sample_rate=$(choose 'Preferred PCM sample rate' 44100 48000)
+    sample_rate=$(choose 'Preferred PCM sample rate' 22050 44100 48000)
 elif [[ $target != clean ]]; then
     drivers=$(choose 'Compiled OPL drivers' all nuked-dbopl nuked-silent dbopl-silent nuked dbopl silent)
     if [ "$drivers" = all ]; then
@@ -88,7 +88,7 @@ elif [[ $target != clean ]]; then
         default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
     fi
     if [[ $target == openwatcom-* || $target == windows-win9x ]]; then
-        sample_rate=$(choose 'Preferred PCM sample rate' 44100 48000)
+        sample_rate=$(choose 'Preferred PCM sample rate' 22050 44100 48000)
     else
         sample_rate=$(choose 'Preferred PCM sample rate' 48000 44100)
     fi
@@ -110,7 +110,7 @@ else
     args=("$target" "CC=$compiler" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
 fi
 if [[ $target == windows-cross ]]; then
-    args+=("WIN9X_OPL_DRIVERS=dbopl,silent,adlib" "WIN9X_OPL_DEFAULT=adlib")
+    args+=("WIN9X_OPL_DRIVERS=dbopl,silent,adlib" "WIN9X_OPL_DEFAULT=adlib" "WIN9X_SAMPLE_RATE=22050")
 fi
 [ -n "$jobs" ] && args+=("JOBS=$jobs")
 compiler_display=$compiler

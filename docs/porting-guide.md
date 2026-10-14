@@ -30,7 +30,7 @@ Win32, and Linux direct-console examples using only this public boundary.
 
 Keyboard events use IBM PC set-1 scan codes, not native virtual-key values.
 Common codes are named in `include/WOLF3D.h`; other bindable keys may be
-passed as their 0–127 set-1 value. Emit both press and release events. Map a
+passed as their 0â€“127 set-1 value. Emit both press and release events. Map a
 physical Pause key to `WOLF3D_KEY_PAUSE` because its hardware sequence is not a
 normal one-byte scan code.
 
@@ -134,7 +134,7 @@ Runtime audio selection is intentionally host-independent:
 
 ```text
 --opl nuked|dbopl|silent  Select an implementation compiled into the library
---sample-rate HZ          Request 8000--192000 Hz PCM (default: 48000)
+--sample-rate HZ          Request 8000--192000 Hz PCM (default: 48000; DOS/Win9x: 22050)
 --adlib / -nosb           Emulate an AdLib-only machine
 --pc-speaker / -noal      Emulate no sound card; default to PC-speaker effects
 --no-sound                Emulate no sound card and select no audio

@@ -8,7 +8,7 @@ build_dir=${WG_OPENWATCOM_WINDOWS_BUILD_DIR:-$root/build/openwatcom-win9x-x86}
 dist_dir=${WG_OPENWATCOM_WINDOWS_DIST_DIR:-$root/dist/wolf3d-lib_${version}_win9x_x86_${toolchain}}
 drivers=${WG_OPENWATCOM_WINDOWS_OPL_DRIVERS:-dbopl,silent,adlib}
 default_driver=${WG_OPENWATCOM_WINDOWS_DEFAULT_OPL:-adlib}
-sample_rate=${WG_OPENWATCOM_WINDOWS_SAMPLE_RATE:-48000}
+sample_rate=${WG_OPENWATCOM_WINDOWS_SAMPLE_RATE:-22050}
 
 case ",$drivers," in
     *,nuked,*|*,dbopl,*|*,silent,*|*,adlib,*) ;;
