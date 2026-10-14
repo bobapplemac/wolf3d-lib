@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.87 - 2026-10-14 - Complete legacy audio build policy
+
+- Apply legacy automatic audio preferences to XP Visual Studio toolsets.
+- Accept explicit silent-only Open Watcom builds alongside automatic selection.
+
 ## 1.4.86 - 2026-10-14 - Automatic audio policy
 
 - Add quiet hardware/emulator/silent fallback for auto; explicit selections fail strictly.

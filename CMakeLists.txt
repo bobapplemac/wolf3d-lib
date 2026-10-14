@@ -48,7 +48,9 @@ option(WG_STATIC_MSVC_RUNTIME
     "Link the MSVC runtime statically for self-contained Windows releases" ON)
 option(WG_STATIC_GNU_RUNTIME
     "Link the GCC support runtime statically in MinGW artifacts" ON)
-if(WG_DIST_PLATFORM MATCHES "^(dos32|win9x|win2k|winxp)$")
+if(WG_DIST_PLATFORM MATCHES "^(dos32|win9x|win2k|winxp)$"
+   OR CMAKE_VS_PLATFORM_TOOLSET MATCHES "_xp$"
+   OR (MSVC AND MSVC_VERSION LESS 1601))
     add_definitions(-DWG_AUDIO_LEGACY_TARGET=1)
 endif()
 option(WG_ENABLE_OPL_NUKED "Compile the Nuked OPL3 runtime driver" ON)

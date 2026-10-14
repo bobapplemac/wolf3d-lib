@@ -124,7 +124,7 @@ bash "$1" "$2"
         if not module.exists() or not cmake:
             self.skipTest('portable CMake version check required')
         script = self.base / 'version.cmake'
-        for version, succeeds in (('1.4.84', False), ('1.4.86', True), ('1.4.90', True)):
+        for version, succeeds in (('1.4.84', False), ('1.4.87', True), ('1.4.90', True)):
             with self.subTest(version=version):
                 script.write_text('include("' + module.as_posix() + '")\nw3p_check_engine_version("' + version + '")\n')
                 run = subprocess.run([cmake, '-P', str(script)], capture_output=True, text=True)

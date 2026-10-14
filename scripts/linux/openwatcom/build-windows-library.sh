@@ -14,8 +14,8 @@ case ",$drivers," in
     *,nuked,*|*,dbopl,*|*,silent,*|*,adlib,*) ;;
     *) echo "At least one Open Watcom Windows OPL driver must be selected." >&2; exit 2 ;;
 esac
-case ",$drivers,$default_driver," in
-    *,auto,*|*,$default_driver,*,$default_driver,*) ;;
+case ",$drivers,auto," in
+    *,$default_driver,*) ;;
     *) echo "Default OPL driver '$default_driver' is not compiled in." >&2; exit 2 ;;
 esac
 
