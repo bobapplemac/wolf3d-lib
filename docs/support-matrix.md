@@ -49,6 +49,7 @@ for the mapping and the distinction from MSBuild toolset selection.
 | --- | --- | --- | --- | --- | --- |
 | MSYS2 UCRT64 | MinGW-w64 GCC 16.2 | x64 | static GCC support runtime | Validated | Package, API, deterministic tests, and all runtime-selectable OPL drivers validated on Windows 11 x64 |
 | Linux Docker / Open Watcom | Open Watcom 2 (pinned) | x86 | Watcom runtime | Build validated | Native PE DLL and consumer import-library link; companion Win9x host playback confirmed on Pentium III/Yamaha OPL3-SAx hardware |
+| Linux Docker / MinGW-w64 | GCC 12 / MSVCRT | x86 | static GCC support runtime | Build validated | Windows 2000 profile; PE/import audit passed; runtime pending |
 | Linux Docker / MinGW-w64 | GCC 12 / MSVCRT | x86 | static GCC support runtime | Build validated | Windows XP profile; PE/import audit passed; runtime pending |
 | Linux Docker / MinGW-w64 | GCC 12 / MSVCRT | x86, x64 | static GCC support runtime | Build validated | Windows 7 profile; PE/import audit passed; runtime pending |
 | Linux Docker / LLVM-MinGW | LLVM 23 / MSVCRT | x86, x64 | compiler-rt | Build validated | Independent Windows 7 profile; PE/import audit passed; runtime pending |

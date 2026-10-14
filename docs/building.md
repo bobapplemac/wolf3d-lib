@@ -331,3 +331,27 @@ rates can be overridden with `OPENWATCOM_SAMPLE_RATE`; use
 Win9x default for compatibility with existing build commands. Modern targets
 retain their 48000 Hz default. Native OPL pitch and tempo do not depend on the
 PCM rate when the audio clock is correctly paced.
+
+## Windows 2000 Docker target
+
+Run `make windows-win2000` on Linux (or choose the Windows 2000 option in
+`./build.sh`). The pinned Debian/MinGW-w64 GCC image builds x86 MSVCRT binaries;
+no Windows development VM is required. The target is included in
+`make windows-cross`. The portable package uses GDI and legacy mouse input,
+without the XP-only Raw Input imports. SDL3 is not supported on this target.
+
+Defaults include only DBOPL and silent, with DBOPL selected. The target-specific
+`WIN2000_OPL_DRIVERS` and `WIN2000_OPL_DEFAULT` Make variables override these;
+general OPL settings for other targets do not change them. Native AdLib access
+is not implemented for Windows 2000/XP. The existing `SAMPLE_RATE` override is
+supported (default 48000 Hz); use the runtime `--sample-rate` option to compare
+rates on slower hardware. Other platform defaults are unchanged.
+
+The PE audit checks x86 architecture, runtime dependencies, known post-2000
+imports and the subsystem version of each staged EXE/DLL. This is not a full
+Windows API compatibility proof: Windows 2000 startup, input, sound and
+performance still require physical testing. Use a fully updated Windows 2000
+SP4 installation for the initial test baseline.
+
+Run `python3 tests/WG_WINDOWS_PE_AUDIT_TEST.py` on Linux for positive/negative
+Windows 2000 audit fixtures, including forbidden imports in adjacent DLLs.

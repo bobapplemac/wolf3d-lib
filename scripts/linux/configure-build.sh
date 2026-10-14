@@ -40,8 +40,8 @@ if ready cmake && ready make; then
     labels+=('Linux library distribution (local toolchain)' 'validation tests' 'development build' 'clean local build outputs')
 fi
 if ready docker && ready make; then
-    targets+=(portable-library-release musl-library-release openwatcom-library-release windows-win9x windows-xp windows-win7 windows-llvm-win7 windows-win10 windows-cross)
-    labels+=('Linux glibc 2.28 library distribution (Docker)' 'Linux musl library distribution (Docker)' 'DOS32 Open Watcom library SDK (Docker)' 'Win9x x86 Open Watcom SDK (Docker)' 'Windows XP x86 MinGW GCC/MSVCRT SDK (Docker)' 'Windows 7 x86/x64 MinGW GCC/MSVCRT SDKs (Docker)' 'Windows 7 x86/x64 LLVM-MinGW/MSVCRT SDKs (Docker)' 'Windows 10 x64 LLVM-MinGW/UCRT SDK (Docker)' 'all Linux-hosted Windows SDKs (Docker)')
+    targets+=(portable-library-release musl-library-release openwatcom-library-release windows-win9x windows-win2000 windows-xp windows-win7 windows-llvm-win7 windows-win10 windows-cross)
+    labels+=('Linux glibc 2.28 library distribution (Docker)' 'Linux musl library distribution (Docker)' 'DOS32 Open Watcom library SDK (Docker)' 'Win9x x86 Open Watcom SDK (Docker)' 'Windows 2000 x86 MinGW GCC/MSVCRT SDK (Docker)' 'Windows XP x86 MinGW GCC/MSVCRT SDK (Docker)' 'Windows 7 x86/x64 MinGW GCC/MSVCRT SDKs (Docker)' 'Windows 7 x86/x64 LLVM-MinGW/MSVCRT SDKs (Docker)' 'Windows 10 x64 LLVM-MinGW/UCRT SDK (Docker)' 'all Linux-hosted Windows SDKs (Docker)')
 fi
 if [ ${#targets[@]} -eq 0 ]; then
     printf '\nNo usable build path was detected. See docs/building.md for prerequisites.\n' >&2
@@ -79,6 +79,9 @@ if [[ $target == openwatcom-* || $target == windows-win9x ]]; then
         default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
     fi
     sample_rate=$(choose 'Preferred PCM sample rate' 22050 44100 48000)
+elif [[ $target == windows-win2000 ]]; then
+    drivers=dbopl-silent
+    default_opl=dbopl
 elif [[ $target != clean ]]; then
     drivers=$(choose 'Compiled OPL drivers' all nuked-dbopl nuked-silent dbopl-silent nuked dbopl silent)
     if [ "$drivers" = all ]; then
@@ -111,6 +114,9 @@ else
 fi
 if [[ $target == windows-cross ]]; then
     args+=("WIN9X_OPL_DRIVERS=dbopl,silent,adlib" "WIN9X_OPL_DEFAULT=adlib" "WIN9X_SAMPLE_RATE=22050")
+fi
+if [[ $target == windows-win2000 ]]; then
+    args+=("WIN2000_OPL_DRIVERS=dbopl,silent" "WIN2000_OPL_DEFAULT=dbopl")
 fi
 [ -n "$jobs" ] && args+=("JOBS=$jobs")
 compiler_display=$compiler

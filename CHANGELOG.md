@@ -6,6 +6,13 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.81 - 2026-10-14 - Windows 2000 Docker target
+
+- Add a Windows 2000 x86 MinGW/MSVCRT Docker target, guided build choice and
+  distribution vocabulary, with DBOPL/silent only and DBOPL selected by default.
+- Audit known post-2000 imports and PE subsystem versions; native AdLib support
+  remains deferred and physical Windows 2000 runtime validation is pending.
+
 ## 1.4.80 - 2026-10-14 - Validated DOS and Win9x audio integration
 
 - Record physical Pentium III/Yamaha OPL3-SAx validation through the portable

@@ -47,6 +47,21 @@ for file in "$directory"/*.exe "$directory"/*.dll; do
                 exit 1
             fi
             ;;
+        *win2000*)
+            # This catches known loader incompatibilities, not all possible
+            # API-semantic differences. Destination runtime testing is required.
+            if echo "$headers" | grep -Eqi 'DLL Name: (api-ms-|ext-ms-|ucrtbase|msvcr[0-9]|vcruntime)|RegisterRawInputDevices|GetRawInputData|GetRawInputBuffer|GetModuleHandleEx[AW]|GetTickCount64|InitializeCriticalSectionEx|EncodePointer|DecodePointer|GetSystemTimePreciseAsFileTime|GetFileInformationByHandleEx|GetFinalPathNameByHandle[AW]|SetThreadStackGuarantee'; then
+                echo "Post-Windows-2000 dependency found: $file" >&2
+                exit 1
+            fi
+            if ! echo "$headers" | awk '
+                /MajorSubsystemVersion/ { major=$2; seen_major=1 }
+                /MinorSubsystemVersion/ { minor=$2; seen_minor=1 }
+                END { exit !(seen_major && seen_minor && (major < 5 || (major == 5 && minor == 0))) }'; then
+                echo "PE subsystem version exceeds Windows 2000 or is missing: $file" >&2
+                exit 1
+            fi
+            ;;
         *msvcrt*|*xp*|*win7*)
             if echo "$headers" | grep -Eqi 'DLL Name: (api-ms-win-crt|ucrtbase)'; then
                 echo "UCRT dependency found in an MSVCRT profile: $file" >&2

@@ -7,9 +7,19 @@ jobs=${WG_WINDOWS_CROSS_JOBS:-}
 drivers=${WG_WINDOWS_CROSS_OPL_DRIVERS:-nuked,dbopl,silent}
 default_driver=${WG_WINDOWS_CROSS_DEFAULT_OPL:-nuked}
 sample_rate=${WG_WINDOWS_CROSS_SAMPLE_RATE:-48000}
+if [ "$profile" = mingw-win2000-x86 ]; then
+    drivers=${WG_WINDOWS_CROSS_OPL_DRIVERS:-dbopl,silent}
+    default_driver=${WG_WINDOWS_CROSS_DEFAULT_OPL:-dbopl}
+fi
 version=$(sed -n '1p' "$root/VERSION")
 
 case "$profile" in
+    mingw-win2000-x86)
+        toolchain=mingw-gcc-i686.cmake
+        compiler_label=mingw-gcc-win2000
+        nt_version=0x0500
+        arch=x86
+        ;;
     mingw-xp-x86)
         toolchain=mingw-gcc-i686.cmake
         compiler_label=mingw-gcc-xp
@@ -53,6 +63,7 @@ case "$profile" in
 esac
 
 case "$profile" in
+    *-win2000-*) dist_platform=win2000 ;;
     *-xp-*) dist_platform=winxp ;;
     *-win7-*) dist_platform=win7 ;;
     *-win10-*) dist_platform=win10 ;;
@@ -75,6 +86,7 @@ cmake -S "$root" -B "$build_dir" -G Ninja \
     -DCMAKE_C_FLAGS="-D_WIN32_WINNT=$nt_version -DWINVER=$nt_version" \
     -DBUILD_TESTING=OFF -DWG_BUILD_HEADLESS=OFF \
     -DWG_WARNINGS_AS_ERRORS=ON -DWG_STATIC_GNU_RUNTIME=ON \
+    -DWG_ENABLE_OPL_ADLIB=OFF \
     -DWG_ENABLE_OPL_NUKED=$(case ",$drivers," in *,nuked,*) echo ON;; *) echo OFF;; esac) \
     -DWG_ENABLE_OPL_DBOPL=$(case ",$drivers," in *,dbopl,*) echo ON;; *) echo OFF;; esac) \
     -DWG_ENABLE_OPL_SILENT=$(case ",$drivers," in *,silent,*) echo ON;; *) echo OFF;; esac) \

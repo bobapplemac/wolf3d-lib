@@ -14,6 +14,8 @@ CMAKE_GENERATOR ?= Unix Makefiles
 BUILD_TYPE ?= Release
 OPL_DRIVERS ?= nuked,dbopl,silent
 OPL_DEFAULT ?= nuked
+WIN2000_OPL_DRIVERS ?= dbopl,silent
+WIN2000_OPL_DEFAULT ?= dbopl
 SAMPLE_RATE ?= 48000
 CMAKE_ARGS ?=
 TEST_ARGS ?=
@@ -69,7 +71,7 @@ PARALLEL_ARG := --parallel $(JOBS)
 	musl musl-library musl-library-release musl-image musl-audit \
 	openwatcom openwatcom-library-release openwatcom-image \
 	windows-cross windows-win9x windows-win9x-library-release \
-	windows-xp windows-xp-library-release windows-win7 \
+	windows-win2000 windows-win2000-library-release windows-xp windows-xp-library-release windows-win7 \
 	windows-win7-library-release windows-llvm-win7 \
 	windows-llvm-win7-library-release windows-win10 \
 	windows-win10-library-release windows-mingw-image \
@@ -90,6 +92,7 @@ help:
 		'  make musl-library-release    Build and audit the Alpine/musl package.' \
 		'  make openwatcom              Build the 32-bit DOS Open Watcom library SDK.' \
 		'  make windows-win9x          Cross-build the Open Watcom Win9x x86 DLL SDK.' \
+		'  make windows-win2000        MinGW GCC/MSVCRT Windows 2000 x86 package.' \
 		'  make windows-xp             Cross-build the MinGW GCC/MSVCRT XP x86 DLL SDK.' \
 		'  make windows-win7           Cross-build MinGW GCC/MSVCRT Win7 x86 and x64 SDKs.' \
 		'  make windows-llvm-win7      Cross-build independent LLVM-MinGW/MSVCRT Win7 SDKs.' \
@@ -296,6 +299,17 @@ windows-win9x-library-release: openwatcom-image
 		"$(OPENWATCOM_BUILD_IMAGE)" \
 		sh scripts/linux/openwatcom/build-windows-library.sh
 
+windows-win2000-library-release: windows-mingw-image
+	$(DOCKER) run --rm --user "$$(id -u):$$(id -g)" \
+		--volume "$(CURDIR):/src" --workdir /src $(DOCKER_RUN_ARGS) \
+		--env WG_WINDOWS_CROSS_PROFILE=mingw-win2000-x86 \
+		--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
+		--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(WIN2000_OPL_DRIVERS)" \
+		--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(WIN2000_OPL_DEFAULT)" \
+		--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
+		"$(WINDOWS_MINGW_BUILD_IMAGE)" \
+		sh scripts/linux/windows-cross/build-library.sh
+
 windows-xp-library-release: windows-mingw-image
 	$(DOCKER) run --rm --user "$$(id -u):$$(id -g)" \
 		--volume "$(CURDIR):/src" --workdir /src $(DOCKER_RUN_ARGS) \
@@ -349,11 +363,12 @@ portable portable-library: portable-library-release
 musl musl-library: musl-library-release
 openwatcom: openwatcom-library-release
 windows-win9x: windows-win9x-library-release
+windows-win2000: windows-win2000-library-release
 windows-xp: windows-xp-library-release
 windows-win7: windows-win7-library-release
 windows-llvm-win7: windows-llvm-win7-library-release
 windows-win10: windows-win10-library-release
-windows-cross: windows-win9x-library-release windows-xp-library-release \
+windows-cross: windows-win2000-library-release windows-win9x-library-release windows-xp-library-release \
 	windows-win7-library-release windows-llvm-win7-library-release \
 	windows-win10-library-release
 
@@ -418,6 +433,7 @@ clean-openwatcom:
 
 clean-windows-cross:
 	$(CMAKE) -E remove_directory "$(WINDOWS_OPENWATCOM_BUILD_DIR)"
+	$(CMAKE) -E remove_directory build/windows-cross-mingw-win2000-x86
 	$(CMAKE) -E remove_directory build/windows-cross-mingw-xp-x86
 	$(CMAKE) -E remove_directory build/windows-cross-mingw-win7-x86
 	$(CMAKE) -E remove_directory build/windows-cross-mingw-win7-x64

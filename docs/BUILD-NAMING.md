@@ -25,6 +25,7 @@ in `DOCS/BUILD.TXT`; the version alone does not identify an exact source tree.
 | --- | --- |
 | `dos32` | 32-bit protected-mode DOS |
 | `win9x` | Windows 95/98/Me family |
+| `win2000` | Windows 2000 baseline (x86, GDI; no native OPL access yet) |
 | `winxp` | Windows XP baseline |
 | `win7` | Windows 7 baseline |
 | `win10` | Windows 10 baseline |
