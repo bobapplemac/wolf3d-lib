@@ -36,9 +36,9 @@ param(
     [ValidateSet('static', 'dynamic')]
     [string]$Runtime = 'static',
     [ValidateSet('all', 'nuked', 'dbopl', 'silent', 'nuked-dbopl',
-        'nuked-silent', 'dbopl-silent')]
+        'nuked-silent', 'dbopl-silent', 'all-adlib', 'dbopl-silent-adlib', 'adlib-silent', 'adlib')]
     [string]$Drivers = 'all',
-    [ValidateSet('auto', 'nuked', 'dbopl', 'silent')]
+    [ValidateSet('auto', 'nuked', 'dbopl', 'silent', 'adlib')]
     [string]$DefaultOpl = 'auto',
     [ValidateSet('package', 'build', 'test', 'clean')]
     [string]$Action = 'package',
@@ -270,8 +270,8 @@ if ($PSBoundParameters.Count -eq 0 -and -not $NonInteractive -and $canPrompt) {
     }
     if ($Compiler -eq 'mingw-ucrt64') { $Runtime = 'static' }
     else { $Runtime = Read-BuildChoice 'MSVC runtime' @('static', 'dynamic') }
-    $Drivers = Read-BuildChoice 'Compiled OPL drivers' @('all', 'nuked', 'dbopl', 'silent', 'nuked-dbopl', 'nuked-silent', 'dbopl-silent')
-    $availableDefaults = if ($Drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } else { @($Drivers -split '-') }
+    $Drivers = Read-BuildChoice 'Compiled OPL drivers' @('all', 'nuked-silent', 'dbopl-silent', 'silent', 'all-adlib', 'dbopl-silent-adlib', 'adlib-silent')
+    $availableDefaults = if ($Drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } elseif ($Drivers -eq 'all-adlib') { @('nuked', 'dbopl', 'silent', 'adlib') } else { @($Drivers -split '-') }
     $DefaultOpl = Read-BuildChoice 'Default OPL driver' (@('auto') + $availableDefaults)
     Write-Host ''
     $confirmation = Read-Host 'Continue with this build? [Y/n]'
@@ -289,7 +289,7 @@ if ($List) {
 if ($Action -eq 'package' -and $Configuration -ne 'Release') {
     throw 'Packaging is restricted to Release builds. Use -Action build or test for Debug.'
 }
-$driverList = if ($Drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } else { @($Drivers -split '-') }
+$driverList = @(if ($Drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } elseif ($Drivers -eq 'all-adlib') { @('nuked', 'dbopl', 'silent', 'adlib') } else { @($Drivers -split '-') })
 if ($driverList -notcontains 'silent') { $driverList += 'silent' }
 if ($DefaultOpl -ne 'auto' -and $driverList -notcontains $DefaultOpl) {
     throw "Default driver '$DefaultOpl' is not included by -Drivers $Drivers."
@@ -372,13 +372,17 @@ if ($Action -ne 'clean') {
         $configureArguments += @(
             '-B', $buildDir,
             "-DWG_STATIC_MSVC_RUNTIME=$(if ($Runtime -eq 'static') { 'ON' } else { 'OFF' })",
-            "-DWG_STATIC_GNU_RUNTIME=$(if ($Runtime -eq 'static') { 'ON' } else { 'OFF' })",
+            "-DWG_STATIC_GNU_RUNTIME=$(if ($Runtime -eq 'static') { 'ON' } else { 'OFF' })"
+        )
+    }
+    # Explicitly reset audio policy even when reusing a preset cache.
+    $configureArguments += @(
             "-DWG_ENABLE_OPL_NUKED=$(if ($driverList -contains 'nuked') { 'ON' } else { 'OFF' })",
             "-DWG_ENABLE_OPL_DBOPL=$(if ($driverList -contains 'dbopl') { 'ON' } else { 'OFF' })",
             "-DWG_ENABLE_OPL_SILENT=$(if ($driverList -contains 'silent') { 'ON' } else { 'OFF' })",
+            "-DWG_ENABLE_OPL_ADLIB=$(if ($driverList -contains 'adlib') { 'ON' } else { 'OFF' })",
             "-DWG_DEFAULT_OPL_DRIVER=$DefaultOpl"
-        )
-    }
+    )
     Invoke-DisplayedCommand -Executable $selected.CMake -Arguments $configureArguments
 }
 

@@ -358,3 +358,16 @@ callbacks; the library itself neither loads a port driver nor accesses ports.
 `WG_DEFAULT_OPL_DRIVER=adlib` is valid only when this adapter is enabled.
 Portable's optional InpOut32 Windows host supplies these callbacks; DBOPL
 remains the default for its win2k test package.
+
+### Windows audio choices
+
+Windows `build.ps1` and the legacy `build.cmd` dispatcher default to `auto`
+and always compile silent. Modern PowerShell accepts these native-adapter choices: `-Drivers all` includes Nuked, DBOPL and silent;
+`all-adlib` additionally includes the host-supplied native adapter. Other choices
+include `dbopl-silent-adlib` and `adlib-silent`. The library itself does not load
+InpOut or access hardware: the application supplies platform callbacks.
+Legacy VC6--VS2005 scripts and IDE dispatchers now use auto, with silent always
+included. Sample rate remains a runtime choice, not a build parameter.
+
+Maintainers can run `python tests/WG_WINDOWS_AUDIO_CHOICES_TEST.py` on Windows
+for dispatcher auto/silent/native choices and stale-cache regression checks.

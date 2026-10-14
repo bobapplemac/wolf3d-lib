@@ -58,6 +58,10 @@ and rejects an unknown libc rather than guessing. Musl recipes pass `musl`.
 | `arm64` | 64-bit ARM; vocabulary reserved for future supported profiles |
 
 Do not mix synonyms such as `amd64`, `x86_64`, or `i386` into package names.
+Docker Linux defaults to `x64`. The portable legacy glibc profile uses `x86`
+with an i686/Pentium Pro minimum (no MMX/SSE/SSE2 requirement); `x86` does not
+promise original Pentium/i586 compatibility. Record CPU flags and baseline in
+BUILD.TXT. The musl Docker profile remains x64 only.
 Use the compiler's target architecture, not the build host's. A 64-bit pointer
 does not by itself prove x64: unknown architectures must fail naming validation.
 CPU instruction requirements belong in build-info unless separate CPU variants
@@ -119,6 +123,16 @@ exact compiler versions as validation evidence.
 | Visual Studio 2012 | `v110` | 17.00 | 1700 | `msvc-v110` |
 | Visual Studio 2013 | `v120` | 18.00 | 1800 | `msvc-v120` |
 | Visual Studio 2015 | `v140` | 19.00 | 1900 | `msvc-v140` |
+| Visual Studio 2017 | `v141` | 19.10-19.16 | 1910-1916 | `msvc-v141` |
+| Visual Studio 2019 | `v142` | 19.20-19.29 | 1920-1929 | `msvc-v142` |
+| Visual Studio 2022 | `v143` | 19.30-19.44 | 1930-1944 | `msvc-v143` |
+| Visual Studio 2026 | `v145` | 19.50+ (14.5x build tools) | 1950+ | `msvc-v145` |
+
+These rows describe the corresponding toolset generation, not every toolset an
+IDE can install. VS2026 separates compiler release cadence from IDE releases;
+record the actual compiler/build-tools version in BUILD.TXT rather than deriving
+it from the IDE year. Future compiler families need explicit mapping updates.
+
 
 `v60`, `v70`, and `v71` are our shorthand for the legacy VC 6.0, 7.0, and
 7.1 generations, not modern MSBuild `PlatformToolset` identifiers. The legacy

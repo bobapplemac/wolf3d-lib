@@ -51,7 +51,8 @@ class Naming(unittest.TestCase):
             path = (source / 'build' / ('PACKAGE-%s.path' % config)).read_text().strip()
             self.assertEqual(path, 'dist/' + expected)
             info = (source / 'build' / ('PACKAGE-%s-BUILD-INFO.txt' % config)).read_text()
-            self.assertIn('Preferred sample rate: 22050 Hz', info)
+            self.assertIn('Sample rate: runtime auto (CLI/config override)', info)
+            self.assertIn('native=22050', info)
             self.assertIn('Default OPL driver: silent', info)
             self.assertNotIn('22050', path)
             self.assertNotIn('silent', path)
@@ -98,6 +99,8 @@ class Naming(unittest.TestCase):
                                    CMAKE_C_COMPILER_ID=compiler, CMAKE_BUILD_TYPE=config)
 
     def test_architecture_and_invalid_vocabulary(self):
+        self.configure('wolf3d-portable_1.4.73_linux-glibc_x86_sdl3_gcc14',
+                       backend='sdl3', CMAKE_SYSTEM_PROCESSOR='i686', CMAKE_SIZEOF_VOID_P=4)
         self.configure('wolf3d-lib_1.4.73_linux-glibc_arm64_gcc14', CMAKE_SYSTEM_PROCESSOR='aarch64')
         self.configure(None, CMAKE_SYSTEM_PROCESSOR='ppc64')
         self.configure(None, CMAKE_BUILD_TYPE='Custom')

@@ -60,7 +60,7 @@ class LegacyIDETests(unittest.TestCase):
                 helper = fixture / 'ide/visual-studio' / band / 'build.cmd'
                 helper.parent.mkdir(parents=True)
                 shutil.copyfile(ROOT / 'ide/visual-studio' / band / 'build.cmd', helper)
-                expected = 'legacy-%s-all-nuked-static' % band
+                expected = 'legacy-%s-all-auto-static' % band
                 output = fixture / 'build' / expected
                 output.mkdir(parents=True)
                 (output / 'CMakeCache.txt').write_text('fixture')

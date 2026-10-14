@@ -26,8 +26,8 @@ set /p "RUNTIME=Compiler runtime - static or dynamic [static]: "
 if "%RUNTIME%"=="" set "RUNTIME=static"
 set /p "DRIVERS=Compiled OPL drivers - all, a name, or hyphenated pair [all]: "
 if "%DRIVERS%"=="" set "DRIVERS=all"
-set /p "DEFAULT_OPL=Default OPL driver - nuked, dbopl, or silent [nuked]: "
-if "%DEFAULT_OPL%"=="" set "DEFAULT_OPL=nuked"
+set /p "DEFAULT_OPL=Default OPL driver - auto, nuked, dbopl, or silent [auto]: "
+if "%DEFAULT_OPL%"=="" set "DEFAULT_OPL=auto"
 
 echo.
 echo Build plan:

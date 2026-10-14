@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.88 - 2026-10-14 - Windows build workflow consistency
+
+- Align PowerShell, batch and legacy IDE audio choices: auto defaults and silent always included.
+- Offer the native adapter in modern Windows builds and reset cached audio choices explicitly.
+- Complete Microsoft toolset vocabulary through VS2026 and clarify Linux architecture names.
+- Add dispatcher regressions for single-driver selections and default presets.
+
 ## 1.4.87 - 2026-10-14 - Complete legacy audio build policy
 
 - Apply legacy automatic audio preferences to XP Visual Studio toolsets.

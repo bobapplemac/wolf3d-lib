@@ -11,7 +11,7 @@ set "ACTION=%~6"
 if "%COMPILER%"=="" goto usage
 if "%CONFIG%"=="" set "CONFIG=Release"
 if "%DRIVERS%"=="" set "DRIVERS=all"
-if "%DEFAULT_OPL%"=="" set "DEFAULT_OPL=nuked"
+if "%DEFAULT_OPL%"=="" set "DEFAULT_OPL=auto"
 if "%RUNTIME%"=="" set "RUNTIME=static"
 if "%ACTION%"=="" set "ACTION=build"
 
@@ -39,10 +39,11 @@ if /I "%DRIVERS%"=="nuked-silent" set "ENABLE_SILENT=ON"
 if /I "%DRIVERS%"=="dbopl-silent" set "ENABLE_DBOPL=ON"
 if /I "%DRIVERS%"=="dbopl-silent" set "ENABLE_SILENT=ON"
 if "%ENABLE_NUKED%%ENABLE_DBOPL%%ENABLE_SILENT%"=="OFFOFFOFF" goto bad_drivers
+set "ENABLE_SILENT=ON"
 if /I "%DEFAULT_OPL%"=="nuked" if /I not "%ENABLE_NUKED%"=="ON" goto bad_opl
 if /I "%DEFAULT_OPL%"=="dbopl" if /I not "%ENABLE_DBOPL%"=="ON" goto bad_opl
 if /I "%DEFAULT_OPL%"=="silent" if /I not "%ENABLE_SILENT%"=="ON" goto bad_opl
-if /I not "%DEFAULT_OPL%"=="nuked" if /I not "%DEFAULT_OPL%"=="dbopl" if /I not "%DEFAULT_OPL%"=="silent" goto bad_opl
+if /I not "%DEFAULT_OPL%"=="auto" if /I not "%DEFAULT_OPL%"=="nuked" if /I not "%DEFAULT_OPL%"=="dbopl" if /I not "%DEFAULT_OPL%"=="silent" goto bad_opl
 if /I not "%RUNTIME%"=="static" if /I not "%RUNTIME%"=="dynamic" goto bad_runtime
 if /I not "%ACTION%"=="build" if /I not "%ACTION%"=="test" if /I not "%ACTION%"=="package" goto bad_action
 
@@ -95,7 +96,7 @@ echo.
 echo   COMPILER  vc6, vs2002, vs2003, or vs2005
 echo   CONFIG    Release ^(default^) or Debug
 echo   DRIVERS   all ^(default^), nuked, dbopl, silent, or a hyphenated pair
-echo   DEFAULT_OPL nuked ^(default^), dbopl, or silent; must be included
+echo   DEFAULT_OPL auto ^(default^), nuked, dbopl, or silent; explicit choice must be included
 echo   RUNTIME   static ^(default^) or dynamic
 echo   ACTION    build ^(default^), test, or package
 exit /b 2

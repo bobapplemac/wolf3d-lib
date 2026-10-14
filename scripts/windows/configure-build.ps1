@@ -75,8 +75,8 @@ $configuration = if ($action -eq 'package') { 'Release' } else {
 $runtime = if ($compiler.Name -eq 'mingw-ucrt64') { 'static' } else {
     Read-Choice 'Compiler runtime' @('static', 'dynamic')
 }
-$drivers = Read-Choice 'Compiled OPL drivers' @('all', 'nuked-silent', 'dbopl-silent', 'silent')
-$availableDefaults = if ($drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } else { @($drivers -split '-') }
+$drivers = Read-Choice 'Compiled OPL drivers' @('all', 'nuked-silent', 'dbopl-silent', 'silent', 'all-adlib', 'dbopl-silent-adlib', 'adlib-silent')
+$availableDefaults = if ($drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } elseif ($drivers -eq 'all-adlib') { @('nuked', 'dbopl', 'silent', 'adlib') } else { @($drivers -split '-') }
 $defaultOpl = Read-Choice 'Default OPL driver' (@('auto') + $availableDefaults)
 
 $commandArguments = @(
