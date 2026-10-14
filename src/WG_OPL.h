@@ -18,6 +18,11 @@ const char *WG_OPL_SelectedDriver(void);
 uint32_t WG_OPL_SelectedCapabilities(void);
 
 wg_opl_t *WG_OPL_Create(uint32_t sample_rate);
+wg_opl_t *WG_OPL_CreateAudio(uint32_t rate, uint32_t *obtained);
+int WG_OPL_ParseRate(const char *text, uint32_t *rate);
+void WG_OPL_SetError(const char *message);
+const char *WG_OPL_Error(void);
+const char *WG_OPL_Trace(void);
 void WG_OPL_Destroy(wg_opl_t *opl);
 void WG_OPL_WriteRegister(wg_opl_t *opl, uint16_t register_number,
                           uint8_t value);

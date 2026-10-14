@@ -295,9 +295,8 @@ Use `windows-*-x86` for 32-bit output. For a dynamic MSVC runtime add
 | `WG_STATIC_GNU_RUNTIME` | `ON` | Statically link GCC support code in MinGW artifacts. |
 | `WG_ENABLE_OPL_NUKED` | `ON` | Compile the faithful Nuked-OPL3 runtime driver. |
 | `WG_ENABLE_OPL_DBOPL` | `ON` | Compile the lower-resource pure-C DBOPL runtime driver. |
-| `WG_ENABLE_OPL_SILENT` | `ON` | Compile timing-preserving silence. |
-| `WG_DEFAULT_OPL_DRIVER` | `nuked` | Select the initial driver; `--opl` may select any compiled driver at runtime. |
-| `WG_DEFAULT_SAMPLE_RATE` | `48000` | Preferred host PCM rate; `--sample-rate` overrides it and the host reports the rate obtained. |
+| `WG_ENABLE_OPL_SILENT` | always `ON` | Timing-preserving silence is mandatory. |
+| `WG_DEFAULT_OPL_DRIVER` | `auto` | Select the initial driver; `--opl` may select any compiled driver at runtime. |
 | `WG_LINUX_LIBC` | empty | Optional `glibc`/`musl` package label used by reproducible Linux builds. |
 | `WG_COMPILER_LABEL` | empty | Optional compiler/toolset label appended to a staged package directory. Windows presets set this automatically. |
 | `WG_DIST_ROOT` | `<source>/dist` | Destination root for staged packages. |
@@ -323,14 +322,10 @@ optional replaceable `NUKEDOPL.LIB`.
 Production executables and OS-specific dependencies deliberately belong to
 the companion `wolf3d-portable` repository.
 
-DOS and Open Watcom Win9x packages default to 22050 Hz PCM to reduce CPU cost
-on period hardware. `--sample-rate HZ` accepts integer requests from 8000 to
-192000; the host may negotiate a lower or rounded hardware rate. DOS build
-rates can be overridden with `OPENWATCOM_SAMPLE_RATE`; use
-`WIN9X_SAMPLE_RATE` for Win9x only. Explicit `SAMPLE_RATE` also overrides the
-Win9x default for compatibility with existing build commands. Modern targets
-retain their 48000 Hz default. Native OPL pitch and tempo do not depend on the
-PCM rate when the audio clock is correctly paced.
+Sample rates are runtime-only: `--sample-rate auto` chooses 22050 Hz for native
+AdLib, 22050 Hz for legacy DBOPL/silent, 44100 Hz for legacy Nuked, and 48000 Hz
+for modern software drivers. Numeric 8000..192000 Hz overrides are supported;
+the device may negotiate a different rate. Native OPL pitch/tempo remain fixed.
 
 ## Windows 2000 Docker target
 
@@ -342,10 +337,9 @@ without the XP-only Raw Input imports. SDL3 is not supported on this target.
 
 Defaults include only DBOPL and silent, with DBOPL selected. The target-specific
 `WIN2K_OPL_DRIVERS` and `WIN2K_OPL_DEFAULT` Make variables override these;
-general OPL settings for other targets do not change them. Native AdLib access
-is not implemented for Windows 2000/XP. The existing `SAMPLE_RATE` override is
-supported (default 48000 Hz); use the runtime `--sample-rate` option to compare
-rates on slower hardware. Other platform defaults are unchanged.
+general OPL settings for other targets do not change them. Native access on
+Windows 2000/XP is provided by the portable host through InpOut32. Sample rates
+are runtime-only; use `--sample-rate auto` or a numeric override.
 
 The PE audit checks x86 architecture, runtime dependencies, known post-2000
 imports and the subsystem version of each staged EXE/DLL. This is not a full

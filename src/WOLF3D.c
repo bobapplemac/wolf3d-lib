@@ -104,14 +104,7 @@ static uint8_t wg_sound_blaster_present = 1U;
 static uint8_t wg_debug_parameter;
 static uint8_t wg_debug_keys_enabled;
 
-#ifndef WG_DEFAULT_SAMPLE_RATE
-#if defined(__WATCOMC__) && (defined(__DOS__) || defined(__NT__))
-#define WG_DEFAULT_SAMPLE_RATE 22050U
-#else
-#define WG_DEFAULT_SAMPLE_RATE 48000U
-#endif
-#endif
-static uint32_t wg_preferred_sample_rate = WG_DEFAULT_SAMPLE_RATE;
+static uint32_t wg_preferred_sample_rate; /* zero means runtime auto */
 
 static unsigned WG_DefaultMenuSelection(void)
 {
@@ -423,7 +416,6 @@ static void WG_FrontMusicStart(unsigned song)
 {
     const uint8_t *data;
     size_t size;
-    uint32_t sample_rate;
 
     if (wg_game.active)
     {
@@ -439,12 +431,8 @@ static void WG_FrontMusicStart(unsigned song)
         WG_FrontMusicClose();
         return;
     }
-    if (!WG_PCMInit(wg_preferred_sample_rate, 2U, &sample_rate))
-    {
-        WG_FrontMusicClose();
-        return;
-    }
-    wg_front_music = ID_SD_MusicCreate(sample_rate);
+    wg_front_music = ID_SD_MusicOpenAudio(wg_preferred_sample_rate);
+    if (wg_front_music == NULL) WG_ReportFatalError(WG_OPL_Error());
     if (wg_front_music == NULL
         || (wg_music_enabled
             && (!WG_AudioGetChunk(&wg_front_audio,
@@ -3344,13 +3332,11 @@ static int WG_GameSessionOpen(unsigned map_number, wg_difficulty_t difficulty,
     {
         goto cleanup;
     }
+    wg_game.music = ID_SD_MusicOpenAudio(wg_preferred_sample_rate);
+    if (wg_game.music == NULL)
     {
-        uint32_t sample_rate;
-
-        if (WG_PCMInit(wg_preferred_sample_rate, 2U, &sample_rate))
-        {
-            wg_game.music = ID_SD_MusicCreate(sample_rate);
-        }
+        WG_ReportFatalError(WG_OPL_Error());
+        goto cleanup;
     }
     if (wg_game.music != NULL)
     {
@@ -3391,7 +3377,7 @@ cleanup:
     if (!success)
     {
         WG_GameSessionClose();
-        WG_ReportFatalError("Unable to start the Wolf3D game session.");
+        if (wg_fatal_error[0] == '\0') WG_ReportFatalError("Unable to start the Wolf3D game session.");
     }
     return success;
 }
@@ -4728,8 +4714,8 @@ const char *wolf3d_GetCommandLineHelp(void)
         "  --joy / --nojoy      Force joystick hardware present or absent\n"
         "\n"
         "Audio:\n"
-        "  --opl NAME           Select a compiled OPL driver\n"
-        "  --sample-rate HZ     Preferred PCM rate from 8000 through 192000 Hz\n"
+        "  --opl NAME           auto fallback or require a compiled OPL driver\n"
+        "  --sample-rate RATE   auto (default), or 8000 through 192000 Hz\n"
         "  --adlib              Emulate an AdLib-only machine\n"
         "  --pc-speaker         Emulate no sound card; default to PC-speaker effects\n"
         "  --no-sound           Emulate no sound card; select no audio\n"
@@ -4768,7 +4754,8 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     const char *signon_path;
     const char *signon_palette;
     const char *opl_driver;
-    unsigned sample_rate;
+    uint32_t sample_rate;
+    const char *sample_rate_text;
     uint32_t input_devices;
     int force_mouse;
     int suppress_mouse;
@@ -4796,9 +4783,8 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
                                   &signon_palette)
         || !WG_FindStringArgument(argc, argv, "--opl", &opl_driver)
         || !WG_FindSoundProfile(argc, argv, &sound_profile)
-        || !WG_FindUnsignedArgument(argc, argv, "--sample-rate",
-                                    WG_DEFAULT_SAMPLE_RATE, 192000U,
-                                    &sample_rate)
+        || !WG_FindStringArgument(argc, argv, "--sample-rate", &sample_rate_text)
+        || !WG_OPL_ParseRate(sample_rate_text, &sample_rate)
         || !WG_ParseSignonPalette(signon_palette,
                                   &signon_palette_family)
         || !WG_FindUnsignedArgument(argc, argv, "--map", 0U, 99U,
@@ -4826,9 +4812,9 @@ wolf3d_result_t wolf3d_Create(int argc, char **argv)
     {
         return WOLF3D_RESULT_INVALID_ARGUMENT;
     }
-    if (sample_rate < 8000U
-        || !WG_OPL_SelectDriver(opl_driver != NULL ? opl_driver : "auto"))
+    if (!WG_OPL_SelectDriver(opl_driver))
     {
+        WG_ReportFatalError(WG_OPL_Error());
         return WOLF3D_RESULT_INVALID_ARGUMENT;
     }
     wg_preferred_sample_rate = (uint32_t)sample_rate;
@@ -5519,6 +5505,7 @@ static wolf3d_result_t wg_run_result;
 
 static wolf3d_result_t WG_RunFrame(int present)
 {
+    if (wg_fatal_error[0] != '\0') return WOLF3D_RESULT_PLATFORM_ERROR;
     WG_MenuMoveSoundAdvance();
     if (!wg_game.active && wg_attract_phase != WG_ATTRACT_NONE
         && wg_attract_deadline != 0U
@@ -7322,3 +7309,21 @@ void wolf3d_Shutdown(void)
     ID_IN_ResetJoysticks();
     wg_initialized = 0;
 }
+
+void wolf3d_SetOPLError(const char *message) { WG_OPL_SetError(message); }
+const char *wolf3d_GetAudioDiagnostics(void) { return WG_OPL_Trace(); }
+int wolf3d_ProbeAudio(const char *driver, const char *rate_text)
+{
+    uint32_t rate, obtained;
+    wg_opl_t *opl;
+    if (!WG_OPL_ParseRate(rate_text, &rate))
+    {
+        WG_OPL_SetError("Invalid sample rate; use auto or 8000..192000."); return 0;
+    }
+    if (!WG_OPL_SelectDriver(driver)) return 0;
+    opl = WG_OPL_CreateAudio(rate, &obtained);
+    WG_OPL_Destroy(opl);
+    WG_PCMShutdown();
+    return opl != NULL;
+}
+const char *wolf3d_GetAudioError(void) { return WG_OPL_Error(); }

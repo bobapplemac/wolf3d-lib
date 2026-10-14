@@ -64,36 +64,31 @@ if [[ $target != portable-* && $target != musl-* && $target != openwatcom-* && $
 fi
 
 drivers=all
-default_opl=nuked
-sample_rate=48000
+default_opl=auto
 if [[ $target == openwatcom-* || $target == windows-win9x ]]; then
-    drivers=$(choose 'Compiled OPL drivers' dbopl-silent-adlib nuked-dbopl-silent-adlib dbopl-silent dbopl silent adlib)
+    drivers=$(choose 'Compiled OPL drivers' dbopl-silent-adlib nuked-dbopl-silent-adlib dbopl-silent adlib-silent silent)
     IFS=- read -r -a defaults <<< "$drivers"
+        defaults=(auto "${defaults[@]}")
     if [[ $drivers == *adlib* ]]; then
-        available_defaults=(adlib)
+        available_defaults=(auto)
         for driver in "${defaults[@]}"; do
-            [ "$driver" = adlib ] || available_defaults+=("$driver")
+            [ "$driver" = auto ] || available_defaults+=("$driver")
         done
         default_opl=$(choose 'Default OPL driver' "${available_defaults[@]}")
     else
         default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
     fi
-    sample_rate=$(choose 'Preferred PCM sample rate' 22050 44100 48000)
 elif [[ $target == windows-win2k ]]; then
     drivers=dbopl-silent
-    default_opl=dbopl
+    default_opl=auto
 elif [[ $target != clean ]]; then
-    drivers=$(choose 'Compiled OPL drivers' all nuked-dbopl nuked-silent dbopl-silent nuked dbopl silent)
+    drivers=$(choose 'Compiled OPL drivers' all nuked-silent dbopl-silent silent)
     if [ "$drivers" = all ]; then
-        default_opl=$(choose 'Default OPL driver' nuked dbopl silent)
+        default_opl=$(choose 'Default OPL driver' auto nuked dbopl silent)
     else
         IFS=- read -r -a defaults <<< "$drivers"
+        defaults=(auto "${defaults[@]}")
         default_opl=$(choose 'Default OPL driver' "${defaults[@]}")
-    fi
-    if [[ $target == openwatcom-* || $target == windows-win9x ]]; then
-        sample_rate=$(choose 'Preferred PCM sample rate' 22050 44100 48000)
-    else
-        sample_rate=$(choose 'Preferred PCM sample rate' 48000 44100)
     fi
 fi
 jobs=''
@@ -105,25 +100,25 @@ opl_drivers=${drivers//-/,}
 [ "$drivers" = all ] && opl_drivers=nuked,dbopl,silent
 if [[ $target == openwatcom-* ]]; then
     compiler='Open Watcom 2 (2026-10-01)'
-    args=("$target" "OPENWATCOM_OPL_DRIVERS=$opl_drivers" "OPENWATCOM_DEFAULT_OPL=$default_opl" "OPENWATCOM_SAMPLE_RATE=$sample_rate")
+    args=("$target" "OPENWATCOM_OPL_DRIVERS=$opl_drivers" "OPENWATCOM_DEFAULT_OPL=$default_opl")
 elif [[ $target == windows-win9x ]]; then
     compiler='Open Watcom 2 (2026-10-01)'
-    args=("$target" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
+    args=("$target" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl")
 else
-    args=("$target" "CC=$compiler" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl" "SAMPLE_RATE=$sample_rate")
+    args=("$target" "CC=$compiler" "OPL_DRIVERS=$opl_drivers" "OPL_DEFAULT=$default_opl")
 fi
 if [[ $target == windows-cross ]]; then
-    args+=("WIN9X_OPL_DRIVERS=dbopl,silent,adlib" "WIN9X_OPL_DEFAULT=adlib" "WIN9X_SAMPLE_RATE=22050")
+    args+=("WIN9X_OPL_DRIVERS=dbopl,silent,adlib" "WIN9X_OPL_DEFAULT=auto")
 fi
 if [[ $target == windows-win2k ]]; then
-    args+=("WIN2K_OPL_DRIVERS=dbopl,silent" "WIN2K_OPL_DEFAULT=dbopl")
+    args+=("WIN2K_OPL_DRIVERS=dbopl,silent" "WIN2K_OPL_DEFAULT=auto")
 fi
 [ -n "$jobs" ] && args+=("JOBS=$jobs")
 compiler_display=$compiler
 if [[ $target == windows-* && $target != windows-win9x ]]; then
     compiler_display='selected Docker profile (see package above)'
 fi
-printf '\nBuild plan:\n  Package:     %s\n  Compiler:    %s\n  OPL drivers: %s (default: %s)\n  Sample rate: %s Hz\n' "$label" "$compiler_display" "$opl_drivers" "$default_opl" "$sample_rate"
+printf '\nBuild plan:\n  Package:     %s\n  Compiler:    %s\n  OPL drivers: %s (default: %s)\n  Sample rate: runtime auto\n' "$label" "$compiler_display" "$opl_drivers" "$default_opl"
 printf '\nReproducible command:\n  ./scripts/linux/invoke-build.sh'
 printf ' %q' "${args[@]}"
 printf '\n\n'

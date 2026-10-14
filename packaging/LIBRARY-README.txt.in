@@ -8,7 +8,7 @@ files.
 Compiled OPL drivers: Nuked=@WG_ENABLE_OPL_NUKED@, DBOPL=@WG_ENABLE_OPL_DBOPL@,
                       silent=@WG_ENABLE_OPL_SILENT@
 Default OPL driver:   @WG_DEFAULT_OPL_DRIVER@
-Preferred PCM rate:   @WG_DEFAULT_SAMPLE_RATE@ Hz
+PCM rate policy:      runtime auto (CLI/config override)
 
 A host populates wolf3d_platform_api_t with video, input, timing, error, and
 PCM callbacks, calls wolf3d_SetPlatform(), and then calls wolf3d_Create(),
@@ -23,7 +23,7 @@ C++ Redistributable. Custom WG_STATIC_MSVC_RUNTIME=OFF builds require the
 matching Redistributable.
 
 Nuked-OPL3 remains a separate, replaceable LGPL shared library. DBOPL and the
-timing-preserving silent driver are built into wolf3d when enabled. Select an
+timing-preserving silent driver are built into wolf3d (silent is always included). Select an
 included driver at runtime with --opl nuked, --opl dbopl, or --opl silent;
 use --sample-rate HZ to change the preferred host PCM rate. See
 DOCS/NOTICES.TXT for provenance.

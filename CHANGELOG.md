@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.86 - 2026-10-14 - Automatic audio policy
+
+- Add quiet hardware/emulator/silent fallback for auto; explicit selections fail strictly.
+- Always include silent, resolve sample rates at runtime, and remove build-time rate choices.
+- Record candidate failures and negotiated rates in diagnostics; suppress optional DLL loader dialogs.
+
 Wolfenstein 3D's historically meaningful `1.4` product identity remains
 stable. The third component is a monotonically increasing library revision;
 beginning with 1.4.17, every commit to the library main branch advances it.

@@ -1,3 +1,4 @@
+add_definitions(-DWG_AUDIO_LEGACY_TARGET=1)
 cmake_minimum_required(VERSION 3.5)
 
 # This intentionally separate build definition keeps support for the Visual
@@ -13,11 +14,10 @@ option(WG_STATIC_MSVC_RUNTIME
        "Link the legacy MSVC runtime statically" ON)
 option(WG_ENABLE_OPL_NUKED "Compile the Nuked OPL3 runtime driver" ON)
 option(WG_ENABLE_OPL_DBOPL "Compile the DBOPL runtime driver" ON)
-option(WG_ENABLE_OPL_SILENT "Compile the timing-preserving silent driver" ON)
-set(WG_DEFAULT_OPL_DRIVER "nuked" CACHE STRING
+set(WG_ENABLE_OPL_SILENT ON CACHE BOOL "Silent is always included" FORCE)
+set(WG_DEFAULT_OPL_DRIVER "auto" CACHE STRING
     "Default runtime OPL driver: nuked, dbopl, or silent")
-set(WG_DEFAULT_SAMPLE_RATE "48000" CACHE STRING
-    "Preferred PCM sample rate")
+unset(WG_DEFAULT_SAMPLE_RATE CACHE)
 set(WG_DIST_ROOT "${WG_ROOT}/dist" CACHE PATH
     "Directory used by legacy release staging targets")
 
@@ -77,8 +77,9 @@ if(NOT WG_ENABLE_OPL_NUKED AND NOT WG_ENABLE_OPL_DBOPL
     message(FATAL_ERROR "At least one OPL driver must be enabled")
 endif()
 string(TOUPPER "${WG_DEFAULT_OPL_DRIVER}" WG_DEFAULT_OPL_DRIVER_UPPER)
-if(NOT DEFINED WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER}
-   OR NOT WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER})
+if(NOT WG_DEFAULT_OPL_DRIVER STREQUAL "auto" AND
+   (NOT DEFINED WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER}
+   OR NOT WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER}))
     message(FATAL_ERROR "The default OPL driver must be enabled")
 endif()
 
@@ -101,8 +102,7 @@ target_compile_definitions(wolf3d PRIVATE
     WOLF3D_BUILD
     inline=__inline
     _CRT_SECURE_NO_WARNINGS
-    WG_DEFAULT_OPL_DRIVER="${WG_DEFAULT_OPL_DRIVER}"
-    WG_DEFAULT_SAMPLE_RATE=${WG_DEFAULT_SAMPLE_RATE}U)
+    WG_DEFAULT_OPL_DRIVER="${WG_DEFAULT_OPL_DRIVER}")
 if(WG_ENABLE_OPL_NUKED)
     target_compile_definitions(wolf3d PRIVATE WG_OPL_ENABLE_NUKED=1)
 endif()

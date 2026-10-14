@@ -7,15 +7,15 @@ build_dir=${WG_OPENWATCOM_WINDOWS_BUILD_DIR:-$root/build/openwatcom-win9x-x86}
 . "$root/scripts/dist-openwatcom.sh"
 dist_dir=${WG_OPENWATCOM_WINDOWS_DIST_DIR:-$root/dist/wolf3d-lib_${version}_win9x_x86_${toolchain}}
 drivers=${WG_OPENWATCOM_WINDOWS_OPL_DRIVERS:-dbopl,silent,adlib}
-default_driver=${WG_OPENWATCOM_WINDOWS_DEFAULT_OPL:-adlib}
-sample_rate=${WG_OPENWATCOM_WINDOWS_SAMPLE_RATE:-22050}
+case ",$drivers," in *,silent,*) ;; *) drivers="$drivers,silent" ;; esac
+default_driver=${WG_OPENWATCOM_WINDOWS_DEFAULT_OPL:-auto}
 
 case ",$drivers," in
     *,nuked,*|*,dbopl,*|*,silent,*|*,adlib,*) ;;
     *) echo "At least one Open Watcom Windows OPL driver must be selected." >&2; exit 2 ;;
 esac
-case ",$drivers," in
-    *,$default_driver,*) ;;
+case ",$drivers,$default_driver," in
+    *,auto,*|*,$default_driver,*,$default_driver,*) ;;
     *) echo "Default OPL driver '$default_driver' is not compiled in." >&2; exit 2 ;;
 esac
 
@@ -23,7 +23,7 @@ objects="$build_dir/objects"
 rm -rf "$build_dir" "$dist_dir"
 mkdir -p "$objects" "$dist_dir/include" "$dist_dir/DOCS/LICENSES"
 
-defines="-dWOLF3D_BUILD -dWG_DEFAULT_OPL_DRIVER=\"$default_driver\" -dWG_DEFAULT_SAMPLE_RATE=${sample_rate}U"
+defines="-dWOLF3D_BUILD -dWG_DEFAULT_OPL_DRIVER=\"$default_driver\" -dWG_AUDIO_LEGACY_TARGET=1"
 opl_sources="$root/src/WG_OPL.c"
 case ",$drivers," in
     *,nuked,*)
@@ -136,7 +136,7 @@ Compiler: Open Watcom 2
 CPU baseline: Pentium
 Compiled OPL drivers: $drivers
 Default OPL driver: $default_driver
-Preferred PCM sample rate: $sample_rate Hz
+Sample rate: runtime auto (CLI/config override)
 
 Link WOLF3D.LIB into an Open Watcom Win32 host and place wolf3d.dll beside
 the executable. If the Nuked driver is included, Nuked-OPL3.dll must also

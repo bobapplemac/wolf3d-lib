@@ -48,15 +48,17 @@ option(WG_STATIC_MSVC_RUNTIME
     "Link the MSVC runtime statically for self-contained Windows releases" ON)
 option(WG_STATIC_GNU_RUNTIME
     "Link the GCC support runtime statically in MinGW artifacts" ON)
+if(WG_DIST_PLATFORM MATCHES "^(dos32|win9x|win2k|winxp)$")
+    add_definitions(-DWG_AUDIO_LEGACY_TARGET=1)
+endif()
 option(WG_ENABLE_OPL_NUKED "Compile the Nuked OPL3 runtime driver" ON)
 option(WG_ENABLE_OPL_DBOPL "Compile the DBOPL runtime driver" ON)
-option(WG_ENABLE_OPL_SILENT "Compile the timing-preserving silent driver" ON)
+set(WG_ENABLE_OPL_SILENT ON CACHE BOOL "Silent is always included" FORCE)
 option(WG_ENABLE_OPL_ADLIB "Compile the host-provided native AdLib driver" OFF)
-set(WG_DEFAULT_OPL_DRIVER "nuked" CACHE STRING
+set(WG_DEFAULT_OPL_DRIVER "auto" CACHE STRING
     "Default runtime OPL driver: nuked, dbopl, silent, or adlib")
-set_property(CACHE WG_DEFAULT_OPL_DRIVER PROPERTY STRINGS nuked dbopl silent adlib)
-set(WG_DEFAULT_SAMPLE_RATE "48000" CACHE STRING
-    "Preferred PCM sample rate; the host may negotiate another rate")
+set_property(CACHE WG_DEFAULT_OPL_DRIVER PROPERTY STRINGS auto nuked dbopl silent adlib)
+unset(WG_DEFAULT_SAMPLE_RATE CACHE)
 set(WG_LINUX_LIBC "" CACHE STRING
     "Optional Linux package ABI label, such as glibc or musl")
 set_property(CACHE WG_LINUX_LIBC PROPERTY STRINGS "" glibc musl)
@@ -123,15 +125,11 @@ if(NOT WG_ENABLE_OPL_NUKED AND NOT WG_ENABLE_OPL_DBOPL
     message(FATAL_ERROR "At least one OPL driver must be enabled")
 endif()
 string(TOUPPER "${WG_DEFAULT_OPL_DRIVER}" WG_DEFAULT_OPL_DRIVER_UPPER)
-if(NOT DEFINED WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER}
-   OR NOT WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER})
+if(NOT WG_DEFAULT_OPL_DRIVER STREQUAL "auto" AND
+   (NOT DEFINED WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER}
+   OR NOT WG_ENABLE_OPL_${WG_DEFAULT_OPL_DRIVER_UPPER}))
     message(FATAL_ERROR
         "WG_DEFAULT_OPL_DRIVER '${WG_DEFAULT_OPL_DRIVER}' is not enabled")
-endif()
-if(NOT WG_DEFAULT_SAMPLE_RATE MATCHES "^[0-9]+$"
-   OR WG_DEFAULT_SAMPLE_RATE LESS 8000
-   OR WG_DEFAULT_SAMPLE_RATE GREATER 192000)
-    message(FATAL_ERROR "WG_DEFAULT_SAMPLE_RATE must be between 8000 and 192000")
 endif()
 
 configure_file(packaging/LIBRARY-README.txt.in
@@ -179,8 +177,7 @@ function(wg_configure_core target)
         target_compile_definitions(${target} PRIVATE WG_OPL_ENABLE_SILENT=1)
     endif()
     target_compile_definitions(${target} PRIVATE
-        WG_DEFAULT_OPL_DRIVER="${WG_DEFAULT_OPL_DRIVER}"
-        WG_DEFAULT_SAMPLE_RATE=${WG_DEFAULT_SAMPLE_RATE}U)
+        WG_DEFAULT_OPL_DRIVER="${WG_DEFAULT_OPL_DRIVER}")
 
     target_include_directories(${target}
         PUBLIC include
@@ -355,6 +352,20 @@ if(BUILD_TESTING)
 endif()
 
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)
+    foreach(policy modern legacy minimal)
+        add_executable(wg-opl-policy-${policy} tests/WG_OPL_POLICY_TEST.c)
+        target_include_directories(wg-opl-policy-${policy} PRIVATE include src)
+        target_compile_definitions(wg-opl-policy-${policy} PRIVATE WG_OPL_ENABLE_ADLIB=1 WG_OPL_ENABLE_SILENT=1)
+        if(policy STREQUAL "minimal")
+            target_compile_definitions(wg-opl-policy-${policy} PRIVATE TEST_NO_EMULATORS=1)
+        else()
+            target_compile_definitions(wg-opl-policy-${policy} PRIVATE WG_OPL_ENABLE_DBOPL=1 WG_OPL_ENABLE_NUKED=1)
+        endif()
+        if(policy STREQUAL "legacy")
+            target_compile_definitions(wg-opl-policy-${policy} PRIVATE WG_AUDIO_LEGACY_TARGET=1)
+        endif()
+        add_test(NAME opl-policy-${policy} COMMAND wg-opl-policy-${policy})
+    endforeach()
     add_executable(wg-modal-frame-test tests/WG_MODAL_FRAME_TEST.c platforms/WG_TEXT_OUTPUT.c)
     target_include_directories(wg-modal-frame-test PRIVATE include src ${WG_MSVC_COMPAT_INCLUDE})
     target_link_libraries(wg-modal-frame-test PRIVATE wolf3d-internal)

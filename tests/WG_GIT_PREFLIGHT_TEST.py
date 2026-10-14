@@ -124,13 +124,13 @@ bash "$1" "$2"
         if not module.exists() or not cmake:
             self.skipTest('portable CMake version check required')
         script = self.base / 'version.cmake'
-        for version, succeeds in (('1.4.84', False), ('1.4.85', True), ('1.4.90', True)):
+        for version, succeeds in (('1.4.84', False), ('1.4.86', True), ('1.4.90', True)):
             with self.subTest(version=version):
                 script.write_text('include("' + module.as_posix() + '")\nw3p_check_engine_version("' + version + '")\n')
                 run = subprocess.run([cmake, '-P', str(script)], capture_output=True, text=True)
                 self.assertEqual(run.returncode == 0, succeeds, run.stdout + run.stderr)
                 if not succeeds:
-                    self.assertIn('wolf3d_PumpFrame', run.stderr)
+                    self.assertIn('wolf3d_ProbeAudio', run.stderr)
                     self.assertIn('too old', run.stderr)
 
     def test_offline(self):

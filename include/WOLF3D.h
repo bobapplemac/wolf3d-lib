@@ -179,6 +179,11 @@ WOLF3D_API size_t wolf3d_GetOPLDriverCount(void);
 WOLF3D_API const char *wolf3d_GetOPLDriverName(size_t index);
 WOLF3D_API uint32_t wolf3d_GetOPLDriverCapabilities(size_t index);
 WOLF3D_API const char *wolf3d_GetSelectedOPLDriver(void);
+/* Main-thread startup/diagnostics only. Probe opens and closes PCM/native OPL. */
+WOLF3D_API int wolf3d_ProbeAudio(const char *driver, const char *rate_text);
+WOLF3D_API const char *wolf3d_GetAudioDiagnostics(void);
+WOLF3D_API const char *wolf3d_GetAudioError(void);
+WOLF3D_API void wolf3d_SetOPLError(const char *message);
 
 #ifdef __cplusplus
 }

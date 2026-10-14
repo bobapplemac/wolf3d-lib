@@ -13,10 +13,9 @@ DOCKER ?= docker
 CMAKE_GENERATOR ?= Unix Makefiles
 BUILD_TYPE ?= Release
 OPL_DRIVERS ?= nuked,dbopl,silent
-OPL_DEFAULT ?= nuked
+OPL_DEFAULT ?= auto
 WIN2K_OPL_DRIVERS ?= dbopl,silent
-WIN2K_OPL_DEFAULT ?= dbopl
-SAMPLE_RATE ?= 48000
+WIN2K_OPL_DEFAULT ?= auto
 CMAKE_ARGS ?=
 TEST_ARGS ?=
 JOBS ?=
@@ -38,8 +37,7 @@ OPENWATCOM_BUILD_DIR ?= build/openwatcom-dos32
 OPENWATCOM_DIST_DIR ?=
 OPENWATCOM_BUILD_IMAGE ?= wolf3d-lib-build-openwatcom-20261001
 OPENWATCOM_OPL_DRIVERS ?= dbopl,silent,adlib
-OPENWATCOM_DEFAULT_OPL ?= adlib
-OPENWATCOM_SAMPLE_RATE ?= 22050
+OPENWATCOM_DEFAULT_OPL ?= auto
 WINDOWS_MINGW_BUILD_IMAGE ?= wolf3d-lib-build-windows-mingw-debian12
 WINDOWS_LLVM_MINGW_MSVC_IMAGE ?= wolf3d-lib-build-llvm-mingw-20260908-msvcrt
 WINDOWS_LLVM_MINGW_UCRT_IMAGE ?= wolf3d-lib-build-llvm-mingw-20260908-ucrt
@@ -48,8 +46,7 @@ WINDOWS_LLVM_MINGW_MSVC_SHA256 ?= 4d905bae713182f1a2b4d33875fe5aa544ce9fc04cc153
 WINDOWS_LLVM_MINGW_UCRT_SHA256 ?= 2258c745e3155870c80793f3e8c80b28fbde11b9ff73c4c78783635b3440b092
 # Win9x defaults follow DOS; explicit OPL_* overrides still apply.
 WIN9X_OPL_DRIVERS ?= $(if $(filter file default undefined,$(origin OPL_DRIVERS)),dbopl$(comma)silent$(comma)adlib,$(OPL_DRIVERS))
-WIN9X_OPL_DEFAULT ?= $(if $(filter file default undefined,$(origin OPL_DEFAULT)),adlib,$(OPL_DEFAULT))
-WIN9X_SAMPLE_RATE ?= $(if $(filter file default undefined,$(origin SAMPLE_RATE)),22050,$(SAMPLE_RATE))
+WIN9X_OPL_DEFAULT ?= $(if $(filter file default undefined,$(origin OPL_DEFAULT)),auto,$(OPL_DEFAULT))
 WINDOWS_OPENWATCOM_BUILD_DIR ?= build/openwatcom-win9x-x86
 WINDOWS_OPENWATCOM_DIST_DIR ?=
 DOCKER_RUN_ARGS ?=
@@ -58,9 +55,9 @@ CMAKE_COMPILER_ARG := -DCMAKE_C_COMPILER="$(CC)"
 CMAKE_BACKEND_ARGS := \
 	-DWG_ENABLE_OPL_NUKED=$(if $(findstring nuked,$(OPL_DRIVERS)),ON,OFF) \
 	-DWG_ENABLE_OPL_DBOPL=$(if $(findstring dbopl,$(OPL_DRIVERS)),ON,OFF) \
-	-DWG_ENABLE_OPL_SILENT=$(if $(findstring silent,$(OPL_DRIVERS)),ON,OFF) \
-	-DWG_DEFAULT_OPL_DRIVER="$(OPL_DEFAULT)" \
-	-DWG_DEFAULT_SAMPLE_RATE="$(SAMPLE_RATE)"
+	-DWG_ENABLE_OPL_SILENT=ON \
+	-DWG_DEFAULT_OPL_DRIVER="$(OPL_DEFAULT)"
+
 PARALLEL_ARG := --parallel $(JOBS)
 
 .DEFAULT_GOAL := all
@@ -125,16 +122,13 @@ help:
 		'  CC=gcc|clang                 C compiler (default: gcc).' \
 		'  BUILD_TYPE=Release|Debug     CMake build type (default: Release).' \
 		'  OPL_DRIVERS=nuked,dbopl,silent Drivers compiled into the library (default: all).' \
-		'  OPL_DEFAULT=nuked|dbopl|silent Runtime default (default: nuked).' \
-		'  SAMPLE_RATE=Hz               Preferred host PCM rate (default: 48000).' \
-		'  WIN9X_SAMPLE_RATE=Hz        Win9x preferred PCM rate (default: 22050).' \
+		'  OPL_DEFAULT=auto|nuked|dbopl|silent Runtime default (default: auto).' \
 		'  JOBS=N                       Parallel job limit.' \
 		'  CMAKE_ARGS="..."             Extra CMake -D settings.' \
 		'  TEST_ARGS="..."              Extra arguments passed to CTest.' \
 		'  DOCKER_RUN_ARGS="..."        Extra docker-run options.' \
 		'  OPENWATCOM_OPL_DRIVERS=...   DOS drivers (default: dbopl,silent,adlib).' \
 		'  OPENWATCOM_DEFAULT_OPL=...   DOS runtime default (default: adlib).' \
-		'  OPENWATCOM_SAMPLE_RATE=Hz    DOS preferred PCM rate (default: 22050).' \
 		'' \
 		'Examples:' \
 		'  make' \
@@ -153,7 +147,6 @@ print-config:
 		'BUILD_TYPE=$(BUILD_TYPE)' \
 		'OPL_DRIVERS=$(OPL_DRIVERS)' \
 		'OPL_DEFAULT=$(OPL_DEFAULT)' \
-		'SAMPLE_RATE=$(SAMPLE_RATE)' \
 		'BUILD_DIR=$(BUILD_DIR)' \
 		'RELEASE_BUILD_DIR=$(RELEASE_BUILD_DIR)' \
 		'PORTABLE_BUILD_DIR=$(PORTABLE_BUILD_DIR)' \
@@ -205,7 +198,6 @@ portable-library-release: portable-image
 		"$(PORTABLE_BUILD_IMAGE)" \
 		make library-release CC=gcc \
 			OPL_DRIVERS="$(OPL_DRIVERS)" OPL_DEFAULT="$(OPL_DEFAULT)" \
-			SAMPLE_RATE="$(SAMPLE_RATE)" \
 			RELEASE_BUILD_DIR="$(PORTABLE_BUILD_DIR)" JOBS="$(JOBS)"
 	$(DOCKER) run --rm \
 		--volume "$(CURDIR):/src:ro" \
@@ -236,7 +228,6 @@ musl-library-release: musl-image
 		"$(MUSL_BUILD_IMAGE)" \
 		make library-release CC="$(CC)" \
 			OPL_DRIVERS="$(OPL_DRIVERS)" OPL_DEFAULT="$(OPL_DEFAULT)" \
-			SAMPLE_RATE="$(SAMPLE_RATE)" \
 			RELEASE_BUILD_DIR="$(MUSL_BUILD_DIR)" JOBS="$(JOBS)" \
 			CMAKE_ARGS="-DWG_LINUX_LIBC=musl $(CMAKE_ARGS)"
 	$(DOCKER) run --rm \
@@ -267,7 +258,6 @@ openwatcom-library-release: openwatcom-image
 		--env WG_OPENWATCOM_DIST_DIR="$(if $(OPENWATCOM_DIST_DIR),/src/$(OPENWATCOM_DIST_DIR))" \
 		--env WG_OPENWATCOM_OPL_DRIVERS="$(OPENWATCOM_OPL_DRIVERS)" \
 		--env WG_OPENWATCOM_DEFAULT_OPL="$(OPENWATCOM_DEFAULT_OPL)" \
-		--env WG_OPENWATCOM_SAMPLE_RATE="$(OPENWATCOM_SAMPLE_RATE)" \
 		"$(OPENWATCOM_BUILD_IMAGE)" \
 		sh scripts/linux/openwatcom/build-library.sh
 
@@ -295,7 +285,6 @@ windows-win9x-library-release: openwatcom-image
 		--env WG_OPENWATCOM_WINDOWS_DIST_DIR="$(if $(WINDOWS_OPENWATCOM_DIST_DIR),/src/$(WINDOWS_OPENWATCOM_DIST_DIR))" \
 		--env WG_OPENWATCOM_WINDOWS_OPL_DRIVERS="$(WIN9X_OPL_DRIVERS)" \
 		--env WG_OPENWATCOM_WINDOWS_DEFAULT_OPL="$(WIN9X_OPL_DEFAULT)" \
-		--env WG_OPENWATCOM_WINDOWS_SAMPLE_RATE="$(WIN9X_SAMPLE_RATE)" \
 		"$(OPENWATCOM_BUILD_IMAGE)" \
 		sh scripts/linux/openwatcom/build-windows-library.sh
 
@@ -306,7 +295,6 @@ windows-win2k-library-release: windows-mingw-image
 		--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
 		--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(WIN2K_OPL_DRIVERS)" \
 		--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(WIN2K_OPL_DEFAULT)" \
-		--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
 		"$(WINDOWS_MINGW_BUILD_IMAGE)" \
 		sh scripts/linux/windows-cross/build-library.sh
 
@@ -317,7 +305,6 @@ windows-xp-library-release: windows-mingw-image
 		--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
 		--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(OPL_DRIVERS)" \
 		--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(OPL_DEFAULT)" \
-		--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
 		"$(WINDOWS_MINGW_BUILD_IMAGE)" \
 		sh scripts/linux/windows-cross/build-library.sh
 
@@ -329,7 +316,6 @@ windows-win7-library-release: windows-mingw-image
 			--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
 			--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(OPL_DRIVERS)" \
 			--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(OPL_DEFAULT)" \
-			--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
 			"$(WINDOWS_MINGW_BUILD_IMAGE)" \
 			sh scripts/linux/windows-cross/build-library.sh || exit $$?; \
 	done
@@ -342,7 +328,6 @@ windows-llvm-win7-library-release: windows-llvm-msvcrt-image
 			--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
 			--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(OPL_DRIVERS)" \
 			--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(OPL_DEFAULT)" \
-			--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
 			"$(WINDOWS_LLVM_MINGW_MSVC_IMAGE)" \
 			sh scripts/linux/windows-cross/build-library.sh || exit $$?; \
 	done
@@ -354,7 +339,6 @@ windows-win10-library-release: windows-llvm-ucrt-image
 		--env WG_WINDOWS_CROSS_JOBS="$(JOBS)" \
 		--env WG_WINDOWS_CROSS_OPL_DRIVERS="$(OPL_DRIVERS)" \
 		--env WG_WINDOWS_CROSS_DEFAULT_OPL="$(OPL_DEFAULT)" \
-		--env WG_WINDOWS_CROSS_SAMPLE_RATE="$(SAMPLE_RATE)" \
 		"$(WINDOWS_LLVM_MINGW_UCRT_IMAGE)" \
 		sh scripts/linux/windows-cross/build-library.sh
 

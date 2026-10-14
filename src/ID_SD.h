@@ -62,6 +62,7 @@ uint32_t ID_SD_SampleClockAdvance(id_sd_sample_clock_t *clock,
                                   uint32_t frames);
 
 id_sd_music_t *ID_SD_MusicCreate(uint32_t sample_rate);
+id_sd_music_t *ID_SD_MusicOpenAudio(uint32_t requested_rate);
 void ID_SD_MusicDestroy(id_sd_music_t *music);
 int ID_SD_MusicStart(id_sd_music_t *music, const uint8_t *chunk,
                      size_t chunk_size);

@@ -1,3 +1,4 @@
+#include "WG_PLATFORM.h"
 /* Portable IMF sequencer and sample clock derived from ID_SD.C. */
 #include "ID_SD.h"
 
@@ -154,29 +155,29 @@ static void ID_SD_MusicWrite(void *user, uint16_t register_number,
     WG_OPL_WriteRegisterBuffered(music->opl, register_number, value);
 }
 
-id_sd_music_t *ID_SD_MusicCreate(uint32_t sample_rate)
+static id_sd_music_t *ID_SD_MusicCreateInternal(uint32_t sample_rate, int pcm)
 {
-    id_sd_music_t *music;
-
-    if (sample_rate < ID_SD_IMF_RATE)
-    {
-        return NULL;
-    }
-    music = (id_sd_music_t *)calloc(1U, sizeof(*music));
-    if (music == NULL)
-    {
-        return NULL;
-    }
+    id_sd_music_t *music = (id_sd_music_t *)calloc(1U, sizeof(*music));
+    if (music == NULL) { WG_OPL_SetError("Unable to allocate music state."); return NULL; }
+    music->opl = pcm ? WG_OPL_CreateAudio(sample_rate, &sample_rate)
+                     : WG_OPL_Create(sample_rate);
     music->sample_rate = sample_rate;
-    music->opl = WG_OPL_Create(sample_rate);
-    if (music->opl == NULL
-        || !ID_SD_SampleClockStart(&music->clock, sample_rate))
+    if (music->opl == NULL || !ID_SD_SampleClockStart(&music->clock, sample_rate))
     {
         WG_OPL_Destroy(music->opl);
+        if (pcm) WG_PCMShutdown();
         free(music);
         return NULL;
     }
     return music;
+}
+id_sd_music_t *ID_SD_MusicCreate(uint32_t sample_rate)
+{
+    return ID_SD_MusicCreateInternal(sample_rate, 0);
+}
+id_sd_music_t *ID_SD_MusicOpenAudio(uint32_t requested_rate)
+{
+    return ID_SD_MusicCreateInternal(requested_rate, 1);
 }
 
 void ID_SD_MusicDestroy(id_sd_music_t *music)

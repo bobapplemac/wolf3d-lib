@@ -5,7 +5,7 @@ Build one wolf3d-lib Windows configuration with Visual Studio or MinGW.
 .DESCRIPTION
 This modern Windows dispatcher detects supported Visual Studio and MSYS2
 UCRT64 installations and maps human-readable compiler, architecture, runtime,
-OPL driver-set, default-driver, sample-rate, and action choices onto the
+OPL driver-set, default-driver and action choices onto the
 authoritative CMake presets and targets.
 
 .EXAMPLE
@@ -38,10 +38,8 @@ param(
     [ValidateSet('all', 'nuked', 'dbopl', 'silent', 'nuked-dbopl',
         'nuked-silent', 'dbopl-silent')]
     [string]$Drivers = 'all',
-    [ValidateSet('nuked', 'dbopl', 'silent')]
-    [string]$DefaultOpl = 'nuked',
-    [ValidateRange(8000, 192000)]
-    [int]$SampleRate = 48000,
+    [ValidateSet('auto', 'nuked', 'dbopl', 'silent')]
+    [string]$DefaultOpl = 'auto',
     [ValidateSet('package', 'build', 'test', 'clean')]
     [string]$Action = 'package',
     [ValidateRange(0, 256)]
@@ -274,7 +272,7 @@ if ($PSBoundParameters.Count -eq 0 -and -not $NonInteractive -and $canPrompt) {
     else { $Runtime = Read-BuildChoice 'MSVC runtime' @('static', 'dynamic') }
     $Drivers = Read-BuildChoice 'Compiled OPL drivers' @('all', 'nuked', 'dbopl', 'silent', 'nuked-dbopl', 'nuked-silent', 'dbopl-silent')
     $availableDefaults = if ($Drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } else { @($Drivers -split '-') }
-    $DefaultOpl = Read-BuildChoice 'Default OPL driver' $availableDefaults
+    $DefaultOpl = Read-BuildChoice 'Default OPL driver' (@('auto') + $availableDefaults)
     Write-Host ''
     $confirmation = Read-Host 'Continue with this build? [Y/n]'
     if ($confirmation -and $confirmation -notmatch '^[Yy]') { exit 0 }
@@ -292,7 +290,8 @@ if ($Action -eq 'package' -and $Configuration -ne 'Release') {
     throw 'Packaging is restricted to Release builds. Use -Action build or test for Debug.'
 }
 $driverList = if ($Drivers -eq 'all') { @('nuked', 'dbopl', 'silent') } else { @($Drivers -split '-') }
-if ($driverList -notcontains $DefaultOpl) {
+if ($driverList -notcontains 'silent') { $driverList += 'silent' }
+if ($DefaultOpl -ne 'auto' -and $driverList -notcontains $DefaultOpl) {
     throw "Default driver '$DefaultOpl' is not included by -Drivers $Drivers."
 }
 
@@ -317,7 +316,7 @@ $devPreset = "$($selected.PresetPrefix)-dev-$archPreset"
 $libraryPreset = "$($selected.PresetPrefix)-library-$archPreset"
 $useDedicatedPreset = ($Action -eq 'package' -or $Action -eq 'clean') `
     -and $Runtime -eq 'static' -and $Drivers -eq 'all' `
-    -and $DefaultOpl -eq 'nuked' -and $SampleRate -eq 48000
+    -and $DefaultOpl -eq 'auto'
 $preset = if ($useDedicatedPreset) { $libraryPreset } else { $devPreset }
 
 if ($useDedicatedPreset) {
@@ -327,8 +326,7 @@ if ($useDedicatedPreset) {
     if ($Configuration -eq 'Debug') { $parts += 'debug' }
     if ($Runtime -eq 'dynamic') { $parts += 'dynamic-crt' }
     if ($Drivers -ne 'all') { $parts += $Drivers }
-    if ($DefaultOpl -ne 'nuked') { $parts += "default-$DefaultOpl" }
-    if ($SampleRate -ne 48000) { $parts += "$SampleRate-hz" }
+    if ($DefaultOpl -ne 'auto') { $parts += "default-$DefaultOpl" }
     $buildDir = Join-Path $root ('build\' + ($parts -join '-'))
 }
 
@@ -360,7 +358,6 @@ Write-Host "  Configuration: $Configuration"
 Write-Host "  Compiler CRT:  $Runtime"
 Write-Host "  OPL drivers:   $($driverList -join ', ')"
 Write-Host "  OPL default:   $DefaultOpl"
-Write-Host "  Sample rate:   $SampleRate Hz"
 Write-Host "  Action:        $Action"
 
 if ($Action -eq 'clean' -and $buildDir -and
@@ -379,8 +376,7 @@ if ($Action -ne 'clean') {
             "-DWG_ENABLE_OPL_NUKED=$(if ($driverList -contains 'nuked') { 'ON' } else { 'OFF' })",
             "-DWG_ENABLE_OPL_DBOPL=$(if ($driverList -contains 'dbopl') { 'ON' } else { 'OFF' })",
             "-DWG_ENABLE_OPL_SILENT=$(if ($driverList -contains 'silent') { 'ON' } else { 'OFF' })",
-            "-DWG_DEFAULT_OPL_DRIVER=$DefaultOpl",
-            "-DWG_DEFAULT_SAMPLE_RATE=$SampleRate"
+            "-DWG_DEFAULT_OPL_DRIVER=$DefaultOpl"
         )
     }
     Invoke-DisplayedCommand -Executable $selected.CMake -Arguments $configureArguments

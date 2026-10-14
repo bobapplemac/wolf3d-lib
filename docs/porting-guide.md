@@ -180,3 +180,29 @@ blits, then pumps with `present=1` on leaving the modal loop. The window may
 look frozen during a drag even though its game state and framebuffer advance.
 `tests/WG_MODAL_FRAME_TEST.c` exercises the production update and guard code,
 including simulation, memory rendering, pauses, reentry and shared-clock resume.
+
+## Automatic audio policy
+
+The default OPL selection is `auto`. DOS, Win9x, win2k and winxp try AdLib,
+DBOPL, Nuked, then silent. Newer targets try AdLib (if compiled and supported),
+Nuked, DBOPL, then silent. Missing/unavailable candidates are skipped quietly.
+Silent is always compiled in; it silences FM synthesis, not digitized effects.
+An explicit `--opl adlib`, `dbopl`, `nuked` or `silent` never falls back: missing
+or failed drivers stop with an error. CLI overrides launcher configuration.
+
+Sample rates are runtime-only. The default is `--sample-rate auto`; numeric
+8000..192000 Hz overrides remain supported. Native AdLib prefers 22050 Hz.
+Legacy targets prefer 22050 Hz for DBOPL/silent and 44100 Hz for Nuked; modern
+targets prefer 48000 Hz for software drivers. Selection resolves after fallback;
+PCM device negotiation may change the actual rate. OPL timestamps and mixing
+use that negotiated rate. PCM-output failure is separate from OPL fallback.
+
+`--diag` opens/closes audio to report candidate attempts, failure reasons and
+preferred/negotiated rates. Auto fallback is quiet in ordinary gameplay.
+On NT, auto may load InpOut32 and install/start its embedded driver. Explicit
+software drivers never load it. Loader-error popups are suppressed around the
+optional DLL load; explicit native failure is reported by the application.
+
+Builds no longer offer a fixed sample rate. Old SAMPLE_RATE variables and
+WG_DEFAULT_SAMPLE_RATE do not control playback; move overrides to the launcher
+configuration or command line. BUILD.TXT records the runtime-auto policy.

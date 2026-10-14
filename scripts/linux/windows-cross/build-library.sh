@@ -5,11 +5,11 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 profile=${WG_WINDOWS_CROSS_PROFILE:?WG_WINDOWS_CROSS_PROFILE is required}
 jobs=${WG_WINDOWS_CROSS_JOBS:-}
 drivers=${WG_WINDOWS_CROSS_OPL_DRIVERS:-nuked,dbopl,silent}
-default_driver=${WG_WINDOWS_CROSS_DEFAULT_OPL:-nuked}
-sample_rate=${WG_WINDOWS_CROSS_SAMPLE_RATE:-48000}
+case ",$drivers," in *,silent,*) ;; *) drivers="$drivers,silent" ;; esac
+default_driver=${WG_WINDOWS_CROSS_DEFAULT_OPL:-auto}
 if [ "$profile" = mingw-win2k-x86 ]; then
     drivers=${WG_WINDOWS_CROSS_OPL_DRIVERS:-dbopl,silent}
-    default_driver=${WG_WINDOWS_CROSS_DEFAULT_OPL:-dbopl}
+    default_driver=${WG_WINDOWS_CROSS_DEFAULT_OPL:-auto}
 fi
 version=$(sed -n '1p' "$root/VERSION")
 
@@ -91,7 +91,6 @@ cmake -S "$root" -B "$build_dir" -G Ninja \
     -DWG_ENABLE_OPL_DBOPL=$(case ",$drivers," in *,dbopl,*) echo ON;; *) echo OFF;; esac) \
     -DWG_ENABLE_OPL_SILENT=$(case ",$drivers," in *,silent,*) echo ON;; *) echo OFF;; esac) \
     -DWG_DEFAULT_OPL_DRIVER="$default_driver" \
-    -DWG_DEFAULT_SAMPLE_RATE="$sample_rate" \
     -DWG_COMPILER_LABEL="$compiler_label" \
     -DWG_DIST_ROOT="$root/dist"
 

@@ -15,7 +15,7 @@ write_build_info()
         printf 'Product: %s\nVersion: %s\nPlatform baseline: %s\nArchitecture: x86\nBackend: %s\n' "$product" "$version" "$platform" "$backend"
         printf 'Toolchain: %s\nCompiler version: %s\nConfiguration: Release\nCPU baseline: Pentium\n' "$toolchain" "$compiler_version"
         printf 'Compiler banner: %s\n' "$compiler_banner"
-        printf 'OPL drivers: %s\nDefault OPL driver: %s\nPreferred sample rate: %s Hz\n' "$drivers" "$default_driver" "$sample_rate"
+        printf 'OPL drivers: %s\nDefault OPL driver: %s\nSample rate: runtime auto (CLI/config override)\nAutomatic rates: native=22050; legacy DBOPL/silent=22050, Nuked=44100; modern software=48000 Hz\n' "$drivers" "$default_driver"
         printf 'Build directory: %s\nDistribution directory: %s\n' "$build_dir" "$dist_dir"
         printf 'Compiler definitions: %s\nLink libraries: %s\n' "${defines:-see recipe below}" "${link_libraries:-see recipe below}"
         printf 'WATCOM: %s\nINCLUDE: %s\nLIB: %s\n' "${WATCOM:-}" "${INCLUDE:-}" "${LIB:-}"

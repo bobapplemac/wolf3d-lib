@@ -112,7 +112,7 @@ and AdLib-compatible hardware, `--adlib`/`-nosb` exposes AdLib only,
 `--no-sound` exposes neither card with all in-game sound initially off. Every
 profile preserves the internal audio clock.
 
-Use `OPL_DRIVERS`, `OPL_DEFAULT`, and `SAMPLE_RATE` with Make, or the
+Use `OPL_DRIVERS` and `OPL_DEFAULT` with Make, or the
 corresponding dispatcher/CMake options documented in
 [building.md](building.md).
 
