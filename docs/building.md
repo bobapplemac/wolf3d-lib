@@ -355,3 +355,12 @@ SP4 installation for the initial test baseline.
 
 Run `python3 tests/WG_WINDOWS_PE_AUDIT_TEST.py` on Linux for positive/negative
 Windows 2000 audit fixtures, including forbidden imports in adjacent DLLs.
+
+## Native AdLib adapter in CMake builds
+
+`WG_ENABLE_OPL_ADLIB=ON` compiles the existing host-supplied native AdLib
+adapter (default OFF). The embedding host must provide the native OPL
+callbacks; the library itself neither loads a port driver nor accesses ports.
+`WG_DEFAULT_OPL_DRIVER=adlib` is valid only when this adapter is enabled.
+Portable's optional InpOut32 Windows host supplies these callbacks; DBOPL
+remains the default for its win2k test package.

@@ -6,6 +6,11 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.83 - 2026-10-14 - Optional native AdLib in CMake builds
+
+- Expose the existing host-provided AdLib adapter through WG_ENABLE_OPL_ADLIB
+  (off by default), allowing NT hosts to supply optional hardware access.
+
 ## 1.4.82 - 2026-10-14 - Windows 2000 shorthand
 
 - Standardize Windows 2000 identifiers, build targets, profiles and package
