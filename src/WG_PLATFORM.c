@@ -200,3 +200,12 @@ void WG_OPLHardwareWrite(uint16_t register_number, uint8_t value)
         wg_platform.opl_hardware_write(register_number, value);
     }
 }
+
+void WG_OPLHardwareWriteTimed(uint16_t reg, uint8_t value,
+                               uint64_t frame, uint32_t sample_rate)
+{
+    if (wg_platform.opl_hardware_write_timed != NULL)
+        wg_platform.opl_hardware_write_timed(reg, value, frame, sample_rate);
+    else
+        WG_OPLHardwareWrite(reg, value);
+}

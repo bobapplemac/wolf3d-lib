@@ -355,6 +355,9 @@ if(BUILD_TESTING)
 endif()
 
 if(BUILD_TESTING AND WG_BUILD_HEADLESS)
+    add_executable(wg-adlib-clock-test tests/WG_ADLIB_CLOCK_TEST.c)
+    target_include_directories(wg-adlib-clock-test PRIVATE include src ${WG_MSVC_COMPAT_INCLUDE})
+    add_test(NAME native-opl-clock COMMAND wg-adlib-clock-test)
     add_test(NAME headless-smoke COMMAND wolf3dgeneric-headless --headless-smoke)
     if(WG_ENABLE_OPL_NUKED)
         add_test(NAME runtime-opl-nuked COMMAND wolf3dgeneric-headless

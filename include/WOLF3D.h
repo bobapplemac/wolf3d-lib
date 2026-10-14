@@ -112,7 +112,7 @@ typedef struct wolf3d_event
     uint32_t buttons;
 } wolf3d_event_t;
 
-#define WOLF3D_PLATFORM_API_VERSION 6U
+#define WOLF3D_PLATFORM_API_VERSION 7U
 
 #define WOLF3D_INPUT_DEVICE_MOUSE    0x01U
 #define WOLF3D_INPUT_DEVICE_JOYSTICK 0x02U
@@ -155,6 +155,10 @@ typedef struct wolf3d_platform_api
     void (*opl_hardware_write)(uint16_t register_number, uint8_t value);
     uint32_t (*input_devices)(void);
     void (*set_mouse_capture)(int captured);
+    /* Frame position since native OPL init, at the negotiated PCM rate.
+       NULL preserves immediate writes for direct-I/O hosts. */
+    void (*opl_hardware_write_timed)(uint16_t register_number, uint8_t value,
+                                     uint64_t frame, uint32_t sample_rate);
 } wolf3d_platform_api_t;
 
 WOLF3D_API extern uint8_t *wolf3d_ScreenBuffer;
@@ -165,6 +169,8 @@ WOLF3D_API wolf3d_result_t wolf3d_SetPlatform(
 WOLF3D_API const char *wolf3d_GetCommandLineHelp(void);
 WOLF3D_API wolf3d_result_t wolf3d_Create(int argc, char **argv);
 WOLF3D_API wolf3d_result_t wolf3d_Run(void);
+/* Main-thread only: keep PCM/native events supplied during a host modal loop. */
+WOLF3D_API wolf3d_result_t wolf3d_PumpAudio(void);
 WOLF3D_API void wolf3d_Shutdown(void);
 WOLF3D_API size_t wolf3d_GetOPLDriverCount(void);
 WOLF3D_API const char *wolf3d_GetOPLDriverName(size_t index);

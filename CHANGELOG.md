@@ -6,6 +6,15 @@ beginning with 1.4.17, every commit to the library main branch advances it.
 Revisions 1.4.1 through 1.4.16 are assigned retrospectively to the dated
 post-promotion milestones below without rewriting Git history.
 
+## 1.4.84 - 2026-10-14 - Timestamped native OPL writes
+
+- Advance platform API to v7 with an optional sample-positioned native OPL
+  callback; preserve immediate writes when hosts leave it NULL.
+- Add main-thread wolf3d_PumpAudio for host modal loops without running
+  game simulation or rendering.
+- Track the AdLib adapter's 64-bit rendered frame position at the negotiated
+  PCM rate so buffered hosts can schedule hardware events during playback.
+
 ## 1.4.83 - 2026-10-14 - Optional native AdLib in CMake builds
 
 - Expose the existing host-provided AdLib adapter through WG_ENABLE_OPL_ADLIB

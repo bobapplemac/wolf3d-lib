@@ -5505,6 +5505,12 @@ static wolf3d_result_t WG_GameDebugKey(uint16_t key)
     return WOLF3D_RESULT_OK;
 }
 
+wolf3d_result_t wolf3d_PumpAudio(void)
+{
+    int ok = wg_game.active ? WG_GameSessionPumpAudio() : WG_FrontMusicPump();
+    return ok ? WOLF3D_RESULT_OK : WOLF3D_RESULT_PLATFORM_ERROR;
+}
+
 wolf3d_result_t wolf3d_Run(void)
 {
     wolf3d_event_t event;

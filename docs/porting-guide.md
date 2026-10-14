@@ -72,7 +72,7 @@ which it accepts application samples, normally the requested rate. A direct
 hardware host may instead report a nearby negotiated rate. The engine's
 rational 700 Hz sample clock remains exact at either rate.
 
-Platform API v6 also has three optional native-OPL callbacks. A constrained
+Platform API v7 retains the three optional immediate native-OPL callbacks. A constrained
 hardware host may initialize an OPL2-compatible device, accept register/value
 writes, and shut it down without putting port I/O in the generic engine. The
 `adlib` adapter is compiled only by an explicitly configured target. Its
@@ -145,3 +145,20 @@ constructs the selected emulator at that obtained rate while preserving the
 exact rational 700 Hz IMF clock and 140 Hz effect clock.
 Hardware profiles are independent of the selected OPL implementation and of
 whether the host opens a physical audio device.
+
+## Timestamped native OPL
+
+API v7 adds optional `opl_hardware_write_timed(reg, value, frame, sample_rate)`.
+When present, this replaces the immediate register-write callback. Frame zero
+is the start of each native OPL instance; every generated PCM frame advances
+the 64-bit position at the negotiated sample rate. Writes with equal positions
+retain their original order. The host must copy events, coordinate them with
+PCM playback, and cancel/join asynchronous work before native shutdown.
+Leave this callback NULL to retain the direct-I/O behavior. PCM shutdown may
+precede OPL shutdown; it must stop any worker that accesses that PCM device.
+
+Windows-style modal move/resize loops may call `wolf3d_PumpAudio()` on the
+engine/window thread to continue producing PCM and timestamped OPL events
+without advancing gameplay. Do not call it concurrently from an audio thread.
+`tests/WG_ADLIB_CLOCK_TEST.c` verifies positions, negotiated rates, 64-bit
+progression and fresh-instance reset without hardware access.

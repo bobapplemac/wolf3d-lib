@@ -25,4 +25,7 @@ int WG_OPLHardwareInit(void);
 void WG_OPLHardwareShutdown(void);
 void WG_OPLHardwareWrite(uint16_t register_number, uint8_t value);
 
+void WG_OPLHardwareWriteTimed(uint16_t reg, uint8_t value,
+                               uint64_t frame, uint32_t sample_rate);
+
 #endif

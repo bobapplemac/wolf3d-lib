@@ -109,7 +109,7 @@ carried in `wl_input_t` to the original `10/(13-adjustment)` and
 two-device host event and `ID_IN.c` applies the original calibrated outer-third
 dead zone and signed `-127..127` delta scaling.
 
-Platform API v6 reports the host's initially detected mouse and joystick
+Platform API v7 reports the host's initially detected mouse and joystick
 devices. The engine uses those results for the original input manager's
 hardware-presence state and SIGNON indicators. `--mouse` and `--joy` force a
 device present, while `--nomouse` and `--nojoy` force it absent; contradictory

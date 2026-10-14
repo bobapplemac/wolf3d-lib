@@ -128,6 +128,7 @@ int WG_InstallPlatform(void)
         NULL,
         NULL,
         NULL,
+        NULL,
         NULL
     };
 
