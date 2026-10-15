@@ -7,7 +7,7 @@ this document and the distribution helpers identical in both repositories.
 
 ```text
 dist/wolf3d-lib_<version>_<platform>_<arch>_<toolchain>[_configuration][_runtime]/
-dist/wolf3d-portable_<version>_<platform>_<arch>_<backend>_<toolchain>[_configuration][_runtime]/
+dist/wolf3d-portable_<version>_<platform>_<arch>_<toolchain>[_configuration][_runtime]/
 ```
 
 Use lowercase ASCII. Underscores separate fields; hyphens join components
@@ -67,19 +67,31 @@ does not by itself prove x64: unknown architectures must fail naming validation.
 CPU instruction requirements belong in build-info unless separate CPU variants
 are deliberately added to the distribution matrix.
 
-## Backend vocabulary (portable only)
+## Compiled video backend vocabulary (build info and runtime only)
 
 | Label | Implementation |
 | --- | --- |
 | `gdi` | Windows GDI graphics, Windows input and waveOut audio |
+| `sdl1` | SDL 1.2 legacy platform implementation |
 | `sdl3` | SDL3 platform implementation |
 | `vga` | DOS VGA mode 13h implementation |
 | `kms-fbdev` | Linux DRM/KMS with fbdev fallback, evdev input and ALSA audio |
 
 Linux console graphics are not VGA mode 13h and do not render terminal text.
-The library has no backend field. Existing source directories, executable
-names, targets (`win32-release`, `console-release`), and command-line options
-retain their names: package labels do not rename those public interfaces.
+Neither product has a video-backend field in its distribution name. Portable
+packages contain one executable with the selected compiled backends; `--backend`
+selects among them at runtime. `DOCS/BUILD.TXT` and `--diag` record the selection.
+SDL1 and SDL3 are mutually exclusive. There is no `_modular` suffix.
+
+Rebuilding the same product/version/platform/architecture/toolchain/configuration
+with a different backend subset replaces that package, including its dependencies.
+It does not produce a second sibling folder. Keep copies outside `dist/` when
+comparing alternate configurations. Build directories may still identify backend
+subsets so their object files and caches remain independent.
+
+The experimental Red Hat 9/i586 package uses the compatibility variant `_rh9`
+after the toolchain: its glibc 2.3.2/kernel 2.4 baseline differs from the modern
+glibc 2.28/i686 GCC 8 package. This prevents an otherwise identical name collision.
 
 ## Toolchain vocabulary
 
@@ -209,11 +221,11 @@ Musl bundling preserves this file and records the additional bundle recipe.
 ```text
 wolf3d-lib_1.4.73_linux-musl_x64_gcc14
 wolf3d-lib_1.4.73_winxp_x86_msvc-v140_debug_dynamic-crt
-wolf3d-portable_1.4.73_win7_x64_gdi_msvc-v120
-wolf3d-portable_1.4.73_win10_x64_sdl3_mingw-gcc14-ucrt
-wolf3d-portable_1.4.73_win9x_x86_gdi_openwatcom2
-wolf3d-portable_1.4.73_dos32_x86_vga_openwatcom2
-wolf3d-portable_1.4.73_linux-glibc_x64_kms-fbdev_gcc14
+wolf3d-portable_1.4.73_win7_x64_msvc-v120
+wolf3d-portable_1.4.73_win10_x64_mingw-gcc14-ucrt
+wolf3d-portable_1.4.73_win9x_x86_openwatcom2
+wolf3d-portable_1.4.73_dos32_x86_openwatcom2
+wolf3d-portable_1.4.73_linux-glibc_x64_gcc14
 ```
 
 These illustrate vocabulary; they are not a promise that every combination is

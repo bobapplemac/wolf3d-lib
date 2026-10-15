@@ -5,7 +5,7 @@ root=$1 dist=$2 product=$3
 test -f "$dist/DOCS/BUILD.TXT"
 test -f "$dist/DOCS/LICENSES/GPL-2.TXT"
 cat "$root/packaging/notices/BASE.TXT" > "$dist/DOCS/NOTICES.TXT"
-for component in PORTABLE NUKED DBOPL SDL3 DOS32A; do
+for component in PORTABLE NUKED DBOPL SDL1 SDL3 DOS32A; do
     include=no
     case "$component" in
         PORTABLE) [ "$product" != wolf3d-portable ] || include=yes ;;

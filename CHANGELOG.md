@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased - shared distribution naming and notices
+
+- Synchronize the naming contract with portable's selectable video backends:
+  backend choices belong in build information rather than package folder names.
+- Add the shared SDL1 license/source notice for consumers that package SDL1.
+  Engine APIs and engine-only SDK identities are unchanged.
+
+
 ## 1.4.88 - 2026-10-14 - Windows build workflow consistency
 
 - Align PowerShell, batch and legacy IDE audio choices: auto defaults and silent always included.

@@ -16,7 +16,7 @@ CMAKE = os.environ.get('CMAKE', shutil.which('cmake') or 'cmake')
 
 class Naming(unittest.TestCase):
     def test_win2k(self):
-        self.configure('wolf3d-portable_1.4.73_win2k_x86_gdi_mingw-gcc12-msvcrt',
+        self.configure('wolf3d-portable_1.4.73_win2k_x86_mingw-gcc12-msvcrt',
                        backend='gdi', WIN32='TRUE', MINGW='TRUE',
                        WG_DIST_PLATFORM='win2k', WG_DIST_CRT='msvcrt',
                        CMAKE_SYSTEM_NAME='Windows', CMAKE_SYSTEM_PROCESSOR='i686',
@@ -67,17 +67,17 @@ class Naming(unittest.TestCase):
                 (1929, '142', 'v142', 'win10'), (1930, '143', 'v143', 'win10'),
                 (1950, '145', 'v145', 'win10')]:
             with self.subTest(label=label):
-                self.configure('wolf3d-portable_1.4.73_%s_x86_gdi_msvc-%s' % (platform, label),
+                self.configure('wolf3d-portable_1.4.73_%s_x86_msvc-%s' % (platform, label),
                                backend='gdi', WIN32='TRUE', MSVC='TRUE', MSVC_VERSION=version,
                                MSVC_TOOLSET_VERSION=toolset, CMAKE_SIZEOF_VOID_P=4)
 
     def test_xp_toolset_and_sdl_profiles(self):
-        self.configure('wolf3d-portable_1.4.73_winxp_x64_gdi_msvc-v140',
+        self.configure('wolf3d-portable_1.4.73_winxp_x64_msvc-v140',
                        backend='gdi', WIN32='TRUE', MSVC='TRUE', MSVC_VERSION=1900,
                        MSVC_TOOLSET_VERSION=140, CMAKE_VS_PLATFORM_TOOLSET='v140_xp')
         self.configure(None, backend='sdl3', WIN32='TRUE', MSVC='TRUE', MSVC_VERSION=1900,
                        MSVC_TOOLSET_VERSION=140, CMAKE_VS_PLATFORM_TOOLSET='v140_xp')
-        self.configure('wolf3d-portable_1.4.73_win7_x64_sdl3_llvm-mingw14-msvcrt',
+        self.configure('wolf3d-portable_1.4.73_win7_x64_llvm-mingw14-msvcrt',
                        backend='sdl3', WIN32='TRUE', MINGW='TRUE', CMAKE_C_COMPILER_ID='Clang',
                        WG_DIST_PLATFORM='win7', WG_DIST_CRT='msvcrt')
 
@@ -94,12 +94,12 @@ class Naming(unittest.TestCase):
             for compiler, label in [('GNU', 'gcc14'), ('Clang', 'clang14')]:
                 for config, suffix in [('Release', ''), ('Debug', '_debug'),
                                        ('RelWithDebInfo', '_relwithdebinfo'), ('MinSizeRel', '_minsizerel')]:
-                    self.configure('wolf3d-portable_1.4.73_linux-%s_x64_kms-fbdev_%s%s' % (libc, label, suffix),
+                    self.configure('wolf3d-portable_1.4.73_linux-%s_x64_%s%s' % (libc, label, suffix),
                                    backend='kms-fbdev', WG_LINUX_LIBC=libc,
                                    CMAKE_C_COMPILER_ID=compiler, CMAKE_BUILD_TYPE=config)
 
     def test_architecture_and_invalid_vocabulary(self):
-        self.configure('wolf3d-portable_1.4.73_linux-glibc_x86_sdl3_gcc14',
+        self.configure('wolf3d-portable_1.4.73_linux-glibc_x86_gcc14',
                        backend='sdl3', CMAKE_SYSTEM_PROCESSOR='i686', CMAKE_SIZEOF_VOID_P=4)
         self.configure('wolf3d-lib_1.4.73_linux-glibc_arm64_gcc14', CMAKE_SYSTEM_PROCESSOR='aarch64')
         self.configure(None, CMAKE_SYSTEM_PROCESSOR='ppc64')

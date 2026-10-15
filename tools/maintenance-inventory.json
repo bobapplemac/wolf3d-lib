@@ -18,6 +18,7 @@
       "packaging/notices/DOS32A.TXT",
       "packaging/notices/NUKED.TXT",
       "packaging/notices/PORTABLE.TXT",
+      "packaging/notices/SDL1.TXT",
       "packaging/notices/SDL3.TXT",
       "scripts/dist-openwatcom.sh",
       "scripts/git-preflight.sh",
