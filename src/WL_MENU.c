@@ -240,21 +240,44 @@ int WL_DrawMenuCursor(uint8_t framebuffer[320 * 200],
                                chunks.cursor + frame, x, y);
 }
 
+/* Original SPEAR WL_MENU.H moves the red menu ramp to the blue ramp. */
+static uint8_t WL_MenuColor(const wg_graphics_t *graphics, uint8_t wolf_color)
+{
+    return (uint8_t)(wolf_color
+        + (WG_DataVariantFamily(graphics->variant) == WG_GAME_FAMILY_SPEAR
+               ? 0x70U : 0U));
+}
+
 static void WL_MenuBar(uint8_t *framebuffer, int x, int y,
                        int width, int height, uint8_t color)
 {
     WG_VideoBar(framebuffer, x, y, width, height, color);
 }
 
-static void WL_MenuOutline(uint8_t *framebuffer, int x, int y,
+static void WL_MenuStripes(uint8_t *framebuffer, const wg_graphics_t *graphics)
+{
+    if (WG_DataVariantFamily(graphics->variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        WL_MenuBar(framebuffer, 0, 10, 320, 22, 0U);
+        WL_MenuBar(framebuffer, 0, 33, 320, 1, 0U);
+    }
+    else
+    {
+        WL_MenuBar(framebuffer, 0, 10, 320, 24, 0U);
+        WL_MenuBar(framebuffer, 0, 32, 320, 1, WL_MENU_STRIPE_COLOR);
+    }
+}
+
+static void WL_MenuOutline(uint8_t *framebuffer, const wg_graphics_t *graphics,
+                           int x, int y,
                            int width, int height)
 {
-    WL_MenuBar(framebuffer, x, y, width + 1, 1, WL_MENU_DEACTIVE_COLOR);
-    WL_MenuBar(framebuffer, x, y, 1, height + 1, WL_MENU_DEACTIVE_COLOR);
+    WL_MenuBar(framebuffer, x, y, width + 1, 1, WL_MenuColor(graphics, WL_MENU_DEACTIVE_COLOR));
+    WL_MenuBar(framebuffer, x, y, 1, height + 1, WL_MenuColor(graphics, WL_MENU_DEACTIVE_COLOR));
     WL_MenuBar(framebuffer, x, y + height, width + 1, 1,
-               WL_MENU_BORDER_2_COLOR);
+               WL_MenuColor(graphics, WL_MENU_BORDER_2_COLOR));
     WL_MenuBar(framebuffer, x + width, y, 1, height + 1,
-               WL_MENU_BORDER_2_COLOR);
+               WL_MenuColor(graphics, WL_MENU_BORDER_2_COLOR));
 }
 
 static void WL_ColorOutline(uint8_t *framebuffer, int x, int y,
@@ -318,15 +341,14 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
         return 0;
     }
 
-    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
         WG_FontClose(&font);
         return 0;
     }
-    WL_MenuBar(framebuffer, 0, 10, 320, 24, 0U);
-    WL_MenuBar(framebuffer, 0, 32, 320, 1, WL_MENU_STRIPE_COLOR);
+    WL_MenuStripes(framebuffer, graphics);
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.options, 84, 0))
     {
         WG_FontClose(&font);
@@ -336,8 +358,8 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
                WL_MENU_WIDTH,
                WL_MainMenuOmitsReadThis(graphics->variant)
                    ? WL_MENU_HEIGHT - 13 : WL_MENU_HEIGHT,
-               WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, WL_MENU_X - 8, WL_MENU_Y - 3,
+               WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, WL_MENU_X - 8, WL_MENU_Y - 3,
                    WL_MENU_WIDTH,
                    WL_MainMenuOmitsReadThis(graphics->variant)
                        ? WL_MENU_HEIGHT - 13 : WL_MENU_HEIGHT);
@@ -361,7 +383,7 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
 
         if (items[index].active == 0U)
         {
-            color = WL_MENU_DEACTIVE_COLOR;
+            color = WL_MenuColor(graphics, WL_MENU_DEACTIVE_COLOR);
         }
         else if (items[index].active == 2U)
         {
@@ -519,7 +541,7 @@ int WL_DrawLoadSaveMenu(
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -528,12 +550,11 @@ int WL_DrawLoadSaveMenu(
     }
     WL_MenuBar(framebuffer, WL_LOAD_SAVE_X - 10, WL_LOAD_SAVE_Y - 5,
                WL_LOAD_SAVE_WIDTH, WL_LOAD_SAVE_HEIGHT,
-               WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, WL_LOAD_SAVE_X - 10,
+               WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, WL_LOAD_SAVE_X - 10,
                    WL_LOAD_SAVE_Y - 5, WL_LOAD_SAVE_WIDTH,
                    WL_LOAD_SAVE_HEIGHT);
-    WL_MenuBar(framebuffer, 0, 10, 320, 24, 0U);
-    WL_MenuBar(framebuffer, 0, 32, 320, 1, WL_MENU_STRIPE_COLOR);
+    WL_MenuStripes(framebuffer, graphics);
     if (!WG_VideoDrawPicture(framebuffer, graphics,
                              saving ? chunks.save_title : chunks.load_title,
                              60, 0))
@@ -691,7 +712,7 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -699,16 +720,16 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
         return 0;
     }
     WL_MenuBar(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y1 - 3,
-               WL_SOUND_WIDTH, 4 * 13 - 7, WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y1 - 3,
+               WL_SOUND_WIDTH, 4 * 13 - 7, WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, WL_SOUND_X - 8, WL_SOUND_Y1 - 3,
                    WL_SOUND_WIDTH, 4 * 13 - 7);
     WL_MenuBar(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y2 - 3,
-               WL_SOUND_WIDTH, 4 * 13 - 7, WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y2 - 3,
+               WL_SOUND_WIDTH, 4 * 13 - 7, WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, WL_SOUND_X - 8, WL_SOUND_Y2 - 3,
                    WL_SOUND_WIDTH, 4 * 13 - 7);
     WL_MenuBar(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y3 - 3,
-               WL_SOUND_WIDTH, 3 * 13 - 7, WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, WL_SOUND_X - 8, WL_SOUND_Y3 - 3,
+               WL_SOUND_WIDTH, 3 * 13 - 7, WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, WL_SOUND_X - 8, WL_SOUND_Y3 - 3,
                    WL_SOUND_WIDTH, 3 * 13 - 7);
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.effects_title,
                              100, WL_SOUND_Y1 - 20)
@@ -734,7 +755,7 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
                                    sound_blaster_present)
                     ? (index == selected ? WL_MENU_HIGHLIGHT_COLOR
                                          : WL_MENU_TEXT_COLOR)
-                    : WL_MENU_DEACTIVE_COLOR;
+                    : WL_MenuColor(graphics, WL_MENU_DEACTIVE_COLOR);
         WG_FontDraw(&font, framebuffer, WL_SOUND_X + 52,
                     WL_SOUND_Y1 + (int)index * 13, labels[index], color);
         on = (index == 0U && sound_mode == 0U)
@@ -825,9 +846,8 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
-    WL_MenuBar(framebuffer, 0, 10, 320, 24, 0U);
-    WL_MenuBar(framebuffer, 0, 32, 320, 1, WL_MENU_STRIPE_COLOR);
+    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    WL_MenuStripes(framebuffer, graphics);
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.control_title,
                              80, 0)
         || !WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
@@ -838,8 +858,8 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
     }
     WL_MenuBar(framebuffer, WL_CONTROL_X - 8, WL_CONTROL_Y - 5,
                WL_CONTROL_WIDTH, WL_CONTROL_HEIGHT,
-               WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, WL_CONTROL_X - 8, WL_CONTROL_Y - 5,
+               WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, WL_CONTROL_X - 8, WL_CONTROL_Y - 5,
                    WL_CONTROL_WIDTH, WL_CONTROL_HEIGHT);
     for (index = 0U; index < WL_CONTROL_MENU_ITEMS; ++index)
     {
@@ -850,7 +870,7 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
                             ? (index == selected
                                    ? WL_MENU_HIGHLIGHT_COLOR
                                    : WL_MENU_TEXT_COLOR)
-                            : WL_MENU_DEACTIVE_COLOR;
+                            : WL_MenuColor(graphics, WL_MENU_DEACTIVE_COLOR);
 
         WG_FontDraw(&font, framebuffer, WL_CONTROL_X + 56,
                     WL_CONTROL_Y + (int)index * 13, labels[index], color);
@@ -888,15 +908,15 @@ int WL_DrawMouseSensitivity(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
         WG_FontClose(&font);
         return 0;
     }
-    WL_MenuBar(framebuffer, 10, 80, 300, 30, WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, 10, 80, 300, 30);
+    WL_MenuBar(framebuffer, 10, 80, 300, 30, WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, 10, 80, 300, 30);
     title_width = WG_FontMeasure(&font, "Adjust Mouse Sensitivity");
     WG_FontDraw(&font, framebuffer, (320 - (int)title_width) / 2, 82,
                 "Adjust Mouse Sensitivity", WL_MENU_READ_COLOR);
@@ -994,11 +1014,11 @@ static void WL_CustomLabels(const wg_font_t *font, uint8_t *framebuffer,
     }
 }
 
-static void WL_CustomWindow(uint8_t *framebuffer, int y)
+static void WL_CustomWindow(uint8_t *framebuffer, const wg_graphics_t *graphics, int y)
 {
     WL_MenuBar(framebuffer, 5, y - 1, 310, 13,
-               WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, 5, y - 1, 310, 13);
+               WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, 5, y - 1, 310, 13);
 }
 
 static void WL_CustomCentered(const wg_font_t *font, uint8_t *framebuffer,
@@ -1039,15 +1059,14 @@ int WL_DrawCustomizeMenu(
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
         WG_FontClose(&font);
         return 0;
     }
-    WL_MenuBar(framebuffer, 0, 10, 320, 24, 0U);
-    WL_MenuBar(framebuffer, 0, 32, 320, 1, WL_MENU_STRIPE_COLOR);
+    WL_MenuStripes(framebuffer, graphics);
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.customize_title,
                              80, 0))
     {
@@ -1057,7 +1076,7 @@ int WL_DrawCustomizeMenu(
 
     WL_CustomCentered(&font, framebuffer, 48, "Mouse");
     WL_CustomLabels(&font, framebuffer, 61, action_labels);
-    WL_CustomWindow(framebuffer, 74);
+    WL_CustomWindow(framebuffer, graphics, 74);
     for (index = 0U; index < 4U; ++index)
     {
         char binding[3];
@@ -1075,13 +1094,13 @@ int WL_DrawCustomizeMenu(
                     mouse_enabled
                         ? (selected == 0U ? WL_MENU_HIGHLIGHT_COLOR
                                           : WL_MENU_TEXT_COLOR)
-                        : WL_MENU_DEACTIVE_COLOR);
+                        : WL_MenuColor(graphics, WL_MENU_DEACTIVE_COLOR));
     }
 
     WL_CustomCentered(&font, framebuffer, 87,
                       "Joystick/Gravis GamePad");
     WL_CustomLabels(&font, framebuffer, 100, action_labels);
-    WL_CustomWindow(framebuffer, 113);
+    WL_CustomWindow(framebuffer, graphics, 113);
     for (index = 0U; index < 4U; ++index)
     {
         char binding[3] = { 'b', '?', '\0' };
@@ -1098,12 +1117,12 @@ int WL_DrawCustomizeMenu(
                     joystick_enabled
                         ? (selected == 3U ? WL_MENU_HIGHLIGHT_COLOR
                                           : WL_MENU_TEXT_COLOR)
-                        : WL_MENU_DEACTIVE_COLOR);
+                        : WL_MenuColor(graphics, WL_MENU_DEACTIVE_COLOR));
     }
 
     WL_CustomCentered(&font, framebuffer, 126, "Keyboard");
     WL_CustomLabels(&font, framebuffer, 139, action_labels);
-    WL_CustomWindow(framebuffer, 152);
+    WL_CustomWindow(framebuffer, graphics, 152);
     for (index = 0U; index < 4U; ++index)
     {
         WG_FontDraw(&font, framebuffer,
@@ -1114,7 +1133,7 @@ int WL_DrawCustomizeMenu(
     }
 
     WL_CustomLabels(&font, framebuffer, 165, movement_labels);
-    WL_CustomWindow(framebuffer, 178);
+    WL_CustomWindow(framebuffer, graphics, 178);
     for (index = 0U; index < 4U; ++index)
     {
         WG_FontDraw(&font, framebuffer,
@@ -1221,15 +1240,15 @@ int WL_DrawEpisodeMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
         WG_FontClose(&font);
         return 0;
     }
-    WL_MenuBar(framebuffer, 6, 19, 308, 162, WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, 6, 19, 308, 162);
+    WL_MenuBar(framebuffer, 6, 19, 308, 162, WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, 6, 19, 308, 162);
     title_width = WG_FontMeasure(&font, "Which episode to play?");
     WG_FontDraw(&font, framebuffer, (320 - (int)title_width) / 2, 2,
                 "Which episode to play?", WL_MENU_READ_HIGHLIGHT_COLOR);
@@ -1275,7 +1294,7 @@ int WL_DrawDifficultyMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -1284,8 +1303,8 @@ int WL_DrawDifficultyMenu(uint8_t framebuffer[320 * 200],
     }
     WG_FontDraw(&font, framebuffer, 70, 68, "How tough are you?",
                 WL_MENU_READ_HIGHLIGHT_COLOR);
-    WL_MenuBar(framebuffer, 45, 90, 225, 67, WL_MENU_BACKGROUND_COLOR);
-    WL_MenuOutline(framebuffer, 45, 90, 225, 67);
+    WL_MenuBar(framebuffer, 45, 90, 225, 67, WL_MenuColor(graphics, WL_MENU_BACKGROUND_COLOR));
+    WL_MenuOutline(framebuffer, graphics, 45, 90, 225, 67);
     for (index = 0U; index < 4U; ++index)
     {
         WG_FontDraw(&font, framebuffer, 74, 100 + (int)index * 13,

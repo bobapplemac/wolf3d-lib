@@ -70,3 +70,23 @@ These tools remain supported manual checks, recorded in the inventory rather
 than deleted for lacking a build-system caller. New unexplained reference leads
 fail the audit and require review. Keep this inventory current when adding,
 removing or changing ownership of shared helpers or generated assets.
+
+## Spear menu and startup reference
+
+Menu presentation must select colors by game family at runtime. Original
+SPEAR/Wolf4SDL `wl_menu.h` uses indices 0x99/0x93/0x9b/0x9d for the menu border,
+secondary border, disabled items and background; Wolf3D uses 0x29/0x23/0x2b/0x2d.
+`DrawStripes` in `wl_menu.cpp` also differs: Spear has a 22-row black band and a
+black line at y+23, whereas Wolf3D has 24 rows and a colored line at y+22.
+References: https://github.com/fabiangreffrath/wolf4sdl/blob/master/wl_menu.h and
+https://github.com/fabiangreffrath/wolf4sdl/blob/master/wl_menu.cpp.
+
+The rating card is not Wolf3D-only: `DemoLoop` calls `PG13` for Spear too.
+Spear's sign-on waits three seconds (no Wolf3D "Press a key"/"Working..." prompt),
+then shows the rating card before the title, credits, scores and demos. Existing
+startup behavior and SDM/SOD rating chunks are retained. See
+https://github.com/fabiangreffrath/wolf4sdl/blob/master/wl_main.cpp.
+
+Configure `WG_TEST_SDM_PATH`/`WG_TEST_SOD_PATH` to exercise menu pixel assertions
+and the rating/title/menu frame tests using external data. Keep Wolf3D data tests
+enabled to catch accidental changes to its red menu theme.

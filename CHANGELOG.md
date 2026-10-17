@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased - Spear menu colors
+
+- Use the original Spear blue menu ramp for backgrounds, borders and disabled
+  items throughout the control panel, rather than Wolf3D red. Match Spear title
+  stripe geometry while leaving Wolf3D rendering unchanged. Add pixel checks
+  with external Spear data and update the affected menu frame expectations.
+
 ## Unreleased - shared distribution naming and notices
 
 - Synchronize the naming contract with portable's selectable video backends:

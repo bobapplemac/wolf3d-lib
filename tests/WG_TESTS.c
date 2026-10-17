@@ -4825,6 +4825,46 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     CHECK(data_set.audio_offset_count == 268U);
 
     CHECK(WG_GraphicsOpen(&graphics, &data_set));
+    /* SPEAR uses blue menu indices, including outlines/disabled items, and
+       a black stripe at y=33 rather than Wolf3D's colored stripe at y=32. */
+    CHECK(WL_DrawMainMenu(framebuffer, &graphics, 0U, 0));
+    CHECK(framebuffer[0] == 0x99U);
+    CHECK(framebuffer[32U * 320U] == 0x99U);
+    CHECK(framebuffer[33U * 320U] == 0U);
+    CHECK(framebuffer[54U * 320U + 70U] == 0x9dU);
+    CHECK(framebuffer[52U * 320U + 68U] == 0x9bU);
+    CHECK(framebuffer[53U * 320U + 246U] == 0x93U);
+    {
+        size_t x, y, disabled_pixels = 0U;
+        uint8_t available[WL_SAVE_SLOTS] = { 0U };
+        char names[WL_SAVE_SLOTS][WL_SAVE_NAME_LENGTH + 1U] = { { 0 } };
+        const uint8_t bindings[WL_CUSTOM_BINDINGS] = { 0U, 1U, 2U, 3U };
+        const uint16_t keys[WL_CUSTOM_BINDINGS] = { 0U, 0U, 0U, 0U };
+        for (y = 107U; y < 120U; ++y)
+            for (x = 100U; x < 220U; ++x)
+                if (framebuffer[y * 320U + x] == 0x9bU) ++disabled_pixels;
+        CHECK(disabled_pixels > 0U); /* Disabled Save Game label. */
+        CHECK(WL_DrawLoadSaveMenu(framebuffer, &graphics, 0, 0U,
+                                  available, names, 0, 0));
+        CHECK(framebuffer[0] == 0x99U);
+        CHECK(WL_DrawCustomizeMenu(framebuffer, &graphics, 6U, 0, 0,
+                                   bindings, bindings, keys, keys, -1, 0));
+        CHECK(framebuffer[0] == 0x99U);
+        CHECK(framebuffer[74U * 320U + 6U] == 0x9dU);
+    }
+
+    CHECK(WL_DrawSoundMenu(framebuffer, &graphics, 0U, 0U, 0, 0, 0, 0));
+    CHECK(framebuffer[0] == 0x99U);
+    CHECK(WL_DrawControlMenu(framebuffer, &graphics, 0U, 1, 0, 0, 0, 0U, 0));
+    CHECK(framebuffer[0] == 0x99U);
+    CHECK(WL_DrawMouseSensitivity(framebuffer, &graphics, 5U));
+    CHECK(framebuffer[0] == 0x99U);
+    CHECK(WL_DrawDifficultyMenu(framebuffer, &graphics, 1U));
+    CHECK(framebuffer[0] == 0x99U);
+    CHECK(framebuffer[91U * 320U + 46U] == 0x9dU);
+    CHECK(WG_DataRatingChunk(variant)
+          == (variant == WG_GAME_SPEAR_DEMO_SDM ? 77U : 91U));
+
     CHECK(WG_GraphicsDecodeTextScreen(&graphics, 0, text_screen));
     CHECK(WG_GraphicsDecodeTextScreen(&graphics, 1, text_screen));
     memset(&psyched_level, 0, sizeof(psyched_level));
