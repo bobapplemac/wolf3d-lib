@@ -240,6 +240,17 @@ int WL_DrawMenuCursor(uint8_t framebuffer[320 * 200],
                                chunks.cursor + frame, x, y);
 }
 
+/* ClearMScreen uses the full-screen C_BACKDROPPIC in every Spear archive. */
+static int WL_MenuBackground(uint8_t *framebuffer, const wg_graphics_t *graphics)
+{
+    if (WG_DataVariantFamily(graphics->variant) == WG_GAME_FAMILY_SPEAR)
+    {
+        return WG_VideoDrawPicture(framebuffer, graphics, 3U, 0, 0);
+    }
+    WG_VideoClear(framebuffer, WL_MENU_BORDER_COLOR);
+    return 1;
+}
+
 /* Original SPEAR WL_MENU.H moves the red menu ramp to the blue ramp. */
 static uint8_t WL_MenuColor(const wg_graphics_t *graphics, uint8_t wolf_color)
 {
@@ -341,7 +352,11 @@ int WL_DrawMainMenu(uint8_t framebuffer[320 * 200],
         return 0;
     }
 
-    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    if (!WL_MenuBackground(framebuffer, graphics))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -541,7 +556,11 @@ int WL_DrawLoadSaveMenu(
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    if (!WL_MenuBackground(framebuffer, graphics))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -712,7 +731,11 @@ int WL_DrawSoundMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    if (!WL_MenuBackground(framebuffer, graphics))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -846,7 +869,11 @@ int WL_DrawControlMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    if (!WL_MenuBackground(framebuffer, graphics))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
     WL_MenuStripes(framebuffer, graphics);
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.control_title,
                              80, 0)
@@ -908,7 +935,11 @@ int WL_DrawMouseSensitivity(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    if (!WL_MenuBackground(framebuffer, graphics))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -1059,7 +1090,11 @@ int WL_DrawCustomizeMenu(
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    if (!WL_MenuBackground(framebuffer, graphics))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -1240,7 +1275,11 @@ int WL_DrawEpisodeMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    if (!WL_MenuBackground(framebuffer, graphics))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {
@@ -1294,7 +1333,11 @@ int WL_DrawDifficultyMenu(uint8_t framebuffer[320 * 200],
     {
         return 0;
     }
-    WG_VideoClear(framebuffer, WL_MenuColor(graphics, WL_MENU_BORDER_COLOR));
+    if (!WL_MenuBackground(framebuffer, graphics))
+    {
+        WG_FontClose(&font);
+        return 0;
+    }
     if (!WG_VideoDrawPicture(framebuffer, graphics, chunks.mouse_back,
                              112, 184))
     {

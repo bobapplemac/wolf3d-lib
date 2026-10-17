@@ -73,6 +73,10 @@ removing or changing ownership of shared helpers or generated assets.
 
 ## Spear menu and startup reference
 
+Spear `ClearMScreen` draws `C_BACKDROPPIC` (graphics chunk 3) across the full
+320x200 screen; a flat blue fill is not a substitute. Menu panels remain solid.
+Tests compare exposed background texels to that asset, including texture variation.
+
 Menu presentation must select colors by game family at runtime. Original
 SPEAR/Wolf4SDL `wl_menu.h` uses indices 0x99/0x93/0x9b/0x9d for the menu border,
 secondary border, disabled items and background; Wolf3D uses 0x29/0x23/0x2b/0x2d.

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - Spear textured menu backdrop
+
+- Draw Spear C_BACKDROPPIC behind control-panel screens instead of a flat blue
+  fill. Preserve solid menu panels and Wolf3D backgrounds. Compare exposed
+  background texels against the original asset in external-data regression tests.
+
 ## Unreleased - Spear menu colors
 
 - Use the original Spear blue menu ramp for backgrounds, borders and disabled

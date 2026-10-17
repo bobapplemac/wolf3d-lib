@@ -4775,6 +4775,30 @@ static void TestDataSet(const char *path, wg_game_variant_t expected_variant,
     WG_DataClose(&data_set);
 }
 
+static void CheckSpearMenuBackdrop(const uint8_t *framebuffer,
+                                   const wg_graphics_t *graphics)
+{
+    uint8_t *pixels = NULL;
+    uint16_t width = 0, height = 0;
+    size_t x, y, variations = 0U;
+    CHECK(WG_GraphicsDecodePicture(graphics, 3U, &pixels, &width, &height));
+    CHECK(width == 320U && height == 200U);
+    if (pixels != NULL && width == 320U && height == 200U)
+    {
+        /* This exposed left margin is not covered by any control-panel item.
+           Check many texels so a flat fill cannot accidentally satisfy it. */
+        for (y = 40U; y < 70U; ++y)
+            for (x = 0U; x < 5U; ++x)
+            {
+                size_t at = y * 320U + x;
+                CHECK(framebuffer[at] == pixels[at]);
+                if (pixels[at] != pixels[40U * 320U]) ++variations;
+            }
+        CHECK(variations > 0U);
+    }
+    free(pixels);
+}
+
 static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
                              size_t expected_pages,
                              size_t expected_present_maps)
@@ -4828,8 +4852,7 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
     /* SPEAR uses blue menu indices, including outlines/disabled items, and
        a black stripe at y=33 rather than Wolf3D's colored stripe at y=32. */
     CHECK(WL_DrawMainMenu(framebuffer, &graphics, 0U, 0));
-    CHECK(framebuffer[0] == 0x99U);
-    CHECK(framebuffer[32U * 320U] == 0x99U);
+    CheckSpearMenuBackdrop(framebuffer, &graphics);
     CHECK(framebuffer[33U * 320U] == 0U);
     CHECK(framebuffer[54U * 320U + 70U] == 0x9dU);
     CHECK(framebuffer[52U * 320U + 68U] == 0x9bU);
@@ -4846,21 +4869,21 @@ static void TestSpearDataSet(const char *path, wg_game_variant_t variant,
         CHECK(disabled_pixels > 0U); /* Disabled Save Game label. */
         CHECK(WL_DrawLoadSaveMenu(framebuffer, &graphics, 0, 0U,
                                   available, names, 0, 0));
-        CHECK(framebuffer[0] == 0x99U);
+        CheckSpearMenuBackdrop(framebuffer, &graphics);
         CHECK(WL_DrawCustomizeMenu(framebuffer, &graphics, 6U, 0, 0,
                                    bindings, bindings, keys, keys, -1, 0));
-        CHECK(framebuffer[0] == 0x99U);
+        CheckSpearMenuBackdrop(framebuffer, &graphics);
         CHECK(framebuffer[74U * 320U + 6U] == 0x9dU);
     }
 
     CHECK(WL_DrawSoundMenu(framebuffer, &graphics, 0U, 0U, 0, 0, 0, 0));
-    CHECK(framebuffer[0] == 0x99U);
+    CheckSpearMenuBackdrop(framebuffer, &graphics);
     CHECK(WL_DrawControlMenu(framebuffer, &graphics, 0U, 1, 0, 0, 0, 0U, 0));
-    CHECK(framebuffer[0] == 0x99U);
+    CheckSpearMenuBackdrop(framebuffer, &graphics);
     CHECK(WL_DrawMouseSensitivity(framebuffer, &graphics, 5U));
-    CHECK(framebuffer[0] == 0x99U);
+    CheckSpearMenuBackdrop(framebuffer, &graphics);
     CHECK(WL_DrawDifficultyMenu(framebuffer, &graphics, 1U));
-    CHECK(framebuffer[0] == 0x99U);
+    CheckSpearMenuBackdrop(framebuffer, &graphics);
     CHECK(framebuffer[91U * 320U + 46U] == 0x9dU);
     CHECK(WG_DataRatingChunk(variant)
           == (variant == WG_GAME_SPEAR_DEMO_SDM ? 77U : 91U));
